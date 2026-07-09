@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Generic;
+
+namespace Declaration.Core.Model
+{
+    public enum EtatConformite
+    {
+        Conforme,
+        IfManquant,
+        IceManquant,
+        FormatInvalide
+    }
+
+    public enum SensAffectation { Achat, Vente }
+
+    public enum SourceAffectation { Decaissement, Espece, Depense, Encaissement }
+
+    public class TiersInfo
+    {
+        public string Numero { get; set; } = "";
+        public string Nom { get; set; } = "";
+        public string IdentifiantFiscal { get; set; } = "";
+        public string Ice { get; set; } = "";
+        public string CodeActivite { get; set; } = "";
+    }
+
+    public class AffectationADeclarer
+    {
+        public string NumeroFacture { get; set; } = "";
+        public string NumeroRapprochement { get; set; } = "";
+        public SensAffectation Sens { get; set; }
+        public SourceAffectation Source { get; set; }
+        public decimal MontantAffecte { get; set; }
+        public DateTime? DatePaiement { get; set; }
+        public DateTime? DateFacture { get; set; }
+        public string ModePaiement { get; set; } = "";
+        public TiersInfo Tiers { get; set; } = new TiersInfo();
+        public bool EstRapprocheNonAffecte { get; set; } = false;
+        public int EC_Type { get; set; }
+        public int EC_Id { get; set; }
+    }
+
+    public class LigneDeclarationEnrichie
+    {
+        public string NumeroFacture { get; set; } = "";
+        public string NumeroRapprochement { get; set; } = "";
+        public string Designation { get; set; } = "";
+        public TiersInfo Tiers { get; set; } = new TiersInfo();
+        public string CodeActivite { get; set; } = "";
+        public decimal HT { get; set; }
+        public decimal Taux { get; set; }
+        public decimal Tva { get; set; }
+        public decimal Ttc { get; set; }
+        public decimal Prorata { get; set; }
+        public string ModePaiement { get; set; } = "";
+        public DateTime? DatePaiement { get; set; }
+        public DateTime? DateFacture { get; set; }
+        public SourceAffectation Source { get; set; }
+        public bool IsReport { get; set; } = false;
+    }
+
+    public class RecapParSource
+    {
+        public SourceAffectation Source { get; set; }
+        public decimal TotalHT { get; set; }
+        public decimal TotalTva { get; set; }
+        public decimal TotalTtc { get; set; }
+    }
+
+    public class RecapParTaux
+    {
+        public decimal Taux { get; set; }
+        public decimal TotalHT { get; set; }
+        public decimal TotalTva { get; set; }
+        public decimal TotalTtc { get; set; }
+    }
+
+    public class RecapParActivite
+    {
+        public string CodeActivite { get; set; } = "";
+        public decimal TotalHT { get; set; }
+        public decimal TotalTva { get; set; }
+        public decimal TotalTtc { get; set; }
+    }
+
+    public class ControleEquilibre
+    {
+        public decimal TotalMontantAffecte { get; set; }
+        public decimal TotalDeclareTtc { get; set; }
+        public decimal ResiduNonTva => TotalMontantAffecte - TotalDeclareTtc;
+        public decimal ResiduExplique { get; set; }
+        public decimal ResiduInexplique => ResiduNonTva - ResiduExplique;
+    }
+
+    public enum NiveauAlerte { Info, Warning, Error }
+
+    public class Alerte
+    {
+        public NiveauAlerte Niveau { get; set; }
+        public string Code { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string RefLigne { get; set; } = "";
+    }
+
+    public enum TypePeriode { Mensuelle, Trimestrielle }
+
+    public class EnTeteDeclaration
+    {
+        public string IdentifiantSociete { get; set; } = "";
+        public int Exercice { get; set; }
+        public TypePeriode Type { get; set; }
+        public int? MoisPeriode { get; set; }
+        public int? TrimestrePeriode { get; set; }
+        public string Numero { get; set; } = "";
+    }
+
+    public class DeclarationModele
+    {
+        public EnTeteDeclaration EnTete { get; set; } = new EnTeteDeclaration();
+        public List<LigneDeclarationEnrichie> Lignes { get; set; } = new();
+        public List<RecapParSource> RecapsParSource { get; set; } = new();
+        public List<RecapParTaux> RecapsParTaux { get; set; } = new();
+        public List<RecapParActivite> RecapsParActivite { get; set; } = new();
+        public ControleEquilibre ControleEquilibre { get; set; } = new();
+        public List<Alerte> Alertes { get; set; } = new();
+    }
+}
