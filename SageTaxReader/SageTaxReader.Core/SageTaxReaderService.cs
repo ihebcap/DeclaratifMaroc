@@ -351,25 +351,56 @@ public class SageTaxReaderService
         return result;
     }
 
+    private static DocumentTaxesInfo EntreeEnErreur((string piece, string sens) req, string motif)
+        => new DocumentTaxesInfo
+        {
+            NumeroPiece = req.piece,
+            Sens = req.sens,
+            EnErreur = true,
+            MotifErreur = motif
+        };
+
     public IReadOnlyDictionary<string, DocumentTaxesInfo> LireFactures(IEnumerable<(string piece, string sens)> requetes)
     {
-        // We set a large timeout for the whole batch
-        // The individual pieces won't freeze indefinitely unless Sage is completely dead
-        return RunOnStaThread(() =>
+        var requests = new List<(string piece, string sens)>(requetes);
+        var result = new Dictionary<string, DocumentTaxesInfo>();
+        if (requests.Count == 0) return result;
+
+        // Timeouts identiques à la lecture unitaire, mais réappliqués PAR PIÈCE.
+        var sessionOpenTimeout = TimeSpan.FromSeconds(30);
+        var perPieceTimeout = TimeSpan.FromSeconds(30);
+
+        // La session Sage est ouverte UNE seule fois et tenue vivante sur un unique thread STA
+        // dédié qui consomme les pièces une à une depuis une file. Le thread appelant impose le
+        // timeout PAR PIÈCE : si une pièce ne rend pas la main (document ouvert dans Sage), elle
+        // est isolée en erreur (motif), le thread STA figé est abandonné (IsBackground) et les
+        // pièces restantes sont marquées à leur tour — jamais de gel global (~8h), jamais de perte
+        // silencieuse. Une pièce introuvable/en exception reste un cas normal, isolé lui aussi.
+        var jobs = new System.Collections.Concurrent.BlockingCollection<(string piece, string sens)>(
+            new System.Collections.Concurrent.ConcurrentQueue<(string piece, string sens)>());
+        var pieceDone = new SemaphoreSlim(0, 1);
+        var sessionReady = new SemaphoreSlim(0, 1);
+        DocumentTaxesInfo? pieceResult = null;
+        Exception? pieceError = null;
+        Exception? startupError = null;
+
+        var staThread = new Thread(() =>
         {
-            var result = new Dictionary<string, DocumentTaxesInfo>();
             var app = new BSCIALApplication100c();
             try
             {
                 OpenSession(app);
-                
+
                 var deviseInfo = ObtenirDeviseSociete(app.CptaApplication);
                 var cacheTypesTaxes = new Dictionary<string, string>();
                 var docFactoryVente = app.FactoryDocumentVente;
                 var docFactoryAchat = app.FactoryDocumentAchat;
+                sessionReady.Release();
 
-                foreach (var req in requetes)
+                foreach (var req in jobs.GetConsumingEnumerable())
                 {
+                    pieceResult = null;
+                    pieceError = null;
                     try
                     {
                         if (req.sens.Equals("Vente", StringComparison.OrdinalIgnoreCase))
@@ -384,7 +415,7 @@ public class SageTaxReaderService
                             var doc = (IBODocumentVente3)docFactoryVente.ReadPiece(docTypeToUse, req.piece);
                             try
                             {
-                                result[req.piece + "_" + req.sens] = ExtraireTaxes(doc.Valorisation, "Vente", doc, app.CptaApplication, deviseInfo.Decimales, cacheTypesTaxes);
+                                pieceResult = ExtraireTaxes(doc.Valorisation, "Vente", doc, app.CptaApplication, deviseInfo.Decimales, cacheTypesTaxes);
                             }
                             finally
                             {
@@ -403,25 +434,74 @@ public class SageTaxReaderService
                             var doc = (IBODocumentAchat3)docFactoryAchat.ReadPiece(docTypeToUse, req.piece);
                             try
                             {
-                                result[req.piece + "_" + req.sens] = ExtraireTaxes(doc.Valorisation, "Achat", doc, app.CptaApplication, deviseInfo.Decimales, cacheTypesTaxes);
+                                pieceResult = ExtraireTaxes(doc.Valorisation, "Achat", doc, app.CptaApplication, deviseInfo.Decimales, cacheTypesTaxes);
                             }
                             finally
                             {
                                 Marshal.ReleaseComObject(doc);
                             }
                         }
+                        else
+                        {
+                            throw new Exception($"Sens inconnu : {req.sens}");
+                        }
                     }
                     catch (Exception ex)
                     {
-                        Console.Error.WriteLine($"Erreur sur la pièce {req.piece} ({req.sens}) : {ex.Message}");
+                        pieceError = ex;
+                    }
+                    finally
+                    {
+                        pieceDone.Release();
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                startupError = ex;
+                sessionReady.Release();
             }
             finally
             {
                 CloseAndRelease(app);
             }
-            return result;
-        }, TimeSpan.FromSeconds(30 * 1000)); // allow generous time for the batch
+        });
+        staThread.IsBackground = true;
+        staThread.SetApartmentState(ApartmentState.STA);
+        staThread.Start();
+
+        if (!sessionReady.Wait(sessionOpenTimeout))
+            throw new TimeoutException($"Ouverture de la session Sage sans réponse en {sessionOpenTimeout.TotalSeconds}s.");
+        if (startupError != null)
+            throw startupError;
+
+        bool lotInterrompu = false;
+        string motifInterruption = "";
+        foreach (var req in requests)
+        {
+            string key = req.piece + "_" + req.sens;
+            if (lotInterrompu)
+            {
+                result[key] = EntreeEnErreur(req, $"Lot interrompu : {motifInterruption}");
+                continue;
+            }
+
+            jobs.Add(req);
+            if (!pieceDone.Wait(perPieceTimeout))
+            {
+                // La pièce n'a pas rendu la main dans le délai : thread STA figé sur cette lecture.
+                motifInterruption = $"Timeout {perPieceTimeout.TotalSeconds}s sur la pièce {req.piece} ({req.sens}) — document peut-être ouvert dans Sage.";
+                result[key] = EntreeEnErreur(req, motifInterruption);
+                lotInterrompu = true;
+                continue;
+            }
+
+            result[key] = pieceError != null
+                ? EntreeEnErreur(req, pieceError.Message)
+                : pieceResult!;
+        }
+
+        jobs.CompleteAdding();
+        return result;
     }
 }

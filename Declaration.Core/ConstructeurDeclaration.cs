@@ -85,6 +85,22 @@ namespace Declaration.Core
                     continue; // Pas de ventilation possible
                 }
 
+                // Pièce isolée en erreur par la lecture OM en lot (TASK-023) : jamais de ligne
+                // silencieuse ni de ventilation fausse — on remonte le motif exact en alerte.
+                if (facture.EnErreur)
+                {
+                    modele.Alertes.Add(new Alerte
+                    {
+                        Niveau = NiveauAlerte.Error,
+                        Code = "FACTURE_ILLISIBLE_OM",
+                        Message = string.IsNullOrWhiteSpace(facture.MotifErreur)
+                            ? "Lecture OM Sage en échec pour cette pièce."
+                            : facture.MotifErreur,
+                        RefLigne = $"Facture: {affectation.NumeroFacture}"
+                    });
+                    continue; // Pas de ventilation possible
+                }
+
                 var validationAlerts = ValiderAffectation(affectation);
                 modele.Alertes.AddRange(validationAlerts);
 

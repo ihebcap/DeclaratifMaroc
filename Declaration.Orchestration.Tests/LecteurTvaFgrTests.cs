@@ -138,9 +138,9 @@ namespace Declaration.Orchestration.Tests
         }
 
         [Fact]
-        public void LireTvaFgr_CodeC20_ParseRobustement()
+        public void LireTvaFgr_CodeC20_ResoluViaFTaxe()
         {
-            // Code C20 (test de robustesse regex)
+            // Code C20 : taux résolu via le mapping F_TAXE (TA_Code -> TA_Taux), plus aucun regex/Substring
             var lignes = new List<LecteurTvaFgr.HistoComptaRow>
             {
                 new LecteurTvaFgr.HistoComptaRow { HC_Indice = 1, HC_Montant = 120m, HC_TaxeCode = "" },

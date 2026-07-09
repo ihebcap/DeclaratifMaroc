@@ -100,6 +100,9 @@ namespace Declaration.Orchestration
                     var key = (a.NumeroFacture, a.Sens);
                     if (!omCache.TryGetValue(key, out var doc) || doc == null) continue;
 
+                    // Ne jamais matérialiser une pièce isolée en erreur (TASK-023).
+                    if (doc.EnErreur) continue;
+
                     // Ne pas réécrire si déjà matérialisé pour cet EC_Id dans cette passe
                     if (cachedDocs.ContainsKey(a.EC_Id)) continue;
 

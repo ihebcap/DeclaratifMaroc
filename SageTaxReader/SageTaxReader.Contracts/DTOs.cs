@@ -28,5 +28,10 @@ namespace SageTaxReader.Contracts
         public double TotalHTNet { get; set; }
         public double EcartArrondi { get; set; }
         public List<TaxeDetail> LignesTaxe { get; set; } = new List<TaxeDetail>();
+
+        // Isolation d'erreur (TASK-023) : une pièce KO n'est jamais silencieusement perdue.
+        // Elle ressort dans le lot avec EnErreur=true et un motif exploitable par l'orchestrateur.
+        public bool EnErreur { get; set; }
+        public string MotifErreur { get; set; } = "";
     }
 }
