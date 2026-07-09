@@ -1,0 +1,27 @@
+# ---- .NET build artifacts ----
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+
+# ---- Compiled binaries (regenerable) ----
+*.exe
+*.dll
+*.pdb
+# ...but keep required reference libs
+!SageTaxReader/libs/Interop.Objets100cLib.dll
+
+# ---- Web (Node / Vite / Playwright) ----
+node_modules/
+declaration-tva-web/dist/
+declaration-tva-web/playwright-report/
+declaration-tva-web/test-results/
+declaration-tva-web/test_error_before.png
+
+# ---- Logs & throwaway output ----
+*.log
+test_output.txt
+
+# ---- Legacy GRFN black box (222 MB of vendored binaries, not versioned) ----
+GRFWinform/

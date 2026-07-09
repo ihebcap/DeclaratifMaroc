@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guide fonctionnel — Déclaration TVA déductible (Maroc)</title>
+<style>
+  :root{
+    --bg:#f7f8fa; --card:#ffffff; --ink:#1a2029; --muted:#5a6472; --line:#e2e6ec;
+    --accent:#1e5eff; --accent-soft:#e9f0ff;
+    --ok:#127a3e; --ok-soft:#e6f4ec; --warn:#8a5a00; --warn-soft:#fbf1dc;
+    --stop:#a3242a; --stop-soft:#fbe9ea; --info:#0b6673; --info-soft:#e0f2f4;
+    --code:#0f172a; --codebg:#f0f2f6;
+    --maxw:960px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0f1319; --card:#161b23; --ink:#e6e9ef; --muted:#9aa5b4; --line:#28303b;
+      --accent:#5b8cff; --accent-soft:#18243d;
+      --ok:#54c483; --ok-soft:#12241a; --warn:#e0b24d; --warn-soft:#2a2113; --stop:#f0868b; --stop-soft:#2a1518;
+      --info:#4fc3d0; --info-soft:#0f2529; --code:#e6e9ef; --codebg:#1c222b;
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.62 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px 96px}
+  .accent-strip{height:4px;background:linear-gradient(90deg,var(--accent),#7aa2ff 55%,var(--info))}
+  header.hero{max-width:var(--maxw);margin:0 auto;padding:44px 24px 26px}
+  .brand{display:flex;align-items:center;gap:10px;margin:0 0 22px}
+  .brand .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--info));
+    color:#fff;font-weight:800;font-size:14px;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .brand .bt{font-weight:700;font-size:14px;color:var(--ink);line-height:1.1}
+  .brand .bs{font-size:12px;color:var(--muted)}
+  .kicker{display:inline-block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
+    font-weight:700;margin:0 0 12px;background:var(--accent-soft);padding:4px 11px;border-radius:999px}
+  h1{font-size:31px;line-height:1.18;margin:0 0 10px;letter-spacing:-.015em}
+  .sub{color:var(--muted);font-size:16px;margin:0 0 18px;max-width:64ch}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;font-size:12.5px}
+  .meta span{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 11px;color:var(--muted)}
+  .meta b{color:var(--ink);font-weight:600}
+
+  nav.toc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:8px 0 34px}
+  nav.toc h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 10px}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:32px}
+  @media(max-width:640px){nav.toc ol{columns:1}}
+  nav.toc a{color:var(--ink);text-decoration:none;line-height:2}
+  nav.toc a:hover{color:var(--accent);text-decoration:underline}
+
+  section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 30px;margin:0 0 20px}
+  section > h2{font-size:22px;margin:0 0 4px;letter-spacing:-.01em;scroll-margin-top:20px}
+  .lead{color:var(--muted);margin:2px 0 18px}
+  h3{font-size:16px;margin:24px 0 8px}
+  p{margin:0 0 12px}
+  ul,ol{margin:0 0 12px;padding-left:22px}
+  li{margin:5px 0}
+  strong{font-weight:650}
+  a{color:var(--accent)}
+  code{background:var(--codebg);color:var(--code);padding:1px 6px;border-radius:5px;font:14px/1.5 "SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  pre{background:var(--codebg);color:var(--code);border:1px solid var(--line);border-radius:10px;padding:16px 18px;overflow-x:auto;font:13.5px/1.6 "SF Mono",ui-monospace,Menlo,Consolas,monospace;margin:0 0 14px}
+
+  table{border-collapse:collapse;width:100%;font-size:14.5px;margin:6px 0 16px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--codebg);font-weight:650;white-space:nowrap}
+  td code{font-size:13px}
+
+  .callout{border:1px solid var(--line);border-left-width:4px;border-radius:10px;padding:14px 18px;margin:14px 0}
+  .callout p:last-child{margin-bottom:0}
+  .callout .tag{font-weight:700;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+  .c-ok{background:var(--ok-soft);border-left-color:var(--ok)} .c-ok .tag{color:var(--ok)}
+  .c-warn{background:var(--warn-soft);border-left-color:var(--warn)} .c-warn .tag{color:var(--warn)}
+  .c-stop{background:var(--stop-soft);border-left-color:var(--stop)} .c-stop .tag{color:var(--stop)}
+  .c-info{background:var(--info-soft);border-left-color:var(--info)} .c-info .tag{color:var(--info)}
+
+  .pill{display:inline-block;font-size:12px;font-weight:650;padding:2px 9px;border-radius:999px;border:1px solid transparent}
+  .p-ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+  .p-warn{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+  .p-stop{background:var(--stop-soft);color:var(--stop);border-color:var(--stop)}
+  .p-info{background:var(--info-soft);color:var(--info);border-color:var(--info)}
+
+  .grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:8px 0 4px}
+  @media(max-width:640px){.grid4{grid-template-columns:1fr}}
+  .qcard{border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:var(--bg)}
+  .qcard .qh{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .qcard .qn{width:28px;height:28px;border-radius:8px;background:var(--accent);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .qcard h4{margin:0;font-size:16px}
+  .qcard .role{font-size:12.5px;color:var(--muted);margin:0 0 8px}
+  .qcard p{font-size:14px;margin:0}
+
+  footer{max-width:var(--maxw);margin:0 auto;padding:26px 24px 40px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  footer .copy{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  footer .copy .mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--info));
+    color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  footer .copy b{color:var(--ink)}
+  .legend{font-size:13px;color:var(--muted);margin-top:8px}
+  hr.soft{border:none;border-top:1px solid var(--line);margin:22px 0}
+
+  @media print{
+    body{background:#fff}
+    nav.toc,footer .noprint{display:none}
+    section{break-inside:avoid;border-color:#ccc}
+  }
+</style>
+</head>
+<body>
+
+<div class="accent-strip"></div>
+
+<header class="hero">
+  <div class="brand">
+    <div class="mark">GRF</div>
+    <div>
+      <div class="bt">APBS Groupe</div>
+      <div class="bs">Module Déclaration TVA</div>
+    </div>
+  </div>
+  <p class="kicker">Guide fonctionnel</p>
+  <h1>Déclaration de TVA déductible (Maroc) — le process</h1>
+  <p class="sub">Ce que le module fait, pourquoi, et selon quelles règles. Document fonctionnel de référence
+     décrivant le fonctionnement de la déclaration de TVA déductible et le relevé de déductions.</p>
+  <div class="meta">
+    <span><b>Version</b> 1 — 08/07/2026</span>
+    <span><b>Objet</b> Déclaration de TVA déductible (Maroc)</span>
+    <span><b>Nature</b> Document fonctionnel de référence</span>
+    <span><b>Déploiement</b> Multi-client</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <nav class="toc">
+    <h2>Sommaire</h2>
+    <ol>
+      <li><a href="#objectif">Objectif : fiabilité &amp; transparence</a></li>
+      <li><a href="#perimetre">Périmètre : système ≠ dépôt</a></li>
+      <li><a href="#modele">Le modèle : l'affectation</a></li>
+      <li><a href="#interrogations">Les 4 interrogations</a></li>
+      <li><a href="#statuts">Statuts de ligne &amp; transparence</a></li>
+      <li><a href="#inclusion">Règles d'inclusion par source</a></li>
+      <li><a href="#calcul">Le calcul (précision)</a></li>
+      <li><a href="#origines">Origines de la TVA</a></li>
+      <li><a href="#dgi">Dépôt DGI (Simpl-TVA)</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 -->
+  <section id="objectif">
+    <h2>1 · Objectif : fiabilité du calcul et transparence</h2>
+    <p class="lead">Deux priorités, dans cet ordre.</p>
+    <p><strong>Fiabilité du calcul</strong> — produire une déclaration dont chaque montant est exact :
+       calcul en pleine précision, arrondi maîtrisé, aucune dérive.</p>
+    <p><strong>Transparence totale</strong> — chaque montant déclaré est justifiable, et
+       <strong>aucune ligne n'est jamais écartée en silence</strong> : ce qui est déclaré, reporté ou exclu
+       est toujours visible, avec son motif.</p>
+    <div class="callout c-info">
+      <span class="tag">Principe directeur</span>
+      <p>La preuve de confiance n'est <strong>pas</strong> un total qui égale un autre total. C'est :
+         « <em>cliquez sur n'importe quelle ligne → vous voyez son règlement, son rapprochement, son affectation
+         réelle, sa conformité</em> ». La preuve porte sur <strong>l'objet métier</strong>, pas sur un agrégat.</p>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="perimetre">
+    <h2>2 · Périmètre : le système suit tout, le dépôt ne sort que le déductible</h2>
+    <p>Distinction fondamentale :</p>
+    <table>
+      <tr><th>Périmètre SYSTÈME (ce qu'on suit)</th><th>Périmètre DÉPÔT (ce qui part à la DGI)</th></tr>
+      <tr>
+        <td>Toutes les opérations : Encaissement + Décaissement + Dépense + Frais bancaire →
+            TVA <strong>déductible ou collectée</strong>. Tout est interrogé, décidé, réconcilié.</td>
+        <td>Seule la <strong>TVA déductible</strong> (relevé de déductions). Le collecté est filtré
+            <strong>uniquement au moment de l'export XML</strong>.</td>
+      </tr>
+    </table>
+    <p>Le <strong>collecté est un citoyen à part entière</strong> de la déclaration système : mêmes interrogations,
+       mêmes décisions, il compte dans le solde. Il n'est retiré qu'à l'export.</p>
+    <h3>Explicitement hors périmètre</h3>
+    <ul>
+      <li>Calcul de la <strong>TVA à payer / crédit / report</strong> (fait ailleurs ou manuellement).</li>
+      <li><strong>Retenue à la source (RAS)</strong> — traitement distinct.</li>
+      <li>Les <strong>montants</strong> sont lus depuis la GRF ; le module travaille en <strong>lecture seule</strong> — aucune écriture.</li>
+    </ul>
+  </section>
+
+  <!-- 3 -->
+  <section id="modele">
+    <h2>3 · Le modèle : l'affectation est l'unité atomique</h2>
+    <p class="lead">Ce n'est ni la facture, ni le règlement qu'on déclare — c'est <strong>l'affectation</strong>.</p>
+    <p>Une <strong>affectation</strong> est le lien <strong>règlement ↔ facture</strong>, <strong>partiel des deux
+       côtés</strong> :</p>
+    <ul>
+      <li>1 règlement peut solder <strong>1..N factures</strong> ;</li>
+      <li>1 facture peut être payée par <strong>1..N règlements</strong>.</li>
+    </ul>
+    <p>On déclare la <strong>TVA au prorata du réellement payé/affecté</strong> — jamais le total de la facture,
+       jamais le total du règlement.</p>
+    <div class="callout c-info">
+      <span class="tag">Point de vigilance</span>
+      <p>Le contrôle se fait sur le <strong>TTC réel par taux</strong> issu des Objets Métier de l'ERP, et non sur
+         le total porté par l'en-tête de la facture. C'est la garantie d'un montant exact, y compris sur les
+         factures multi-taux.</p>
+    </div>
+    <h3>Déclencheur = le paiement rapproché (régime des décaissements)</h3>
+    <p>Ce qui ouvre le droit à déduire, c'est le <strong>règlement rapproché en banque</strong>, pas la facture.
+       Conséquence : <strong>on reporte le règlement, pas la facture</strong>. Une facture réglée en plusieurs fois
+       = plusieurs affectations, chacune déclarée le mois de <em>son</em> rapprochement.</p>
+    <p class="legend">Source du rapprochement = le <strong>pointage bancaire local</strong>, issu du rapprochement
+       sur extraits — la référence fiable de « ce qui est réellement passé en banque ».</p>
+  </section>
+
+  <!-- 4 -->
+  <section id="interrogations">
+    <h2>4 · Les 4 interrogations</h2>
+    <p class="lead">Le poste de travail est organisé autour de <strong>ce que le comptable interroge réellement</strong> :
+       3 preuves en lecture seule + 1 seule surface d'action.</p>
+    <div class="grid4">
+      <div class="qcard">
+        <div class="qh"><div class="qn">1</div><h4>Rapprochement</h4></div>
+        <p class="role"><span class="pill p-info">preuve · lecture seule</span></p>
+        <p>Le règlement est-il rapproché en banque ? → <strong>éligible ce mois</strong> ou <strong>reporté</strong>.</p>
+      </div>
+      <div class="qcard">
+        <div class="qh"><div class="qn">2</div><h4>Affectation</h4></div>
+        <p class="role"><span class="pill p-info">preuve · lecture seule</span></p>
+        <p>Répartition réelle du règlement sur les factures (partielle) → <strong>montant réel, taux, nature
+           déductible/collectée, domaine</strong>.</p>
+      </div>
+      <div class="qcard">
+        <div class="qh"><div class="qn">3</div><h4>Conformité IF/ICE</h4></div>
+        <p class="role"><span class="pill p-info">preuve · lecture seule</span></p>
+        <p>Fournisseur conforme ? <span style="color:var(--ok)">vert</span> /
+           <span style="color:var(--stop)">rouge = rejet DGI</span>. À corriger en amont, pas dans la déclaration.</p>
+      </div>
+      <div class="qcard" style="border-color:var(--accent)">
+        <div class="qh"><div class="qn">4</div><h4>Factures à déclarer</h4></div>
+        <p class="role"><span class="pill p-ok">action</span></p>
+        <p>Le relevé de déductions — <strong>deux faces</strong>, décisions et clôture. La seule surface où l'on agit.</p>
+      </div>
+    </div>
+    <p style="margin-top:14px">Les 3 preuves sont en <strong>lecture seule</strong>. Elles ne servent qu'à
+       <strong>justifier</strong> : depuis n'importe quelle ligne des Factures, on remonte à ses 3 preuves
+       (<em>payé ? bien affecté ? conforme ?</em>).</p>
+    <h3>Les domaines ne sont pas des étapes</h3>
+    <p>Décaissement / Encaissement / Dépense / Frais bancaire sont des <strong>facettes / filtres transverses</strong>
+       applicables à chaque interrogation — pas des étapes d'un tunnel, pas la distinction achat-vente.</p>
+  </section>
+
+  <!-- 5 -->
+  <section id="statuts">
+    <h2>5 · Statuts de ligne &amp; règles de transparence</h2>
+    <p class="lead">La face « je ne déclare pas » est aussi importante que « je déclare » — chaque exclusion porte
+       un <strong>motif en clair</strong>.</p>
+    <h3>Face « je déclare »</h3>
+    <p>Les affectations éligibles, éclatées par facture → le relevé de déductions. Montant = TVA au prorata
+       réellement affecté. Seul le <strong>déductible</strong> sort au XML DGI.</p>
+    <h3>Face « je ne déclare pas » — trois statuts distincts</h3>
+    <table>
+      <tr><th>Statut</th><th>Nature</th><th>Signification</th></tr>
+      <tr><td><span class="pill p-warn">Reportée</span></td><td>système</td>
+          <td>Règlement pas encore rapproché → repart au mois de son rapprochement. On reporte le <em>règlement</em>.
+              <strong>Hors équilibre du mois</strong> : compteur séparé.</td></tr>
+      <tr><td><span class="pill p-stop">Écartée</span></td><td>système</td>
+          <td>Non éligible, <strong>motif affiché</strong> : pas de TVA, hors période, doublon, nature non déductible…</td></tr>
+      <tr><td><span class="pill p-info">Exclue</span></td><td>manuelle</td>
+          <td>Choix du comptable — <strong>tracé et réversible</strong>.</td></tr>
+    </table>
+    <div class="callout c-ok">
+      <span class="tag">La réconciliation boucle toujours</span>
+      <pre>Σ candidates = intégrées + exclues + reportées + écartées + proposées</pre>
+      <p>Elle est garantie en permanence et affichée comme réassurance : <strong>aucune ligne n'existe hors de
+         cette somme</strong>.</p>
+    </div>
+    <p><strong>Actions possibles</strong> (sur le règlement / l'affectation) : <em>exclure</em> ·
+       <em>réintégrer / annuler l'exclusion</em> · <em>forcer le report</em>. <strong>Geste final : clôturer</strong>,
+       verrouillé tant qu'il reste des lignes à décider ou une anomalie bloquante (le bouton affiche le reste-à-faire).</p>
+    <div class="callout c-warn">
+      <span class="tag">Reportées : deux totaux, jamais mélangés</span>
+      <p>L'équilibre du mois ne porte que sur les <strong>rapprochées</strong> (mois déclaré). Les reportées sont un
+         compteur séparé « ce qui attend le rapprochement ». Les mélanger fausserait la lecture de l'équilibre.</p>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="inclusion">
+    <h2>6 · Règles d'inclusion par source</h2>
+    <p class="lead">On déclare le mois précédent : en 07/2026 on déclare 06/2026.
+       <strong>La date de facture ne décide jamais l'inclusion</strong> (affichage seulement).</p>
+    <p><strong>Quelle date décide de la période ?</strong> Celle qui matérialise le <strong>paiement effectif</strong> —
+       car c'est le paiement, pas la facture, qui ouvre le droit à déduire :</p>
+    <ul>
+      <li><strong>Décaissement banque</strong> (chèque / traite / virement) → la <strong>date de rapprochement
+          bancaire</strong> (le moment où l'opération est pointée sur l'extrait), <em>pas</em> la date d'émission
+          du règlement ni la date de facture.</li>
+      <li><strong>Décaissement espèce</strong> → la <strong>date de règlement</strong> (pas de rapprochement bancaire).</li>
+      <li><strong>Dépense / Frais bancaire</strong> → la <strong>date de l'opération</strong> elle-même.</li>
+    </ul>
+    <table>
+      <tr><th>Source</th><th>Critère de date</th><th>Conditions</th></tr>
+      <tr><td>Décaissement fournisseur<br>(chèque / traite / virement)</td>
+          <td><strong>date de rapprochement</strong> dans le mois</td>
+          <td>rapproché + affecté à une facture, affectation non déclarée</td></tr>
+      <tr><td>Décaissement espèce</td>
+          <td><strong>date de règlement</strong> dans le mois</td>
+          <td>affecté à une facture, affectation non déclarée</td></tr>
+      <tr><td>Dépense</td><td>date de la dépense</td><td>uniquement <strong>avec TVA</strong></td></tr>
+      <tr><td>Frais bancaire</td><td>date du frais</td><td>uniquement <strong>avec TVA</strong></td></tr>
+    </table>
+    <p>Critère réel du « reste à déclarer » = <strong>rapproché ≤ fin de période</strong> ET
+       <strong>affectation non encore déclarée</strong>.</p>
+    <div class="callout c-info">
+      <span class="tag">Exemple concret</span>
+      <p>Facture fournisseur datée du <strong>12/03</strong>, réglée par chèque émis le <strong>28/05</strong>,
+         chèque <strong>rapproché en banque le 03/06</strong>.<br>
+         → l'affectation se déclare sur la <strong>période 06/2026</strong> (déposée en juillet). Ni la date de facture
+         (mars) ni la date d'émission du chèque (mai) n'entrent en compte : <strong>seule la date de rapprochement
+         décide</strong>.</p>
+      <p style="margin-top:8px"><strong>Paiement en plusieurs fois</strong> : une facture réglée par deux chèques
+         rapprochés — l'un en juin, l'autre en juillet — donne <strong>deux affectations</strong>, déclarées
+         respectivement sur juin et juillet, chacune au <strong>prorata de son montant</strong>. Le reste attend
+         son rapprochement (statut <em>Reportée</em>).</p>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="calcul">
+    <h2>7 · Le calcul (garantie de précision)</h2>
+    <p>Pour chaque affectation (paiement partiel ou total d'une facture) :</p>
+<pre>proration_paiement = montant_affecté / TTC_facture      (pleine précision, AUCUN arrondi intermédiaire)
+
+Pour chaque taux i de la facture (HT_i, TVA_i issus de l'ERP) :
+    HT_déclaré_i  = ROUND(HT_i  × proration_paiement, n, AwayFromZero)
+    TVA_déclaré_i = ROUND(TVA_i × proration_paiement, n, AwayFromZero)
+    TTC_déclaré_i = HT_déclaré_i + TVA_déclaré_i</pre>
+    <ul>
+      <li><code>n</code> = nombre de décimales de la devise société (lu dynamiquement, jamais figé).</li>
+      <li><strong>Arrondi arithmétique</strong> (<code>AwayFromZero</code>).</li>
+      <li><strong>Paiement total</strong> (proration = 1) : reprise des valeurs de l'ERP <strong>telles quelles</strong>
+          → zéro dérive.</li>
+      <li>Jamais de ratio arrondi puis divisé — l'arrondi se fait uniquement sur les montants finaux.</li>
+      <li><strong>Prorata d'assujettissement</strong> : porté comme <em>champ déclaré</em>,
+          <strong>pas multiplié</strong> dans le montant. La TVA déclarée reste pleine ; le prorata s'applique en aval.</li>
+    </ul>
+    <p class="legend">Le détail TVA d'une facture est <strong>lu une seule fois</strong> puis mis en cache pour
+       toutes les affectations qui la pointent (performance et cohérence).</p>
+  </section>
+
+  <!-- 8 -->
+  <section id="origines">
+    <h2>8 · Origines de la TVA</h2>
+    <p class="lead">Toutes les échéances ne se lisent pas de la même façon ; le module route chaque écriture vers
+       la bonne source de détail TVA.</p>
+    <table>
+      <tr><th>Origine</th><th>Lecture du détail TVA</th></tr>
+      <tr><td><strong>ERP (Sage)</strong></td>
+          <td>TVA via les <strong>Objets Métier</strong> de l'ERP (exact, sans recalcul).</td></tr>
+      <tr><td><strong>Saisie GRF</strong></td>
+          <td>Détail reconstruit à partir des échéances saisies sur la GRF, taux résolu depuis la table des taxes.</td></tr>
+      <tr><td><strong>Solde initial</strong></td>
+          <td>Traité par une <strong>alerte explicite</strong> — jamais de ligne silencieuse.</td></tr>
+    </table>
+    <div class="callout c-info">
+      <span class="tag">Pourquoi ça compte</span>
+      <p>Router par origine garantit que chaque écriture est lue à sa source exacte — condition d'un montant
+         fiable comme d'un traitement rapide.</p>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="dgi">
+    <h2>9 · Dépôt DGI (relevé de déductions, Simpl-TVA)</h2>
+    <p>Le module génère lui-même le fichier XML de dépôt, au format du relevé de déductions. Deux artefacts sont
+       consultables <strong>avant dépôt</strong> : un <strong>écran de contrôle</strong> et un <strong>export
+       Excel</strong> (feuille Détail + feuille Récap).</p>
+    <h3>Champs par ligne</h3>
+    <p><code>num · des · mht (HT) · tva · ttc · refF (IF / nom / ICE) · tx · prorata · mp (mode) · dpai · dfac</code></p>
+    <h3>Modes de règlement</h3>
+    <p>1 = espèce · 2 = chèque · 3 = opération bancaire · 4 = virement · 5 = traite · 7 = autre.</p>
+    <h3>En-tête</h3>
+    <p><code>identifiantFiscal · annee · periode</code> (mois 1-12 / trimestre 1-4) · <code>regime</code>
+       (1 mensuel / 2 trimestriel). Séparateur décimal <code>.</code> ; fichier zippé ;
+       nom <code>{Numero}-{Exercice}-{M|T}{période}</code>.</p>
+    <div class="callout c-stop">
+      <span class="tag">Validations Maroc — bloquantes</span>
+      <p><strong>IF = 8 caractères</strong> · <strong>ICE = 15 caractères STRICT</strong> · <strong>sans espaces</strong>.
+         Un tiers non conforme <strong>bloque le dépôt</strong> — la conformité doit être corrigée en amont.</p>
+    </div>
+    <h3>Autres contrôles avant dépôt</h3>
+    <ul>
+      <li>tiers sans ICE ou sans identifiant fiscal ;</li>
+      <li>facture introuvable côté ERP ;</li>
+      <li>règlement rapproché <strong>non affecté</strong> (à traiter ou ignorer) ;</li>
+      <li>ligne à assiette ou montant = 0.</li>
+    </ul>
+  </section>
+
+</div>
+
+<footer>
+  <div class="copy">
+    <div class="mark">GRF</div>
+    <div>
+      <div><b>GRF — Module Déclaration TVA</b> · Guide fonctionnel</div>
+      <div>© 2026 APBS Groupe. Tous droits réservés.</div>
+    </div>
+  </div>
+  <p class="noprint">Document confidentiel — usage réservé au client destinataire. Reproduction et diffusion
+     soumises à l'accord d'APBS Groupe.</p>
+</footer>
+
+</body>
+</html>

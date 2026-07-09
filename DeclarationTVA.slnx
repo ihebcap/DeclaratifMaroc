@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/SageTaxReader/">
+    <Project Path="SageTaxReader/SageTaxReader.Contracts/SageTaxReader.Contracts.csproj" />
+  </Folder>
+  <Project Path="Declaration.API/Declaration.API.csproj" />
+  <Project Path="Declaration.Application/Declaration.Application.csproj" />
+  <Project Path="Declaration.Controle/Declaration.Controle.csproj" />
+  <Project Path="Declaration.Controle.Tests/Declaration.Controle.Tests.csproj" />
+  <Project Path="Declaration.Core/Declaration.Core.csproj" />
+  <Project Path="Declaration.Core.Tests/Declaration.Core.Tests.csproj" />
+  <Project Path="Declaration.Orchestration.Tests/Declaration.Orchestration.Tests.csproj" />
+  <Project Path="Declaration.Selection.Tests/Declaration.Selection.Tests.csproj" />
+  <Project Path="Declaration.Export.Excel.Tests/Declaration.Export.Excel.Tests.csproj" />
+  <Project Path="Declaration.Export.Xml.Tests/Declaration.Export.Xml.Tests.csproj" />
+  <Project Path="Declaration.Export.Excel/Declaration.Export.Excel.csproj" />
+  <Project Path="Declaration.Export.Xml/Declaration.Export.Xml.csproj" />
+  <Project Path="Declaration.Infrastructure/Declaration.Infrastructure.csproj" />
+  <Project Path="Declaration.Orchestration/Declaration.Orchestration.csproj" />
+  <Project Path="Declaration.Selection/Declaration.Selection.csproj" />
+</Solution>
