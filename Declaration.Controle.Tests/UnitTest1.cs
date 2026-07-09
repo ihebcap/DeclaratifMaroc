@@ -1,0 +1,10 @@
+﻿namespace Declaration.Controle.Tests;
+
+public class UnitTest1
+{
+    [Fact]
+    public void Test1()
+    {
+
+    }
+}
