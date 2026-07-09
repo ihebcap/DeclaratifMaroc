@@ -143,6 +143,28 @@ public class DeclarationsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Réouvre une déclaration clôturée : remet le statut à EnCours et efface
+    /// le tampon DT_Id sur les affectations (TASK-028).
+    /// </summary>
+    [HttpPost("{id}/reouverture")]
+    public async Task<IActionResult> Rouvrir(Guid id)
+    {
+        try
+        {
+            await _workflowService.ReouvriDeclarationAsync(id);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+    }
+
     // ─── Endpoints délégués à TASK-010/011 ────────────────────────────────────
     // Ces endpoints sont présents dans le contrat d'API mais leur implémentation
     // (Export.Xml / Export.Excel / Rapport anomalies) est délivrée par TASK-010/011.

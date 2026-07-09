@@ -255,4 +255,63 @@ public class DeclarationRepository : IDeclarationRepository
         var sql = $"UPDATE LigneCandidate SET Etat = @Etat WHERE Id IN ({string.Join(",", ids.Select(id => $"'{id}'"))})";
         await connection.ExecuteAsync(sql, new { Etat = (int)nouvelEtat });
     }
+
+    // ─── Tampon DT_Id (TASK-028) ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Pose le tampon DT_Id sur RT_AFFECTATION pour tous les mouvements dont le MV_Numero
+    /// figure dans <paramref name="numerosRapprochement"/>.
+    /// Set-based : un seul UPDATE avec IN (...) par batch de 1 000 numéros maximum.
+    /// Opère sur la base GRF (GrfConnection).
+    /// </summary>
+    public async Task TamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement)
+    {
+        var numeros = numerosRapprochement.Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
+        if (numeros.Count == 0) return;
+
+        using var connection = _connectionFactory.CreateGrfConnection();
+
+        // Batch de 1 000 numéros pour ne pas dépasser la limite SQL Server (2 100 paramètres).
+        const int batchSize = 1_000;
+        for (int i = 0; i < numeros.Count; i += batchSize)
+        {
+            var batch = numeros.Skip(i).Take(batchSize).ToList();
+
+            // Paramètres dynamiques : @p0, @p1, …
+            var paramNames = batch.Select((_, idx) => $"@p{idx}").ToList();
+            var inClause   = string.Join(", ", paramNames);
+
+            var sql = $@"
+                UPDATE dbo.RT_AFFECTATION
+                SET    DT_Id = @dtId
+                WHERE  DT_Id IS NULL
+                  AND  MV_Id IN (
+                       SELECT MV_Id FROM dbo.RT_MOUVEMENT
+                       WHERE  MV_Numero IN ({inClause})
+                  )";
+
+            var dynamicParams = new Dapper.DynamicParameters();
+            dynamicParams.Add("dtId", dtId);
+            for (int j = 0; j < batch.Count; j++)
+                dynamicParams.Add($"p{j}", batch[j]);
+
+            await connection.ExecuteAsync(sql, dynamicParams);
+        }
+    }
+
+    /// <summary>
+    /// Efface le tampon DT_Id (→ NULL) sur toutes les affectations portant ce <paramref name="dtId"/>.
+    /// Permet la réouverture : le trigger autorise explicitement la transition valeur → NULL.
+    /// Opère sur la base GRF (GrfConnection).
+    /// </summary>
+    public async Task DetamponnerAffectationsAsync(int dtId)
+    {
+        using var connection = _connectionFactory.CreateGrfConnection();
+        const string sql = @"
+            UPDATE dbo.RT_AFFECTATION
+            SET    DT_Id = NULL
+            WHERE  DT_Id = @dtId";
+        await connection.ExecuteAsync(sql, new { dtId });
+    }
 }
+

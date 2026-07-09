@@ -1,0 +1,13 @@
+{
+  "_comment": "Fichier de connexion UNIQUE et PARTAGE par toutes les apps/API sous GRF. Editer uniquement ce fichier. Il est copie a cote de chaque exe au build.",
+
+  "ConnectionStrings": {
+    "GrfConnection": "Server=.\\sql2022;Database=GR_EMA_DISTRIBUTION;User Id=sa;Password=1234;TrustServerCertificate=True;",
+    "SageConnection": "Server=.\\sql2022;Database=NEW_EMA DISTRIBUTION;User Id=sa;Password=1234;TrustServerCertificate=True;",
+    "PersistenceConnection": "Server=.\\sql2022;Database=GR_EMA_DISTRIBUTION;User Id=sa;Password=1234;TrustServerCertificate=True;"
+  },
+
+  "WorkerConfig": {
+    "WorkerExePath": "SageTaxReader.Console.exe"
+  }
+}

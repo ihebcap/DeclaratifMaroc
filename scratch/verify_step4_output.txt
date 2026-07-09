@@ -1,0 +1,29 @@
+Le contexte de la base de donn‚es a ‚t‚ modifi‚ en 'GR_EMA_DISTRIBUTION'.
+
+(75 lignes affect‚es)
+
+(75 lignes affect‚es)
+Total Local (Nouveau) :
+           
+-----------
+         75
+
+(1 lignes affect‚es)
+Total Sage (Ancien) :
+           
+-----------
+         75
+
+(1 lignes affect‚es)
+---------------------------------------------------
+Presents en Local, absents de Sage (=> ajoutes dans le nouveau) :
+MV_Id       MV_Numero                      MV_PointDate            MV_Montant                
+----------- ------------------------------ ----------------------- --------------------------
+
+(0 lignes affect‚es)
+---------------------------------------------------
+Presents dans Sage, absents de Local (=> supprimes dans le nouveau) :
+MV_Id       MV_Numero                      EC_DateRappro           MV_Montant                
+----------- ------------------------------ ----------------------- --------------------------
+
+(0 lignes affect‚es)

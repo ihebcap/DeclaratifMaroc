@@ -287,5 +287,43 @@ public class DeclarationWorkflowService
         }
 
         await _repository.UpdateStatutAsync(declarationId, StatutDeclaration.Cloturee);
+
+        // ── TASK-028 : pose le tampon DT_Id sur les affectations intégrées ──────────────
+        // On extrait le numéro entier de déclaration legacy depuis le champ Numero
+        // (ex. "TVA001-2025-06") ; en l'absence d'un vrai entier légacy on dérive
+        // un identifiant stable à partir du hashcode de l'Id guid (toujours positif).
+        var dtId = Math.Abs(declaration.Id.GetHashCode());
+
+        // Récupère les numéros de rapprochement des lignes intégrées (tous domaines)
+        var lignesIntegrees = await _repository.GetLignesAsync(
+            declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var numerosRapprochement = lignesIntegrees
+            .Where(l => l.Etat == EtatLigne.Integree && !string.IsNullOrWhiteSpace(l.NumeroRapprochement))
+            .Select(l => l.NumeroRapprochement)
+            .Distinct()
+            .ToList();
+
+        if (numerosRapprochement.Any())
+            await _repository.TamponnerAffectationsAsync(dtId, numerosRapprochement);
+    }
+
+    /// <summary>
+    /// Réouvre une déclaration clôturée : remet le statut à EnCours et efface
+    /// le tampon DT_Id sur toutes les affectations associées (transition valeur → NULL
+    /// autorisée par le trigger). L'affectation redevient sélectionnable et modifiable.
+    /// </summary>
+    public async Task ReouvriDeclarationAsync(Guid declarationId)
+    {
+        var declaration = await _repository.GetByIdAsync(declarationId);
+        if (declaration == null) throw new ArgumentException("Déclaration introuvable");
+
+        if (declaration.Statut != StatutDeclaration.Cloturee)
+            throw new InvalidOperationException("Seule une déclaration Clôturée peut être rouverte.");
+
+        // Détamponner en premier : le trigger autorise DT_Id valeur → NULL
+        var dtId = Math.Abs(declaration.Id.GetHashCode());
+        await _repository.DetamponnerAffectationsAsync(dtId);
+
+        await _repository.UpdateStatutAsync(declarationId, StatutDeclaration.EnCours);
     }
 }

@@ -1,0 +1,1 @@
+using System; using UglyToad.PdfPig; var pdf = PdfDocument.Open(@"D:\_vibe\objetmetiers\sage 100c objets métiers.pdf"); foreach (var page in pdf.GetPages()) { var text = page.Text; if (text.Contains("IBODocumentAchat3") || text.Contains("IDocValorisation") || text.Contains("FactoryDocumentAchat")) Console.WriteLine($"sage 100c objets métiers.pdf p.{page.Number}: found match"); }

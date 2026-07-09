@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <AssemblyName>Tresorerie.UIDeclarationTva</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <UseWindowsForms>True</UseWindowsForms>
+    <TargetFramework>net461</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>15.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Reference Include="Tresorerie.Core">
+      <HintPath>..\..\..\GRFWinform\Tresorerie.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Utils.v19.2">
+      <HintPath>..\..\..\GRFWinform\DevExpress.Utils.v19.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraLayout.v19.2">
+      <HintPath>..\..\..\GRFWinform\DevExpress.XtraLayout.v19.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraEditors.v19.2">
+      <HintPath>..\..\..\GRFWinform\DevExpress.XtraEditors.v19.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraGrid.v19.2">
+      <HintPath>..\..\..\GRFWinform\DevExpress.XtraGrid.v19.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraBars.v19.2">
+      <HintPath>..\..\..\GRFWinform\DevExpress.XtraBars.v19.2.dll</HintPath>
+    </Reference>
+    <Reference Include="Tresorerie.UICommun">
+      <HintPath>..\..\..\GRFWinform\Tresorerie.UICommun.dll</HintPath>
+    </Reference>
+    <Reference Include="Tresorerie.Win.Commun">
+      <HintPath>..\..\..\GRFWinform\Tresorerie.Win.Commun.dll</HintPath>
+    </Reference>
+    <Reference Include="Tresorerie.Infrastructure">
+      <HintPath>..\..\..\GRFWinform\Tresorerie.Infrastructure.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Data.v19.2">
+      <HintPath>..\..\..\GRFWinform\DevExpress.Data.v19.2.dll</HintPath>
+    </Reference>
+    <Reference Include="Tresorerie.Erp.ICore">
+      <HintPath>..\..\..\GRFWinform\Tresorerie.Erp.ICore.dll</HintPath>
+    </Reference>
+    <Reference Include="Tresorerie.Authorization.Core">
+      <HintPath>..\..\..\GRFWinform\Tresorerie.Authorization.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Core" />
+    <Reference Include="SageBO.Core">
+      <HintPath>..\..\..\GRFWinform\SageBO.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System.IO.Compression">
+      <HintPath>..\..\..\GRFWinform\System.IO.Compression.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog">
+      <HintPath>..\..\..\GRFWinform\Serilog.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>
