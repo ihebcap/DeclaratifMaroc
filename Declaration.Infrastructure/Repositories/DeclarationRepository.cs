@@ -300,18 +300,45 @@ public class DeclarationRepository : IDeclarationRepository
     }
 
     /// <summary>
-    /// Efface le tampon DT_Id (→ NULL) sur toutes les affectations portant ce <paramref name="dtId"/>.
-    /// Permet la réouverture : le trigger autorise explicitement la transition valeur → NULL.
+    /// Efface le tampon DT_Id (→ NULL) sur les affectations portant ce <paramref name="dtId"/>
+    /// ET rattachées aux mouvements <paramref name="numerosRapprochement"/> de la déclaration.
+    /// Le bornage par MV_Numero (miroir de <see cref="TamponnerAffectationsAsync"/>) garantit
+    /// qu'une éventuelle collision de dtId dérivé ne libère jamais le verrou d'une autre
+    /// déclaration. Le trigger autorise explicitement la transition valeur → NULL.
     /// Opère sur la base GRF (GrfConnection).
     /// </summary>
-    public async Task DetamponnerAffectationsAsync(int dtId)
+    public async Task DetamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement)
     {
+        var numeros = numerosRapprochement?.Distinct().ToList() ?? new List<string>();
+        if (numeros.Count == 0) return;
+
         using var connection = _connectionFactory.CreateGrfConnection();
-        const string sql = @"
-            UPDATE dbo.RT_AFFECTATION
-            SET    DT_Id = NULL
-            WHERE  DT_Id = @dtId";
-        await connection.ExecuteAsync(sql, new { dtId });
+
+        // Batch de 1 000 numéros (limite SQL Server 2 100 paramètres), miroir de la pose.
+        const int batchSize = 1_000;
+        for (int i = 0; i < numeros.Count; i += batchSize)
+        {
+            var batch = numeros.Skip(i).Take(batchSize).ToList();
+
+            var paramNames = batch.Select((_, idx) => $"@p{idx}").ToList();
+            var inClause   = string.Join(", ", paramNames);
+
+            var sql = $@"
+                UPDATE dbo.RT_AFFECTATION
+                SET    DT_Id = NULL
+                WHERE  DT_Id = @dtId
+                  AND  MV_Id IN (
+                       SELECT MV_Id FROM dbo.RT_MOUVEMENT
+                       WHERE  MV_Numero IN ({inClause})
+                  )";
+
+            var dynamicParams = new Dapper.DynamicParameters();
+            dynamicParams.Add("dtId", dtId);
+            for (int j = 0; j < batch.Count; j++)
+                dynamicParams.Add($"p{j}", batch[j]);
+
+            await connection.ExecuteAsync(sql, dynamicParams);
+        }
     }
 }
 

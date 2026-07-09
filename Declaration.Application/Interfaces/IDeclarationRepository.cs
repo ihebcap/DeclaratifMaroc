@@ -31,8 +31,11 @@ public interface IDeclarationRepository
     Task TamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement);
 
     /// <summary>
-    /// Efface le tampon DT_Id (→ NULL) sur toutes les affectations liées à ce numéro de déclaration.
-    /// Permet la réouverture : l'affectation redevient sélectionnable et modifiable.
+    /// Efface le tampon DT_Id (→ NULL) sur les affectations portant ce <paramref name="dtId"/>
+    /// ET rattachées aux mouvements de la déclaration (numéros de rapprochement fournis).
+    /// Le bornage aux mouvements de la déclaration empêche qu'une collision de dtId dérivé
+    /// libère le verrou d'une autre déclaration. Permet la réouverture : l'affectation
+    /// redevient sélectionnable et modifiable.
     /// </summary>
-    Task DetamponnerAffectationsAsync(int dtId);
+    Task DetamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement);
 }

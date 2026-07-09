@@ -289,19 +289,12 @@ public class DeclarationWorkflowService
         await _repository.UpdateStatutAsync(declarationId, StatutDeclaration.Cloturee);
 
         // ── TASK-028 : pose le tampon DT_Id sur les affectations intégrées ──────────────
-        // On extrait le numéro entier de déclaration legacy depuis le champ Numero
-        // (ex. "TVA001-2025-06") ; en l'absence d'un vrai entier légacy on dérive
-        // un identifiant stable à partir du hashcode de l'Id guid (toujours positif).
-        var dtId = Math.Abs(declaration.Id.GetHashCode());
+        // On dérive un identifiant stable et toujours positif à partir du hashcode
+        // de l'Id guid (voir DeriveDtId : masque bit-à-bit, pas de Math.Abs sujet à
+        // OverflowException sur int.MinValue).
+        var dtId = DeriveDtId(declaration.Id);
 
-        // Récupère les numéros de rapprochement des lignes intégrées (tous domaines)
-        var lignesIntegrees = await _repository.GetLignesAsync(
-            declarationId, "Decaissement", 1, int.MaxValue, null, null);
-        var numerosRapprochement = lignesIntegrees
-            .Where(l => l.Etat == EtatLigne.Integree && !string.IsNullOrWhiteSpace(l.NumeroRapprochement))
-            .Select(l => l.NumeroRapprochement)
-            .Distinct()
-            .ToList();
+        var numerosRapprochement = await GetNumerosRapprochementIntegresAsync(declarationId);
 
         if (numerosRapprochement.Any())
             await _repository.TamponnerAffectationsAsync(dtId, numerosRapprochement);
@@ -320,10 +313,41 @@ public class DeclarationWorkflowService
         if (declaration.Statut != StatutDeclaration.Cloturee)
             throw new InvalidOperationException("Seule une déclaration Clôturée peut être rouverte.");
 
-        // Détamponner en premier : le trigger autorise DT_Id valeur → NULL
-        var dtId = Math.Abs(declaration.Id.GetHashCode());
-        await _repository.DetamponnerAffectationsAsync(dtId);
+        // Détamponner en premier : le trigger autorise DT_Id valeur → NULL.
+        // ── TASK-028 (correctif intégrité) : on borne le dé-tamponnage aux SEULS
+        // mouvements de CETTE déclaration (mêmes numéros de rapprochement que la pose).
+        // Sans cela, deux déclarations dont le dtId dérivé collisionne partageraient la
+        // clause « WHERE DT_Id = @dtId » et rouvrir l'une libérerait silencieusement le
+        // verrou de l'autre — précisément le trou d'intégrité que TASK-028 doit fermer.
+        var dtId = DeriveDtId(declaration.Id);
+        var numerosRapprochement = await GetNumerosRapprochementIntegresAsync(declarationId);
+        if (numerosRapprochement.Any())
+            await _repository.DetamponnerAffectationsAsync(dtId, numerosRapprochement);
 
         await _repository.UpdateStatutAsync(declarationId, StatutDeclaration.EnCours);
+    }
+
+    /// <summary>
+    /// Dérive un identifiant de déclaration (DT_Id) stable et toujours positif à partir
+    /// de l'Id guid. Utilise un masque bit-à-bit (et non Math.Abs, qui lève
+    /// OverflowException sur int.MinValue). Reste un dérivé de hashcode (collisions
+    /// théoriquement possibles) : c'est pourquoi la pose ET le retrait du tampon sont
+    /// toujours bornés aux numéros de rapprochement de la déclaration concernée.
+    /// </summary>
+    private static int DeriveDtId(Guid id) => id.GetHashCode() & int.MaxValue;
+
+    /// <summary>
+    /// Numéros de rapprochement distincts des lignes intégrées de la déclaration
+    /// (socle du tamponnage/dé-tamponnage RT_AFFECTATION).
+    /// </summary>
+    private async Task<List<string>> GetNumerosRapprochementIntegresAsync(Guid declarationId)
+    {
+        var lignes = await _repository.GetLignesAsync(
+            declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        return lignes
+            .Where(l => l.Etat == EtatLigne.Integree && !string.IsNullOrWhiteSpace(l.NumeroRapprochement))
+            .Select(l => l.NumeroRapprochement)
+            .Distinct()
+            .ToList();
     }
 }

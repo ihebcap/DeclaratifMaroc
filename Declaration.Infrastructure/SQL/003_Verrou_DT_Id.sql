@@ -3,6 +3,14 @@
 -- Cible : base GRF (GR_EMA_DISTRIBUTION) — SQL Server T-SQL
 -- À exécuter UNE FOIS par l'administrateur de base.
 -- =====================================================================
+-- Options SET : on force QUOTED_IDENTIFIER/ANSI_NULLS ON pour que la création
+-- d'objets réussisse quel que soit le client (ex. sqlcmd, dont le défaut est OFF).
+-- NB : l'index créé plus bas est volontairement NON filtré (voir §0) afin de ne
+-- PAS imposer QUOTED_IDENTIFIER ON aux writers legacy GRFN/Sage de RT_AFFECTATION.
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
+GO
+-- =====================================================================
 -- Hypothèses confirmées sur GR_EMA_DISTRIBUTION :
 --   RT_AFFECTATION.DT_Id   INT NULL (FK → table déclaration legacy, peut rester orpheline)
 --   RT_MOUVEMENT.MV_Point  INT (1 = pointé, GrfEnums.Point_Oui = 1)
@@ -11,6 +19,12 @@
 
 -- ─────────────────────────────────────────────────────────────────────
 -- 0. Index utile pour les triggers RT_MOUVEMENT (EXISTS par MV_Id)
+--    IMPORTANT : index NON filtré volontairement. Un index filtré
+--    (WHERE DT_Id IS NOT NULL) impose SET QUOTED_IDENTIFIER ON à TOUT
+--    writer de RT_AFFECTATION (msg 1934) — or GRFN/Sage legacy peuvent
+--    écrire avec QUOTED_IDENTIFIER OFF, ce qui casserait leurs flux
+--    légitimes. Un index ordinaire (MV_Id, DT_Id) sert le seek du trigger
+--    sans imposer d'option de session aux applis existantes.
 -- ─────────────────────────────────────────────────────────────────────
 IF NOT EXISTS (
     SELECT 1 FROM sys.indexes
@@ -19,8 +33,7 @@ IF NOT EXISTS (
 )
 BEGIN
     CREATE INDEX IX_RT_AFFECTATION_MV_Id_DT_Id
-        ON dbo.RT_AFFECTATION (MV_Id, DT_Id)
-        WHERE DT_Id IS NOT NULL;
+        ON dbo.RT_AFFECTATION (MV_Id, DT_Id);
 END;
 GO
 
@@ -61,7 +74,10 @@ BEGIN
 
     -- ── 1b. Bloquer UPDATE financier/structurant si DT_Id NOT NULL ─────
     -- On considère un UPDATE « financier » si l'une des colonnes suivantes change :
-    --   AF_Montant, MV_Id, EC_Id, AF_Taux (si elle existe), AF_Date
+    --   AF_Montant, MV_Id, EC_Id, AF_Date
+    -- NB : la colonne AF_Taux n'existe PAS sur RT_AFFECTATION (vérifié sur
+    -- GR_EMA_DISTRIBUTION) — le taux vit sur l'échéance/facture, pas l'affectation ;
+    -- rien à protéger ici de ce côté.
     -- On interdit cela seulement si la ligne ÉTAIT déjà déclarée (DT_Id NOT NULL dans deleted)
     -- ET que la transition n'est PAS un simple dé-tamponnage (DT_Id : val → NULL).
     IF EXISTS (
