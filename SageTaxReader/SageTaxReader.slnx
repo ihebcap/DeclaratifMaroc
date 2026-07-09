@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="SageTaxReader.Console/SageTaxReader.Console.csproj" />
+  <Project Path="SageTaxReader.Core/SageTaxReader.Core.csproj" />
+</Solution>

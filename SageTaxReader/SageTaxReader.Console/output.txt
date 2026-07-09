@@ -1,0 +1,119 @@
+[ECHEC] Mdp '' : Base indisponible : Le mot de passe est incorrectˇ!
+[ECHEC] Mdp 'GocomXYZ' : Base indisponible : Le mot de passe est incorrectˇ!
+[ECHEC] Mdp 'admin' : Base indisponible : Le mot de passe est incorrectˇ!
+[ECHEC] Mdp 'sage' : Base indisponible : Le mot de passe est incorrectˇ!
+[ECHEC] Mdp '1234' : Base indisponible : Le mot de passe est incorrectˇ!
+[ECHEC] Mdp 'distri' : Base indisponible : Le mot de passe est incorrectˇ!
+[ECHEC] Mdp 'demo' : Base indisponible : Le mot de passe est incorrectˇ!
+[ECHEC] Mdp 'administrateur' : Base indisponible : Le mot de passe est incorrectˇ!
+[ECHEC] Mdp 'sage100' : Base indisponible : Le mot de passe est incorrectˇ!
+[ECHEC] Mdp 'bijou' : Base indisponible : Le mot de passe est incorrectˇ!
+VÇrification de la disponibilitÇ de la base...
+--------------------------------------------------
+DO_Piece: 25FA01371 | Sens: Vente
+--------------------------------------------------
+Taxe: FODEC (TaxeTypeTPHT) | Taux: 1% | BaseHT: 67,00 | MontantTVA: 0,67 | TTC: 67,67
+Taxe: 3 (TaxeTypeTVAEncaiss) | Taux: 14% | BaseHT: 460,76 | MontantTVA: 64,51 | TTC: 525,27
+Taxe: 1 (TaxeTypeTVAEncaiss) | Taux: 20% | BaseHT: 25217,59 | MontantTVA: 5043,52 | TTC: 30261,11
+Taxe: TF (TaxeTypeTPTTC) | Taux: 0,25% | BaseHT: 168,05 | MontantTVA: 0,42 | TTC: 168,47
+--------------------------------------------------
+Totaux OM  -> HT: 25937,05 | TVA: 5109,12 | TTC: 30796,70
+Contrìle   -> Sum(BaseHT): 25913,40 | Sum(TVA): 5109,12
+[ATTENTION] êcart de -249,47 entre HT+TVA et TTC document.
+JSON Dump:
+{
+  "NumeroPiece": "25FA01371",
+  "Sens": "Vente",
+  "TotalHT": 25937.049999999999,
+  "TotalTva": 5109.1199999999999,
+  "TotalTtc": 30796.700000000001,
+  "LignesTaxe": [
+    {
+      "Taux": 1,
+      "BaseHT": 67,
+      "MontantTva": 0.67000000000000004,
+      "TTC": 67.670000000000002,
+      "Code": "FODEC",
+      "Type": "TaxeTypeTPHT"
+    },
+    {
+      "Taux": 14,
+      "BaseHT": 460.75999999999999,
+      "MontantTva": 64.510000000000005,
+      "TTC": 525.26999999999998,
+      "Code": "3",
+      "Type": "TaxeTypeTVAEncaiss"
+    },
+    {
+      "Taux": 20,
+      "BaseHT": 25217.59,
+      "MontantTva": 5043.5200000000004,
+      "TTC": 30261.110000000001,
+      "Code": "1",
+      "Type": "TaxeTypeTVAEncaiss"
+    },
+    {
+      "Taux": 0.25,
+      "BaseHT": 168.05000000000001,
+      "MontantTva": 0.41999999999999998,
+      "TTC": 168.47,
+      "Code": "TF",
+      "Type": "TaxeTypeTPTTC"
+    }
+  ]
+}
+
+--------------------------------------------------
+DO_Piece: G0110 | Sens: Achat
+--------------------------------------------------
+Taxe: 2 (TaxeTypeTVAEncaiss) | Taux: 20% | BaseHT: 53,53 | MontantTVA: 10,71 | TTC: 64,24
+Taxe: 02 (TaxeTypeTVAEncaiss) | Taux: 10% | BaseHT: 12,66 | MontantTVA: 1,27 | TTC: 13,93
+Taxe: 4 (TaxeTypeTVADebit) | Taux: 7% | BaseHT: 5,85 | MontantTVA: 0,41 | TTC: 6,26
+Taxe: TTN (TaxeTypeTPTTC) | Taux: 0% | BaseHT: 0,00 | MontantTVA: 1,00 | TTC: 1,00
+--------------------------------------------------
+Totaux OM  -> HT: 54,07 | TVA: 13,39 | TTC: 616,00
+Contrìle   -> Sum(BaseHT): 72,04 | Sum(TVA): 13,39
+[ATTENTION] êcart de 548,54 entre HT+TVA et TTC document.
+JSON Dump:
+{
+  "NumeroPiece": "G0110",
+  "Sens": "Achat",
+  "TotalHT": 54.07,
+  "TotalTva": 13.390000000000001,
+  "TotalTtc": 616,
+  "LignesTaxe": [
+    {
+      "Taux": 20,
+      "BaseHT": 53.530000000000001,
+      "MontantTva": 10.710000000000001,
+      "TTC": 64.239999999999995,
+      "Code": "2",
+      "Type": "TaxeTypeTVAEncaiss"
+    },
+    {
+      "Taux": 10,
+      "BaseHT": 12.66,
+      "MontantTva": 1.27,
+      "TTC": 13.93,
+      "Code": "02",
+      "Type": "TaxeTypeTVAEncaiss"
+    },
+    {
+      "Taux": 7,
+      "BaseHT": 5.8499999999999996,
+      "MontantTva": 0.40999999999999998,
+      "TTC": 6.2599999999999998,
+      "Code": "4",
+      "Type": "TaxeTypeTVADebit"
+    },
+    {
+      "Taux": 0,
+      "BaseHT": 0,
+      "MontantTva": 1,
+      "TTC": 1,
+      "Code": "TTN",
+      "Type": "TaxeTypeTPTTC"
+    }
+  ]
+}
+
