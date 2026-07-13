@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ExcelFilter } from './ExcelFilter';
+import { ColumnSelector } from './ColumnSelector';
+import { useColumnPrefs } from './useColumnPrefs';
 import { formatMoney } from './utils';
 import type { DeclarationModele, LigneDeclarationEnrichie } from './mockData';
 import * as XLSX from 'xlsx';
@@ -12,11 +14,11 @@ export function ControlGrid({ data }: { data: DeclarationModele }) {
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
 
   const columns: { key: keyof LigneDeclarationEnrichie, label: string, filterType: 'list' | 'text' | 'number' | 'date' }[] = [
-    { key: 'factureNumero', label: 'N° Facture', filterType: 'text' },
-    { key: 'designation', label: 'Désignation', filterType: 'text' },
-    { key: 'tiers', label: 'Tiers', filterType: 'text' },
-    { key: 'identifiantFiscal', label: 'IF', filterType: 'text' },
-    { key: 'ice', label: 'ICE', filterType: 'text' },
+    { key: 'factureNumero', label: 'N° Facture', filterType: 'list' },
+    { key: 'designation', label: 'Désignation', filterType: 'list' },
+    { key: 'tiers', label: 'Tiers', filterType: 'list' },
+    { key: 'identifiantFiscal', label: 'IF', filterType: 'list' },
+    { key: 'ice', label: 'ICE', filterType: 'list' },
     { key: 'montantHT', label: 'Montant HT', filterType: 'number' },
     { key: 'tauxTVA', label: 'Taux TVA', filterType: 'list' },
     { key: 'montantTVA', label: 'Montant TVA', filterType: 'number' },
@@ -26,6 +28,8 @@ export function ControlGrid({ data }: { data: DeclarationModele }) {
     { key: 'dateFacture', label: 'Date Facture', filterType: 'date' },
     { key: 'source', label: 'Source', filterType: 'list' }
   ];
+
+  const { visibleColumns, visibleKeys, toggle: toggleColumn, reset: resetColumns } = useColumnPrefs('grf.cols.controle', columns);
 
   const handleFilterChange = (key: string, val: any) => {
     setFilters(prev => {
@@ -143,6 +147,7 @@ export function ControlGrid({ data }: { data: DeclarationModele }) {
           <button className="btn" onClick={() => alert('Mock XML Download')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>
             <Download size={16} /> Exporter XML (EDI)
           </button>
+          <ColumnSelector columns={columns} visibleKeys={visibleKeys} onToggle={toggleColumn} onReset={resetColumns} />
         </div>
       </div>
 
@@ -151,7 +156,7 @@ export function ControlGrid({ data }: { data: DeclarationModele }) {
         <table className="table" style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10 }}>
             <tr>
-              {columns.map(col => (
+              {visibleColumns.map(col => (
                 <th key={col.key} style={{ padding: '0.5rem 1rem', borderBottom: '2px solid var(--border-color)', textAlign: ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA'].includes(col.key) ? 'right' : 'left', cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort(col.key)}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA'].includes(col.key) ? 'flex-end' : 'flex-start', gap: '0.25rem' }}>
                     {col.label}
@@ -173,7 +178,7 @@ export function ControlGrid({ data }: { data: DeclarationModele }) {
           <tbody>
             {filteredData.map(row => (
               <tr key={row.id} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'white' }}>
-                {columns.map(col => (
+                {visibleColumns.map(col => (
                   <td key={col.key} style={{ padding: '0.5rem 1rem', textAlign: ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA'].includes(col.key) ? 'right' : 'left', whiteSpace: 'nowrap' }}>
                     {renderCell(col.key, row[col.key])}
                   </td>
@@ -182,7 +187,7 @@ export function ControlGrid({ data }: { data: DeclarationModele }) {
             ))}
             {filteredData.length === 0 && (
               <tr>
-                <td colSpan={columns.length} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <td colSpan={visibleColumns.length} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                   Aucune ligne ne correspond aux filtres.
                 </td>
               </tr>
