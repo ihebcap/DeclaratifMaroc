@@ -21,6 +21,10 @@ namespace Declaration.Selection
                 using var connection = new SqlConnection(connectionString);
                 await connection.OpenAsync();
 
+                // ICE/IF fournisseur : source dynamique via noms de colonnes ERP configurés dans
+                // P_SOCIETE (TASK-048). Blocage explicite si config absente/invalide.
+                var identiteConfig = await IdentiteFiscaleFournisseurConfig.ChargerAsync(connection, soId);
+
                 var param = new
                 {
                     so = soId,
@@ -37,6 +41,9 @@ namespace Declaration.Selection
                     decaisseOui = GrfEnums.Decaisse_Oui,
                     decaisseNon = GrfEnums.Decaisse_Non,
                     modeEspece = GrfEnums.ModePaiement_Espece,
+                    ecTypeFactureErp = GrfEnums.EcType_FactureErp,
+                    ecTypeSolde = GrfEnums.EcType_Solde,
+                    ecTypeFgr = GrfEnums.EcType_Fgr,
                     dtId = dtIdToInclude
                 };
 
@@ -46,31 +53,36 @@ namespace Declaration.Selection
 
                 // 1. Décaissements Fournisseur
                 var decaissements = await connection.QueryAsync<AffectationRow>(
-                    GetDecaissementFournisseurSql(), param);
+                    GetDecaissementFournisseurSql(identiteConfig), param);
                 MapAndAdd(result, decaissements, SensAffectation.Achat, SourceAffectation.Decaissement);
 
                 // 2. Espèces Fournisseur
                 var especes = await connection.QueryAsync<AffectationRow>(
-                    GetEspeceFournisseurSql(), param);
+                    GetEspeceFournisseurSql(identiteConfig), param);
                 MapAndAdd(result, especes, SensAffectation.Achat, SourceAffectation.Espece);
 
                 // 3. Dépenses
                 var depenses = await connection.QueryAsync<AffectationRow>(
-                    GetDepenseSql(), param);
+                    GetDepenseSql(identiteConfig), param);
                 MapAndAdd(result, depenses, SensAffectation.Achat, SourceAffectation.Depense);
 
                 // 5. Encaissements Client (Ventes)
                 var encaissements = await connection.QueryAsync<AffectationRow>(
-                    GetEncaissementClientSql(), param);
+                    GetEncaissementClientSql(identiteConfig), param);
                 MapAndAdd(result, encaissements, SensAffectation.Vente, SourceAffectation.Encaissement);
 
                 // Note: on pourrait aussi rajouter l'espèce Client.
 
                 return result;
             }
+            catch (ConfigurationIdentiteFiscaleException)
+            {
+                // Blocage explicite (config ICE/IF absente/invalide) : ne pas masquer en liste vide.
+                throw;
+            }
             catch (Exception ex)
             {
-                // Robustesse demandée : on log (ici on pourrait injecter ILogger) et on retourne une liste vide 
+                // Robustesse demandée : on log (ici on pourrait injecter ILogger) et on retourne une liste vide
                 // plutôt que de planter brutalement si la période ou société est introuvable.
                 Console.WriteLine($"Erreur lors de la sélection des affectations (SO_Id={soId}) : {ex.Message}");
                 return result;
@@ -107,8 +119,8 @@ namespace Declaration.Selection
             }
         }
 
-        private string GetDecaissementFournisseurSql() => @"
-            SELECT 
+        private string GetDecaissementFournisseurSql(IdentiteFiscaleFournisseurConfig id) => $@"
+            SELECT
                 E.DO_Numero AS NumeroFacture,
                 M.MV_Numero AS NumeroRapprochement,
                 A.AF_Montant AS MontantAffecte,
@@ -118,8 +130,8 @@ namespace Declaration.Selection
                 E.EC_Id,
                 M.CT_Code AS TiersNumero,
                 M.CT_Intitule AS TiersNom,
-                M.MV_Identifiant AS TiersIF,
-                M.MV_Ice AS TiersICE,
+                {id.SelectIdentifiantExpression("T")} AS TiersIF,
+                {id.SelectIceExpression("T")} AS TiersICE,
                 T.CT_APE AS TiersActivite,
                 M.MV_Type AS ModePaiementId
             FROM RT_MOUVEMENT M
@@ -132,14 +144,15 @@ namespace Declaration.Selection
               AND M.MV_DECAISSE = @decaisseOui AND M.MV_Compta = @comptabilise 
               AND M.MV_Annule = @annuleNon AND M.MV_Impaye = @nonImpaye
               AND (
-                  (A.DT_Id IS NULL AND M.MV_PointDate >= @debut AND M.MV_PointDate < @finExclude)
+                  (A.DT_Id IS NULL AND {RegleDatePeriode.DateReferenceSqlM} >= @debut AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude) -- période via DateReference (TASK-062, source unique) ; rapproché → MV_PointDate
                   OR (@dtId IS NOT NULL AND A.DT_Id = @dtId)
               )
               AND M.MV_Type != @modeEspece -- Exclure l'espèce
+              AND E.EC_Type IN (@ecTypeFactureErp, @ecTypeSolde, @ecTypeFgr) -- liste blanche : vraies factures + solde
         ";
 
-        private string GetEspeceFournisseurSql() => @"
-            SELECT 
+        private string GetEspeceFournisseurSql(IdentiteFiscaleFournisseurConfig id) => $@"
+            SELECT
                 E.DO_Numero AS NumeroFacture,
                 M.MV_Numero AS NumeroRapprochement,
                 A.AF_Montant AS MontantAffecte,
@@ -149,8 +162,8 @@ namespace Declaration.Selection
                 E.EC_Id,
                 M.CT_Code AS TiersNumero,
                 M.CT_Intitule AS TiersNom,
-                M.MV_Identifiant AS TiersIF,
-                M.MV_Ice AS TiersICE,
+                {id.SelectIdentifiantExpression("T")} AS TiersIF,
+                {id.SelectIceExpression("T")} AS TiersICE,
                 T.CT_APE AS TiersActivite,
                 M.MV_Type AS ModePaiementId
             FROM RT_MOUVEMENT M
@@ -162,14 +175,15 @@ namespace Declaration.Selection
               AND M.MV_Compta = @comptabilise 
               AND M.MV_Annule = @annuleNon AND M.MV_Impaye = @nonImpaye
               AND (
-                  (A.DT_Id IS NULL AND M.MV_Date >= @debut AND M.MV_Date <= @finInclude)
+                  (A.DT_Id IS NULL AND {RegleDatePeriode.DateReferenceSqlM} >= @debut AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude) -- espèce → MV_Date via DateReference ; borne haute homogène < @finExclude (TASK-062, fin du double comptage <= @finInclude)
                   OR (@dtId IS NOT NULL AND A.DT_Id = @dtId)
               )
               AND M.MV_Type = @modeEspece -- Filtre espèce
+              AND E.EC_Type IN (@ecTypeFactureErp, @ecTypeSolde, @ecTypeFgr) -- liste blanche : vraies factures + solde
         ";
 
-        private string GetDepenseSql() => @"
-            SELECT 
+        private string GetDepenseSql(IdentiteFiscaleFournisseurConfig id) => $@"
+            SELECT
                 E.DO_Numero AS NumeroFacture,
                 M.MV_Numero AS NumeroRapprochement,
                 A.AF_Montant AS MontantAffecte,
@@ -179,8 +193,8 @@ namespace Declaration.Selection
                 E.EC_Id,
                 M.CT_Code AS TiersNumero,
                 M.CT_Intitule AS TiersNom,
-                M.MV_Identifiant AS TiersIF,
-                M.MV_Ice AS TiersICE,
+                {id.SelectIdentifiantExpression("T")} AS TiersIF,
+                {id.SelectIceExpression("T")} AS TiersICE,
                 T.CT_APE AS TiersActivite,
                 M.MV_Type AS ModePaiementId
             FROM RT_MOUVEMENT M
@@ -193,13 +207,14 @@ namespace Declaration.Selection
               AND M.MV_DECAISSE = @decaisseOui AND M.MV_Compta = @comptabilise 
               AND M.MV_Annule = @annuleNon
               AND (
-                  (A.DT_Id IS NULL AND M.MV_PointDate >= @debut AND M.MV_PointDate < @finExclude)
+                  (A.DT_Id IS NULL AND {RegleDatePeriode.DateReferenceSqlM} >= @debut AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude) -- période via DateReference (TASK-062, source unique) ; rapproché → MV_PointDate
                   OR (@dtId IS NOT NULL AND A.DT_Id = @dtId)
               )
+              AND E.EC_Type IN (@ecTypeFactureErp, @ecTypeSolde, @ecTypeFgr) -- liste blanche : vraies factures + solde
         ";
 
-        private string GetEncaissementClientSql() => @"
-            SELECT 
+        private string GetEncaissementClientSql(IdentiteFiscaleFournisseurConfig id) => $@"
+            SELECT
                 E.DO_Numero AS NumeroFacture,
                 M.MV_Numero AS NumeroRapprochement,
                 A.AF_Montant AS MontantAffecte,
@@ -209,8 +224,8 @@ namespace Declaration.Selection
                 E.EC_Id,
                 M.CT_Code AS TiersNumero,
                 M.CT_Intitule AS TiersNom,
-                M.MV_Identifiant AS TiersIF,
-                M.MV_Ice AS TiersICE,
+                {id.SelectIdentifiantExpression("T")} AS TiersIF,
+                {id.SelectIceExpression("T")} AS TiersICE,
                 T.CT_APE AS TiersActivite,
                 M.MV_Type AS ModePaiementId
             FROM RT_MOUVEMENT M
@@ -224,9 +239,10 @@ namespace Declaration.Selection
               AND M.MV_Compta = @comptabilise 
               AND M.MV_Annule = @annuleNon AND M.MV_Impaye = @nonImpaye
               AND (
-                  (A.DT_Id IS NULL AND M.MV_PointDate >= @debut AND M.MV_PointDate < @finExclude)
+                  (A.DT_Id IS NULL AND {RegleDatePeriode.DateReferenceSqlM} >= @debut AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude) -- période via DateReference (TASK-062, source unique) ; rapproché → MV_PointDate
                   OR (@dtId IS NOT NULL AND A.DT_Id = @dtId)
               )
+              AND E.EC_Type IN (@ecTypeFactureErp, @ecTypeSolde, @ecTypeFgr) -- liste blanche : vraies factures + solde
         ";
 
         private class AffectationRow
