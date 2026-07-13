@@ -156,28 +156,7 @@ public class DeclarationWorkflowService
                 return await RevaliderLignesFigeesAsync(declarationId, domaine);
             }
 
-            var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
-            var dateFin = dateDebut.AddMonths(1).AddDays(-1);
-
-            var grfConnectionString = _connectionFactory.GetGrfConnectionString();
-            var candidates = await _selectionService.SelectionnerExpliqueeAsync(
-                declaration.SocieteId, dateDebut, dateFin, grfConnectionString);
-
-            // TASK-080 : garde-fou d'exclusivité — un règlement déjà Proposee/Integree dans une
-            // AUTRE déclaration (EnCours ou Cloturee) de la même société ne doit pas devenir
-            // éligible ici, sous peine de double-affectation (le verrou DT_Id/TASK-028 ne se
-            // déclenche, lui, qu'à la clôture — trop tard). Appliqué APRÈS l'évaluateur (qui
-            // ignore toute notion de déclaration) et AVANT la sélection des éligibles, pour ne
-            // jamais remplacer un motif de rejet déjà posé (DejaDeclare, HorsPeriode, etc.).
-            await AppliquerExclusiviteInterDeclarationAsync(candidates, declaration.SocieteId, declarationId);
-
-            var orchestrateur = BuildOrchestrateur(grfConnectionString);
-
-            var affectations = candidates.Where(c => c.EstEligible).Select(c => c.Affectation).ToList();
-            var modele = orchestrateur.Traiter(affectations, 2);
-
-            var lignes = MapLignesCandidates(declarationId, domaine, candidates, modele);
-
+            var lignes = await ConstruireLignesFigeesAsync(declarationId, declaration, domaine);
             await _repository.SaveLignesCandidatesAsync(lignes);
         }
         finally
@@ -185,10 +164,47 @@ public class DeclarationWorkflowService
             gate.Release();
         }
 
-        // Figeage frais : le pipeline TASK-072/076 vient d'être appliqué en direct, rien à
-        // revalider (aucune alerte de resynchronisation possible sur des lignes qui viennent
-        // d'être écrites avec l'état courant du garde-fou).
-        return Array.Empty<Alerte>();
+        // TASK-081 : le pipeline TASK-072/076 vient d'appliquer le garde-fou et d'écrire la
+        // sentinelle CodeTaxe='ERREUR' en cache le cas échéant — mais rien ne la relit avant ce
+        // retour. Sans cet appel, l'alerte LIGNE_FIGEE_A_REVERIFIER (TASK-077/078) n'apparaît
+        // jamais au tout premier chargement, seulement au second appel /lignes (branche « déjà
+        // figé » ci-dessus). RevaliderLignesFigeesAsync relit GetLignesAsync, donc voit les
+        // lignes qui viennent d'être sauvegardées par SaveLignesCandidatesAsync ci-dessus — même
+        // détection, aucune règle dupliquée.
+        return await RevaliderLignesFigeesAsync(declarationId, domaine);
+    }
+
+    /// <summary>
+    /// Exécute le pipeline de premier figeage (sélection candidates → garde-fou d'exclusivité
+    /// TASK-080 → orchestrateur Sage → mapping) pour un (déclaration, domaine) — sans persister.
+    /// Extrait en méthode <c>protected virtual</c> uniquement pour permettre à un test unitaire
+    /// (TASK-081) de substituer l'orchestrateur (dépendant d'un worker Sage réel, non mockable
+    /// simplement) sans dupliquer la logique de <see cref="ChargerCandidatesSiNecessaireAsync"/>.
+    /// </summary>
+    protected virtual async Task<List<LigneCandidate>> ConstruireLignesFigeesAsync(
+        Guid declarationId, DeclarationEntete declaration, string domaine)
+    {
+        var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
+        var dateFin = dateDebut.AddMonths(1).AddDays(-1);
+
+        var grfConnectionString = _connectionFactory.GetGrfConnectionString();
+        var candidates = await _selectionService.SelectionnerExpliqueeAsync(
+            declaration.SocieteId, dateDebut, dateFin, grfConnectionString);
+
+        // TASK-080 : garde-fou d'exclusivité — un règlement déjà Proposee/Integree dans une
+        // AUTRE déclaration (EnCours ou Cloturee) de la même société ne doit pas devenir
+        // éligible ici, sous peine de double-affectation (le verrou DT_Id/TASK-028 ne se
+        // déclenche, lui, qu'à la clôture — trop tard). Appliqué APRÈS l'évaluateur (qui
+        // ignore toute notion de déclaration) et AVANT la sélection des éligibles, pour ne
+        // jamais remplacer un motif de rejet déjà posé (DejaDeclare, HorsPeriode, etc.).
+        await AppliquerExclusiviteInterDeclarationAsync(candidates, declaration.SocieteId, declarationId);
+
+        var orchestrateur = BuildOrchestrateur(grfConnectionString);
+
+        var affectations = candidates.Where(c => c.EstEligible).Select(c => c.Affectation).ToList();
+        var modele = orchestrateur.Traiter(affectations, 2);
+
+        return MapLignesCandidates(declarationId, domaine, candidates, modele);
     }
 
     /// <summary>
