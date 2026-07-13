@@ -38,6 +38,12 @@ namespace Declaration.Core.Model
         public bool EstRapprocheNonAffecte { get; set; } = false;
         public int EC_Type { get; set; }
         public int EC_Id { get; set; }
+
+        // TASK-077 : identifiant du mouvement de règlement (RT_MOUVEMENT.MV_Id) à l'origine de
+        // cette affectation — snapshoté au figeage pour permettre une revalidation ultérieure
+        // ciblée (le règlement est-il toujours pointé ?), sans avoir à rejouer toute la
+        // sélection. 0 si aucun règlement rattaché (cf. AffectationCandidateRow.MV_Id).
+        public int MV_Id { get; set; }
     }
 
     public class LigneDeclarationEnrichie
