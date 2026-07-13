@@ -1,6 +1,5 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Declaration.Application.Interfaces;
 
@@ -18,26 +17,32 @@ public class DbConnectionFactory : IDbConnectionFactory
     public IDbConnection CreateGrfConnection()
     {
         var cs = _configuration.GetConnectionString("GrfConnection");
-        return string.IsNullOrEmpty(cs) ? new SqliteConnection("Data Source=tva.db") : new SqlConnection(cs);
+        if (string.IsNullOrEmpty(cs))
+            throw new InvalidOperationException("Chaîne de connexion 'GrfConnection' non configurée (connections.json / appsettings.json).");
+        return new SqlConnection(cs);
     }
 
     public string GetGrfConnectionString()
     {
-        return _configuration.GetConnectionString("GrfConnection") ?? "Data Source=tva.db";
+        var cs = _configuration.GetConnectionString("GrfConnection");
+        if (string.IsNullOrEmpty(cs))
+            throw new InvalidOperationException("Chaîne de connexion 'GrfConnection' non configurée (connections.json / appsettings.json).");
+        return cs;
     }
 
     public IDbConnection CreateSageConnection()
     {
         var cs = _configuration.GetConnectionString("SageConnection");
-        return string.IsNullOrEmpty(cs) ? new SqliteConnection("Data Source=tva.db") : new SqlConnection(cs);
+        if (string.IsNullOrEmpty(cs))
+            throw new InvalidOperationException("Chaîne de connexion 'SageConnection' non configurée (connections.json / appsettings.json).");
+        return new SqlConnection(cs);
     }
 
     public IDbConnection CreatePersistenceConnection()
     {
         var cs = _configuration.GetConnectionString("PersistenceConnection");
-        if (string.IsNullOrEmpty(cs)) return new SqliteConnection("Data Source=tva.db");
-        if (cs.Contains(".db") || (cs.Contains("Data Source=") && !cs.Contains("Server=") && !cs.Contains("Initial Catalog=")))
-            return new SqliteConnection(cs);
+        if (string.IsNullOrEmpty(cs))
+            throw new InvalidOperationException("Chaîne de connexion 'PersistenceConnection' non configurée (connections.json / appsettings.json).");
         return new SqlConnection(cs);
     }
 }
