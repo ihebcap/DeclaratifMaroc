@@ -1,0 +1,89 @@
+
+[06:26:19.385] 
+[06:26:19.394] ======================================================================
+[06:26:19.406]   DEMARRAGE API (SQL Server reel : GR_EMA_DISTRIBUTION)
+[06:26:19.417] ======================================================================
+[06:26:19.452] PID=56020 attente demarrage...
+[06:26:21.188] API prete -> http://localhost:5057
+[06:26:21.190] 
+[06:26:21.202] ======================================================================
+[06:26:21.215]   ETAPE 1 — LOGIN
+[06:26:21.227] ======================================================================
+[06:26:21.314] POST /api/auth/login → 200 OK  JWT[0:50]=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfb...
+[06:26:21.316] 
+[06:26:21.329] ======================================================================
+[06:26:21.341]   ETAPE 2 — CREER DECLARATION (societeId=1, exercice=2026, periode=6)
+[06:26:21.354] ======================================================================
+[06:26:21.695] POST /api/declarations → 201 Created
+[06:26:21.697]   id     = ccd4a9de-e7cf-478c-85a3-50467827d745
+[06:26:21.708]   numero = TVA1-2026-06
+[06:26:21.721]   statut = 0  (0=EnCours attendu)
+[06:26:21.731] 
+[06:26:21.744] ======================================================================
+[06:26:21.757]   ETAPE 3 — INJECTION LIGNES INTEGREE (etat post-ecrans 1-2-3)
+[06:26:21.771] ======================================================================
+[06:26:21.840]   Rapprochements reels selectionnes depuis RT_MOUVEMENT (MV_Point=1, DT_Id IS NULL) :
+[06:26:21.847]     MV_Id=11982  MV_Numero=RF26060115  Montant=28200
+[06:26:21.851]     MV_Id=11978  MV_Numero=RF26060112  Montant=74.25
+[06:26:21.865]     MV_Id=11899  MV_Numero=RF26060069  Montant=24463.2
+[06:26:21.898]   INSERT LigneCandidate id=c9a2b340-38a3-429d-8d54-dd0a30441d70  Etat=1(Integree)  NumRapproch=RF26060115  TVA=5640
+[06:26:21.903]   INSERT LigneCandidate id=82cb52f5-fa6f-4d45-bc2d-c9de14f58782  Etat=1(Integree)  NumRapproch=RF26060112  TVA=14.85
+[06:26:21.914]   INSERT LigneCandidate id=342a732b-cac8-45da-8113-5a880e5b4472  Etat=1(Integree)  NumRapproch=RF26060069  TVA=4892.64
+[06:26:21.921]   -> 3 ligne(s) Integree inserees en base (representent l'etat post-ecrans 1-2-3)
+[06:26:21.929] 
+[06:26:21.943] ======================================================================
+[06:26:21.957]   ETAPE 4 — GET /checkup (controles pre-integration)
+[06:26:21.986] ======================================================================
+[06:26:22.073] GET /declarations/ccd4a9de-e7cf-478c-85a3-50467827d745/checkup → 200 OK
+[06:26:22.075]   alertes.Count=0  bloquantes=0
+[06:26:22.090]   reconciliation.integrees=3  proposees=0
+[06:26:22.106]   controleEquilibre.isValid=  ecart=
+[06:26:22.114] 
+[06:26:22.128] ======================================================================
+[06:26:22.142]   ETAPE 5 — POST /cloture  [CRITERE §1]
+[06:26:22.157] ======================================================================
+[06:26:22.218] POST /api/declarations/ccd4a9de-e7cf-478c-85a3-50467827d745/cloture
+[06:26:22.221]   <- HTTP 204 NoContent
+[06:26:22.232]   <- Corps : ''
+[06:26:22.243]   <- Duree : 44 ms
+[06:26:22.254]   [CRITERE §1 VALIDE] 204 No Content confirme — tampon DT_Id pose par CloturerDeclarationAsync
+[06:26:22.266] 
+[06:26:22.278] ======================================================================
+[06:26:22.292]   ETAPE 6 — GET /declarations/{id} apres cloture  [CRITERE §2]
+[06:26:22.306] ======================================================================
+[06:26:22.333] GET /api/declarations/ccd4a9de-e7cf-478c-85a3-50467827d745 → 200 OK
+[06:26:22.335]   statut = 1  (Cloturee)
+[06:26:22.349]   [CRITERE §2 VALIDE] Statut = Cloturee (1)
+[06:26:22.363]   → Front DeclarationStepper.tsx:37  isIntegree(statut=1) = true
+[06:26:22.379]     → bandeau 'Declaration integree — lecture seule' affiche
+[06:26:22.395]     → IntegrationPanel.tsx:132  isReadOnly = integree || confirmed = true
+[06:26:22.408]     → bouton id='btn-confirmer-integration' absent (condition ligne 246 : !isReadOnly)
+[06:26:22.423]     → StepBar : etapes 1-4 affichent CheckCircle2 vert (isDone=true)
+[06:26:22.436] 
+[06:26:22.453] ======================================================================
+[06:26:22.468]   ETAPE 7 — Verification DT_Id sur RT_AFFECTATION  [CRITERE §3]
+[06:26:22.481] ======================================================================
+[06:26:22.502] RT_AFFECTATION.DT_Id IS NOT NULL : 3 ligne(s)
+[06:26:22.515]   RT_AFFECTATION: AF_Id=22697 MV_Id=11899 EC_Id=23964 DT_Id=148884204 Montant=24463.200000
+[06:26:22.521]   RT_AFFECTATION: AF_Id=22914 MV_Id=11978 EC_Id=24012 DT_Id=148884204 Montant=74.250000
+[06:26:22.535]   RT_AFFECTATION: AF_Id=22919 MV_Id=11982 EC_Id=22005 DT_Id=148884204 Montant=28200.000000
+[06:26:22.549]   [CRITERE §3 VALIDE] DT_Id tampon pose sur RT_AFFECTATION
+[06:26:22.563]   => ces affectations (MV_Id) sont exclues des prochaines selections
+[06:26:22.576]      (SelectionExpliqueeService : WHERE DT_Id IS NULL — TASK-008/021)
+[06:26:22.590]   => trigger interdit DELETE/UPDATE financier si DT_Id NOT NULL (TASK-028)
+[06:26:22.603] 
+[06:26:22.617] ======================================================================
+[06:26:22.633]   ETAPE 8 — Double cloture bloquee (guard securite)
+[06:26:22.647] ======================================================================
+[06:26:22.700]   HTTP 400 — double cloture bloquee (InvalidOperationException, statut != EnCours)
+[06:26:22.702]   [OK] Idempotence / protection double-clic confirmee
+[06:26:22.714] 
+[06:26:22.728] ======================================================================
+[06:26:22.742]   RECAP — CRITERES TASK-057
+[06:26:22.755] ======================================================================
+[06:26:22.770] §1  POST /cloture → 204 No Content                    VALIDE
+[06:26:22.784] §2  GET statut → Cloturee (1) + lecture seule front    VALIDE
+[06:26:22.796] §3  DT_Id pose sur RT_AFFECTATION (TASK-028 flux)      VALIDE
+[06:26:22.810] 
+[06:26:22.825] Timestamp : 2026-07-12 06:26:22
+[06:26:22.845] API arretee.
