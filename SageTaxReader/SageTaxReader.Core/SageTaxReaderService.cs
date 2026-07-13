@@ -151,11 +151,11 @@ public class SageTaxReaderService
             {
                 OpenSession(app);
                 var docFactory = app.FactoryDocumentVente;
-                
+
                 DocumentType docTypeToUse = DocumentType.DocumentTypeVenteFacture;
                 if (!docFactory.ExistPiece(docTypeToUse, numeroPiece))
                 {
-                    docTypeToUse = (DocumentType)7; // DocumentTypeVenteFactureComptabilisee
+                    docTypeToUse = DocumentType.DocumentTypeVenteFactureCpta; // facture comptabilisée
                     if (!docFactory.ExistPiece(docTypeToUse, numeroPiece))
                     {
                         throw new Exception($"Facture de vente {numeroPiece} introuvable (ni en Facture, ni en Facture Comptabilisée).");
@@ -193,7 +193,7 @@ public class SageTaxReaderService
                 DocumentType docTypeToUse = DocumentType.DocumentTypeAchatFacture;
                 if (!docFactory.ExistPiece(docTypeToUse, numeroPiece))
                 {
-                    docTypeToUse = (DocumentType)17; // DocumentTypeAchatFactureComptabilisee
+                    docTypeToUse = DocumentType.DocumentTypeAchatFactureCpta; // facture comptabilisée
                     if (!docFactory.ExistPiece(docTypeToUse, numeroPiece))
                     {
                         throw new Exception($"Facture d'achat {numeroPiece} introuvable (ni en Facture, ni en Facture Comptabilisée).");
@@ -230,7 +230,7 @@ public class SageTaxReaderService
                 conn.Open();
                 using (var cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = "SELECT DO_ValFrais, DO_Escompte, DO_TxEscompte, DO_MontantRegle, DO_Type FROM F_DOCENTETE WHERE DO_Piece = @piece";
+                    cmd.CommandText = "SELECT DO_ValFrais, DO_Escompte, DO_TxEscompte, DO_MontantRegle, DO_Type, DO_TotalHTNet FROM F_DOCENTETE WHERE DO_Piece = @piece";
                     cmd.Parameters.AddWithValue("@piece", doc.DO_Piece);
                     using (var reader = cmd.ExecuteReader())
                     {
@@ -241,8 +241,22 @@ public class SageTaxReaderService
                             double txEscompte = reader.IsDBNull(2) ? 0 : Convert.ToDouble(reader.GetValue(2));
                             acompte = reader.IsDBNull(3) ? 0 : Convert.ToDouble(reader.GetValue(3));
                             realDoType = reader.IsDBNull(4) ? 0 : Convert.ToInt16(reader.GetValue(4));
-                            
-                            if (doEscompte == 0 && txEscompte > 0) 
+                            double htNet = reader.IsDBNull(5) ? 0 : Convert.ToDouble(reader.GetValue(5));
+
+                            // TASK-046 : sur certaines pièces comptabilisées, l'en-tête Sage a
+                            // DO_TotalHT = 0 alors que le HT réel est dans DO_TotalHTNet (= Σ HT lignes,
+                            // recoupé DB). On ne fabrique aucune valeur : on remplace la source du HT
+                            // document par le champ sibling DO_TotalHTNet quand DO_TotalHT est nul.
+                            // Choix DO_TotalHTNet plutôt que l'OM (valo.TotalHT*) : l'OM normalise le HT
+                            // en positif (avoirs faussés) et valo.TotalHTBrut vaut 0 sur certaines pièces ;
+                            // DO_TotalHTNet conserve la valeur ET le signe attendus par le reste du calcul.
+                            // Non-régression : DO_TotalHT ≠ 0 → htLignes inchangé (46/46 pièces justes).
+                            if (htLignes == 0 && htNet != 0)
+                            {
+                                htLignes = htNet;
+                            }
+
+                            if (doEscompte == 0 && txEscompte > 0)
                             {
                                 // Percentage on HT + Frais
                                 escompte = Math.Round((htLignes + frais) * (txEscompte / 100.0), decimales, MidpointRounding.AwayFromZero);
@@ -264,7 +278,11 @@ public class SageTaxReaderService
             TypeDocument = realDoType,
             Sens = sens,
             TotalHT = Math.Round(htLignes + frais, decimales, MidpointRounding.AwayFromZero), // Total HT Document incl. Frais
-            TotalTtc = doc.DO_TotalTTC,
+            // TASK-047 : TTC document sourcé de la valorisation OM (source qui fait foi, comme la TVA),
+            // et non plus de l'en-tête SQL DO_TotalTTC. L'OM conserve le signe (avoirs négatifs) et
+            // recoupe l'en-tête sur les pièces saines ; sur une pièce à en-tête TTC cassé/nul, l'OM
+            // recalcule la valeur. Aucune valeur fabriquée : l'écart réel (ex. -5,74) reste visible.
+            TotalTtc = Math.Round(valo.TotalTTC, decimales, MidpointRounding.AwayFromZero),
             Escompte = escompte,
             Frais = frais,
             Acompte = acompte
@@ -341,6 +359,19 @@ public class SageTaxReaderService
             result.TotalTva = Math.Round(totalTvaCalcule, decimales, MidpointRounding.AwayFromZero);
             result.TotalParafiscale = Math.Round(totalParafiscaleCalcule, decimales, MidpointRounding.AwayFromZero);
             result.EcartArrondi = Math.Round(result.TotalTtc - (result.TotalHTNet + result.TotalTva + result.TotalParafiscale), decimales, MidpointRounding.AwayFromZero);
+
+            // TASK-076 : les totaux ci-dessus viennent d'être réellement calculés (lecture Sage
+            // aboutie) — ils sont exploitables comme « montants bruts » même si la pièce est
+            // ensuite exclue pour incohérence (cf. bloc suivant).
+            result.MontantsBrutsDisponibles = true;
+
+            // TASK-072 : incohérence Σ(HT+TVA+Parafiscale) vs TTC document — cf. IncoherenceHtTvaTtc.
+            if (IncoherenceHtTvaTtc.EstIncoherent(result.TotalHTNet, result.TotalTva, result.TotalParafiscale, result.TotalTtc, out _))
+            {
+                result.EnErreur = true;
+                result.MotifErreur = $"Incohérence Sage : Σ(HT net+TVA+Parafiscale)={result.TotalHTNet + result.TotalTva + result.TotalParafiscale:F2} "
+                    + $"≠ TTC={result.TotalTtc:F2} (écart {result.EcartArrondi:F2}) — pièce {result.NumeroPiece} exclue de la valorisation.";
+            }
         }
         finally
         {
@@ -408,7 +439,7 @@ public class SageTaxReaderService
                             DocumentType docTypeToUse = DocumentType.DocumentTypeVenteFacture;
                             if (!docFactoryVente.ExistPiece(docTypeToUse, req.piece))
                             {
-                                docTypeToUse = (DocumentType)7;
+                                docTypeToUse = DocumentType.DocumentTypeVenteFactureCpta;
                                 if (!docFactoryVente.ExistPiece(docTypeToUse, req.piece))
                                     throw new Exception($"Facture de vente {req.piece} introuvable.");
                             }
@@ -427,7 +458,7 @@ public class SageTaxReaderService
                             DocumentType docTypeToUse = DocumentType.DocumentTypeAchatFacture;
                             if (!docFactoryAchat.ExistPiece(docTypeToUse, req.piece))
                             {
-                                docTypeToUse = (DocumentType)17;
+                                docTypeToUse = DocumentType.DocumentTypeAchatFactureCpta;
                                 if (!docFactoryAchat.ExistPiece(docTypeToUse, req.piece))
                                     throw new Exception($"Facture d'achat {req.piece} introuvable.");
                             }
