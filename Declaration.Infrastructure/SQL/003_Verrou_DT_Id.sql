@@ -1,5 +1,5 @@
 -- =====================================================================
--- TASK-028 — Verrou d'intégration déclaration (tampon DT_Id)
+-- TASK-064 — Trigger : immuabilité TOTALE d'une affectation déclarée
 -- Cible : base GRF (GR_EMA_DISTRIBUTION) — SQL Server T-SQL
 -- À exécuter UNE FOIS par l'administrateur de base.
 -- =====================================================================
@@ -40,10 +40,9 @@ GO
 -- ─────────────────────────────────────────────────────────────────────
 -- 1. Trigger immuabilité RT_AFFECTATION
 --    - Interdit DELETE d'une affectation DT_Id IS NOT NULL.
---    - Interdit UPDATE des colonnes financières/structurantes si DT_Id NOT NULL
---      AVANT la mise à jour (ou si elle devient NOT NULL après sans changer DT_Id).
---    - AUTORISE la transition DT_Id : valeur → NULL (dé-tamponnage = réouverture).
---    - AUTORISE la transition DT_Id : NULL → valeur (tamponnage = intégration).
+--    - Interdit TOUTE modification d'une affectation déclarée (DT_Id NOT NULL).
+--    - AUTORISE UNIQUEMENT la transition de dé-tamponnage PUR (DT_Id : valeur → NULL),
+--      si toutes les autres colonnes protégées restent inchangées.
 -- ─────────────────────────────────────────────────────────────────────
 IF OBJECT_ID('dbo.TR_RT_AFFECTATION_Immuabilite', 'TR') IS NOT NULL
     DROP TRIGGER dbo.TR_RT_AFFECTATION_Immuabilite;
@@ -72,27 +71,26 @@ BEGIN
         THROW 50028, N'Opération interdite — cette affectation est incluse dans la déclaration TVA et ne peut pas être supprimée. Rouvrez la déclaration avant toute modification.', 1;
     END;
 
-    -- ── 1b. Bloquer UPDATE financier/structurant si DT_Id NOT NULL ─────
-    -- On considère un UPDATE « financier » si l'une des colonnes suivantes change :
-    --   AF_Montant, MV_Id, EC_Id, AF_Date
-    -- NB : la colonne AF_Taux n'existe PAS sur RT_AFFECTATION (vérifié sur
-    -- GR_EMA_DISTRIBUTION) — le taux vit sur l'échéance/facture, pas l'affectation ;
-    -- rien à protéger ici de ce côté.
-    -- On interdit cela seulement si la ligne ÉTAIT déjà déclarée (DT_Id NOT NULL dans deleted)
-    -- ET que la transition n'est PAS un simple dé-tamponnage (DT_Id : val → NULL).
+    -- ── 1b. Bloquer tout UPDATE si DT_Id NOT NULL ──────────────────────
+    -- On interdit toute modification si la ligne ÉTAIT déjà déclarée (d.DT_Id IS NOT NULL).
+    -- La seule exception autorisée est le dé-tamponnage PUR (transition DT_Id : valeur → NULL)
+    -- où absolument aucune autre colonne protégée n'a été modifiée.
+    -- Les colonnes protégées excluent DT_Id et la colonne technique RowVersion.
     IF EXISTS (
         SELECT 1
         FROM inserted i
         JOIN deleted d ON i.AF_Id = d.AF_Id
         WHERE d.DT_Id IS NOT NULL          -- était déclarée avant
-          AND i.DT_Id IS NOT NULL          -- reste déclarée après (pas un dé-tamponnage)
           AND (
-              -- Colonnes financières/structurantes : changement interdit
-              ISNULL(i.AF_Montant, 0) <> ISNULL(d.AF_Montant, 0)
-           OR ISNULL(i.MV_Id,      0) <> ISNULL(d.MV_Id,      0)
-           OR ISNULL(i.EC_Id,      0) <> ISNULL(d.EC_Id,      0)
-           OR ISNULL(CONVERT(DATE, i.AF_Date), '1900-01-01') <>
-              ISNULL(CONVERT(DATE, d.AF_Date), '1900-01-01')
+              i.DT_Id IS NOT NULL          -- reste déclarée après (pas un dé-tamponnage)
+              OR (                         -- dé-tamponnage non pur
+                  i.DT_Id IS NULL
+                  AND EXISTS (
+                      SELECT i.AF_Montant, i.MV_Id, i.EC_Id, i.AF_Date, i.AF_No, i.AF_MtDevise, i.AF_EcId, i.AF_NbrJourReg, i.AF_DelaiMoyen, i.AF_IsSynchro, i.AF_IsImporterFromErp
+                      EXCEPT
+                      SELECT d.AF_Montant, d.MV_Id, d.EC_Id, d.AF_Date, d.AF_No, d.AF_MtDevise, d.AF_EcId, d.AF_NbrJourReg, d.AF_DelaiMoyen, d.AF_IsSynchro, d.AF_IsImporterFromErp
+                  )
+              )
           )
     )
     BEGIN
@@ -100,19 +98,23 @@ BEGIN
         SELECT TOP 1 @dtIdUpd = d.DT_Id
         FROM inserted i
         JOIN deleted d ON i.AF_Id = d.AF_Id
-        WHERE d.DT_Id IS NOT NULL AND i.DT_Id IS NOT NULL
+        WHERE d.DT_Id IS NOT NULL
           AND (
-              ISNULL(i.AF_Montant, 0) <> ISNULL(d.AF_Montant, 0)
-           OR ISNULL(i.MV_Id,      0) <> ISNULL(d.MV_Id,      0)
-           OR ISNULL(i.EC_Id,      0) <> ISNULL(d.EC_Id,      0)
-           OR ISNULL(CONVERT(DATE, i.AF_Date), '1900-01-01') <>
-              ISNULL(CONVERT(DATE, d.AF_Date), '1900-01-01')
+              i.DT_Id IS NOT NULL
+              OR (
+                  i.DT_Id IS NULL
+                  AND EXISTS (
+                      SELECT i.AF_Montant, i.MV_Id, i.EC_Id, i.AF_Date, i.AF_No, i.AF_MtDevise, i.AF_EcId, i.AF_NbrJourReg, i.AF_DelaiMoyen, i.AF_IsSynchro, i.AF_IsImporterFromErp
+                      EXCEPT
+                      SELECT d.AF_Montant, d.MV_Id, d.EC_Id, d.AF_Date, d.AF_No, d.AF_MtDevise, d.AF_EcId, d.AF_NbrJourReg, d.AF_DelaiMoyen, d.AF_IsSynchro, d.AF_IsImporterFromErp
+                  )
+              )
           );
 
         DECLARE @msgAfUpd NVARCHAR(500) =
             N'Opération interdite — affectation incluse dans la déclaration TVA n° '
             + CAST(@dtIdUpd AS NVARCHAR(20))
-            + N'. Modification des colonnes financières refusée. Rouvrez la déclaration avant toute correction.';
+            + N' — toute modification est refusée. Rouvrez la déclaration avant correction.';
         THROW 50028, @msgAfUpd, 1;
     END;
 END;
