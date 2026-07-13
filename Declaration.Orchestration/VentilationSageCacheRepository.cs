@@ -28,7 +28,8 @@ namespace Declaration.Orchestration
             var sql = @"
                 SELECT EC_Id, Taux, BaseHT, MontantTva, TTC, CodeTaxe,
                        TotalHT, TotalTva, TotalTtc,
-                       Token_MV_Id, Token_MV_Point
+                       Token_MV_Id, Token_MV_Point, MotifErreur,
+                       BrutHT, BrutTva, BrutParafiscale, BrutTtc
                 FROM   GRC_VENTILATION_SAGE_CACHE
                 WHERE  EC_Id = @EcId";
             return conn.Query<VentilationSageCacheEntry>(sql, new { EcId = ecId })
@@ -64,16 +65,99 @@ namespace Declaration.Orchestration
             return conn.QuerySingleOrDefault<PaiementToken>(sql, new { EcId = ecId });
         }
 
+        /// <summary>
+        /// TASK-072 : montant en devise de l'échéance (RT_ECHEANCE.EC_MtDevise), source GRF
+        /// indépendante du TTC lu côté Sage — sert de contrôle croisé.
+        /// </summary>
+        public virtual decimal? GetEcheanceMontantDevise(int ecId, string grfConnectionString)
+        {
+            using var conn = new SqlConnection(grfConnectionString);
+            conn.Open();
+
+            var sql = "SELECT EC_MtDevise FROM RT_ECHEANCE WHERE EC_Id = @EcId";
+            return conn.QuerySingleOrDefault<decimal?>(sql, new { EcId = ecId });
+        }
+
+        /// <summary>
+        /// TASK-072 : purge toute ventilation existante pour cet EC_Id et la remplace par une
+        /// ligne sentinelle unique (Taux=-1, CodeTaxe="ERREUR") portant le motif exact.
+        /// DELETE puis INSERT dans la même connexion — jamais de MERGE ici, la sentinelle
+        /// doit être seule (aucun bucket réel résiduel ne doit rester mêlé).
+        /// </summary>
+        public virtual void MarquerEnErreur(int ecId, string motif, string persistenceConnectionString,
+            MontantsBrutsErreur? montantsBruts = null)
+        {
+            using var conn = new SqlConnection(persistenceConnectionString);
+            conn.Open();
+            using var tx = conn.BeginTransaction();
+
+            conn.Execute("DELETE FROM GRC_VENTILATION_SAGE_CACHE WHERE EC_Id = @EcId", new { EcId = ecId }, tx);
+
+            // TASK-076 : BrutHT/BrutTva/BrutParafiscale/BrutTtc portent les montants Sage tels que
+            // lus au moment de la détection (AVANT exclusion) — NULL si non fournis (jamais une
+            // valeur inventée). Sert l'investigation manuelle côté ERP sur l'écran Factures.
+            conn.Execute(@"
+                INSERT INTO GRC_VENTILATION_SAGE_CACHE
+                    (EC_Id, Taux, BaseHT, MontantTva, TTC, CodeTaxe,
+                     TotalHT, TotalTva, TotalTtc,
+                     Token_MV_Id, Token_MV_Point, DateLecture, Source, MotifErreur,
+                     BrutHT, BrutTva, BrutParafiscale, BrutTtc)
+                VALUES
+                    (@EcId, -1, 0, 0, 0, 'ERREUR',
+                     0, 0, 0,
+                     NULL, NULL, @DateLecture, 'OM', @Motif,
+                     @BrutHT, @BrutTva, @BrutParafiscale, @BrutTtc)",
+                new
+                {
+                    EcId = ecId,
+                    DateLecture = DateTime.UtcNow,
+                    Motif = motif,
+                    BrutHT = montantsBruts?.TotalHTNet,
+                    BrutTva = montantsBruts?.TotalTva,
+                    BrutParafiscale = montantsBruts?.TotalParafiscale,
+                    BrutTtc = montantsBruts?.TotalTtc
+                }, tx);
+
+            tx.Commit();
+        }
+
+        /// <summary>
+        /// TASK-078 : purge sans réécrire — force le prochain appel à traiter cet EC_Id comme un
+        /// cache miss (relecture Sage réelle), y compris si la sentinelle actuelle porte déjà des
+        /// montants bruts capturés (TASK-076, qui sinon la considérerait définitivement réglée).
+        /// </summary>
+        public virtual void SupprimerEntrees(int ecId, string persistenceConnectionString)
+        {
+            using var conn = new SqlConnection(persistenceConnectionString);
+            conn.Open();
+            conn.Execute("DELETE FROM GRC_VENTILATION_SAGE_CACHE WHERE EC_Id = @EcId", new { EcId = ecId });
+        }
+
         // ──────────────────────────────────────────────────────────────────────
         // Écriture du cache — upsert idempotent via MERGE SQL Server
         // ──────────────────────────────────────────────────────────────────────
 
         public void UpsertEntries(IEnumerable<VentilationSageCacheEntry> entries, string persistenceConnectionString)
         {
+            var list = entries.ToList();
+            if (list.Count == 0) return;
+
             using var conn = new SqlConnection(persistenceConnectionString);
             conn.Open();
 
-            foreach (var e in entries)
+            // TASK-076/077 : purge toute sentinelle ERREUR résiduente (Taux=-1) pour ces EC_Id AVANT
+            // d'écrire des buckets réels — sinon les deux coexistent (clé MERGE (EC_Id,Taux) distincte)
+            // et cassent l'hypothèse « une seule ligne ERREUR » utilisée par TryServireDepuisCache
+            // (cache miss forcé, revalidation rétroactive). Une écriture normale supplante toujours
+            // une sentinelle d'erreur précédente pour le même EC_Id.
+            foreach (var ecId in list.Select(e => e.EC_Id).Distinct())
+            {
+                conn.Execute(
+                    "DELETE FROM GRC_VENTILATION_SAGE_CACHE WHERE EC_Id = @EcId AND CodeTaxe = 'ERREUR'",
+                    new { EcId = ecId });
+            }
+
+            foreach (var e in list)
                 UpsertOne(conn, e);
         }
 
