@@ -20,9 +20,11 @@ CREATE TABLE [GRC_VENTILATION_SAGE_CACHE] (
     [TotalTva]       DECIMAL(18,4)   NOT NULL,
     [TotalTtc]       DECIMAL(18,4)   NOT NULL,
 
-    -- Token de paiement capturé à l'écriture
-    [Token_MV_Id]    INT             NOT NULL,
-    [Token_MV_Point] INT             NOT NULL,
+    -- Token de paiement capturé à l'écriture.
+    -- NULL = facture lue mais non rattachée à un règlement pointé : ventilation
+    -- « brute » conservée (réutilisable pour l'affichage) mais non déclarable.
+    [Token_MV_Id]    INT             NULL,
+    [Token_MV_Point] INT             NULL,
 
     -- Audit
     [DateLecture]    DATETIME2       NOT NULL DEFAULT GETUTCDATE(),

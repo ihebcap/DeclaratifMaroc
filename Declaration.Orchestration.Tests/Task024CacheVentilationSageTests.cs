@@ -38,14 +38,14 @@ namespace Declaration.Orchestration.Tests
     {
         public int TotalCalls { get; private set; }
 
-        public DocumentTaxesInfo? InvoquerWorker(string numeroFacture, string sens, WorkerConfig config)
+        public DocumentTaxesInfo? InvoquerWorker(string numeroFacture, string sens, WorkerConfig config, Action<string>? log = null)
         {
             TotalCalls++;
             return MakeDoc(numeroFacture, sens);
         }
 
         public List<DocumentTaxesInfo> InvoquerWorkerBatch(
-            IEnumerable<(string numeroFacture, string sens)> requetes, WorkerConfig config)
+            IEnumerable<(string numeroFacture, string sens)> requetes, WorkerConfig config, Action<string>? log = null)
         {
             var result = new List<DocumentTaxesInfo>();
             foreach (var r in requetes) { TotalCalls++; result.Add(MakeDoc(r.numeroFacture, r.sens)); }
@@ -66,6 +66,40 @@ namespace Declaration.Orchestration.Tests
     internal class StubLecteurFgr : ILecteurTvaFgr
     {
         public DocumentTaxesInfo? LireTvaFgr(int ecId, string numero, string cs, string sageCs) => null;
+    }
+
+    // TASK-072 : simule une pièce OM détectée incohérente (EnErreur=true dès la lecture Sage,
+    // avant tout passage par l'orchestrateur — équivalent du garde-fou IncoherenceHtTvaTtc).
+    internal class ErroneousWorkerInvoker : IWorkerInvoker
+    {
+        public int TotalCalls { get; private set; }
+        public const string Motif = "Incohérence Sage : Σ(HT+TVA) ≠ TTC — pièce exclue de la valorisation.";
+
+        public DocumentTaxesInfo? InvoquerWorker(string numeroFacture, string sens, WorkerConfig config, Action<string>? log = null)
+        {
+            TotalCalls++;
+            return MakeDoc(numeroFacture, sens);
+        }
+
+        public List<DocumentTaxesInfo> InvoquerWorkerBatch(
+            IEnumerable<(string numeroFacture, string sens)> requetes, WorkerConfig config, Action<string>? log = null)
+        {
+            var result = new List<DocumentTaxesInfo>();
+            foreach (var r in requetes) { TotalCalls++; result.Add(MakeDoc(r.numeroFacture, r.sens)); }
+            return result;
+        }
+
+        // TASK-076 : montants bruts réellement lus (Σ HT+TVA ≠ TTC), disponibles au moment de la
+        // détection — c'est précisément le cas que TASK-076 rend visible sur l'écran Factures.
+        public const double BrutHT = 1000, BrutTva = 200, BrutParafiscale = 0, BrutTtc = 999999;
+
+        internal static DocumentTaxesInfo MakeDoc(string numero, string sens) => new()
+        {
+            NumeroPiece = numero, Sens = sens,
+            EnErreur = true, MotifErreur = Motif,
+            TotalHTNet = BrutHT, TotalTva = BrutTva, TotalParafiscale = BrutParafiscale, TotalTtc = BrutTtc,
+            MontantsBrutsDisponibles = true
+        };
     }
 
     // Cache in-memory pour les tests unitaires uniquement
@@ -96,7 +130,34 @@ namespace Declaration.Orchestration.Tests
             }
         }
 
+        // TASK-072 : purge toute ventilation existante et la remplace par une sentinelle unique.
+        // TASK-076 : persiste en plus les montants bruts (si fournis) sur la ligne sentinelle.
+        public void MarquerEnErreur(int ecId, string motif, string _, MontantsBrutsErreur? montantsBruts = null)
+        {
+            _store[ecId] = new List<VentilationSageCacheEntry>
+            {
+                new()
+                {
+                    EC_Id = ecId, Taux = -1, CodeTaxe = "ERREUR", MotifErreur = motif,
+                    BrutHT = montantsBruts?.TotalHTNet,
+                    BrutTva = montantsBruts?.TotalTva,
+                    BrutParafiscale = montantsBruts?.TotalParafiscale,
+                    BrutTtc = montantsBruts?.TotalTtc
+                }
+            };
+        }
+
+        // TASK-072 : null par défaut = contrôle croisé ignoré (comportement des tests T1-T9,
+        // antérieurs à ce contrôle, inchangé). Les tests dédiés au contrôle le renseignent.
+        public Dictionary<int, decimal?> EcheanceMontantDeviseParEcId { get; } = new();
+
+        public decimal? GetEcheanceMontantDevise(int ecId, string _)
+            => EcheanceMontantDeviseParEcId.TryGetValue(ecId, out var v) ? v : (decimal?)null;
+
         public bool HasEntry(int ecId) => _store.ContainsKey(ecId) && _store[ecId].Count > 0;
+
+        // TASK-078 : purge sans réécrire (utilisé par ResynchroniserLigneAsync).
+        public void SupprimerEntrees(int ecId, string _) => _store.Remove(ecId);
     }
 
     internal static class T
@@ -164,6 +225,25 @@ namespace Declaration.Orchestration.Tests
             Assert.Equal(2, inv.TotalCalls);
         }
 
+        [Fact] public void T9_PaiementAbsent_LectureBrute_MiseEnCache_TokenNull()
+        {
+            // Une facture lue mais SANS règlement pointé est désormais mise en cache
+            // (lecture OM brute, réutilisable pour l'affichage) avec un token NULL,
+            // mais reste non servie comme ventilation déclarable (cf. T4).
+            var inv = new CountingWorkerInvoker(); var repo = new InMemoryCacheRepository();
+            repo.PaymentPresent = false; // aucun paiement pointé
+            var orch = new OrchestrateurDeclaration(inv, T.Cfg, new StubLecteurFgr(),
+                "fake-grf", "fake-sage", repo, "fake-pers");
+            var aff = T.Aff("FAC001", 1);
+
+            orch.Traiter(new[] { aff }, 1);
+
+            Assert.Equal(1, inv.TotalCalls);          // OM lu une fois
+            Assert.True(repo.HasEntry(1));            // ligne brute conservée
+            var rows = repo.GetEntries(1, "fake-pers");
+            Assert.All(rows, r => Assert.Null(r.Token_MV_Id));   // token NULL = non déclarable
+        }
+
         [Fact] public void T5_SansPersistenceConnection_OMAppeleNormalement()
         {
             var inv = new CountingWorkerInvoker(); var repo = new InMemoryCacheRepository();
@@ -202,6 +282,130 @@ namespace Declaration.Orchestration.Tests
             var modele = orch.Traiter(new[] { T.Aff("FAC001", 5), T.Aff("FAC001", 5) }, 1);
             Assert.Equal(1, inv.TotalCalls);
             Assert.Equal(2, modele.Lignes.Count);
+        }
+
+        // TASK-072 : contrôle croisé TTC Sage vs RT_ECHEANCE.EC_MtDevise (GRF). Reproduit le cas
+        // réel FC2501717 (EC_Id=21473) où le TTC Sage divergeait du montant d'échéance GRF connu.
+        [Fact] public void T10_TtcSageDivergeDeEcMtDevise_LigneExclue_AlerteLevee()
+        {
+            var inv = new CountingWorkerInvoker(); var repo = new InMemoryCacheRepository();
+            repo.EcheanceMontantDeviseParEcId[7] = 999999m; // GRF attend un TTC très différent de l'OM (1200)
+            var orch = new OrchestrateurDeclaration(inv, T.Cfg, new StubLecteurFgr(),
+                "fake-grf", "fake-sage", repo, "fake-pers");
+
+            var modele = orch.Traiter(new[] { T.Aff("FAC072", 7) }, 1);
+
+            Assert.Empty(modele.Lignes);
+            Assert.Contains(modele.Alertes, a => a.Code == "FACTURE_ILLISIBLE_OM"
+                && a.Message.Contains("EC_MtDevise"));
+        }
+
+        [Fact] public void T11_TtcSageCoherentAvecEcMtDevise_LigneDeclaree()
+        {
+            var inv = new CountingWorkerInvoker(); var repo = new InMemoryCacheRepository();
+            repo.EcheanceMontantDeviseParEcId[8] = 1200m; // cohérent avec le TTC OM (1200)
+            var orch = new OrchestrateurDeclaration(inv, T.Cfg, new StubLecteurFgr(),
+                "fake-grf", "fake-sage", repo, "fake-pers");
+
+            var modele = orch.Traiter(new[] { T.Aff("FAC073", 8) }, 1);
+
+            Assert.NotEmpty(modele.Lignes);
+            Assert.DoesNotContain(modele.Alertes, a => a.Code == "FACTURE_ILLISIBLE_OM");
+        }
+
+        // TASK-072 : une pièce OM rendue EnErreur (incohérence Sage) n'est jamais matérialisée
+        // comme ventilation réelle — une sentinelle d'erreur (CodeTaxe="ERREUR") est écrite à la
+        // place, portant le motif exact, pour rester visible sur l'écran Factures.
+        [Fact] public void T12_PieceOMEnErreur_SentinelleEcriteAuLieuDeLaVentilation()
+        {
+            var inv = new ErroneousWorkerInvoker(); var repo = new InMemoryCacheRepository();
+            var orch = new OrchestrateurDeclaration(inv, T.Cfg, new StubLecteurFgr(),
+                "fake-grf", "fake-sage", repo, "fake-pers");
+
+            var modele = orch.Traiter(new[] { T.Aff("FAC072B", 20) }, 1);
+
+            Assert.Empty(modele.Lignes);
+            Assert.Contains(modele.Alertes, a => a.Code == "FACTURE_ILLISIBLE_OM");
+            Assert.True(repo.HasEntry(20));
+            var rows = repo.GetEntries(20, "fake-pers");
+            Assert.Single(rows);
+            Assert.Equal("ERREUR", rows[0].CodeTaxe);
+            Assert.Equal(ErroneousWorkerInvoker.Motif, rows[0].MotifErreur);
+        }
+
+        // TASK-072 : une fois la sentinelle écrite, un second passage ne relit jamais l'OM
+        // (motif servi depuis le cache) — évite de re-solliciter Sage pour une pièce durablement
+        // cassée à chaque rafraîchissement de l'écran Factures.
+        [Fact] public void T13_PieceEnErreur_SecondPassage_ServieDepuisSentinelle_ZeroOM()
+        {
+            var inv = new ErroneousWorkerInvoker(); var repo = new InMemoryCacheRepository();
+            var orch = new OrchestrateurDeclaration(inv, T.Cfg, new StubLecteurFgr(),
+                "fake-grf", "fake-sage", repo, "fake-pers");
+            var aff = T.Aff("FAC072C", 21);
+
+            orch.Traiter(new[] { aff }, 1);
+            Assert.Equal(1, inv.TotalCalls);
+
+            var modele2 = orch.Traiter(new[] { aff }, 1);
+
+            Assert.Equal(1, inv.TotalCalls); // toujours 1 : pas de relecture OM
+            Assert.Empty(modele2.Lignes);
+            Assert.Contains(modele2.Alertes, a => a.Code == "FACTURE_ILLISIBLE_OM");
+        }
+
+        // TASK-076 : les montants bruts Sage (tels que lus, AVANT exclusion) sont persistés sur la
+        // ligne sentinelle d'erreur — exploitables par l'écran Factures pour l'investigation
+        // manuelle côté ERP, sans jamais relire Sage à la demande.
+        [Fact] public void T15_PieceOMEnErreur_MontantsBrutsPersistesSurLaSentinelle()
+        {
+            var inv = new ErroneousWorkerInvoker(); var repo = new InMemoryCacheRepository();
+            var orch = new OrchestrateurDeclaration(inv, T.Cfg, new StubLecteurFgr(),
+                "fake-grf", "fake-sage", repo, "fake-pers");
+
+            orch.Traiter(new[] { T.Aff("FAC076", 40) }, 1);
+
+            var rows = repo.GetEntries(40, "fake-pers");
+            Assert.Single(rows);
+            Assert.Equal("ERREUR", rows[0].CodeTaxe);
+            Assert.Equal(ErroneousWorkerInvoker.BrutHT, rows[0].BrutHT);
+            Assert.Equal(ErroneousWorkerInvoker.BrutTva, rows[0].BrutTva);
+            Assert.Equal(ErroneousWorkerInvoker.BrutParafiscale, rows[0].BrutParafiscale);
+            Assert.Equal(ErroneousWorkerInvoker.BrutTtc, rows[0].BrutTtc);
+        }
+
+        // TASK-072 : une ligne de cache déjà présente AVANT ce correctif (donc jamais passée par
+        // le garde-fou de lecture OM) et portant une incohérence Sage doit être revalidée et
+        // exclue au moment où elle est SERVIE depuis le cache — pas seulement à l'écriture.
+        // Reproduit le cas réel EC_Id=21473/FC2501717 : cache déjà écrit avec HT+TVA≠TTC, token
+        // toujours pointé (donc jamais réinvalidé par un dépointage).
+        [Fact] public void T14_LigneCacheAncienneIncoherente_RevalideeEtExclueALaLecture()
+        {
+            var inv = new CountingWorkerInvoker(); var repo = new InMemoryCacheRepository();
+            // Simule une ligne déjà en cache avant ce correctif (écrite par l'ancien code, sans
+            // passer par MarquerEnErreur), avec la même incohérence que le cas réel.
+            repo.UpsertEntries(new[]
+            {
+                new VentilationSageCacheEntry
+                {
+                    EC_Id = 30, Taux = 20, CodeTaxe = "D20",
+                    BaseHT = 1720251.20, MontantTva = 344050.24, TTC = 2064301.44,
+                    TotalHT = 1720251.20, TotalTva = 344050.24, TotalTtc = 20700.00,
+                    Token_MV_Id = 42, Token_MV_Point = 1
+                }
+            }, "fake-pers");
+
+            var orch = new OrchestrateurDeclaration(inv, T.Cfg, new StubLecteurFgr(),
+                "fake-grf", "fake-sage", repo, "fake-pers");
+
+            var modele = orch.Traiter(new[] { T.Aff("FC2501717", 30) }, 1);
+
+            Assert.Equal(0, inv.TotalCalls); // aucune relecture OM nécessaire
+            Assert.Empty(modele.Lignes);
+            Assert.Contains(modele.Alertes, a => a.Code == "FACTURE_ILLISIBLE_OM");
+            // La ligne corrompue a été purgée et remplacée par la sentinelle (auto-guérison du cache).
+            var rows = repo.GetEntries(30, "fake-pers");
+            Assert.Single(rows);
+            Assert.Equal("ERREUR", rows[0].CodeTaxe);
         }
 
         [Fact] public void T8_ECType111_FGR_NePaseParCacheSage()
@@ -245,7 +449,7 @@ namespace Declaration.Orchestration.Tests
             "Server=.\\sql2022;Database=GR_EMA_DISTRIBUTION;User Id=sa;Password=1234;TrustServerCertificate=True;";
 
         // Plage d'EC_Id réservée pour les tests (jamais présente en prod)
-        private const string TestEcIds = "900001,900002,900003,900004,900005,900010,900011";
+        private const string TestEcIds = "900001,900002,900003,900004,900005,900006,900007,900010,900011,900012";
 
         // DDL de la table cache (idempotent — IF NOT EXISTS)
         private const string EnsureTableSql = @"
@@ -261,14 +465,52 @@ namespace Declaration.Orchestration.Tests
                     [TotalHT]        DECIMAL(18,4)   NOT NULL,
                     [TotalTva]       DECIMAL(18,4)   NOT NULL,
                     [TotalTtc]       DECIMAL(18,4)   NOT NULL,
-                    [Token_MV_Id]    INT             NOT NULL,
-                    [Token_MV_Point] INT             NOT NULL,
+                    [Token_MV_Id]    INT             NULL,
+                    [Token_MV_Point] INT             NULL,
                     [DateLecture]    DATETIME2       NOT NULL DEFAULT GETUTCDATE(),
                     [Source]         NVARCHAR(100)   NOT NULL DEFAULT 'OM',
+                    [MotifErreur]    NVARCHAR(500)   NULL,
                     CONSTRAINT [PK_GRC_VENTILATION_SAGE_CACHE] PRIMARY KEY ([EC_Id], [Taux])
                 );
                 CREATE INDEX [IX_GRC_VENTILATION_SAGE_CACHE_ECId]
                 ON [GRC_VENTILATION_SAGE_CACHE] ([EC_Id]);
+            END
+            ELSE IF NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = 'GRC_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'MotifErreur'
+            )
+            BEGIN
+                ALTER TABLE [GRC_VENTILATION_SAGE_CACHE] ADD [MotifErreur] NVARCHAR(500) NULL;
+            END;
+
+            -- TASK-076 : montants bruts Sage (sentinelle d'erreur uniquement).
+            IF NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = 'GRC_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'BrutHT'
+            )
+            BEGIN
+                ALTER TABLE [GRC_VENTILATION_SAGE_CACHE] ADD [BrutHT] DECIMAL(18,4) NULL;
+            END;
+            IF NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = 'GRC_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'BrutTva'
+            )
+            BEGIN
+                ALTER TABLE [GRC_VENTILATION_SAGE_CACHE] ADD [BrutTva] DECIMAL(18,4) NULL;
+            END;
+            IF NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = 'GRC_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'BrutParafiscale'
+            )
+            BEGIN
+                ALTER TABLE [GRC_VENTILATION_SAGE_CACHE] ADD [BrutParafiscale] DECIMAL(18,4) NULL;
+            END;
+            IF NOT EXISTS (
+                SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = 'GRC_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'BrutTtc'
+            )
+            BEGIN
+                ALTER TABLE [GRC_VENTILATION_SAGE_CACHE] ADD [BrutTtc] DECIMAL(18,4) NULL;
             END";
 
         public Task024SqlServerIntegrationTests()
@@ -448,6 +690,89 @@ namespace Declaration.Orchestration.Tests
                 Assert.Equal(m1.Lignes[i].Ttc,  m2.Lignes[i].Ttc,  precision: 4);
                 Assert.Equal(m1.Lignes[i].Taux, m2.Lignes[i].Taux, precision: 4);
             }
+        }
+
+        // ── IT-7 — TASK-072 : MarquerEnErreur purge et écrit la sentinelle sur SQL Server ────
+
+        [Fact]
+        public void IT7_MarquerEnErreur_PurgeEtEcritSentinelle_SQLServer()
+        {
+            var repo = Repo();
+            var ventilationReelle = new VentilationSageCacheEntry
+            {
+                EC_Id = 900006, Taux = 20, BaseHT = 1000, MontantTva = 200, TTC = 1200,
+                CodeTaxe = "TVA20", TotalHT = 1000, TotalTva = 200, TotalTtc = 1200,
+                Token_MV_Id = 42, Token_MV_Point = 1
+            };
+            repo.UpsertEntries(new[] { ventilationReelle }, SqlServerCs);
+
+            repo.MarquerEnErreur(900006, "Incohérence Sage : HT+TVA ≠ TTC.", SqlServerCs);
+
+            var rows = repo.GetEntries(900006, SqlServerCs);
+            Assert.Single(rows); // la ventilation réelle a été purgée
+            Assert.Equal("ERREUR", rows[0].CodeTaxe);
+            Assert.Equal(-1, (int)rows[0].Taux);
+            Assert.Equal("Incohérence Sage : HT+TVA ≠ TTC.", rows[0].MotifErreur);
+        }
+
+        // ── IT-8 — TASK-072 : revalidation rétroactive sur SQL Server réel, reproduisant ────
+        // exactement les montants du cas réel EC_Id=21473/FC2501717 (HT=1 720 251,20 /
+        // TVA=344 050,24 / TTC=20 700,00), sur un EC_Id réservé (jamais le vrai en prod).
+
+        [Fact]
+        public void IT8_LigneCacheAncienneIncoherente_RevalideeSurSQLServerReel()
+        {
+            var repo = Repo(); // token forcé = MV_Id=42, MV_Point=1 (payé, jamais dépointé)
+            var inv = new CountingWorkerInvoker();
+
+            // Pré-condition : ligne de cache déjà écrite avant ce correctif, avec les montants
+            // réels du cas FC2501717 — même moteur SQL Server que la prod.
+            repo.UpsertEntries(new[]
+            {
+                new VentilationSageCacheEntry
+                {
+                    EC_Id = 900007, Taux = 20, CodeTaxe = "D20",
+                    BaseHT = 1720251.20, MontantTva = 344050.24, TTC = 2064301.44,
+                    TotalHT = 1720251.20, TotalTva = 344050.24, TotalTtc = 20700.00,
+                    Token_MV_Id = 42, Token_MV_Point = 1
+                }
+            }, SqlServerCs);
+
+            var orch = new OrchestrateurDeclaration(inv, T.Cfg, new StubLecteurFgr(),
+                "fake-grf", "fake-sage", repo, SqlServerCs);
+
+            var modele = orch.Traiter(new[] { T.Aff("IT8-FC2501717", ecId: 900007) }, 1);
+
+            Assert.Equal(0, inv.TotalCalls); // jamais relu en OM
+            Assert.Empty(modele.Lignes);
+            Assert.Contains(modele.Alertes, a => a.Code == "FACTURE_ILLISIBLE_OM");
+
+            var rows = repo.GetEntries(900007, SqlServerCs);
+            Assert.Single(rows);
+            Assert.Equal("ERREUR", rows[0].CodeTaxe);
+            Assert.Contains("Incohérence Sage", rows[0].MotifErreur);
+        }
+
+        // ── IT-9 — TASK-076 : MarquerEnErreur persiste les montants bruts sur SQL Server réel ────
+
+        [Fact]
+        public void IT9_MarquerEnErreur_MontantsBrutsPersistes_SQLServer()
+        {
+            var repo = Repo();
+            var montantsBruts = new MontantsBrutsErreur
+            {
+                TotalHTNet = 1720251.20, TotalTva = 344050.24, TotalParafiscale = 0, TotalTtc = 20700.00
+            };
+
+            repo.MarquerEnErreur(900012, "Incohérence Sage : HT+TVA ≠ TTC.", SqlServerCs, montantsBruts);
+
+            var rows = repo.GetEntries(900012, SqlServerCs);
+            Assert.Single(rows);
+            Assert.Equal("ERREUR", rows[0].CodeTaxe);
+            Assert.Equal(1720251.20, rows[0].BrutHT!.Value, precision: 2);
+            Assert.Equal(344050.24, rows[0].BrutTva!.Value, precision: 2);
+            Assert.Equal(0.0, rows[0].BrutParafiscale!.Value, precision: 2);
+            Assert.Equal(20700.00, rows[0].BrutTtc!.Value, precision: 2);
         }
 
         // ── IT-Dump — Génère VERIFY/TASK-024_verify.md ────────────────────────
