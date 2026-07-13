@@ -59,24 +59,43 @@ namespace Declaration.Selection
 
             MotifRejet motif = MotifRejet.Eligible;
 
+            // AF_Id == null (aucune affectation) testé AVANT MV_Compta/Annule/Impaye : sans
+            // règlement affecté, il n'y a pas de RT_MOUVEMENT à évaluer (M est NULL, COALESCE
+            // ramène MV_Compta à 0) — ces contrôles ne s'appliquent qu'aux factures affectées et
+            // ne doivent jamais bloquer la lecture facture-first d'une facture NonAffecte
+            // (TASK-052 : bug corrigé, NonAffecte était inatteignable car classé NonComptabilise).
             if (r.DT_Id != null) motif = MotifRejet.DejaDeclare;
+            else if (r.AF_Id == null) motif = MotifRejet.NonAffecte;
             else if (r.MV_Compta != GrfEnums.Compta_Comptabilise) motif = MotifRejet.NonComptabilise;
             else if (r.MV_Annule != GrfEnums.Annule_Non) motif = MotifRejet.Annule;
             else if (source != SourceAffectation.Depense && r.MV_Impaye != GrfEnums.Impaye_NonImpaye) motif = MotifRejet.Impaye;
-            else if (r.AF_Id == null) motif = MotifRejet.NonAffecte;
+            // Liste blanche EC_Type : seules les vraies factures/solde (0/4/111) sont à lire.
+            // Impayés, gains, remboursements, change… ne sont pas des factures ⇒ hors périmètre
+            // (non valorisable), sans échec worker « facture introuvable ».
+            else if (r.EC_Type != null && !GrfEnums.EstEcTypeFacture(r.EC_Type.Value)) motif = MotifRejet.EcTypeHorsPerimetre;
 
             if (motif == MotifRejet.Eligible)
             {
+                // Période située par la DATE DE RÉFÉRENCE (TASK-062, source unique RegleDatePeriode),
+                // borne haute homogène < finExclude sur les 3 chemins. Gate EstDeclarable : espèce
+                // (auto-rapprochée) OU rapproché banque (MV_Point=1).
+                // ⚠️ Keying espèce sur `source == Espece` (et NON MV_Type) : le comportement facture-first
+                //    de l'espèce reste GELÉ tant que le PO n'a pas arbitré (dépense/client espèce inchangés).
                 if (source == SourceAffectation.Espece)
                 {
-                    if (r.DatePaiement < debut || r.DatePaiement > fin)
+                    // Espèce fournisseur : DateReference = MV_Date (= DatePaiement).
+                    if (r.DatePaiement < debut || r.DatePaiement >= finExclude)
                         motif = MotifRejet.HorsPeriode;
+                }
+                else if (r.MV_Point != GrfEnums.Point_Oui)
+                {
+                    // Non-espèce non rapproché : non déclarable (gate EstDeclarable).
+                    motif = MotifRejet.NonRapproche;
                 }
                 else
                 {
-                    if (r.MV_Point != GrfEnums.Point_Oui)
-                        motif = MotifRejet.NonRapproche;
-                    else if (r.MV_PointDate == null || r.MV_PointDate < debut || r.MV_PointDate >= finExclude)
+                    // Non-espèce rapproché : DateReference = MV_PointDate.
+                    if (r.MV_PointDate == null || r.MV_PointDate < debut || r.MV_PointDate >= finExclude)
                         motif = MotifRejet.HorsPeriode;
                 }
             }
@@ -112,7 +131,11 @@ namespace Declaration.Selection
                         CodeActivite = r.TiersActivite ?? ""
                     },
                     EC_Type = r.EC_Type ?? 0,
-                    EC_Id = r.EC_Id ?? 0
+                    EC_Id = r.EC_Id ?? 0,
+                    // TASK-077 : MV_Id snapshoté pour la revalidation ciblée ultérieure du
+                    // rapprochement (RT_MOUVEMENT.MV_Point). AffectationCandidateRow.MV_Id est
+                    // déjà non-nullable (0 = aucun règlement rattaché, cf. requêtes SQL amont).
+                    MV_Id = r.MV_Id
                 }
             };
         }
