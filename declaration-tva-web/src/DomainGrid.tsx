@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ExcelFilter } from './ExcelFilter';
+import { ColumnSelector } from './ColumnSelector';
+import { useColumnPrefs } from './useColumnPrefs';
 import { formatMoney } from './utils';
 import api from './api';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -45,8 +47,10 @@ export function DomainGrid({
     type ColumnDef = { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date' };
     const defaultColumns: ColumnDef[] = [
         { key: 'factureNumero', label: 'N° Facture', filterType: 'text' },
-        { key: 'designation', label: 'Désignation', filterType: 'text' },
+        // TASK-034 : colonne « Désignation » retirée — aucune source dans LigneCandidate
+        // (décision PO par défaut : ne rien inventer, pas de colonne vide muette).
         { key: 'tiers', label: 'Tiers', filterType: 'text' },
+        { key: 'origine', label: 'Origine', filterType: 'list' }, // TASK-038 : origine EC_Type (Sage/OM · FGR · Solde initial)
         { key: 'montantHT', label: 'Montant HT', filterType: 'number' },
         { key: 'tauxTVA', label: 'Taux TVA', filterType: 'list' },
         { key: 'montantTTC', label: 'Montant TTC', filterType: 'number' },
@@ -55,18 +59,19 @@ export function DomainGrid({
         { key: 'motif', label: 'Motif Écartement', filterType: 'text' }
     ];
     const gridColumns: ColumnDef[] = columns || defaultColumns;
+    const { visibleColumns, visibleKeys, toggle: toggleColumn, reset: resetColumns } = useColumnPrefs('grf.cols.domain', gridColumns);
 
     const fetchPage = useCallback(async () => {
         setLoading(true);
         try {
+            // TASK-067B : le back (BuildLigneFilterWhere) applique désormais numeroRapprochement/
+            // source/tauxTVA/origine en MULTI-SÉLECTION RÉELLE (IN), fin de la troncature à la 1re
+            // valeur cochée (l'ancien `v[0]` ignorait silencieusement les autres cases — filtre
+            // menteur, cf. TASK-063 pour le même bug côté Rapprochement).
             const backendFilters: any = {};
             for (const [k, v] of Object.entries(filters)) {
-                let outK = k === 'statutLigne' ? 'etat' : k;
-                if (outK === 'numeroRapprochement' && Array.isArray(v)) {
-                    backendFilters[outK] = v[0];
-                } else {
-                    backendFilters[outK] = v;
-                }
+                const outK = k === 'statutLigne' ? 'etat' : k;
+                backendFilters[outK] = v;
             }
 
             const res = await api.get(`/declarations/${declarationId}/lignes`, {
@@ -228,6 +233,7 @@ export function DomainGrid({
                             Effacer filtres
                         </button>
                     )}
+                    <ColumnSelector columns={gridColumns} visibleKeys={visibleKeys} onToggle={toggleColumn} onReset={resetColumns} />
                 </div>
             </div>
 
@@ -255,12 +261,12 @@ export function DomainGrid({
                     <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                         <tr>
                             {!readonly && (
-                                <th style={{ padding: '0.5rem 1rem', width: '40px', borderBottom: '1px solid var(--border-color)' }}>
+                                <th style={{ padding: '0.5rem 1rem', width: '40px', borderBottom: '1px solid var(--border-color)', borderRight: '1px solid var(--border-color)' }}>
                                     <input type="checkbox" checked={selectAllFilters || (selectedIds.size > 0 && selectedIds.size === data.length)} onChange={handleToggleAll} />
                                 </th>
                             )}
-                            {gridColumns.map((col: ColumnDef) => (
-                                <th key={col.key} style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border-color)', textAlign: ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA'].includes(col.key) ? 'right' : 'left', cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort(col.key)}>
+                            {visibleColumns.map((col: ColumnDef) => (
+                                <th key={col.key} style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border-color)', borderRight: '1px solid var(--border-color)', textAlign: ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA'].includes(col.key) ? 'right' : 'left', cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort(col.key)}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA'].includes(col.key) ? 'flex-end' : 'flex-start', gap: '0.25rem' }}>
                                         {col.label}
                                         {sortConfig?.key === col.key && (
@@ -298,12 +304,12 @@ export function DomainGrid({
                                     }}
                                 >
                                     {!readonly && (
-                                        <td style={{ padding: '0.5rem 1rem', width: '40px' }} onClick={(e) => e.stopPropagation()}>
+                                        <td style={{ padding: '0.5rem 1rem', width: '40px', borderRight: '1px solid var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
                                             <input type="checkbox" checked={isSelected || selectAllFilters} onChange={() => handleToggleOne(row.id)} disabled={selectAllFilters} />
                                         </td>
                                     )}
-                                    {gridColumns.map((col: ColumnDef) => (
-                                        <td key={col.key} style={{ padding: '0.5rem 1rem', textAlign: ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA'].includes(col.key) ? 'right' : 'left', whiteSpace: 'nowrap' }}>
+                                    {visibleColumns.map((col: ColumnDef) => (
+                                        <td key={col.key} style={{ padding: '0.5rem 1rem', borderRight: '1px solid var(--border-color)', textAlign: ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA'].includes(col.key) ? 'right' : 'left', whiteSpace: 'nowrap' }}>
                                             {renderCell(col.key, row[col.key])}
                                         </td>
                                     ))}
