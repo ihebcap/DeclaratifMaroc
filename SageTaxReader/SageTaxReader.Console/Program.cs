@@ -22,19 +22,20 @@ class Program
         if (args.Length > 0 && args[0].Equals("batch", StringComparison.OrdinalIgnoreCase))
         {
             // Mode BATCH JSON
-            // args[1] = JSON list of { NumeroPiece, Sens }
-            string jsonInput = args[1];
-            
+            // La liste JSON { NumeroPiece, Sens } est lue sur stdin (pas d'argument :
+            // évite la limite de longueur de ligne de commande Windows sur gros volumes).
+            string jsonInput = Console.In.ReadToEnd();
+
             string server = "";
             string database = "";
             string user = "";
             string pwd = "";
-            if (args.Length >= 6)
+            if (args.Length >= 5)
             {
-                server = args[2];
-                database = args[3];
-                user = args[4];
-                pwd = args[5];
+                server = args[1];
+                database = args[2];
+                user = args[3];
+                pwd = args[4];
             }
             else
             {

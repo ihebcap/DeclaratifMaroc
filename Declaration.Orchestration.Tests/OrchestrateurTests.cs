@@ -15,7 +15,7 @@ namespace Declaration.Orchestration.Tests
         {
             public int InvocationCount { get; private set; } = 0;
 
-            public DocumentTaxesInfo? InvoquerWorker(string numeroFacture, string sens, WorkerConfig config)
+            public DocumentTaxesInfo? InvoquerWorker(string numeroFacture, string sens, WorkerConfig config, Action<string>? log = null)
             {
                 InvocationCount++;
 
@@ -41,7 +41,7 @@ namespace Declaration.Orchestration.Tests
                 };
             }
 
-            public List<DocumentTaxesInfo> InvoquerWorkerBatch(IEnumerable<(string numeroFacture, string sens)> requetes, WorkerConfig config)
+            public List<DocumentTaxesInfo> InvoquerWorkerBatch(IEnumerable<(string numeroFacture, string sens)> requetes, WorkerConfig config, Action<string>? log = null)
             {
                 var result = new List<DocumentTaxesInfo>();
                 foreach (var req in requetes)
