@@ -32,10 +32,7 @@ public class ComparateurDeclarationService
             throw new Exception($"Déclaration GRFN {dtId} introuvable.");
         }
 
-        if (!int.TryParse(info.SocieteId, out int soId))
-        {
-            throw new Exception($"SocieteId {info.SocieteId} n'est pas un entier valide.");
-        }
+        int soId = info.SocieteId;
 
         // 1. Charger lignes GRFN stockées
         var lignesGrfn = (await _grfnRepository.GetLignesDeclarationAsync(dtId)).ToList();

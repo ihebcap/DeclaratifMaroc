@@ -8,7 +8,7 @@ export function CreateDeclarationModal({
     onClose, 
     onSuccess 
 }: { 
-    societeId: string, 
+    societeId: number, 
     societeName: string, 
     onClose: () => void,
     onSuccess: (id: string) => void
