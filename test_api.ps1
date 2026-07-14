@@ -25,14 +25,14 @@ try {
 
     Write-Host ""
     Write-Host "=== 2. CREER DECLARATION ==="
-    $decl = Invoke-RestMethod -Uri "http://localhost:5005/api/declarations" -Method Post -Headers $H -Body '{"societeId":"001","exercice":2026,"periode":6,"type":0}' -ContentType "application/json"
+    $decl = Invoke-RestMethod -Uri "http://localhost:5005/api/declarations" -Method Post -Headers $H -Body '{"societeId":1,"exercice":2026,"periode":6,"type":0}' -ContentType "application/json"
     $id = $decl.id
     Write-Host "201 Created -- Numero=$($decl.numero) Id=$id"
 
     Write-Host ""
     Write-Host "=== 3. DOUBLON (409 attendu) ==="
     try {
-        Invoke-RestMethod -Uri "http://localhost:5005/api/declarations" -Method Post -Headers $H -Body '{"societeId":"001","exercice":2026,"periode":6,"type":0}' -ContentType "application/json"
+        Invoke-RestMethod -Uri "http://localhost:5005/api/declarations" -Method Post -Headers $H -Body '{"societeId":1,"exercice":2026,"periode":6,"type":0}' -ContentType "application/json"
         Write-Host "ERREUR: aurait du renvoyer 409"
     } catch {
         Write-Host "409 Conflict -- OK"
@@ -47,8 +47,8 @@ try {
     foreach ($g in $grouped | Select-Object -First 2) {
         Write-Host "--- Groupe: Reglement='$($g.Name)' ---"
         foreach ($l in $g.Group) {
-            $etatLabel = switch ($l.etat) { 0 { "Proposee" } 1 { "Integree" } 2 { "Exclue" } default { "?" } }
-            Write-Host "  [$etatLabel] $($l.numeroFacture) -- Reglement='$($l.numeroRapprochement)' -- Tiers=$($l.tiersNom) -- MotifRejet='$($l.motifRejet)'"
+            $etatLabel = switch ($l.statutLigne) { 0 { "Proposee" } 1 { "Integree" } 2 { "Exclue" } default { "?" } }
+            Write-Host "  [$etatLabel] $($l.factureNumero) -- Reglement='$($l.numeroRapprochement)' -- Tiers=$($l.tiers) -- MotifRejet='$($l.motif)'"
         }
     }
 
@@ -59,10 +59,10 @@ try {
 
     Write-Host ""
     Write-Host "=== 6. PATCH lignes Proposee vers Integree ==="
-    $eligibles = $lignes.items | Where-Object { $_.etat -eq 0 }
+    $eligibles = $lignes.items | Where-Object { $_.statutLigne -eq 0 }
     foreach ($l in $eligibles) {
         Invoke-RestMethod -Uri "http://localhost:5005/api/declarations/$id/lignes/$($l.id)" -Method Patch -Headers $H -Body '{"etat":1}' -ContentType "application/json"
-        Write-Host "  204 No Content -- $($l.numeroFacture) patche vers Integree"
+        Write-Host "  204 No Content -- $($l.factureNumero) patche vers Integree"
     }
 
     Write-Host ""
@@ -79,7 +79,7 @@ try {
 
     Write-Host ""
     Write-Host "=== 8. CLOTURE BLOQUEE (declaration sans lignes integrees) ==="
-    $decl2 = Invoke-RestMethod -Uri "http://localhost:5005/api/declarations" -Method Post -Headers $H -Body '{"societeId":"002","exercice":2026,"periode":7,"type":0}' -ContentType "application/json"
+    $decl2 = Invoke-RestMethod -Uri "http://localhost:5005/api/declarations" -Method Post -Headers $H -Body '{"societeId":1,"exercice":2026,"periode":7,"type":0}' -ContentType "application/json"
     $id2 = $decl2.id
     $null = Invoke-RestMethod -Uri "http://localhost:5005/api/declarations/$id2/lignes?domaine=Decaissement&page=1&size=5" -Method Get -Headers $H
     try {

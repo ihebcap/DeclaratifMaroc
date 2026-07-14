@@ -7,7 +7,13 @@
     "PersistenceConnection": "Server=.\\sql2022;Database=GR_EMA_DISTRIBUTION;User Id=sa;Password=1234;TrustServerCertificate=True;"
   },
 
+  "_comment_SageOM": "Identifiants de l'utilisateur APPLICATIF Sage (Objets Metier) - distincts du login SQL ci-dessus. Requis par le worker pour ouvrir la base commerciale.",
+  "SageOM": {
+    "User": "<Administrateur>",
+    "Password": "P@ssw0rd"
+  },
+
   "WorkerConfig": {
-    "WorkerExePath": "SageTaxReader.Console.exe"
+    "WorkerExePath": "D:\\_vibe\\GRF\\SageTaxReader\\SageTaxReader.Console\\bin\\Debug\\net48\\SageTaxReader.Console.exe"
   }
 }
