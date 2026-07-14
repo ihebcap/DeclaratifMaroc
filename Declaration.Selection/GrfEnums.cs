@@ -17,6 +17,19 @@ namespace Declaration.Selection
         public const int Compta_NonComptabilise = 0;
         public const int Compta_Comptabilise = 1;
 
+        // RT_ECHEANCE.EC_Type — origine de l'échéance (discriminant de valorisation).
+        // LISTE BLANCHE : on ne valorise QUE ces trois types (vraies factures / solde).
+        // Tous les autres (1 IMP, 3 RN, 90 G, 91 P, 100 GE, 101 PE, 102 VM, 103-108 remb.,
+        // 109 CI, 110 II…) ne sont pas des factures à lire → exclus de la sélection.
+        public const int EcType_FactureErp = 0;   // FC — Facture Erp (TVA via OM, worker Sage)
+        public const int EcType_Solde = 4;         // S  — Solde
+        public const int EcType_Fgr = 111;         // FGR — Facture GR (détail RT_HISTOCOMPTA, SQL)
+
+        // Vrai si l'échéance est une facture/solde à valoriser (liste blanche 0/4/111).
+        // Tout autre EC_Type (impayé, gain, remboursement, change…) n'est pas une facture à lire.
+        public static bool EstEcTypeFacture(int ecType) =>
+            ecType == EcType_FactureErp || ecType == EcType_Solde || ecType == EcType_Fgr;
+
         // Autres flags
         public const int Point_Oui = 1;
         public const int Annule_Non = 0;
