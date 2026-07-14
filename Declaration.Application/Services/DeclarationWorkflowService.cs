@@ -282,7 +282,18 @@ public class DeclarationWorkflowService
             }
         }
 
-        if (lignes.Count == 0) return alertes;
+        // TASK-082 : une ligne Exclue DÈS LE FIGEAGE (détection TASK-072/076 pendant la lecture du
+        // cache, avant même de devenir Proposee — cas réel FC2501717/EC_Id=21473) porte un EC_Id
+        // connu dès sa création (MapLignesCandidates) mais était totalement absente de `lignes`
+        // ci-dessus : jamais revalidée, donc le badge « ligne à revérifier » de l'écran ②
+        // (Affectations) restait silencieux, alors que Synthèse/Contrôle affiche déjà le même
+        // motif via l'alerte indépendante LIGNE_EXCLUE (GetCheckupAsync). Ne change AUCUN
+        // état/valeur — ajoute seulement ces lignes au contrôle d'incohérence ci-dessous.
+        var lignesExcluesIncoherence = toutesLignes
+            .Where(l => l.Etat == EtatLigne.Exclue && l.EC_Id > 0 && !l.IncoherenceValidee)
+            .ToList();
+
+        if (lignes.Count == 0 && lignesExcluesIncoherence.Count == 0) return alertes;
 
         // TASK-077 (suite) : auto-guérison des lignes figées AVANT la migration 006 (EC_Id/MV_Id
         // = 0, valeur inconnue à l'origine) — sans ce backfill, ces lignes ne sont JAMAIS
@@ -327,7 +338,8 @@ public class DeclarationWorkflowService
             }
         }
 
-        var ecIds = lignes.Where(l => l.EC_Id > 0).Select(l => l.EC_Id).Distinct().ToList();
+        var ecIds = lignes.Concat(lignesExcluesIncoherence)
+            .Where(l => l.EC_Id > 0).Select(l => l.EC_Id).Distinct().ToList();
         var ecIdsEnErreur = await _repository.GetEcIdsEnErreurAsync(ecIds);
 
         var mvIds = lignes.Where(l => l.MV_Id > 0).Select(l => l.MV_Id).Distinct().ToList();
@@ -364,6 +376,25 @@ public class DeclarationWorkflowService
                         RefLigne = l.NumeroFacture
                     });
                 }
+            }
+        }
+
+        // TASK-082 : même contrôle d'incohérence que ci-dessus, pour les lignes Exclue dès le
+        // figeage (cf. lignesExcluesIncoherence). Pas de contrôle MV_Point ici : une ligne Exclue
+        // n'a jamais été valorisée/déclarée, donc « règlement dépointé depuis le figeage » n'a pas
+        // de sens pour elle — seul le motif d'incohérence Sage doit être resignalé (parité avec
+        // l'alerte LIGNE_EXCLUE déjà visible en Synthèse/Contrôle).
+        foreach (var l in lignesExcluesIncoherence)
+        {
+            if (ecIdsEnErreur.Contains(l.EC_Id))
+            {
+                alertes.Add(new Alerte
+                {
+                    Niveau = NiveauAlerte.Warning,
+                    Code = "LIGNE_FIGEE_A_REVERIFIER",
+                    Message = $"Facture {l.NumeroFacture} exclue de la valorisation (EC_Id={l.EC_Id}) : incohérence Sage HT/TVA/TTC détectée — vérification manuelle requise avant clôture. Ligne non valorisée, aucune valeur déclarée pour cette pièce.",
+                    RefLigne = l.NumeroFacture
+                });
             }
         }
 
