@@ -25,3 +25,6 @@ test_output.txt
 
 # ---- Legacy GRFN black box (222 MB of vendored binaries, not versioned) ----
 GRFWinform/
+
+# Claude Code local config
+.claude/

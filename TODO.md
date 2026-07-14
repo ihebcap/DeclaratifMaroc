@@ -162,6 +162,31 @@ ci-dessous) — **à faire confirmer explicitement par le PO** avant lancement (
 |---|---|---|---|
 | 1 | [TASK-084](TASKS/TASK-084-ouverture-domaine-reglements-clients-tva-collectee.md) | **Ouverture domaine règlements clients (`MV_Domaine=0`)** dans le tunnel : socle SQL déjà partiellement écrit (TASK-015/021, jamais exercé sur le chemin de figeage réel) ; export XML DGI **bloqué** (TASK-014 : schéma TVA Collectée `⛔ inconnu`) → v1 = sélection+calcul+front, export explicitement différé. | 🎯 **prêt** — ⚠️ nécessite confirmation PO du reclassement roadmap avant lancement. |
 
+### 🧮 Colonne TTC — écran ③ Calcul TVA (PO 14/07/2026)
+Demande PO (capture écran ③ Calcul TVA) : ajouter une colonne « Total TTC » (= Total HT + Total TVA) dans le tableau des sous-totaux par taux, par ligne de taux et sur `Σ Total`. Affichage pur, aucune donnée nouvelle requise (dérivé de `totalHT`/`totalTVA` déjà présents en front).
+
+| # | Task | Objet | État |
+|---|---|---|---|
+| 1 | [TASK-085](TASKS/TASK-085-colonne-ttc-calcul-tva.md) | **Colonne TTC** sur le tableau des sous-totaux TVA (`CalculTvaPanel.tsx`) : entête + ligne par taux + `Σ Total`, front-only, aucun changement back/DTO. | 🎯 **prêt** — front-only, périmètre trivial (3 emplacements), vérification visuelle requise en VERIFY. |
+
+### 🔍 Écran ④ Intégration — récap vide, écart sans détail, avertissements tronqués (PO 14/07/2026)
+Demande PO (capture écran ④ Intégration) : (1) le bloc « Récapitulatif de l'intégration » en haut
+s'affiche vide ; (2) le contrôle « Équilibre comptable » affiche un écart global sans détail et
+son libellé prête à confusion ; (3) les avertissements « Ligne exclue : ... » n'indiquent ni
+référence ni montant. Analyse code (architecte) : dans les 3 cas, le backend expose déjà les
+données utiles (`recapSource`/`recapTaux`/`refLigne`/`filtre` via `/checkup`), mais
+`IntegrationPanel.tsx` ne les consomme pas (troncature d'affichage / état front non robuste), pas
+un manque de données en base ou en API.
+
+| # | Task | Objet | État |
+|---|---|---|---|
+| 1 | [TASK-086](TASKS/TASK-086-recap-integration-vide-fallback-api.md) | **Récap vide** : source des chiffres = réponse `/checkup` (déjà chargée) au lieu des props volatiles de l'étape ③, robuste au rechargement de page / ouverture directe sur ④. | 🎯 **prêt** — front-only, lecture seule d'un contrat déjà exposé. |
+| 2 | [TASK-087](TASKS/TASK-087-detail-ecart-equilibre-comptable.md) | **Détail de l'écart + renommage** du contrôle « Équilibre comptable » : afficher la ventilation `recapSource`/`recapTaux` déjà disponible sous le badge BLOQUANT ; libellé à trancher par le PO (options proposées dans la task). | 🎯 **prêt** — ⚠️ nécessite validation PO du nouveau libellé avant implémentation. |
+| 3 | [TASK-088](TASKS/TASK-088-detail-avertissements-lignes-exclues.md) | **Détail des avertissements** : afficher `refLigne` (référence facture/pièce, déjà renvoyée par l'API) pour chaque « Ligne exclue », drill-down optionnel via le mécanisme TASK-016. | 🎯 **prêt** — front-only, lecture seule d'un contrat déjà exposé. |
+
+> Aucune dépendance bloquante entre elles ; les 3 touchent `IntegrationPanel.tsx` (zones
+> distinctes) — séquencer si livrées ensemble pour éviter les conflits d'édition.
+
 ### 🎛️ UX grilles — filtres « valeurs disponibles » & sélecteur de colonnes (PO 13/07/2026)
 Demande PO (capture écran ② Affectations) : (1) chaque filtre de colonne doit proposer **la liste des valeurs réellement présentes** (type Excel : cases + recherche) sur **toutes** les listes ; (2) **sélecteur de colonnes** persistant (`localStorage`) sur toutes les listes. `ExcelFilter` gère déjà le mode `'list'` — le travail porte sur l'alimentation des options et un nouveau composant colonnes.
 
