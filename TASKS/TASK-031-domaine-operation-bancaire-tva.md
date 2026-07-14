@@ -2,6 +2,10 @@
 
 > ⏸️ **DIFFÉRÉ (backlog).** Décision PO 09/07/2026 : **le client ne gère pas ce cas aujourd'hui** dans ses déclarations. À traiter plus tard, hors chemin critique. Aucune dépendance ne doit être bloquée par cette tâche.
 
+> 🔎 **Mise à jour 09/07/2026 (source confirmée par le PO).** Le domaine est porté par `RT_MOUVEMENT.MV_Domaine` : **0 = Encaissement, 1 = Décaissement, 6 = Frais bancaire**. Les frais bancaires **prévisionnels** proviennent de `RT_PREVISIONNELLE` avec `PT_Domaine = 6` (table distincte de `RT_MOUVEMENT`). Ceci lève l'inconnue de l'étape 1 / du risque « localiser la source exacte ».
+>
+> **Déjà livré hors périmètre déclaration** (écran Rapprochement, TASK-036/037) : la colonne `Domaine` mappe désormais `MV_Domaine` (0/1/6, codes inconnus → `Autre (n)`). ⚠️ Mais le pivot rapprochement lit **uniquement `RT_MOUVEMENT`** : les frais présents **seulement** dans `RT_PREVISIONNELLE` (`PT_Domaine = 6`) **n'apparaissent pas** dans l'écran → nécessite une UNION (voir étape 5 bis ci-dessous). À traiter en même temps que cette tâche.
+
 ## Contexte
 L'ancien module GRFN déclare **trois** sources de déduction, pas deux : décaissement, dépense **et frais/commissions bancaires avec TVA** via `DeclarationTvaController.GetDeclarationCommissionBancaire` (`scratch/decompiled/UIDeclarationTva/Tresorerie.UIDeclarationTva.Stuctures/DeclarationTvaController.cs:917`). Ces lignes portent le mode de paiement `<mp><id>=3` (Opération bancaire) dans le relevé de déductions Simpl-TVA.
 
@@ -27,11 +31,12 @@ Sortie : lignes de déclaration source=FraisBancaire, intégrées comme les autr
 ```
 
 ## Étapes
-1. Cartographier en base la source réelle des opérations bancaires (table `RT_MOUVEMENT` / prévisionnel) + le lien type d'opération → code taxe → taux (2 connexions comme TASK-022).
+1. ~~Cartographier en base la source réelle des opérations bancaires~~ **Résolu (09/07/2026)** : `RT_MOUVEMENT.MV_Domaine = 6` **et** `RT_PREVISIONNELLE.PT_Domaine = 6`. Reste à cartographier le lien type d'opération → code taxe → taux (2 connexions comme TASK-022).
 2. Ajouter la valeur `SourceAffectation.FraisBancaire` (ou `OperationBancaire`) et le mapping `MapperModePaiementSimplTVA` = 3.
 3. Requête de sélection (miroir des autres domaines : garde-fous universels, `DT_Id IS NULL`, date de période, sens).
 4. Valorisation **directe** (assiette = montant, TVA = montant TVA), sans prorata, avec arrondi `AwayFromZero`.
 5. Brancher dans le workflow (candidates, checkup, clôture) + exports Excel/XML + poste 4 interrogations.
+5. bis **Écran Rapprochement (TASK-036/037)** : élargir la projection `GetReglementsRapprochementAsync` par une **UNION** `RT_MOUVEMENT` ∪ `RT_PREVISIONNELLE (PT_Domaine = 6)` pour que les frais bancaires prévisionnels remontent dans l'interrogation. Points de vigilance : colonnes non communes (numéro, tiers, montant, affectations, EC_Type/origine potentiellement absents côté prévisionnel → valeurs explicites, jamais nulles silencieuses), impact sur `COUNT` (pagination) et sur les tris/filtres, distinction visuelle de la source.
 6. Aucune ligne silencieuse : cas exclus → motif explicite (pas de TVA, taxe non à taux, non rapproché).
 
 ## Livrables
@@ -46,5 +51,6 @@ Sortie : lignes de déclaration source=FraisBancaire, intégrées comme les autr
 
 ## Risques / dépendances
 - ⏸️ **Différé** : le client n'utilise pas ce cas → aucune urgence, valeur à confirmer avant réalisation.
-- Localiser la source exacte des opérations bancaires en base prod (peut différer du modèle prévisionnel legacy).
+- ~~Localiser la source exacte des opérations bancaires en base prod~~ **Résolu** : `RT_MOUVEMENT.MV_Domaine = 6` + `RT_PREVISIONNELLE.PT_Domaine = 6`.
+- UNION `RT_MOUVEMENT` ∪ `RT_PREVISIONNELLE` : risque de doublon (un frais à la fois prévisionnel et réalisé ?) et de colonnes hétérogènes → cadrer les clés d'unicité avant réalisation.
 - Cohérence sens Encaissement/Décaissement avec le mapping domaines XML (TASK-014).

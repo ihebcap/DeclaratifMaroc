@@ -1,5 +1,14 @@
 # TODO — Module Déclaration TVA (GRF)
 
+## 🔴 CRITIQUE — bugs bloquants découverts sur cas réel (PO 13/07/2026)
+✅ **TASK-076, TASK-077, TASK-078, TASK-080, TASK-081 et TASK-082 livrées et approuvées**
+(2026-07-13/14) — voir `DONE.md`. TASK-081 (bandeau absent au premier figeage) et TASK-082
+(bandeau absent pour une ligne `Exclue` dès le figeage, cas réel `FC2501717`/`EC_Id=21473`)
+découvertes et corrigées ensemble sur le même signalement PO (bandeau ② toujours silencieux
+après le correctif 081 seul).
+
+> ⚠️ TASK-072 (incohérence Σ(HT+TVA) vs rapproché, cas PO 68 règlements) et TASK-071 (deadlock d'intégration) ont été découverts ensemble sur cas réel et sont désormais **DONE** — cf. `DONE.md`. TASK-075 (relecture ②③ après intégration) également **DONE** (2026-07-13, implémentée en worker exceptionnel, **non vérifiée en environnement réel** — cf. réserve dans `DONE.md`). TASK-076/077/078 (suivis directs de TASK-072, workflow complet de détection/décision sur une incohérence Sage) également **DONE** (2026-07-13 — TASK-078 vérifiée par relecture de code exhaustive, **non confirmée visuellement en réel**, cf. réserve dans `DONE.md`, « on teste au fur et à mesure »). Ne pas confondre avec TASK-069/070 (mise en page ③, déjà traitées).
+
 ## Ordre d'exécution consolidé (re-séquencé 08/07/2026)
 
 Vérifié dans le code : les Gap A/B/C décrits par les tasks sont **confirmés**. Ordre retenu :
@@ -53,7 +62,46 @@ Vérifié dans le code : les Gap A/B/C décrits par les tasks sont **confirmés*
 | [TASK-023](DONE_DETAIL/TASK-023-lecture-sage-session-reutilisee.md) | Session Sage réutilisée (`EC_Type=0`) : 1 `Open()` → boucle `ReadPiece` → 1 `Close()`, cache devise/codes taxe, **timeout par pièce**, isolation d'erreur | ✅ VERIFY approuvé — thread STA unique (aucun `Parallel.ForEach`), pièce KO → `EnErreur`+motif (alerte `FACTURE_ILLISIBLE_OM`, jamais matérialisée en cache), N traité = N demandé. Preuves réelles `DISTRI_DEMO` : **12/12 montants identiques** (unitaire vs batch), **30,04 s → 2,84 s (×10,6)**. Build 0 erreur (rejoué par l'architecte), 76 tests / 0 échec. Réserves non bloquantes : timeout pièce interrompt le reste du lot (transparent, jamais silencieux) ; perf sur base démo 12 pièces (extrapolation prod argumentée). |
 
 ### 🎯 Track A — front poste de travail
-✅ **Terminé** — TASK-019 livrée et approuvée (voir table ✅ Fait). Correctif back associé Gap A TVA : **TASK-030**.
+✅ **Terminé** — TASK-019 livrée et approuvée (voir table ✅ Fait). Correctif back associé Gap A TVA : **[TASK-030](DONE_DETAIL/TASK-030-correction-gap-a-tva.md)** — ✅ **livré et approuvé** (2026-07-09).
+
+#### 🖥️ Refonte front rappro/TVA — retour PO 09/07/2026 (module déclaration seul, GRC = simple exemple de style)
+Décisions PO actées : **menu groupé multi-entrées à valeur ajoutée** (voir 035) — INTERROGATION (Rapprochement bancaire 🟢 *global* + Factures ⚪) / DÉCLARATION (Déclaration TVA 🟢 + Relevé de déductions ⚪) / À VENIR grisé (RAS · Télédéclaration · Tableau de bord 🔒) ; on **montre** toute la portée, on ne **build** que le cœur. Pivot rapprochement = **par règlement** (TVA sur décaissement) ; traçabilité = **colonnes de preuve inline + preuve à la demande**, **pas de panneau latéral**. Priorité cœur = rapprochement + valorisation TVA (la génération est triviale). Décompilation GénéraFi (09/07/2026) confirme l'architecture (cf. mémoire `generafi-reference-produit-tva`).
+> **Ordre d'exécution confirmé (PO)** : 034 → 035 → 036 → 037 → 038 (shell menu remonté en #2 pour rendre la valeur visible tôt).
+
+| Ordre | Task | Nature | Objet | État |
+|---|---|---|---|---|
+| 2 | [TASK-035](DONE_DETAIL/TASK-035-navigation-deux-entrees-densite.md) | front | **Shell menu groupé** (INTERROGATION / DÉCLARATION / À VENIR) + densité « 0 espace perdu ». Entrées cœur actives (Rappro 🟢, Déclaration 🟢), autres ⚪ placeholder / 🔒 grisées. Câble *Déclaration* → flux existant, *Rapprochement bancaire* → écran TASK-037 (placeholder tant que 037 non livré). | ✅ **livré et approuvé** (2026-07-09) — front-only, build tsc+vite / oxlint 0 erreur, aucune dérive vers les écrans « à venir ». Voir DONE.md. |
+| 3 | [TASK-036](DONE_DETAIL/TASK-036-endpoint-interrogation-rapprochement-global.md) | **back** | **Endpoint interrogation rapprochement GLOBAL** (règlement-pivot, lecture seule stricte) : `RT_MOUVEMENT`/`RT_AFFECTATION`/`MV_Point`/`EC_Type`/`DT_Id`, filtré/paginé, **reste à affecter visible**. DTO explicite | ✅ **livré et approuvé** (2026-07-09) — `GET /api/rapprochement` SELECT-only (aucun write/DLL, `DT_Id` lu jamais écrit), reste à affecter exposé, preuve réelle `GR_EMA_DISTRIBUTION`, build 0 erreur + 15/15 tests. **Débloque 037.** Voir DONE.md. |
+| 4 | [TASK-037](DONE_DETAIL/TASK-037-ecran-rapprochement-bancaire-front.md) | front | **Écran Rapprochement bancaire** (grille règlement-pivot dense : montant/mode/date/rapproché banque/factures affectées/reste/origine/déclaré + drill preuve TVA) | ✅ **livré et approuvé** (2026-07-09) — grille dense pivot règlement, reste à affecter ≠ 0 rendu visible (orange+⚠), drill-down à la demande, filtres/tri/pagination, build tsc+vite / oxlint OK. **Décision PO : drill-down agrégé (nb factures + montant affecté + reste + origine OM/FGR) accepté** comme niveau d'interrogation ; ventilation facture-par-facture = poste Déclaration. Voir DONE.md. |
+| 5 | [TASK-038](DONE_DETAIL/TASK-038-tracabilite-tva-inline-declaration.md) | front (+DTO) | **Traçabilité TVA inline** dans « Factures à déclarer » : colonnes origine (`EC_Type` Sage/FGR/Solde)/taux/motif visibles + `ProofModal` à la demande, sans panneau latéral | ✅ **livré et approuvé** (2026-07-09) — colonne `origine` (source unique `ReglementRapprochementRow.LibelleEcType` partagée avec l'écran Rapprochement), snapshot `EcType` entité→SQL→DTO→front, `ProofModal` inchangé, build back/front/lint + 43/43 tests. Voir DONE.md. |
+| 6 | [TASK-041](DONE_DETAIL/TASK-041-ecran-factures-interrogation.md) | back+front | **Écran « Factures » (INTERROGATION, filtre date obligatoire)** : grille facture-pivot (N°/date/fournisseur/réf/HT/TVA/autre taxe/écart/escompte/TTC/solde + statut déclaration 3 valeurs Non déclarable·Partiel·Total). Familles A (`RT_ECHEANCE`, gratuit) + C (`RT_AFFECTATION`/`DT_Id`, statut calculé) réelles ; famille B (HT/TVA/…) **depuis cache TASK-024** ou « non valorisé »+motif. **Lecture seule stricte.** Option 2 (sélection/déclaration partielle actionnable) **différée**. | ✅ **livré et approuvé** (2026-07-09) — `GET /api/factures` SELECT-only (période 400, `DT_Id` lu jamais écrit), `FacturesFromWhere` partagé liste+COUNT+distincts, statut 3 valeurs répliqué à l'identique C#↔SQL, famille B au cache TASK-024 sinon « non valorisé »+motif. Preuve réelle `GR_EMA_DISTRIBUTION` (1408 factures, borne Solde=TTC−Réglé, cache vide→100 % non valorisé, logique Partiel/Total prouvée what-if). Voir DONE.md. |
+
+> ⚠️ Aucune fusion avec GOCOM/`gocom-web` (modules distincts, cf. mémoire `grc-vs-declaration-modules-distincts`). GRC = simple référence de **style** (dense, 0 espace perdu).
+> **Ordre PO** : 034 → 035 → 036 → 037 → 038. **Chemin critique cœur** : 034 → **036 → 037** (035 shell et 038 traçabilité peuvent avancer en parallèle après 034, mais 035 est priorisé en #2 pour la visibilité de la valeur).
+
+#### 🧭 Flux Déclaration TVA règlement-first — tunnel 8 écrans (PO 11/07/2026, `reflexion dectva.md`)
+Décisions PO actées : **règlement-first assumé** (point d'entrée = les règlements décaissés) ; densité **0 espace perdu** (cohérent 035/037/041) ; justificatif = **`ProofModal` à la demande**, pas de panneau latéral. Front-only + réutilisation massive de l'existant (back déjà livré : sélection/figeage TASK-012/017, verrou TASK-028, valorisation TASK-022/023/024, contrôle TASK-009, exports TASK-010/011, conformité TASK-027). Le tunnel remplace le stepper 2 étapes (`DeclarationStepper.tsx`).
+
+| Ordre | Task | Nature | Objet | État |
+|---|---|---|---|---|
+| — | _(tunnel 053→059 livré)_ | — | — | ✅ |
+
+> **Séquentiel strict** : 053 → 054 → 055 → 056 → 057 → 058 → 059 (chaque étape consomme la sortie de la précédente). 053 peut être livré seul (étapes en placeholder honnête).
+> **Écran §1 « Gestion déclarations »** (liste + création + statut/historique) : **déjà couvert** par `DeclarationList.tsx` + `CreateDeclarationModal.tsx` (TASK-012/013) — enrichissement colonnes (Lignes/TVA/Actions) à traiter dans 053 si manquant, pas de task dédiée.
+> **Écran §7 « Justificatif »** : **pas de task dédiée** — `ProofModal` existant (TASK-038) enrichi timeline dans 055 (décision PO : preuve à la demande, pas de panneau latéral).
+> ⚠️ Garde-fou règlement-first : ne **jamais** filtrer `MV_DECAISSE=1` (trou ~465 factures/mois, mémoire `grf-trou-selection-mv-decaisse`) — utiliser `MV_Domaine IN (0,1)`.
+
+#### 🗺️ Roadmap produit — APRÈS le cœur (décision PO 09/07/2026)
+Jalons **planifiés pour plus tard** (à cadrer en TASKS le moment venu, **pas maintenant** — priorité = rapprochement + valorisation TVA). Repère : GénéraFi (`generafi-reference-produit-tva`), sans copier.
+
+| Jalon | Domaine | Note de cadrage (à approfondir au lancement) |
+|---|---|---|
+| R1 | **RAS fournisseurs** (Retenue à la Source) | Nouveau domaine de calcul + sélection ; s'appuie sur le même socle règlement/affectation. |
+| R2 | **Télé-Déclaration** (SIMPL) | Dépend d'une déclaration complète et figée (verrou `DT_Id` déjà en place) ; format/transport à spécifier. |
+| R3 | **Tableau de bord / indicateurs** | TVA Collectée / Récupérable / **Due**, courbes (Solde TVA, RAS). Dépend de la disponibilité des données Récupérable + RAS (donc après R1). Peut être plus aéré que les écrans de travail. |
+
+> **Hors roadmap confirmée** (non mentionnés — restent à décider) : intégration **Comptabilité**, Sauvegarde/Restauration, Assistance. **TVA Collectée (ventes/clients) reclassée 14/07/2026 → [TASK-084](TASKS/TASK-084-ouverture-domaine-reglements-clients-tva-collectee.md)** (demande PO explicite, cf. §Ouverture domaine TVA Collectée ci-dessus).
+> ⚠️ Ne pas dériver : on **finit 034→038** avant d'ouvrir R1/R2/R3.
 
 ### ⚡ Track C — Perf & sources de TVA par `EC_Type` (retour worker TASK-009)
 | # | Task | Objet | État |
@@ -71,13 +119,78 @@ Vérifié dans le code : les Gap A/B/C décrits par les tasks sont **confirmés*
 
 > **Origine** : analyse d'écart ancien GRF ↔ notre code (09/07/2026). Le legacy a 3 sources de déduction (décaissement, dépense, **frais bancaire**) ; notre module en couvre 2 (frais bancaire absent) et traite la dépense différemment. Différé car non prioritaire pour le client.
 
+### 🚧 Blocage valorisation famille B (Sage OM) — isolé par la traçabilité (10/07/2026)
+| # | Task | Objet | État |
+|---|---|---|---|
+| 5 | [TASK-060](TASKS/TASK-060-remontee-claire-erreurs-valorisation.md) | **Remontée claire des erreurs de valorisation à l'utilisateur** : le rafraîchissement facture-first juin 2026 affiche `240 en erreur` en agrégat, sans qu'aucun écran ne détaille la répartition par code. **Preuve code** : le backend calcule et transmet déjà le détail complet (`RapportValorisation.Erreurs[]`, `Code`/`Message`/`RefLigne`, `FacturesController.cs:107-126`), mais le front (`FactureInterrogation.tsx:174-196`) ne fait qu'un `console.warn` + toast agrégé renvoyant vers « la console / les logs serveur ». Objectif : agrégation par code + affichage lisible (modale/panneau), distinguant qualité-de-données tiers (`TIERS_SANS_ICE`/`IF`) des anomalies applicatives (`ERREUR_FGR`, `FACTURE_ILLISIBLE_OM`...). | 🎯 **prêt** — demande PO 11/07 ; lecture seule, aucune logique de valorisation touchée. Dépend de TASK-050/052 (DONE). |
+| 6 | [TASK-061](DONE_DETAIL/TASK-061-montants-float-vers-decimal.md) | **Montants persistés en FLOAT au lieu de DECIMAL** : `dbo.LigneCandidate` (`DeclarationTVA.sql:49-54,70,74`) déclare `HT`/`Taux`/`TVA`/`TTC`/`Prorata`/`MontantAffecte` en `FLOAT`, alors que le modèle C# est déjà en `decimal` (`WorkflowEntities.cs:56-67`). Désalignement de type sur des montants de TVA → arrondis binaires + conversion Dapper. Passer en `DECIMAL(18,6)` (CREATE + ALTER ADD + commentaire) **et** ajouter un bloc `ALTER COLUMN` idempotent pour migrer les bases déjà déployées. Aucune logique C# touchée. | ✅ **implémenté** (2026-07-13) — DECIMAL(18,6) appliqué, migration idempotente avec gestion dynamique des contraintes de défaut incluse. Voir DONE.md. |
+| 7 | [TASK-064](DONE_DETAIL/TASK-064-trigger-immuabilite-totale-affectation-declaree.md) | **Immuabilité TOTALE d'une affectation déclarée (trigger)** : le verrou TASK-028 (`003_Verrou_DT_Id.sql:83-117`, bloc 1b) ne bloque l'UPDATE que des colonnes **financières** (`AF_Montant`/`MV_Id`/`EC_Id`/`AF_Date`) d'une affectation `DT_Id NOT NULL` → toute autre colonne reste modifiable. Généraliser le bloc 1b : **tout** UPDATE refusé si `DT_Id NOT NULL` avant ET après, **sauf** le dé-tamponnage pur `DT_Id : valeur → NULL` (réouverture, à préserver pour `ReouvriDeclarationAsync`). DELETE (1a) et trigger `RT_MOUVEMENT` (2) inchangés. Fichier unique. | ✅ **implémenté** (2026-07-13) — Trigger d'immuabilité totale implémenté avec exception exclusive de dé-tamponnage pur. Voir DONE.md. |
+| 8 | [TASK-065](TASKS/TASK-065-renommage-tables-conformes-dm-enttva-dm-lgtva.md) | **Renommer les tables en `DM_ENTTVA` / `DM_LGTVA` (nommage conforme)** : `DeclarationEntete`/`LigneCandidate` sont en PascalCase C# non conforme à la convention legacy (`PREFIXE_XX_`). Renommer **uniquement les tables SQL** (DDL `DeclarationTVA.sql` + index/FK + 22 littéraux `DeclarationRepository.cs`) via `sp_rename` idempotent ; **ne pas** toucher aux classes C#/DTO/TS (Dapper mappe par colonne). **Supprime aussi `001_Schema_TVA.sql`** (mort + incompatible `UNIQUEIDENTIFIER`). | ✅ **implémenté** (2026-07-13) — Tables, index et contraintes renommés via `sp_rename` idempotent, `001_Schema_TVA.sql` supprimé, repository mis à jour. |
+
+> **Isolé grâce à la traçabilité** (mémoire `grf-valorisation-tracabilite-blocage-om`) : `logs/valorisation.log` + rapport HTTP `{ facturesTraitees, nbErreurs, erreurs[] }` + toast front. Les 30 `TIERS_SANS_ICE` + 30 `TIERS_SANS_IF` sont de la qualité de données, **pas** ce blocage.
+
 ### 🧹 Dette technique
 ✅ **Terminé** — TASK-026 livrée et approuvée (2026-07-09) : `Declaration.Core.Tests` compilable et vert (28/28, dont 3 tests chemin FGR), 6 projets de tests intégrés au `.slnx` (`Controle.Tests` filtrable sans DB). Build/test solution exhaustif rejoué par l'architecte (0 erreur, 75 réussites hors DB). Voir DONE.md.
+
+| # | Task | Objet | État |
+|---|---|---|---|
+| 2 | [TASK-039](DONE_DETAIL/TASK-039-filtre-mv-domaine-rapprochement.md) | **Filtre `MV_Domaine` manquant sur l'endpoint rapprochement (TASK-036)** : un bordereau de remise `BORD26060022` remonte dans la liste des règlements. `RapprochementFromWhere` ne filtre pas la nature du mouvement → ajouter `MV_Domaine IN (0,1)` (0=encaissement, 1=décaissement), écarter bordereaux/virements/alimentations. Régression : filtre présent en TASK-001, perdu en TASK-036. | ✅ **livré et approuvé** (2026-07-09) — filtre `MV_Domaine IN (0,1)` sur `RapprochementFromWhere` (liste+COUNT partagés) + 2 sous-requêtes `distincts` ; preuve réelle `.\sql2022`/`GR_EMA_DISTRIBUTION` (BORD absent, 19 non-règlements exclus, 0 NULL, 694 règlements conservés), 0 erreur + 15/15 tests. Voir DONE.md. |
+| 3 | [TASK-040](DONE_DETAIL/TASK-040-compteur-reglements-vs-filtres-grid.md) | **Compteur « Règlements : N » incohérent avec les filtres de la grille (rappro)** : `total` = `totalCount` serveur, alors que `numeroReglement`/`origine`/`domaine` sont filtrés **côté client sur la page seule** (`RapprochementInterrogation.tsx:146-157`) → compteur ≠ liste affichée. Fix : pousser ces 3 filtres **côté serveur** (WHERE partagé liste+count) pour rendre `totalCount` exact. | ✅ **livré et approuvé** (2026-07-09) — 3 filtres poussés dans `RapprochementFromWhere` (liste+COUNT), expressions `CASE` origine/domaine répliquant à l'identique `LibelleOrigine`/`LibelleDomaine`, filtrage client supprimé, multi-sélection `string[]` bout-en-bout. Build 0 erreur + 43/43 tests. Voir DONE.md. |
+| 4 | [TASK-043](TASKS/TASK-043-tva-par-reglement-liste-rapprochement.md) | **Montant de TVA par règlement dans la liste de rapprochement (FGR + Sage)** : afficher, par règlement, la TVA de la facture/FGR. Enrichissement **de la page courante seule** (borné `size`), FGR via `LecteurTvaFgr`, Sage via cache TASK-024 + fallback session réutilisée TASK-023 ; prorata affectation partielle, somme multi-facture, état de valorisation explicite (jamais un `0` muet). Lecture seule, hors `COUNT`/tri. | ⏸️ **bloqué** — renommée TASK-041→**043** (collision avec l'écran Factures). back (projection + service + DTO endpoint TASK-036) + front. **Séquencer après TASK-039 et TASK-040** (mêmes projection/DTO ; 039 non livrée). Périmètre PO = FGR + Sage complet. |
+| 5 | [TASK-062](TASKS/TASK-062-suppression-bouton-preuve-affectations.md) | **Supprimer le bouton « Preuve » de l'écran ② Affectations** : la modale `ProofModal` (3 onglets, `DomainGrid` filtré sur le n° rapprochement) est **redondante** avec la carte inline `FactureCard` — qui affiche déjà la preuve complète (payé÷TTC=%, TVA par taux, IF/ICE, conformité, origine) — et **non significative** (dump générique type 776 lignes `Encaissement/Proposée`, titre confondant règlement/rapprochement). Retirer bouton + câblage `ProofModal` dans `AffectationsDrill.tsx` **uniquement**. `DomainGrid.readonly` conservé (utilisé ailleurs). Front-only. | 🎯 **prêt** — décision PO 13/07 ; **recadré 13/07 (architecte)** : `ProofModal.tsx` **conservé** (partagé avec `WorkstationPanel.tsx` l.5/228 — sa suppression casserait le build) ; option « descendre aux lignes sources » écartée (tâche distincte si besoin). |
+| 6 | [TASK-069](DONE_DETAIL/TASK-069-correctif-mise-en-page-ecran-calcul-tva.md) | **Correctif mise en page écran ③ Calcul TVA** : bandeau pied (total TVA à intégrer) rogné par la barre du stepper — conteneur `DeclarationStepper.tsx:155` (`flex:1`) sans `minHeight:0`, anti-pattern flexbox classique. Décision PO 13/07 : **option A** — bandeau interne du panneau conservé tel quel, correctif limité au layout. | ✅ **livré et approuvé** (2026-07-13) — `minHeight:0` ajouté au conteneur d'étape partagé, preuve visuelle PO confirmée (bandeau total visible, aucun recouvrement stepper). Voir DONE.md. **A révélé un 2e bug distinct** (bloc « Sous-totaux par taux » invisible, écrasé par le tableau factures) → extrait vers **TASK-070**. |
+| 7 | [TASK-070](DONE_DETAIL/TASK-070-allegement-contenu-ecran-calcul-tva.md) | **Alléger l'écran ③ Calcul TVA** : retirer le tableau détail facture (déjà disponible en ② Affectations, colonne Taux filtrable + total TVA) ; ne garder que le bloc « Sous-totaux par taux TVA » + bandeau pied total. Corrige au passage le bug de visibilité du bloc sous-totaux (plus rien pour l'écraser) et la redondance signalée par le PO. Décision PO 13/07 : option retenue = alléger ③ (pas de fusion ②+③). | ✅ **livré et approuvé** (2026-07-13) — capture PO réelle (68 règlements/245 lignes), build 0 erreur. Voir DONE.md. |
+
+### 🎨 Identité visuelle & branding produit (PO 13/07/2026)
+Demande PO : la page d'authentification affiche aujourd'hui « Déclaration TVA » alors que la TVA n'est qu'un premier module d'une plateforme appelée à en accueillir d'autres (roadmap R1 RAS / R2 Télé-Déclaration / R3 Tableau de bord, cf. §Roadmap ci-dessous) — le nom de produit doit être distinct du nom de module. En parallèle, léger affinage du thème visuel (rester **simple**, mais choisir une teinte **élégante et propre au produit** plutôt que le bleu Material générique), sans toucher aux écrans denses existants. Direction retenue (clarification architecte 13/07) : **« Sobre + touche couleur signature »** (indigo profond + monogramme sidebar, pas de mode sombre).
+
+| # | Task | Objet | État |
+|---|---|---|---|
+| 1 | [TASK-082](TASKS/TASK-082-renommage-module-auth-declaratif-maroc.md) | **Renommer le titre de la page d'authentification en « Déclaratif Maroc »** (`Auth.tsx` + `index.html`) — nom de produit distinct du nom de module (« TVA » reste affiché comme module actif dans la sidebar post-connexion, non touché). | 🎯 **prêt** — front-only, texte seul, risque quasi nul. |
+| 2 | [TASK-083](TASKS/TASK-083-theme-visuel-sobre-signature-declaratif-maroc.md) | **Thème visuel sobre + couleur signature** : nouvelle teinte d'accent (indigo profond, variables CSS `index.css`) + monogramme sidebar (`App.tsx`). Zéro écran de grille dense retouché (layout inchangé, seule la couleur d'accent se répercute via les variables). | 🎯 **prêt** — front-only, périmètre strict (5 variables CSS + 1 ajout sidebar), vérification visuelle avant/après requise en VERIFY sur écrans denses. |
+
+> Séquencer 082 → 083 (les deux touchent `Auth.tsx` en zones disjointes) ou en parallèle si préféré — aucune dépendance technique bloquante entre elles.
+
+### 🆕 Ouverture domaine TVA Collectée — règlements clients (PO 14/07/2026)
+Demande PO : le step1 (écran ① Règlements) ne traite que les règlements **fournisseurs**
+(`MV_Domaine=1`) ; il faut aussi gérer les règlements **clients** (`MV_Domaine=0`), avec les
+mêmes règles d'éligibilité, en les **distinguant** (TVA collectée ≠ TVA déductible). Reclasse
+« TVA Collectée » hors de la case roadmap « non mentionnés — restent à décider » (cf. §Roadmap
+ci-dessous) — **à faire confirmer explicitement par le PO** avant lancement (arbitrage vs R1/R2/R3).
+
+| # | Task | Objet | État |
+|---|---|---|---|
+| 1 | [TASK-084](TASKS/TASK-084-ouverture-domaine-reglements-clients-tva-collectee.md) | **Ouverture domaine règlements clients (`MV_Domaine=0`)** dans le tunnel : socle SQL déjà partiellement écrit (TASK-015/021, jamais exercé sur le chemin de figeage réel) ; export XML DGI **bloqué** (TASK-014 : schéma TVA Collectée `⛔ inconnu`) → v1 = sélection+calcul+front, export explicitement différé. | 🎯 **prêt** — ⚠️ nécessite confirmation PO du reclassement roadmap avant lancement. |
+
+### 🎛️ UX grilles — filtres « valeurs disponibles » & sélecteur de colonnes (PO 13/07/2026)
+Demande PO (capture écran ② Affectations) : (1) chaque filtre de colonne doit proposer **la liste des valeurs réellement présentes** (type Excel : cases + recherche) sur **toutes** les listes ; (2) **sélecteur de colonnes** persistant (`localStorage`) sur toutes les listes. `ExcelFilter` gère déjà le mode `'list'` — le travail porte sur l'alimentation des options et un nouveau composant colonnes.
+
+| # | Task | Objet | État |
+|---|---|---|---|
+| 1 | [TASK-068](DONE_DETAIL/TASK-068-selecteur-colonnes-persistant-listes.md) | **Sélecteur de colonnes persistant (`localStorage`) sur toutes les listes** : hook `useColumnPrefs` + composant `ColumnSelector` réutilisables, câblés aux 6 grilles (clé de stockage par écran). Rend entête+corps sur `visibleColumns`, repli sûr si préférence absente. Front-only. | ✅ **livré et approuvé** (2026-07-13) — 6 grilles câblées, entête/corps cohérents (y compris virtualisé), repli sûr, build tsc+vite/oxlint 0 erreur, e2e Playwright vert. Réserve non bloquante : `DomainGrid` partage une clé unique entre ses 3 contextes d'usage. Voir DONE.md. |
+
+> ⚠️ TASK-068 touche **les mêmes fichiers de grille** que TASK-067A/B (`ReglementsSelection`, `FactureInterrogation`, `RapprochementInterrogation`, `AffectationsDrill`, `DomainGrid`, `ControlGrid`), déjà stabilisés. Aucune dépendance bloquante restante.
+
+### 🔐 Gouvernance & traçabilité
+✅ **Terminé** — TASK-074 (authentification réelle GRF), TASK-073 (garde `UT_Admin=1` + audit
+réouverture) et TASK-079 (suppression déclaration EnCours + écran liste enrichi) livrées et
+approuvées (2026-07-13), dans cet ordre. Voir DONE.md. Périmètres C (exposition UI) et D (test
+d'intégration automatisé) de TASK-073 non traités — non bloquants, laissés à la discrétion du PO
+(pas de task de suivi ouverte, à recréer si le PO le demande). **TASK-079 porte une réserve non
+levée** (aucune preuve réelle en base rejouée dans cette session, cf. DONE.md) — à confirmer par
+le PO avant usage réel en suppression. **Complément** : TASK-080 (exclusivité règlement entre
+déclarations `EnCours` concurrentes) ✅ **livrée et approuvée** (2026-07-14, preuve réelle rejouée
+contre `.\sql2022`/`GR_EMA_DISTRIBUTION`) — voir `DONE.md`.
 
 ### 📘 Documentation
 | # | Task | Objet | État |
 |---|---|---|---|
 | 1 | [TASK-029](TASKS/TASK-029-guide-fonctionnel-accessible-app.md) | **Guide fonctionnel accessible depuis l'app** : servir `DOCS/GUIDE_PROCESS_DECLARATION_TVA.html` comme asset statique (`public/guide-fonctionnel-tva.html`) + entrée « Guide » dans la sidebar `App.tsx` (ouverture nouvel onglet) ; source unique = `DOCS/`, `public/` en miroir | 🎯 **prêt** — front-only, découplé des chemins critiques. Guide client v1 livré (design v0). |
+
+### 📦 Déploiement
+| # | Task | Objet | État |
+|---|---|---|---|
+| 1 | [TASK-044](TASKS/TASK-044-deploiement-mono-service-mono-dossier.md) | **Déploiement mono-service / mono-dossier** : **un seul** service Windows (l'API) qui appelle tout (worker OM inclus) et sert le front, dans **un seul** dossier deploy. Socle déjà en place (front `wwwroot`, `WorkerExePath` relatif à l'exe, `logs/` à côté de l'exe). Reste : `publish.ps1` (build front + `dotnet publish` API + worker net48 → `deploy/`), `connections.json` de déploiement (chemins relatifs, secret hors dépôt), install service (compte Sage+SQL), `DOCS/DEPLOIEMENT.md`. | 🎯 **prêt** — indépendant de TASK-045. Aucune modif métier/worker. |
 
 > **Origine Track C** : le worker TASK-009 a mesuré ~0,5-1 s/facture (session COM Sage ouverte **par facture**) → ~35 min/2085. Cause réelle = pas de routing par origine (`EC_Type`) : tout partait à l'OM, même les FGR (détail dispo en SQL `RT_HISTOCOMPTA`). Modèle figé en mémoire (`grf-echeance-ectype-mapping`, `grf-tva-perf-lecture-sage`). **Découplé de TASK-009** (désormais livrée : le recalcul du contrôle vit dans `Declaration.Controle`).
 
