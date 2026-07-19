@@ -308,7 +308,7 @@ export function RapprochementInterrogation({ societeId, showToast }: { societeId
       case 'domaine': return <DomaineChip domaine={v} />;
       case 'resteAAffecter':
         return isResteNonNul(v)
-          ? <span style={{ color: '#b45309', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'flex-end' }}><AlertTriangle size={12} />{formatMoney(v)}</span>
+          ? <span style={{ color: 'var(--status-warning-text-alt)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'flex-end' }}><AlertTriangle size={12} />{formatMoney(v)}</span>
           : <span style={{ color: 'var(--text-secondary)' }}>{formatMoney(v)}</span>;
       case 'nbFacturesAffectees': return v;
       default: return v;
@@ -478,11 +478,11 @@ function ReglementDetail({ row, onClose }: { row: any, onClose: () => void }) {
           {line('Montant du règlement', formatMoney(row.montant))}
           {line(`Montant affecté (${row.nbFacturesAffectees} facture${row.nbFacturesAffectees > 1 ? 's' : ''})`, formatMoney(row.montantAffecte))}
           {line('Reste à affecter', isResteNonNul(reste)
-            ? <span style={{ color: '#b45309', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><AlertTriangle size={13} />{formatMoney(reste)}</span>
+            ? <span style={{ color: 'var(--status-warning-text-alt)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><AlertTriangle size={13} />{formatMoney(reste)}</span>
             : <span style={{ color: 'var(--status-ok-text)' }}>{formatMoney(reste)}</span>)}
 
           {isResteNonNul(reste) && (
-            <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', background: 'var(--status-warning-bg)', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '0.78rem', color: 'var(--status-warning-text)', display: 'flex', gap: '0.5rem' }}>
+            <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)', borderRadius: '6px', fontSize: '0.78rem', color: 'var(--status-warning-text)', display: 'flex', gap: '0.5rem' }}>
               <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
               <span>Écart non nul entre le montant du règlement et la somme des affectations — rendu visible (aucune somme absorbée en silence).</span>
             </div>

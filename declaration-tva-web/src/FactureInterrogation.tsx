@@ -72,7 +72,7 @@ const anneeEstPlausible = (isoDate: string) => {
 function StatutBadge({ statut }: { statut: string }) {
   const map: Record<string, { bg: string, text: string, label: string }> = {
     Total: { bg: 'var(--status-ok-bg)', text: 'var(--status-ok-text)', label: 'Total' },
-    Partiel: { bg: '#fef3c7', text: '#b45309', label: 'Partiel' },
+    Partiel: { bg: '#fef3c7', text: 'var(--status-warning-text-alt)', label: 'Partiel' },
     NonDeclarable: { bg: '#f3f4f6', text: '#6b7280', label: 'Non décl.' },
   };
   const c = map[statut] || { bg: '#f3f4f6', text: '#374151', label: statut || '—' };
@@ -102,13 +102,13 @@ function CelluleB({ value, valorisee, motif, brutValue }: { value: number | null
         const title = `${motif} — valeur brute Sage affichée (donnée non fiable, jamais déclarable)`;
         return (
           <span title={title} style={{ color: '#6b7280', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.78rem', fontStyle: 'italic', cursor: 'help' }}>
-            <AlertTriangle size={12} style={{ color: '#b45309', flexShrink: 0 }} />
+            <AlertTriangle size={12} style={{ color: 'var(--status-warning-text-alt)', flexShrink: 0 }} />
             {formatMoney(brutValue)}
           </span>
         );
       }
       return (
-        <span title={motif} style={{ color: '#b45309', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.72rem', fontStyle: 'italic', cursor: 'help' }}>
+        <span title={motif} style={{ color: 'var(--status-warning-text-alt)', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.72rem', fontStyle: 'italic', cursor: 'help' }}>
           <HelpCircle size={12} /> non valorisé
         </span>
       );
@@ -301,11 +301,11 @@ export function FactureInterrogation({ societeId, showToast }: { societeId: numb
       case 'declare': return <span style={{ color: isNonNul(v) ? '#4338ca' : 'var(--text-secondary)', fontWeight: isNonNul(v) ? 600 : 400 }}>{formatMoney(v)}</span>;
       case 'resteADeclarer':
         return isNonNul(v)
-          ? <span style={{ color: '#b45309', fontWeight: 700 }}>{formatMoney(v)}</span>
+          ? <span style={{ color: 'var(--status-warning-text-alt)', fontWeight: 700 }}>{formatMoney(v)}</span>
           : <span style={{ color: 'var(--text-secondary)' }}>{formatMoney(v)}</span>;
       case 'soldeFacture':
         return isNonNul(v)
-          ? <span style={{ color: '#b45309', fontWeight: 600 }}>{formatMoney(v)}</span>
+          ? <span style={{ color: 'var(--status-warning-text-alt)', fontWeight: 600 }}>{formatMoney(v)}</span>
           : <span style={{ color: 'var(--status-ok-text)' }}>{formatMoney(v)}</span>;
       case 'statut': return <StatutBadge statut={v} />;
       case 'origine': return <OrigineChip origine={v} />;
@@ -488,7 +488,7 @@ function FactureDetail({ row, onClose }: { row: any, onClose: () => void }) {
           {line('Écart', celluleB(row.ecart))}
           {line('Escompte', celluleB(row.escompte))}
           {!row.valorisee && (
-            <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', background: 'var(--status-warning-bg)', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '0.78rem', color: 'var(--status-warning-text)', display: 'flex', gap: '0.5rem' }}>
+            <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)', borderRadius: '6px', fontSize: '0.78rem', color: 'var(--status-warning-text)', display: 'flex', gap: '0.5rem' }}>
               <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
               <span>Facture non valorisée — {row.motifValorisation || 'motif indisponible'}. Rendue visible (aucune valeur inventée, aucune ligne masquée).</span>
             </div>
@@ -520,10 +520,10 @@ function FactureDetail({ row, onClose }: { row: any, onClose: () => void }) {
           {line('Réglé (décaissé)', formatMoney(row.regle))}
           {line('Déclaré (DT_Id)', <span style={{ color: isNonNul(row.declare) ? '#4338ca' : undefined }}>{formatMoney(row.declare)}</span>)}
           {line('Reste à déclarer', isNonNul(reste)
-            ? <span style={{ color: '#b45309', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><AlertTriangle size={13} />{formatMoney(reste)}</span>
+            ? <span style={{ color: 'var(--status-warning-text-alt)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><AlertTriangle size={13} />{formatMoney(reste)}</span>
             : <span style={{ color: 'var(--status-ok-text)' }}>{formatMoney(reste)}</span>)}
           {line('Solde facture (TTC − Réglé)', isNonNul(solde)
-            ? <span style={{ color: '#b45309', fontWeight: 700 }}>{formatMoney(solde)}</span>
+            ? <span style={{ color: 'var(--status-warning-text-alt)', fontWeight: 700 }}>{formatMoney(solde)}</span>
             : <span style={{ color: 'var(--status-ok-text)' }}>{formatMoney(solde)}</span>)}
 
           <div style={{ marginTop: '1rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>

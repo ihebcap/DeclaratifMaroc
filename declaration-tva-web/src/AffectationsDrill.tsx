@@ -586,7 +586,7 @@ export function AffectationsDrill({
                       {isColVisible('factureNumero') && <GridCell col={COL_BY_KEY.get('factureNumero')!}>{r.factureNumero}</GridCell>}
                       {isColVisible('tiers') && <GridCell col={COL_BY_KEY.get('tiers')!}>{r.tiers}</GridCell>}
                       {isColVisible('origine') && <GridCell col={COL_BY_KEY.get('origine')!}>{r.origine}</GridCell>}
-                      <div style={{ flex: '1 1 auto', padding: '0.4rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#b45309', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ flex: '1 1 auto', padding: '0.4rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--status-warning-text-alt)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         <AlertTriangle size={13} style={{ flexShrink: 0 }} />
                         Non valorisé — {r.motif || 'motif non renseigné'}
                       </div>

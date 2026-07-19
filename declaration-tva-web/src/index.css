@@ -30,6 +30,11 @@
   --status-warning-text: #92400e;
   --status-blocking-bg: #fee2e2;
   --status-blocking-text: #b91c1c;
+  /* Second couple "attention" trouvé lors du grep exhaustif TASK-121 étape 2 (teinte de texte/
+     bordure différente de --status-warning-text, aucune variable existante ne correspondait) :
+     structuration uniquement, valeurs hex actuelles inchangées. */
+  --status-warning-border: #fde68a;
+  --status-warning-text-alt: #b45309;
 
   --border-color: #e0e0e0;
   

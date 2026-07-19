@@ -139,7 +139,7 @@ export function DeclarationList({
                                             fontSize: '0.875rem',
                                             fontWeight: 500,
                                             backgroundColor: dec.statut === STATUT_EN_COURS ? '#e0e7ff' : dec.statut === STATUT_CLOTUREE ? '#fef3c7' : 'var(--status-ok-bg)',
-                                            color: dec.statut === STATUT_EN_COURS ? '#4338ca' : dec.statut === STATUT_CLOTUREE ? '#b45309' : 'var(--status-ok-text)'
+                                            color: dec.statut === STATUT_EN_COURS ? '#4338ca' : dec.statut === STATUT_CLOTUREE ? 'var(--status-warning-text-alt)' : 'var(--status-ok-text)'
                                         }}>
                                             {STATUT_LABELS[dec.statut] ?? dec.statut}
                                         </span>

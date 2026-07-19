@@ -55,7 +55,7 @@ export function WorkstationPanel({ declarationId, onClotured }: { declarationId:
     const segments = [
         { key: 'Intégrées', count: rec.integrees, color: 'var(--status-ok-text)', bg: 'var(--status-ok-bg)' },
         { key: 'Exclues', count: rec.exclues, color: 'var(--status-blocking-text)', bg: 'var(--status-blocking-bg)' },
-        { key: 'Reportées', count: rec.reportees, color: '#b45309', bg: '#fef3c7' },
+        { key: 'Reportées', count: rec.reportees, color: 'var(--status-warning-text-alt)', bg: '#fef3c7' },
         { key: 'Écartées', count: rec.ecartees, color: '#374151', bg: '#f3f4f6' },
         { key: 'Proposées', count: rec.proposees, color: '#4b5563', bg: '#e5e7eb' },
     ];

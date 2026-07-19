@@ -71,7 +71,7 @@ function statutDe(row: ReglementRow): Statut {
 
 const STATUT_META: Record<Statut, { label: string; bg: string; text: string; icon: typeof CheckCircle2 }> = {
   eligible: { label: 'Éligible', bg: 'var(--status-ok-bg)', text: 'var(--status-ok-text)', icon: CheckCircle2 },
-  controle: { label: 'À contrôler', bg: '#fef3c7', text: '#b45309', icon: AlertTriangle },
+  controle: { label: 'À contrôler', bg: '#fef3c7', text: 'var(--status-warning-text-alt)', icon: AlertTriangle },
   bloque: { label: 'Bloqué', bg: 'var(--status-blocking-bg)', text: 'var(--status-blocking-text)', icon: XCircle },
 };
 
