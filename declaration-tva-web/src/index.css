@@ -8,14 +8,14 @@
   --text-secondary: #666666;
   --text-tertiary: #999999;
   
-  --sidebar-bg: #ffffff; /* White sidebar */
-  --sidebar-text: #4a4a4a;
-  --sidebar-active-bg: #e3f2fd; /* Light blue background for active */
-  --sidebar-active-text: #1976d2; /* Axelor/Material Blue */
-  
-  --accent-primary: #1976d2;
-  --accent-secondary: #2196f3;
-  --accent-hover: #1565c0;
+  --sidebar-bg: #1a1a1a; /* Noir/anthracite — signature Déclaratif Maroc (TASK-120) */
+  --sidebar-text: #e0e0e0;
+  --sidebar-active-bg: #0f3d24; /* Vert très foncé — fond entrée active (TASK-120) */
+  --sidebar-active-text: #3ddc84; /* Vert clair — signature Déclaratif Maroc (TASK-120) */
+
+  --accent-primary: #178a4c;   /* Vert signature — Déclaratif Maroc (TASK-120) */
+  --accent-secondary: #2fa868;
+  --accent-hover: #0f6b3a;
   
   --danger: #d32f2f;
   --success: #2e7d32;

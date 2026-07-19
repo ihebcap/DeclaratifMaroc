@@ -130,6 +130,7 @@ function Dashboard({ user, onLogout, showToast }: { user: User; onLogout: () => 
               <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                 <div className="flex items-center gap-2">
                   <LayoutDashboard size={22} style={{color: 'var(--accent-primary)'}} />
+                  <img src="/icon-dm.svg" alt="DM" width={18} height={18} style={{borderRadius: '4px', imageRendering: 'pixelated'}} />
                   <span>TVA</span>
                 </div>
               </div>
