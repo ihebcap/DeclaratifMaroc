@@ -130,7 +130,7 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
                 Période {formatDate(debut)} → {formatDate(fin)}
             </span>
             {integree ? (
-                <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.25rem 0.6rem', borderRadius: 'var(--radius-full)', background: '#dcfce7', color: '#15803d', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.25rem 0.6rem', borderRadius: 'var(--radius-full)', background: 'var(--status-ok-bg)', color: 'var(--status-ok-text)', whiteSpace: 'nowrap' }}>
                     {STATUT_LABELS[info.statut] ?? info.statut} — lecture seule
                 </span>
             ) : (
@@ -147,7 +147,7 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
 
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {readOnlyStep && (
-                    <div style={{ padding: '0.5rem 1.5rem', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', color: '#15803d', fontSize: '0.8125rem', fontWeight: 500, flexShrink: 0 }}>
+                    <div style={{ padding: '0.5rem 1.5rem', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', color: 'var(--status-ok-text)', fontSize: '0.8125rem', fontWeight: 500, flexShrink: 0 }}>
                         Déclaration intégrée — cette étape est figée (lecture seule).
                     </div>
                 )}
@@ -218,7 +218,7 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
                     <BottomBar>
                         <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>Étape 5/6</span>
                         {hasBloquants && (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8125rem', color: '#b91c1c', fontWeight: 600 }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8125rem', color: 'var(--status-blocking-text)', fontWeight: 600 }}>
                                 <XCircle size={14} /> Corriger les anomalies 🔴 avant de continuer
                             </span>
                         )}

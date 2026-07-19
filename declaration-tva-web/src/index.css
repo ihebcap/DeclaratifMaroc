@@ -20,7 +20,17 @@
   --danger: #d32f2f;
   --success: #2e7d32;
   --warning: #ed6c02;
-  
+
+  /* Badges de statut ok/attention/bloquant (TASK-121) — variabilisation des couleurs
+     hex jusqu'ici codées en dur dans les composants métier ; valeurs actuelles
+     reprises telles quelles, aucun changement visuel à ce stade. */
+  --status-ok-bg: #dcfce7;
+  --status-ok-text: #15803d;
+  --status-warning-bg: #fffbeb;
+  --status-warning-text: #92400e;
+  --status-blocking-bg: #fee2e2;
+  --status-blocking-text: #b91c1c;
+
   --border-color: #e0e0e0;
   
   /* Flatter shadows */

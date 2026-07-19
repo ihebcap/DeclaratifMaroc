@@ -53,8 +53,8 @@ export function WorkstationPanel({ declarationId, onClotured }: { declarationId:
     const rec = checkup.reconciliation;
     const total = rec.candidates;
     const segments = [
-        { key: 'Intégrées', count: rec.integrees, color: '#15803d', bg: '#dcfce7' },
-        { key: 'Exclues', count: rec.exclues, color: '#b91c1c', bg: '#fee2e2' },
+        { key: 'Intégrées', count: rec.integrees, color: 'var(--status-ok-text)', bg: 'var(--status-ok-bg)' },
+        { key: 'Exclues', count: rec.exclues, color: 'var(--status-blocking-text)', bg: 'var(--status-blocking-bg)' },
         { key: 'Reportées', count: rec.reportees, color: '#b45309', bg: '#fef3c7' },
         { key: 'Écartées', count: rec.ecartees, color: '#374151', bg: '#f3f4f6' },
         { key: 'Proposées', count: rec.proposees, color: '#4b5563', bg: '#e5e7eb' },
@@ -134,7 +134,7 @@ export function WorkstationPanel({ declarationId, onClotured }: { declarationId:
             </div>
 
             {clotureError && (
-                <div style={{ padding: '0.75rem 1.5rem', background: '#fee2e2', color: '#b91c1c', borderBottom: '1px solid #fecaca', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                <div style={{ padding: '0.75rem 1.5rem', background: 'var(--status-blocking-bg)', color: 'var(--status-blocking-text)', borderBottom: '1px solid #fecaca', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                     <AlertCircle size={18} />
                     {clotureError}
                 </div>

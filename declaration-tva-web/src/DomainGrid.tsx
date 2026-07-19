@@ -189,8 +189,8 @@ export function DomainGrid({
             }
             const colors: any = {
                 'Proposée': { bg: '#f3f4f6', text: '#4b5563' },
-                'Intégrée': { bg: '#dcfce7', text: '#15803d' },
-                'Exclue': { bg: '#fee2e2', text: '#b91c1c' },
+                'Intégrée': { bg: 'var(--status-ok-bg)', text: 'var(--status-ok-text)' },
+                'Exclue': { bg: 'var(--status-blocking-bg)', text: 'var(--status-blocking-text)' },
                 'Reportée': { bg: '#fef3c7', text: '#b45309' },
                 'Écartée': { bg: '#e5e7eb', text: '#374151', border: '1px solid #9ca3af' },
             };
@@ -215,8 +215,8 @@ export function DomainGrid({
                             </span>
                             {(selectedIds.size > 0 || selectAllFilters) && (
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <button onClick={() => doBulkAction('Intégrée')} className="btn" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><CheckSquare size={14}/> Intégrer</button>
-                                    <button onClick={() => doBulkAction('Exclue')} className="btn" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><XSquare size={14}/> Exclure</button>
+                                    <button onClick={() => doBulkAction('Intégrée')} className="btn" style={{ background: 'var(--status-ok-bg)', color: 'var(--status-ok-text)', border: '1px solid #bbf7d0', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><CheckSquare size={14}/> Intégrer</button>
+                                    <button onClick={() => doBulkAction('Exclue')} className="btn" style={{ background: 'var(--status-blocking-bg)', color: 'var(--status-blocking-text)', border: '1px solid #fecaca', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><XSquare size={14}/> Exclure</button>
                                     <button onClick={() => doBulkAction('Reportée')} className="btn" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><Clock size={14}/> Reporter</button>
                                     <button onClick={() => doBulkAction('Proposée')} className="btn" style={{ background: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>Réinitialiser</button>
                                 </div>

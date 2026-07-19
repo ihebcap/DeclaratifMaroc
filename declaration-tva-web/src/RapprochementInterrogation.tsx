@@ -61,7 +61,7 @@ const isResteNonNul = (v: number) => Math.abs(v ?? 0) > 0.005;
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const yearStartIso = () => `${new Date().getFullYear()}-01-01`;
 
-function OuiNonBadge({ value, trueColor = { bg: '#dcfce7', text: '#15803d' } }: { value: boolean, trueColor?: { bg: string, text: string } }) {
+function OuiNonBadge({ value, trueColor = { bg: 'var(--status-ok-bg)', text: 'var(--status-ok-text)' } }: { value: boolean, trueColor?: { bg: string, text: string } }) {
   const c = value ? trueColor : { bg: '#f3f4f6', text: '#6b7280' };
   return (
     <span style={{ background: c.bg, color: c.text, padding: '2px 8px', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
@@ -77,7 +77,7 @@ function OrigineChip({ origine }: { origine: string }) {
     Sage: { bg: '#e0e7ff', text: '#4338ca' },
     FGR: { bg: '#fef3c7', text: '#b45309' },
     Mixte: { bg: '#fae8ff', text: '#a21caf' },
-    SansAffectation: { bg: '#fee2e2', text: '#b91c1c' },
+    SansAffectation: { bg: 'var(--status-blocking-bg)', text: 'var(--status-blocking-text)' },
     SoldeInitial: { bg: '#f1f5f9', text: '#475569' },
   };
   const c = map[origine] || { bg: '#f3f4f6', text: '#374151' };
@@ -479,10 +479,10 @@ function ReglementDetail({ row, onClose }: { row: any, onClose: () => void }) {
           {line(`Montant affecté (${row.nbFacturesAffectees} facture${row.nbFacturesAffectees > 1 ? 's' : ''})`, formatMoney(row.montantAffecte))}
           {line('Reste à affecter', isResteNonNul(reste)
             ? <span style={{ color: '#b45309', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><AlertTriangle size={13} />{formatMoney(reste)}</span>
-            : <span style={{ color: '#15803d' }}>{formatMoney(reste)}</span>)}
+            : <span style={{ color: 'var(--status-ok-text)' }}>{formatMoney(reste)}</span>)}
 
           {isResteNonNul(reste) && (
-            <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '0.78rem', color: '#92400e', display: 'flex', gap: '0.5rem' }}>
+            <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', background: 'var(--status-warning-bg)', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '0.78rem', color: 'var(--status-warning-text)', display: 'flex', gap: '0.5rem' }}>
               <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
               <span>Écart non nul entre le montant du règlement et la somme des affectations — rendu visible (aucune somme absorbée en silence).</span>
             </div>

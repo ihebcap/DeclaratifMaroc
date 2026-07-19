@@ -30,7 +30,7 @@ export function GenerationPanel({ declarationId, onBack }: { declarationId: stri
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '2rem' }}>
             <div style={{ maxWidth: '600px', width: '100%', background: 'white', borderRadius: '8px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                 <div style={{ padding: '2rem', textAlign: 'center', borderBottom: '1px solid var(--border-color)' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '50%', background: generated ? '#dcfce7' : 'var(--bg-secondary)', color: generated ? '#16a34a' : 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '50%', background: generated ? 'var(--status-ok-bg)' : 'var(--bg-secondary)', color: generated ? '#16a34a' : 'var(--text-secondary)', marginBottom: '1.5rem' }}>
                         {generated ? <CheckCircle2 size={32} /> : <FileCode2 size={32} />}
                     </div>
                     <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.5rem', fontWeight: 600 }}>Génération des Fichiers</h2>

@@ -71,7 +71,7 @@ const anneeEstPlausible = (isoDate: string) => {
 // Statut à 3 valeurs, dérivé des affectations DT_Id (jamais un booléen).
 function StatutBadge({ statut }: { statut: string }) {
   const map: Record<string, { bg: string, text: string, label: string }> = {
-    Total: { bg: '#dcfce7', text: '#15803d', label: 'Total' },
+    Total: { bg: 'var(--status-ok-bg)', text: 'var(--status-ok-text)', label: 'Total' },
     Partiel: { bg: '#fef3c7', text: '#b45309', label: 'Partiel' },
     NonDeclarable: { bg: '#f3f4f6', text: '#6b7280', label: 'Non décl.' },
   };
@@ -306,7 +306,7 @@ export function FactureInterrogation({ societeId, showToast }: { societeId: numb
       case 'soldeFacture':
         return isNonNul(v)
           ? <span style={{ color: '#b45309', fontWeight: 600 }}>{formatMoney(v)}</span>
-          : <span style={{ color: '#15803d' }}>{formatMoney(v)}</span>;
+          : <span style={{ color: 'var(--status-ok-text)' }}>{formatMoney(v)}</span>;
       case 'statut': return <StatutBadge statut={v} />;
       case 'origine': return <OrigineChip origine={v} />;
       default: return v;
@@ -488,7 +488,7 @@ function FactureDetail({ row, onClose }: { row: any, onClose: () => void }) {
           {line('Écart', celluleB(row.ecart))}
           {line('Escompte', celluleB(row.escompte))}
           {!row.valorisee && (
-            <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '0.78rem', color: '#92400e', display: 'flex', gap: '0.5rem' }}>
+            <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', background: 'var(--status-warning-bg)', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '0.78rem', color: 'var(--status-warning-text)', display: 'flex', gap: '0.5rem' }}>
               <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
               <span>Facture non valorisée — {row.motifValorisation || 'motif indisponible'}. Rendue visible (aucune valeur inventée, aucune ligne masquée).</span>
             </div>
@@ -521,10 +521,10 @@ function FactureDetail({ row, onClose }: { row: any, onClose: () => void }) {
           {line('Déclaré (DT_Id)', <span style={{ color: isNonNul(row.declare) ? '#4338ca' : undefined }}>{formatMoney(row.declare)}</span>)}
           {line('Reste à déclarer', isNonNul(reste)
             ? <span style={{ color: '#b45309', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><AlertTriangle size={13} />{formatMoney(reste)}</span>
-            : <span style={{ color: '#15803d' }}>{formatMoney(reste)}</span>)}
+            : <span style={{ color: 'var(--status-ok-text)' }}>{formatMoney(reste)}</span>)}
           {line('Solde facture (TTC − Réglé)', isNonNul(solde)
             ? <span style={{ color: '#b45309', fontWeight: 700 }}>{formatMoney(solde)}</span>
-            : <span style={{ color: '#15803d' }}>{formatMoney(solde)}</span>)}
+            : <span style={{ color: 'var(--status-ok-text)' }}>{formatMoney(solde)}</span>)}
 
           <div style={{ marginTop: '1rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
             La TVA fournisseur (Maroc) se déduit au <strong>décaissement</strong> : la base déclarable

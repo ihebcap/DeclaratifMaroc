@@ -70,9 +70,9 @@ function statutDe(row: ReglementRow): Statut {
 }
 
 const STATUT_META: Record<Statut, { label: string; bg: string; text: string; icon: typeof CheckCircle2 }> = {
-  eligible: { label: 'Éligible', bg: '#dcfce7', text: '#15803d', icon: CheckCircle2 },
+  eligible: { label: 'Éligible', bg: 'var(--status-ok-bg)', text: 'var(--status-ok-text)', icon: CheckCircle2 },
   controle: { label: 'À contrôler', bg: '#fef3c7', text: '#b45309', icon: AlertTriangle },
-  bloque: { label: 'Bloqué', bg: '#fee2e2', text: '#b91c1c', icon: XCircle },
+  bloque: { label: 'Bloqué', bg: 'var(--status-blocking-bg)', text: 'var(--status-blocking-text)', icon: XCircle },
 };
 
 function StatutBadge({ statut }: { statut: Statut }) {
@@ -323,7 +323,7 @@ export function ReglementsSelection({
       case 'montant': return formatMoney(row.montant);
       case 'affecte': return affecteLabel(row);
       case 'rapprocheBanque': return row.rapprocheBanque
-        ? <span style={{ color: '#15803d', fontWeight: 600 }}>Oui</span>
+        ? <span style={{ color: 'var(--status-ok-text)', fontWeight: 600 }}>Oui</span>
         : <span style={{ color: 'var(--text-secondary)' }}>Non</span>;
       case 'statut': return <StatutBadge statut={statutDe(row)} />;
       default: return (row as any)[col.key];

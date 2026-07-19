@@ -520,7 +520,7 @@ export function AffectationsDrill({
           style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%',
             padding: '0.6rem 1rem', border: 'none', borderBottom: '1px solid #fecaca',
-            background: showOnlyIncoherent ? '#fecaca' : '#fee2e2', color: '#7f1d1d',
+            background: showOnlyIncoherent ? '#fecaca' : 'var(--status-blocking-bg)', color: '#7f1d1d',
             fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', textAlign: 'left',
           }}
         >
@@ -577,7 +577,7 @@ export function AffectationsDrill({
               <Fragment key={r.key}>
                 <div
                   style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: estIncoherente ? '#fff1f2' : 'white' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = estIncoherente ? '#fee2e2' : 'var(--bg-secondary)')}
+                  onMouseEnter={e => (e.currentTarget.style.background = estIncoherente ? 'var(--status-blocking-bg)' : 'var(--bg-secondary)')}
                   onMouseLeave={e => (e.currentTarget.style.background = estIncoherente ? '#fff1f2' : 'white')}
                 >
                   {r.nonValorise ? (
@@ -601,7 +601,7 @@ export function AffectationsDrill({
                 </div>
                 {estIncoherente && derniereLigneDuGroupe && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.4rem 0.75rem 0.6rem', background: '#fff1f2', borderBottom: '2px solid #fecaca' }}>
-                    <AlertTriangle size={13} style={{ color: '#b91c1c', flexShrink: 0 }} />
+                    <AlertTriangle size={13} style={{ color: 'var(--status-blocking-text)', flexShrink: 0 }} />
                     <span style={{ fontSize: '0.72rem', color: '#7f1d1d', flex: 1 }}>
                       Incohérence Sage détectée après figeage sur cette facture — décision requise avant clôture.
                     </span>
@@ -615,7 +615,7 @@ export function AffectationsDrill({
                     <button
                       onClick={() => handleResynchroniser(r.ecId)}
                       disabled={resyncEnCours.has(r.ecId)}
-                      style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.25rem 0.6rem', borderRadius: '4px', border: 'none', background: '#b91c1c', color: 'white', cursor: resyncEnCours.has(r.ecId) ? 'not-allowed' : 'pointer', opacity: resyncEnCours.has(r.ecId) ? 0.6 : 1 }}
+                      style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.25rem 0.6rem', borderRadius: '4px', border: 'none', background: 'var(--status-blocking-text)', color: 'white', cursor: resyncEnCours.has(r.ecId) ? 'not-allowed' : 'pointer', opacity: resyncEnCours.has(r.ecId) ? 0.6 : 1 }}
                       title="Relit la pièce Sage maintenant (après correction côté ERP) et réévalue l'incohérence"
                     >
                       {resyncEnCours.has(r.ecId) ? 'Resynchronisation…' : 'Corriger / Resynchroniser'}
@@ -663,7 +663,7 @@ function renderGridCell(col: GCol, r: GridRow): React.ReactNode {
   switch (col.key) {
     case 'statutConformite':
       return (
-        <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '99px', background: r.statutConformite === 'Conforme' ? '#dcfce7' : '#fee2e2', color: r.statutConformite === 'Conforme' ? '#15803d' : '#b91c1c' }}>
+        <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '99px', background: r.statutConformite === 'Conforme' ? 'var(--status-ok-bg)' : 'var(--status-blocking-bg)', color: r.statutConformite === 'Conforme' ? 'var(--status-ok-text)' : 'var(--status-blocking-text)' }}>
           {r.statutConformite}
         </span>
       );

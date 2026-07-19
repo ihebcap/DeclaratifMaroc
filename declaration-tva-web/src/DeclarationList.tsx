@@ -138,8 +138,8 @@ export function DeclarationList({
                                             borderRadius: '99px',
                                             fontSize: '0.875rem',
                                             fontWeight: 500,
-                                            backgroundColor: dec.statut === STATUT_EN_COURS ? '#e0e7ff' : dec.statut === STATUT_CLOTUREE ? '#fef3c7' : '#dcfce7',
-                                            color: dec.statut === STATUT_EN_COURS ? '#4338ca' : dec.statut === STATUT_CLOTUREE ? '#b45309' : '#15803d'
+                                            backgroundColor: dec.statut === STATUT_EN_COURS ? '#e0e7ff' : dec.statut === STATUT_CLOTUREE ? '#fef3c7' : 'var(--status-ok-bg)',
+                                            color: dec.statut === STATUT_EN_COURS ? '#4338ca' : dec.statut === STATUT_CLOTUREE ? '#b45309' : 'var(--status-ok-text)'
                                         }}>
                                             {STATUT_LABELS[dec.statut] ?? dec.statut}
                                         </span>
