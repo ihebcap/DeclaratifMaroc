@@ -127,6 +127,22 @@ export function FactureInterrogation({ societeId, showToast }: { societeId: numb
   const [debut, setDebut] = useState<string>(yearStartIso());
   const [fin, setFin] = useState<string>(todayIso());
 
+  // TASK-148 : debounce (350ms) avant de répercuter debut/fin sur les effets de fetch — évite un
+  // appel API par frappe/segment modifié dans les deux champs <input type="date">, dont un état
+  // transitoire (ex. debut modifié avant fin) pouvait produire une plage invalide (400 Bad Request
+  // observé : debut=2026-10-29&fin=2026-07-20, fin encore à sa valeur par défaut le temps de la
+  // saisie). Les <input> restent branchés sur debut/fin (réactivité immédiate à l'écran) ; seuls
+  // les effets réseau utilisent les valeurs debounced.
+  const [debouncedDebut, setDebouncedDebut] = useState(debut);
+  const [debouncedFin, setDebouncedFin] = useState(fin);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedDebut(debut);
+      setDebouncedFin(fin);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [debut, fin]);
+
   const [refreshing, setRefreshing] = useState(false);
 
   const [page, setPage] = useState(1);
@@ -145,12 +161,16 @@ export function FactureInterrogation({ societeId, showToast }: { societeId: numb
 
   const { visibleColumns, visibleKeys, toggle: toggleColumn, reset: resetColumns } = useColumnPrefs('grf.cols.factures', COLUMNS);
 
-  // Valeurs distinctes (origines EC_Type présentes) pour le filtre liste — dépend de la période.
+  // Valeurs distinctes (origines EC_Type présentes) pour le filtre liste — dépend de la période
+  // (debounced, TASK-148).
   useEffect(() => {
+    // TASK-148 (défense supplémentaire, indépendante du debounce) : jamais d'appel avec une plage
+    // invalide, même après le délai de 350ms (ex. saisie manuelle directe d'une date hors bornes).
+    if (debouncedDebut > debouncedFin) return;
     let cancelled = false;
     (async () => {
       try {
-        const res = await api.get('/factures/distincts', { params: { debut, fin, soId: societeId } });
+        const res = await api.get('/factures/distincts', { params: { debut: debouncedDebut, fin: debouncedFin, soId: societeId } });
         if (cancelled) return;
         const origines = (res.data.origines || []).map((o: any) => ({ label: o.libelle, value: o.libelle }));
         setOrigineOptions(origines);
@@ -166,14 +186,16 @@ export function FactureInterrogation({ societeId, showToast }: { societeId: numb
       }
     })();
     return () => { cancelled = true; };
-  }, [debut, fin, societeId]);
+  }, [debouncedDebut, debouncedFin, societeId]);
 
   const fetchPage = useCallback(async () => {
+    // TASK-148 : même garde qu'au-dessus — pas d'appel avec une plage invalide.
+    if (debouncedDebut > debouncedFin) return;
     setLoading(true);
     try {
       const params: any = {
-        debut,
-        fin,
+        debut: debouncedDebut,
+        fin: debouncedFin,
         soId: societeId,
         page,
         size,
@@ -208,9 +230,9 @@ export function FactureInterrogation({ societeId, showToast }: { societeId: numb
     } finally {
       setLoading(false);
     }
-  }, [debut, fin, page, filters, sortConfig, showToast, societeId]);
+  }, [debouncedDebut, debouncedFin, page, filters, sortConfig, showToast, societeId]);
 
-  useEffect(() => { setPage(1); }, [filters, sortConfig, debut, fin]);
+  useEffect(() => { setPage(1); }, [filters, sortConfig, debouncedDebut, debouncedFin]);
   useEffect(() => { fetchPage(); }, [fetchPage]);
 
   // Rafraîchir la valorisation (famille B) : lit les OM Sage pour la période et remplit le cache
