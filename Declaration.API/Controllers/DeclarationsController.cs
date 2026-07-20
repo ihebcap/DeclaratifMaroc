@@ -150,6 +150,26 @@ public class DeclarationsController : ControllerBase
     }
 
     /// <summary>
+    /// TASK-144 : diagnostic explicatif en ligne d'une ligne en anomalie (identifiée par son EC_Id).
+    /// LECTURE SEULE STRICTE — aucune écriture, aucune NOUVELLE lecture OM Sage (le motif d'échec
+    /// déjà tenté est relu depuis le cache). Le seul accès Sage est un SELECT F_DOCREGL (contrôle
+    /// collision DO_Numero), base résolue dynamiquement par SO_Id (TASK-118). Retourne 404 si
+    /// l'échéance est introuvable pour cette déclaration/société.
+    /// </summary>
+    [HttpGet("{id}/lignes/diagnostic/{ecId:int}")]
+    public async Task<IActionResult> DiagnostiquerLigne(Guid id, int ecId)
+    {
+        if (ecId <= 0)
+            return BadRequest(new { Message = "'ecId' est obligatoire et doit être positif." });
+
+        var resultat = await _workflowService.DiagnostiquerLigneAsync(id, ecId);
+        if (resultat == null)
+            return NotFound(new { Message = $"Aucune échéance EC_Id={ecId} trouvée pour cette déclaration." });
+
+        return Ok(new DiagnosticLigneDto(resultat));
+    }
+
+    /// <summary>
     /// TASK-078 : valide explicitement une incohérence déjà signalée (TASK-077) — décision PO
     /// tracée (qui/quand), n'écrit AUCUN montant/état de ligne. L'alerte correspondante ne sera
     /// plus remontée pour cette pièce (EC_Id) tant qu'une resynchronisation ne l'invalide pas.
@@ -198,13 +218,29 @@ public class DeclarationsController : ControllerBase
     /// Retourne les alertes (Info/Warning/Error) + contrôle d'équilibre réels.
     /// Les alertes Error bloquent la clôture.
     /// </summary>
+    [HttpPost("{id}/selection")]
+    public async Task<IActionResult> SaveSelection(Guid id, [FromBody] List<string> selectedNumeros)
+    {
+        await _repository.SaveSelectionReglementsAsync(id, selectedNumeros);
+        return NoContent();
+    }
+
+    [HttpGet("{id}/selection")]
+    public async Task<IActionResult> GetSelection(Guid id)
+    {
+        var selection = await _repository.GetSelectionReglementsAsync(id);
+        return Ok(selection);
+    }
+
     [HttpGet("{id}/checkup")]
     public async Task<IActionResult> GetCheckup(Guid id)
     {
         try
         {
             var result = await _workflowService.GetCheckupAsync(id);
-            var lignes = (await _repository.GetLignesAsync(id, "Decaissement", 1, int.MaxValue, null, null)).ToList();
+            var lignesDec = (await _repository.GetLignesAsync(id, "Decaissement", 1, int.MaxValue, null, null)).ToList();
+            var lignesEnc = (await _repository.GetLignesAsync(id, "Encaissement", 1, int.MaxValue, null, null)).ToList();
+            var lignes = lignesDec.Concat(lignesEnc).ToList();
             var proposees = lignes.Count(l => l.Etat == EtatLigne.Proposee);
             var integreesCount = lignes.Count(l => l.Etat == EtatLigne.Integree);
             var exclues = lignes.Count(l => l.Etat == EtatLigne.Exclue);
@@ -212,49 +248,95 @@ public class DeclarationsController : ControllerBase
             var ecartees = lignes.Count(l => l.Etat == EtatLigne.Ecartee);
 
             // TASK-058 : projection de contrôle consommée par l'écran ⑤ (front lecture seule).
-            // Aucun recalcul TVA — simple agrégation des lignes INTÉGRÉES déjà valorisées par
-            // le recalcul back (TASK-009). Les clés JSON sont alignées sur le contrat front
-            // (recapSource / recapTaux / alertes typées / equilibre).
-            var integrees = lignes.Where(l => l.Etat == EtatLigne.Integree).ToList();
+            // Aucun recalcul TVA — simple agrégation des lignes déjà valorisées par le recalcul
+            // back (TASK-009). Les clés JSON sont alignées sur le contrat front (recapSource /
+            // recapTaux / alertes typées / equilibre).
 
-            var recapSource = integrees
+            // TASK-103 : recapSource/recapTaux doivent couvrir le même ensemble que le
+            // contrôle d'équilibre (DeclarationWorkflowService.cs:738 — Integree OU Proposee),
+            // sinon le détail « Répartition par source » reste invisible tant que la
+            // déclaration n'est pas clôturée (les lignes valorisées sont encore Proposee).
+            var lignesRecap = lignes.Where(l => l.Etat == EtatLigne.Integree || l.Etat == EtatLigne.Proposee).ToList();
+
+            var recapSource = lignesRecap
                 .GroupBy(l => string.IsNullOrWhiteSpace(l.Source) ? "—" : l.Source)
                 .Select(g => new
                 {
                     source = g.Key,
                     ht = g.Sum(x => x.HT),
                     tva = g.Sum(x => x.TVA),
-                    ttc = g.Sum(x => x.TTC)
+                    ttc = g.Sum(x => x.TTC),
+                    nbLignes = g.Count()
                 })
                 .OrderByDescending(x => x.ttc)
                 .ToList();
 
-            var recapTaux = integrees
-                .GroupBy(l => l.Taux)
+            var recapTaux = lignesRecap
+                .GroupBy(l => new { l.Taux, l.Domaine })
                 .Select(g => new
                 {
-                    taux = g.Key,
+                    taux = g.Key.Taux,
+                    domaine = g.Key.Domaine,
                     ht = g.Sum(x => x.HT),
                     tva = g.Sum(x => x.TVA),
-                    ttc = g.Sum(x => x.TTC)
+                    ttc = g.Sum(x => x.TTC),
+                    nbLignes = g.Count()
                 })
                 .OrderByDescending(x => x.taux)
                 .ToList();
 
-            // Équilibre : dérivé du contrôle back (TotalDeclareTtc vs HT + TVA des intégrées).
-            // Écart ~0 = déclaration équilibrée. Tolérance d'arrondi 0,01.
-            var totalTva = integrees.Sum(l => l.TVA);
+            // Équilibre : dérivé du contrôle back (TotalDeclareTtc vs HT + TVA), les trois
+            // termes agrégés sur le MÊME ensemble Integree||Proposee (lignesRecap, TASK-108).
+            // Avant TASK-108, totalTva était restreint aux seules lignes Integree alors que
+            // TotalDeclareTtc/TotalMontantAffecte couvrent Integree||Proposee : sur une
+            // déclaration EnCours (0 Integree) l'écart valait alors ΣTVA Proposee en entier
+            // (la TVA totale mal étiquetée « écart détecté »). Écart ~0 = déclaration équilibrée.
+            // Tolérance d'arrondi 0,01.
+            var totalTva = lignesRecap.Sum(l => l.TVA);
             var ecart = result.ControleEquilibre.TotalDeclareTtc
                         - (result.ControleEquilibre.TotalMontantAffecte + totalTva);
-            var equilibre = new { isValid = Math.Abs(ecart) < 0.01m, ecart };
+
+            // TASK-112 : axe réellement discriminant pour isoler l'écart — Source est une
+            // tautologie (DM_LGTVA.Source == domaine pour 100% des lignes d'un domaine donné).
+            // Par construction ligne à ligne (TTC = HT + TVA attendu à la valorisation), l'écart
+            // ci-dessus se décompose EXACTEMENT en Σ résidu des lignes où ce n'est pas vérifié
+            // (ex. facture non ventilée : HT affecté mais Taux/TVA/TTC restés à 0,
+            // DeclarationWorkflowService.MapLignesCandidates) — les lignes cohérentes contribuent
+            // un résidu nul par définition. `ecartExplique` vérifie cette identité pour ne jamais
+            // présenter un drill qui ne rendrait pas compte de la totalité de l'écart annoncé
+            // (principe « aucune ligne silencieuse »).
+            const decimal toleranceResidu = 0.01m;
+            var recapIncoherence = lignesRecap
+                .GroupBy(l => new { l.Domaine, Incoherente = Math.Abs(l.TTC - (l.HT + l.TVA)) > toleranceResidu })
+                .Select(g => new
+                {
+                    domaine = g.Key.Domaine,
+                    incoherente = g.Key.Incoherente,
+                    ht = g.Sum(x => x.HT),
+                    tva = g.Sum(x => x.TVA),
+                    ttc = g.Sum(x => x.TTC),
+                    residu = g.Sum(x => x.TTC - (x.HT + x.TVA)),
+                    nbLignes = g.Count()
+                })
+                .OrderByDescending(x => x.incoherente)
+                .ToList();
+            var residuIncoherentes = recapIncoherence.Where(g => g.incoherente).Sum(g => g.residu);
+            var ecartExplique = Math.Abs(ecart - residuIncoherentes) < toleranceResidu;
+
+            var equilibre = new { isValid = Math.Abs(ecart) < toleranceResidu, ecart, ecartExplique };
 
             // Alertes typées : Niveau back → type front (Error → bloquant, Warning/Info →
-            // avertissement, aucune masquée). Drill câblé sur numeroRapprochement (seule clé
-            // supportée par le filtre JSON du repo, TASK-034) retrouvé via la ligne référencée.
+            // avertissement, aucune masquée). Drill câblé en priorité sur EC_Id (TASK-146, clé
+            // précise par ligne) — repli sur numeroRapprochement (TASK-034) si EC_Id absent/0
+            // (lignes figées avant TASK-077, cf. commentaire AffectationsDrill.tsx:50).
             var alertes = result.Alertes.Select(a =>
             {
                 var ligne = lignes.FirstOrDefault(l => l.NumeroFacture == a.RefLigne);
-                var hasDrill = ligne != null && !string.IsNullOrWhiteSpace(ligne.NumeroRapprochement);
+                var hasEcId = ligne != null && ligne.EC_Id > 0;
+                var hasDrill = ligne != null && (hasEcId || !string.IsNullOrWhiteSpace(ligne.NumeroRapprochement));
+                object? filtre = !hasDrill ? null
+                    : hasEcId ? new { ecId = new[] { ligne!.EC_Id } }
+                    : new { numeroRapprochement = ligne!.NumeroRapprochement };
                 return new
                 {
                     type = a.Niveau == Declaration.Core.Model.NiveauAlerte.Error ? "bloquant" : "avertissement",
@@ -262,7 +344,7 @@ public class DeclarationsController : ControllerBase
                     code = a.Code,
                     refLigne = a.RefLigne,
                     domaine = hasDrill ? ligne!.Domaine : null,
-                    filtre = hasDrill ? (object)new { numeroRapprochement = ligne!.NumeroRapprochement } : null
+                    filtre
                 };
             }).ToList();
 
@@ -270,6 +352,7 @@ public class DeclarationsController : ControllerBase
                 equilibre,
                 recapSource,
                 recapTaux,
+                recapIncoherence,
                 alertes,
                 controleEquilibre = result.ControleEquilibre,
                 reconciliation = new {
@@ -385,6 +468,36 @@ public class DeclarationsController : ControllerBase
     [HttpGet("/api/controle")]
     public IActionResult GetControle([FromQuery] int societeId, [FromQuery] int periode)
         => StatusCode(501, new { Message = "Non implémenté — délégué à TASK-009 (Contrôle GRF-N)." });
+
+    /// <summary>
+    /// TASK-094 (Option A) — diagnostic lecture seule d'un tampon DT_Id observé sur
+    /// RT_AFFECTATION : identifie sa déclaration d'origine si elle existe encore, ou signale
+    /// explicitement un tampon orphelin (déclaration disparue). Réservé UT_Admin=1 (même garde
+    /// que réouverture/suppression, TASK-073) — aucune écriture, uniquement recalcul et lecture.
+    /// </summary>
+    /// <param name="dtIds">
+    /// Liste optionnelle de DT_Id (CSV, ex. "425466408,12345"). Absente → diagnostique toutes
+    /// les valeurs DT_Id distinctes actuellement présentes sur RT_AFFECTATION.
+    /// </param>
+    [HttpGet("/api/diagnostic/dt-id")]
+    public async Task<IActionResult> DiagnostiquerDtId([FromQuery] string? dtIds)
+    {
+        if (!User.HasClaim("UT_Admin", "1"))
+            return Forbid();
+
+        List<int>? cibles = null;
+        if (!string.IsNullOrWhiteSpace(dtIds))
+        {
+            cibles = dtIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out var v) ? (int?)v : null)
+                .Where(v => v.HasValue)
+                .Select(v => v!.Value)
+                .ToList();
+        }
+
+        var resultats = await _workflowService.DiagnostiquerDtIdAsync(cibles);
+        return Ok(resultats);
+    }
 }
 
 public class CreateDeclarationRequest

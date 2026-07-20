@@ -84,7 +84,42 @@ public class DeclarationRepository : IDeclarationRepository
         using var connection = _connectionFactory.CreatePersistenceConnection();
         var id = declarationId.ToString();
         await connection.ExecuteAsync("DELETE FROM DM_LGTVA WHERE DeclarationId = @Id", new { Id = id });
+        await connection.ExecuteAsync("DELETE FROM DM_SELECTION_REGLEMENT WHERE DeclarationId = @Id", new { Id = id });
         await connection.ExecuteAsync("DELETE FROM DM_ENTTVA WHERE Id = @Id", new { Id = id });
+    }
+
+    public async Task SaveSelectionReglementsAsync(Guid declarationId, IEnumerable<string> selectedNumeroReglements)
+    {
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        try
+        {
+            var idStr = declarationId.ToString();
+            await connection.ExecuteAsync("DELETE FROM DM_SELECTION_REGLEMENT WHERE DeclarationId = @Id", new { Id = idStr }, transaction);
+            
+            var list = selectedNumeroReglements.Distinct().ToList();
+            if (list.Count > 0)
+            {
+                var sql = "INSERT INTO DM_SELECTION_REGLEMENT (DeclarationId, NumeroReglement) VALUES (@DeclarationId, @NumeroReglement)";
+                var parameters = list.Select(num => new { DeclarationId = idStr, NumeroReglement = num }).ToList();
+                await connection.ExecuteAsync(sql, parameters, transaction);
+            }
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<List<string>> GetSelectionReglementsAsync(Guid declarationId)
+    {
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        var sql = "SELECT NumeroReglement FROM DM_SELECTION_REGLEMENT WHERE DeclarationId = @Id";
+        var result = await connection.QueryAsync<string>(sql, new { Id = declarationId.ToString() });
+        return result.ToList();
     }
 
     private sealed class AgregatRow
@@ -174,10 +209,12 @@ public class DeclarationRepository : IDeclarationRepository
 
     /// <summary>
     /// TASK-077 : lit (sans dupliquer la règle de détection TASK-072/076) les EC_Id actuellement
-    /// marqués en erreur (sentinelle CodeTaxe='ERREUR') dans GRC_VENTILATION_SAGE_CACHE, sur la
+    /// marqués en erreur (sentinelle CodeTaxe='ERREUR') dans DM_VENTILATION_SAGE_CACHE, sur la
     /// base de persistance. Même table/critère que <see cref="EnrichirFamilleBDepuisCacheAsync"/>.
+    /// TASK-118 : borné à <paramref name="soId"/> — EC_Id seul peut collisionner entre deux bases
+    /// Sage physiquement distinctes.
     /// </summary>
-    public async Task<HashSet<int>> GetEcIdsEnErreurAsync(IEnumerable<int> ecIds)
+    public async Task<HashSet<int>> GetEcIdsEnErreurAsync(int soId, IEnumerable<int> ecIds)
     {
         var ids = ecIds.Where(id => id > 0).Distinct().ToList();
         var result = new HashSet<int>();
@@ -185,8 +222,8 @@ public class DeclarationRepository : IDeclarationRepository
 
         using var connection = _connectionFactory.CreatePersistenceConnection();
         var rows = await connection.QueryAsync<int>(
-            "SELECT DISTINCT EC_Id FROM GRC_VENTILATION_SAGE_CACHE WHERE EC_Id IN @ecIds AND CodeTaxe = 'ERREUR'",
-            new { ecIds = ids });
+            "SELECT DISTINCT EC_Id FROM DM_VENTILATION_SAGE_CACHE WHERE SO_Id = @soId AND EC_Id IN @ecIds AND CodeTaxe = 'ERREUR'",
+            new { soId, ecIds = ids });
         foreach (var r in rows) result.Add(r);
         return result;
     }
@@ -379,6 +416,23 @@ public class DeclarationRepository : IDeclarationRepository
                     }
                 }
 
+                if (json.RootElement.TryGetProperty("ecId", out var ecId))
+                {
+                    // TASK-146 : filtre précis par ligne (EC_Id), prioritaire sur numeroRapprochement
+                    // côté appelant (DeclarationsController.GetCheckup) — un règlement peut couvrir
+                    // plusieurs factures, EC_Id isole la ligne réellement en anomalie.
+                    var ecIds = ExtraireListeChaines(ecId)
+                        .Select(v => int.TryParse(v, out var i) ? (int?)i : null)
+                        .Where(v => v.HasValue)
+                        .Select(v => v!.Value)
+                        .ToList();
+                    if (ecIds.Count > 0)
+                    {
+                        sql.Append(" AND EC_Id IN @EcIds ");
+                        p.Add("EcIds", ecIds);
+                    }
+                }
+
                 if (json.RootElement.TryGetProperty("source", out var src))
                 {
                     var sources = ExtraireListeChaines(src);
@@ -415,6 +469,21 @@ public class DeclarationRepository : IDeclarationRepository
                     {
                         sql.Append(" AND EcType IN @EcTypes ");
                         p.Add("EcTypes", ecTypes);
+                    }
+                }
+
+                if (json.RootElement.TryGetProperty("incoherente", out var incoherente))
+                {
+                    // TASK-112 : axe « lignes incohérentes » (TTC ≠ HT+TVA, tolérance d'arrondi) —
+                    // remplace le filtre `source` tautologique pour isoler l'écart d'équilibre.
+                    var valeurs = ExtraireListeChaines(incoherente);
+                    if (valeurs.Any(v => string.Equals(v, "true", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        sql.Append(" AND ABS(TTC - (HT + TVA)) > 0.01 ");
+                    }
+                    else if (valeurs.Any(v => string.Equals(v, "false", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        sql.Append(" AND ABS(TTC - (HT + TVA)) <= 0.01 ");
                     }
                 }
 
@@ -582,7 +651,11 @@ public class DeclarationRepository : IDeclarationRepository
                    SUM(AF.AF_Montant)                                AS MontantAffecte,
                    MIN(E.EC_Type)                                    AS EcTypeMin,
                    MAX(E.EC_Type)                                    AS EcTypeMax,
-                   SUM(CASE WHEN AF.DT_Id IS NOT NULL THEN 1 ELSE 0 END) AS NbDeclare
+                   SUM(CASE WHEN AF.DT_Id IS NOT NULL THEN 1 ELSE 0 END) AS NbDeclare,
+                   -- TASK-140 : DT_Id de la déclaration verrou (résolu en numéro côté applicatif).
+                   -- MIN + MAX pour détecter une éventuelle incohérence sans la masquer.
+                   MAX(AF.DT_Id)                                     AS DtId,
+                   MIN(AF.DT_Id)                                     AS DtIdMin
             FROM RT_AFFECTATION AF
             JOIN RT_ECHEANCE E ON AF.EC_Id = E.EC_Id
             GROUP BY AF.MV_Id
@@ -591,9 +664,19 @@ public class DeclarationRepository : IDeclarationRepository
           AND M.MV_Domaine IN (0, 1) -- 0=encaissement, 1=décaissement : vrais règlements uniquement (exclut bordereaux de remise, virements, alim. caisse ; les frais bancaires MV_Domaine=6 sont dans une autre table)
           -- Période située par la DATE DE RÉFÉRENCE (TASK-062, source unique RegleDatePeriode) :
           -- rapproché → MV_PointDate ; espèce & non-rapproché → MV_Date. Corrige RF26060064 (rapproché
-          -- en janvier via MV_PointDate mais MV_Date en juin). AUCUN gate ajouté : le non-rapproché
-          -- reste visible dans l'interrogation (décision PO). Borne haute homogène < @finExclude.
-          AND " + RegleDatePeriode.DateReferenceSqlM + @" >= @debut AND " + RegleDatePeriode.DateReferenceSqlM + @" < @finExclude
+          -- en janvier via MV_PointDate mais MV_Date en juin).
+          -- TASK-099 : la règle diffère selon l'appelant (même endpoint, deux usages) —
+          --   • écran ① Sélection (@declarationId fourni) : coupure de période SEULE (rattrapage de
+          --     l'arriéré jamais déclaré, plus de borne basse) + non-rapprochés hors-espèce MASQUÉS
+          --     (gate EstDeclarable) — décision PO 14/07/2026 : uniquement cet écran.
+          --   • Interrogation Rapprochement (TASK-037, @declarationId absent) : comportement INCHANGÉ
+          --     (fenêtre pleine borne basse/haute, aucun gate — le non-rapproché reste visible).
+          AND (
+              (@declarationId IS NOT NULL AND " + RegleDatePeriode.DateReferenceSqlM + @" < @finExclude)
+              OR
+              (@declarationId IS NULL AND " + RegleDatePeriode.DateReferenceSqlM + @" >= @debut AND " + RegleDatePeriode.DateReferenceSqlM + @" < @finExclude)
+          )
+          AND (@declarationId IS NULL OR " + RegleDatePeriode.EstDeclarableSqlM + @")
           -- Mode : multi-sélection RÉELLE (TASK-063) — liste vide ⇒ pas de contrainte (guard @hasModes).
           AND (@hasModes = 0 OR M.MV_Type IN @modes)
           -- Rapproché = pointage bancaire (MV_Point=1) OU espèce (MV_Type=0, auto-rapprochée) :
@@ -707,6 +790,7 @@ public class DeclarationRepository : IDeclarationRepository
         {
             so = soId,
             debut = dateDebut.Date,
+            declarationId = f.DeclarationId?.ToString(),
             finExclude = dateFin.Date.AddDays(1), // borne haute inclusive sur la date
             // Énumération + booléens en multi-sélection réelle : guard @hasX = 0 si liste vide.
             modes,
@@ -784,7 +868,15 @@ public class DeclarationRepository : IDeclarationRepository
                 A.MontantAffecte                   AS MontantAffecte,
                 A.EcTypeMin                        AS EcTypeMin,
                 A.EcTypeMax                        AS EcTypeMax,
-                ISNULL(A.NbDeclare, 0)             AS NbDeclare
+                ISNULL(A.NbDeclare, 0)             AS NbDeclare,
+                A.DtId                             AS DtId,
+                A.DtIdMin                          AS DtIdMin,
+                (SELECT COUNT(*) FROM dbo.DM_SELECTION_REGLEMENT SR
+                 JOIN dbo.DM_ENTTVA D ON SR.DeclarationId = D.Id
+                 WHERE D.Statut = 0 
+                   AND D.SocieteId = M.SO_Id 
+                   AND (@declarationId IS NULL OR D.Id <> @declarationId)
+                   AND SR.NumeroReglement = M.MV_Numero) AS NbSelectionAutre
             {RapprochementFromWhere}
             ORDER BY {orderBy}, M.MV_Id
             OFFSET @offset ROWS FETCH NEXT @size ROWS ONLY";
@@ -794,7 +886,60 @@ public class DeclarationRepository : IDeclarationRepository
         p.Add("size", size);
 
         using var connection = _connectionFactory.CreateGrfConnection();
-        return await connection.QueryAsync<ReglementRapprochementRow>(sql, p);
+        var rows = (await connection.QueryAsync<ReglementRapprochementRow>(sql, p)).ToList();
+        await ResoudreNumeroDeclarationAsync(rows);
+        return rows;
+    }
+
+    /// <summary>
+    /// TASK-140 — résolution APPLICATIVE du numéro de déclaration verrou. RT_AFFECTATION.DT_Id vit
+    /// sur GRF, DM_ENTTVA sur la base de persistance (connexions Dapper distinctes) : un JOIN SQL
+    /// direct dépendrait d'un nom de base en dur, fragile selon l'environnement client. On résout
+    /// donc en un SEUL appel batché (les DT_Id distincts de la page) puis fusion en mémoire.
+    /// Cas incohérent (DtIdMin ≠ DtId, ne devrait pas arriver — verrou atomique TASK-028) : les DEUX
+    /// numéros sont remontés explicitement, jamais un choix arbitraire silencieux.
+    /// </summary>
+    private async Task ResoudreNumeroDeclarationAsync(IReadOnlyList<ReglementRapprochementRow> rows)
+    {
+        var dtIds = rows
+            .SelectMany(r => new[] { r.DtId, r.DtIdMin })
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+        if (dtIds.Count == 0) return;
+
+        using var pc = _connectionFactory.CreatePersistenceConnection();
+        var pairs = await pc.QueryAsync<DeclarationDtNumero>(
+            "SELECT DT_Id, Numero FROM DM_ENTTVA WHERE DT_Id IN @dtIds", new { dtIds });
+
+        var map = new Dictionary<int, string?>();
+        foreach (var pair in pairs)
+            if (pair.DT_Id.HasValue && !map.ContainsKey(pair.DT_Id.Value))
+                map[pair.DT_Id.Value] = pair.Numero;
+
+        foreach (var r in rows)
+        {
+            if (!r.DtId.HasValue) continue;
+            map.TryGetValue(r.DtId.Value, out var numMax);
+            if (r.DtIdMin.HasValue && r.DtIdMin.Value != r.DtId.Value)
+            {
+                map.TryGetValue(r.DtIdMin.Value, out var numMin);
+                // Incohérence signalée, jamais masquée (transparence — cf. TASK-140 §CONTRAINTE).
+                r.NumeroDeclaration =
+                    $"⚠ {numMin ?? r.DtIdMin.Value.ToString()} / {numMax ?? r.DtId.Value.ToString()} (incohérent)";
+            }
+            else
+            {
+                r.NumeroDeclaration = numMax; // peut rester NULL (déclaration sans Numero) — jamais inventé
+            }
+        }
+    }
+
+    private sealed class DeclarationDtNumero
+    {
+        public int? DT_Id { get; set; }
+        public string? Numero { get; set; }
     }
 
     public async Task<int> GetReglementsRapprochementCountAsync(
@@ -999,11 +1144,17 @@ public class DeclarationRepository : IDeclarationRepository
         // Famille B : enrichissement depuis le cache de ventilation TASK-024 (connexion de
         // PERSISTANCE, distincte de GRF) — jamais de lecture Sage synchrone ici. Absence de
         // cache ⇒ « non valorisé » + motif (transparence).
-        await EnrichirFamilleBDepuisCacheAsync(rows);
+        // TASK-118 : borné à soId (EC_Id seul peut collisionner entre deux bases Sage distinctes).
+        await EnrichirFamilleBDepuisCacheAsync(soId, rows);
         return rows;
     }
 
-    private async Task EnrichirFamilleBDepuisCacheAsync(List<FactureInterrogationRow> rows)
+    /// <summary>
+    /// TASK-118 : <paramref name="soId"/> borne la lecture du cache à la société courante — sans
+    /// ce filtre, un EC_Id partagé par coïncidence entre deux bases Sage physiquement distinctes
+    /// ferait remonter la ventilation (ou l'erreur) d'une AUTRE société.
+    /// </summary>
+    private async Task EnrichirFamilleBDepuisCacheAsync(int soId, List<FactureInterrogationRow> rows)
     {
         if (rows.Count == 0) return;
 
@@ -1016,15 +1167,15 @@ public class DeclarationRepository : IDeclarationRepository
             try
             {
                 using var cacheConn = _connectionFactory.CreatePersistenceConnection();
-                // Totaux HT/TVA de la facture : le cache stocke les buckets TVA par (EC_Id, Taux).
+                // Totaux HT/TVA de la facture : le cache stocke les buckets TVA par (SO_Id, EC_Id, Taux).
                 // On somme les BaseHT/MontantTva pour reconstituer les totaux de la facture.
                 // TASK-072 : la ligne sentinelle d'erreur (CodeTaxe='ERREUR') est exclue de ce
                 // SUM — jamais mêlée aux totaux réels (sinon 0 silencieux au lieu de « non valorisé »).
                 var cacheRows = await cacheConn.QueryAsync<VentilationCacheTotal>(@"
                     SELECT EC_Id AS EcId, SUM(BaseHT) AS TotalHt, SUM(MontantTva) AS TotalTva
-                    FROM GRC_VENTILATION_SAGE_CACHE
-                    WHERE EC_Id IN @ecIds AND CodeTaxe <> 'ERREUR'
-                    GROUP BY EC_Id", new { ecIds });
+                    FROM DM_VENTILATION_SAGE_CACHE
+                    WHERE SO_Id = @soId AND EC_Id IN @ecIds AND CodeTaxe <> 'ERREUR'
+                    GROUP BY EC_Id", new { soId, ecIds });
                 foreach (var c in cacheRows) totals[c.EcId] = c;
 
                 // TASK-072 : motif précis des pièces exclues (incohérence Sage détectée), porté
@@ -1036,8 +1187,8 @@ public class DeclarationRepository : IDeclarationRepository
                 var erreurRows = await cacheConn.QueryAsync<VentilationCacheErreur>(@"
                     SELECT EC_Id AS EcId, MotifErreur,
                            BrutHT, BrutTva, BrutParafiscale, BrutTtc
-                    FROM GRC_VENTILATION_SAGE_CACHE
-                    WHERE EC_Id IN @ecIds AND CodeTaxe = 'ERREUR'", new { ecIds });
+                    FROM DM_VENTILATION_SAGE_CACHE
+                    WHERE SO_Id = @soId AND EC_Id IN @ecIds AND CodeTaxe = 'ERREUR'", new { soId, ecIds });
                 foreach (var e in erreurRows) erreurs[e.EcId] = e;
             }
             catch
@@ -1189,6 +1340,106 @@ public class DeclarationRepository : IDeclarationRepository
 
             await connection.ExecuteAsync(sql, dynamicParams);
         }
+    }
+
+    // ─── Diagnostic tampon DT_Id (TASK-094, lecture seule stricte) ─────────────
+
+    /// <summary>Toutes les déclarations existantes, quelle que soit la société (diagnostic admin).</summary>
+    public async Task<IEnumerable<DeclarationEntete>> GetToutesDeclarationsAsync()
+    {
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        return await connection.QueryAsync<DeclarationEntete>("SELECT * FROM DM_ENTTVA");
+    }
+
+    /// <summary>
+    /// Valeurs distinctes de DT_Id non nulles présentes sur RT_AFFECTATION. SELECT seul,
+    /// base GRF (GrfConnection) — aucune écriture.
+    /// </summary>
+    public async Task<IEnumerable<int>> GetDistinctDtIdsAffectationsAsync()
+    {
+        using var connection = _connectionFactory.CreateGrfConnection();
+        return await connection.QueryAsync<int>(
+            "SELECT DISTINCT DT_Id FROM dbo.RT_AFFECTATION WHERE DT_Id IS NOT NULL");
+    }
+
+    /// <summary>TASK-094 (Option B) : pose ou efface DM_ENTTVA.DT_Id (base de persistance).</summary>
+    public async Task SetDtIdDeclarationAsync(Guid declarationId, int? dtId)
+    {
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        await connection.ExecuteAsync(
+            "UPDATE DM_ENTTVA SET DT_Id = @DtId WHERE Id = @Id",
+            new { Id = declarationId.ToString(), DtId = dtId });
+    }
+
+    // ─── Diagnostic explicatif en ligne d'une anomalie (TASK-144, lecture seule stricte) ──────
+
+    /// <summary>TASK-144 : échéance RT_ECHEANCE (GRF) consultée. SELECT seul, aucune écriture.</summary>
+    public async Task<EcheanceDiagnosticRow?> GetEcheanceDiagnosticAsync(int soId, int ecId)
+    {
+        using var connection = _connectionFactory.CreateGrfConnection();
+        return await connection.QuerySingleOrDefaultAsync<EcheanceDiagnosticRow>(@"
+            SELECT E.EC_Id, E.EC_No, E.EC_Type, E.DO_Numero, E.CT_Code, E.CT_Intitule, E.EC_MtDevise
+            FROM RT_ECHEANCE E
+            WHERE E.SO_Id = @so AND E.EC_Id = @ecId",
+            new { so = soId, ecId });
+    }
+
+    /// <summary>
+    /// TASK-144 : toutes les échéances RT_ECHEANCE (GRF) de la société portant ce DO_Numero —
+    /// inclut l'échéance consultée. SELECT seul.
+    /// </summary>
+    public async Task<IReadOnlyList<EcheanceCollisionRow>> GetEcheancesMemeDoNumeroAsync(int soId, string doNumero)
+    {
+        if (string.IsNullOrWhiteSpace(doNumero)) return Array.Empty<EcheanceCollisionRow>();
+        using var connection = _connectionFactory.CreateGrfConnection();
+        var rows = await connection.QueryAsync<EcheanceCollisionRow>(@"
+            SELECT E.EC_Id, E.EC_No, E.CT_Code, E.CT_Intitule
+            FROM RT_ECHEANCE E
+            WHERE E.SO_Id = @so AND E.DO_Numero = @doNumero
+            ORDER BY E.EC_Id",
+            new { so = soId, doNumero });
+        return rows.ToList();
+    }
+
+    /// <summary>
+    /// TASK-144 : motif d'échec déjà persisté (DM_VENTILATION_SAGE_CACHE, sentinelle CodeTaxe='ERREUR').
+    /// Ne redéclenche AUCUNE lecture Sage — lit seulement le résultat déjà écrit (base de persistance).
+    /// </summary>
+    public async Task<string?> GetMotifErreurCacheAsync(int soId, int ecId)
+    {
+        if (ecId <= 0) return null;
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        return await connection.QuerySingleOrDefaultAsync<string?>(
+            "SELECT TOP 1 MotifErreur FROM DM_VENTILATION_SAGE_CACHE WHERE SO_Id = @soId AND EC_Id = @ecId AND CodeTaxe = 'ERREUR'",
+            new { soId, ecId });
+    }
+
+    /// <summary>
+    /// TASK-144 : documents de règlement Sage (F_DOCREGL) pour les EC_No fournis (jointure EC_No = DR_No).
+    /// SELECT strictement lecture seule sur la base Sage (chaîne résolue dynamiquement par SO_Id et
+    /// fournie par l'appelant — jamais codée en dur). Un EC_No absent du dictionnaire = orphelin.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<int, DocumentReglementSageRow>> GetDocumentsReglementSageAsync(
+        string sageConnectionString, IEnumerable<int> ecNos)
+    {
+        var ids = ecNos.Where(n => n > 0).Distinct().ToList();
+        var result = new Dictionary<int, DocumentReglementSageRow>();
+        if (ids.Count == 0) return result;
+
+        using var connection = new Microsoft.Data.SqlClient.SqlConnection(sageConnectionString);
+        var rows = await connection.QueryAsync<DocumentReglementSageRow>(@"
+            SELECT DR_No, DO_Piece, DR_Date
+            FROM F_DOCREGL
+            WHERE DR_No IN @ecNos",
+            new { ecNos = ids });
+
+        foreach (var r in rows)
+        {
+            // Une échéance peut porter plusieurs lignes de règlement ; on ne garde que la présence
+            // + le premier document (suffit au verdict « a un document Sage réel »).
+            if (!result.ContainsKey(r.DR_No)) result[r.DR_No] = r;
+        }
+        return result;
     }
 }
 
