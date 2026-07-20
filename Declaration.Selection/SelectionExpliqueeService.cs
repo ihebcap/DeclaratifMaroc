@@ -117,10 +117,12 @@ namespace Declaration.Selection
               -- TASK-050 : MV_DECAISSE supprimé — cadrage direction par MV_Domaine=1 seul.
               -- MV_DECAISSE concerne uniquement les traites/effets (à revoir séparément).
               -- L'espèce (MV_Type=0) reste incluse via MV_Domaine sans filtre additionnel.
-              -- Période située par la DATE DE RÉFÉRENCE (TASK-062, source unique RegleDatePeriode) :
-              -- rapproché → MV_PointDate ; espèce & non-rapproché → MV_Date. Remplace l'ancien filet
-              -- large 3 branches. L'ensemble DÉCLARABLE reste identique (seul l'évaluateur gate).
-              AND {RegleDatePeriode.DateReferenceSqlM} >= @debut AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude
+              -- TASK-099 : périmètre = date de COUPURE (rattrapage, plus de borne basse) + non
+              -- encore déclaré (DT_Id IS NULL, rôle n°1 — borne aussi le volume sans borne basse).
+              -- Rapproché → MV_PointDate ; espèce & non-rapproché → MV_Date (RegleDatePeriode,
+              -- source unique). L'ensemble DÉCLARABLE reste gated par l'évaluateur (EstDeclarable).
+              AND A.DT_Id IS NULL
+              AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude
         ";
 
         private string GetSurensembleDepenseSql(IdentiteFiscaleFournisseurConfig id) => $@"
@@ -156,10 +158,10 @@ namespace Declaration.Selection
               AND M.MV_Domaine = @domaineDepense
               -- TASK-050 : MV_DECAISSE supprimé — cadrage direction par MV_Domaine=6 seul.
               -- MV_DECAISSE concerne uniquement les traites/effets (à revoir séparément).
-              -- Période située par la DATE DE RÉFÉRENCE (TASK-062, source unique RegleDatePeriode) :
-              -- rapproché → MV_PointDate ; espèce & non-rapproché → MV_Date. Remplace l'ancien filet
-              -- large 3 branches. L'ensemble DÉCLARABLE reste identique (seul l'évaluateur gate).
-              AND {RegleDatePeriode.DateReferenceSqlM} >= @debut AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude
+              -- TASK-099 : périmètre = date de COUPURE (rattrapage, plus de borne basse) + non
+              -- encore déclaré (DT_Id IS NULL). L'ensemble DÉCLARABLE reste gated par l'évaluateur.
+              AND A.DT_Id IS NULL
+              AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude
         ";
 
         private string GetSurensembleClientSql(IdentiteFiscaleFournisseurConfig id) => $@"
@@ -195,10 +197,10 @@ namespace Declaration.Selection
               AND M.MV_Domaine = @domaineClient
               -- TASK-050 : MV_DECAISSE supprimé — cadrage direction par MV_Domaine=0 seul.
               -- MV_DECAISSE concerne uniquement les traites/effets (à revoir séparément).
-              -- Période située par la DATE DE RÉFÉRENCE (TASK-062, source unique RegleDatePeriode) :
-              -- rapproché → MV_PointDate ; espèce & non-rapproché → MV_Date. Remplace l'ancien filet
-              -- large 3 branches. L'ensemble DÉCLARABLE reste identique (seul l'évaluateur gate).
-              AND {RegleDatePeriode.DateReferenceSqlM} >= @debut AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude
+              -- TASK-099 : périmètre = date de COUPURE (rattrapage, plus de borne basse) + non
+              -- encore déclaré (DT_Id IS NULL). L'ensemble DÉCLARABLE reste gated par l'évaluateur.
+              AND A.DT_Id IS NULL
+              AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude
         ";
 
         /// <summary>
@@ -241,7 +243,14 @@ namespace Declaration.Selection
                     domaineFournisseur = GrfEnums.Domaine_ReglementFournisseur,
                     domaineDepense = GrfEnums.Domaine_Depense,
                     pointOui = GrfEnums.Point_Oui,
-                    modeEspece = GrfEnums.ModePaiement_Espece
+                    modeEspece = GrfEnums.ModePaiement_Espece,
+                    // TASK-145 : DO_Domaine (RT_ECHEANCE) — restreint cette lecture facture-first
+                    // aux seuls documents d'ACHAT Sage (ErpDomaine.Achat=1). Sans ce filtre, une
+                    // échéance EC_Type=0 de VENTE (DO_Domaine=0) était lue ici et évaluée avec
+                    // Sens=Achat codé en dur, provoquant un appel Sage docFactoryAchat.ExistPiece
+                    // sur une pièce de vente → "Facture d'achat introuvable" alors que la pièce
+                    // existe côté vente. Les ventes restent gérées par SelectionnerExpliqueeAsync.
+                    achatDomaine = GrfEnums.ErpDomaine_Achat
                 };
 
                 // Facture-first : pivot sur RT_ECHEANCE (toutes factures EC_Type=0 de la période).
@@ -324,6 +333,11 @@ namespace Declaration.Selection
               AND E.EC_Type IN (@ecTypeFacture, @ecTypeSolde, @ecTypeFgr)
               -- Axe date facture (TASK-050 : cohérent écran Factures, TASK-041)
               AND E.DO_Date >= @debut AND E.DO_Date < @finExclude
+              -- TASK-145 : cette lecture est achat/dépense uniquement (voir commentaire l.253-255
+              -- ci-dessus) -- sans ce filtre, une échéance de VENTE (DO_Domaine=0) était lue ici et
+              -- évaluée avec Sens=Achat codé en dur (MapAndEvaluate), provoquant une fausse erreur
+              -- Sage Facture d'achat introuvable sur une pièce de vente authentique.
+              AND E.DO_Domaine = @achatDomaine
         ";
 
     }

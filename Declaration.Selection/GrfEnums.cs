@@ -4,10 +4,19 @@ namespace Declaration.Selection
     {
         // Enums mappés depuis Tresorerie.Core.Enum (à vérifier sur GR_EMA_DISTRIBUTION)
         
-        // MV_Domaine
+        // MV_Domaine (RT_MOUVEMENT) — type de mouvement de trésorerie.
+        // ⚠️ Distinct de RT_ECHEANCE.DO_Domaine (ErpDomaine ci-dessous) — TASK-145 : les deux notions
+        // de "domaine" ont été confondues une première fois, ne pas reproduire l'erreur.
         public const int Domaine_ReglementClient = 0;
         public const int Domaine_ReglementFournisseur = 1;
         public const int Domaine_Depense = 6;
+
+        // RT_ECHEANCE.DO_Domaine — type de document Sage (enum Sage ErpDomaine,
+        // Tresorerie.Core.Enum.ErpDomaine) : Vente=0, Achat=1, Stock=2, Ticket=3, Interne=4.
+        // TASK-145 : nécessaire pour ne lire QUE les factures d'achat dans GetFactureFirstSql
+        // (facture-first, périmètre achat/dépense uniquement — les ventes sont gérées par
+        // SelectionnerExpliqueeAsync, axe encaissement).
+        public const int ErpDomaine_Achat = 1;
 
         // MV_Impaye
         public const int Impaye_NonImpaye = 0;
