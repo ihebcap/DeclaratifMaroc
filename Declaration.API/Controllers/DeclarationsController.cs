@@ -170,6 +170,25 @@ public class DeclarationsController : ControllerBase
     }
 
     /// <summary>
+    /// TASK-147 : recalcule UNE ligne Proposee dont le diagnostic a détecté un cache PÉRIMÉ (relu
+    /// avec succès APRÈS la création de la déclaration). Ne redéclenche AUCUNE lecture OM Sage —
+    /// reconstruit la ligne depuis le cache déjà persisté. Retourne 409 si les conditions de
+    /// staleness ne sont plus réunies (rien écrit dans ce cas).
+    /// </summary>
+    [HttpPost("{id}/lignes/recalculer-depuis-cache")]
+    public async Task<IActionResult> RecalculerLigneDepuisCache(Guid id, [FromBody] ValiderIncoherenceRequest request)
+    {
+        if (request.EcId <= 0)
+            return BadRequest(new { Message = "'ecId' est obligatoire." });
+        var (trouvee, recalculee, message) = await _workflowService.RecalculerLigneDepuisCacheAsync(id, request.EcId);
+        if (!trouvee)
+            return NotFound(new { Message = message });
+        if (!recalculee)
+            return Conflict(new { Message = message });
+        return Ok(new { Message = message });
+    }
+
+    /// <summary>
     /// TASK-078 : valide explicitement une incohérence déjà signalée (TASK-077) — décision PO
     /// tracée (qui/quand), n'écrit AUCUN montant/état de ligne. L'alerte correspondante ne sera
     /// plus remontée pour cette pièce (EC_Id) tant qu'une resynchronisation ne l'invalide pas.

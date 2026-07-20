@@ -1415,6 +1415,57 @@ public class DeclarationRepository : IDeclarationRepository
     }
 
     /// <summary>
+    /// TASK-147 : dernière lecture connue du cache (succès OU erreur, peu importe) pour cet EC_Id —
+    /// sert à détecter un cache PÉRIMÉ (relu avec succès APRÈS la création de la déclaration alors
+    /// que la ligne affiche encore un motif de rejet). Ne redéclenche AUCUNE lecture Sage. Le MERGE
+    /// (TASK-076/077, VentilationSageCacheRepository.UpsertEntries) garantit qu'un seul état courant
+    /// existe par EC_Id (soit des buckets de succès, soit une unique sentinelle ERREUR) — TOP 1
+    /// suffit, TotalHT/TotalTva/TotalTtc sont dupliqués à l'identique sur chaque bucket d'une même
+    /// lecture réussie.
+    /// </summary>
+    public async Task<CacheLectureRow?> GetDerniereLectureCacheAsync(int soId, int ecId)
+    {
+        if (ecId <= 0) return null;
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        return await connection.QuerySingleOrDefaultAsync<CacheLectureRow?>(
+            @"SELECT TOP 1 DateLecture, MotifErreur, TotalHT, TotalTva, TotalTtc
+              FROM DM_VENTILATION_SAGE_CACHE
+              WHERE SO_Id = @soId AND EC_Id = @ecId
+              ORDER BY DateLecture DESC",
+            new { soId, ecId });
+    }
+
+    /// <summary>
+    /// TASK-147 : buckets de taux du cache déjà lu avec succès (CodeTaxe &lt;&gt; 'ERREUR') pour cet
+    /// EC_Id — sert à reconstruire la ligne candidate sans redéclencher de lecture Sage.
+    /// </summary>
+    public async Task<IReadOnlyList<CacheBucketRow>> GetBucketsCacheAsync(int soId, int ecId)
+    {
+        if (ecId <= 0) return Array.Empty<CacheBucketRow>();
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        var rows = await connection.QueryAsync<CacheBucketRow>(
+            @"SELECT Taux, BaseHT AS HT, MontantTva AS Tva, TTC
+              FROM DM_VENTILATION_SAGE_CACHE
+              WHERE SO_Id = @soId AND EC_Id = @ecId AND CodeTaxe <> 'ERREUR'
+              ORDER BY Taux",
+            new { soId, ecId });
+        return rows.ToList();
+    }
+
+    /// <summary>
+    /// TASK-147 : supprime la ou les ligne(s) DM_LGTVA périmée(s) d'un EC_Id AVANT de les
+    /// reconstruire depuis le cache à jour (jamais appelée hors de ce recalcul ciblé — la
+    /// suppression est immédiatement suivie d'une réinsertion dans le même appelant).
+    /// </summary>
+    public async Task SupprimerLignesParEcIdAsync(Guid declarationId, int ecId)
+    {
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        await connection.ExecuteAsync(
+            "DELETE FROM DM_LGTVA WHERE DeclarationId = @DeclarationId AND EC_Id = @EcId",
+            new { DeclarationId = declarationId.ToString(), EcId = ecId });
+    }
+
+    /// <summary>
     /// TASK-144 : documents de règlement Sage (F_DOCREGL) pour les EC_No fournis (jointure EC_No = DR_No).
     /// SELECT strictement lecture seule sur la base Sage (chaîne résolue dynamiquement par SO_Id et
     /// fournie par l'appelant — jamais codée en dur). Un EC_No absent du dictionnaire = orphelin.

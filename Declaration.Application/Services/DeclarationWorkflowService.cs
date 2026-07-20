@@ -188,8 +188,29 @@ public class DeclarationWorkflowService
         var dateFin = dateDebut.AddMonths(1).AddDays(-1);
 
         var grfConnectionString = _connectionFactory.GetGrfConnectionString();
-        var candidates = await _selectionService.SelectionnerExpliqueeAsync(
+        var candidatesList = await _selectionService.SelectionnerExpliqueeAsync(
             declaration.SocieteId, dateDebut, dateFin, grfConnectionString);
+
+        if (domaine == "Decaissement")
+        {
+            candidatesList = candidatesList.Where(c => c.Affectation.Source == SourceAffectation.Decaissement 
+                                                    || c.Affectation.Source == SourceAffectation.Espece 
+                                                    || c.Affectation.Source == SourceAffectation.Depense).ToList();
+        }
+        else if (domaine == "Encaissement")
+        {
+            candidatesList = candidatesList.Where(c => c.Affectation.Source == SourceAffectation.Encaissement).ToList();
+        }
+
+        // TASK-097 : Filtre sur le périmètre réel des règlements sélectionnés — toujours appliqué,
+        // y compris quand aucune sélection n'a encore été persistée (selection vide/null), auquel
+        // cas le résultat est ZÉRO candidat et jamais "tous les candidats" (invariance serveur,
+        // cf. réserve bloquante VERIFY TASK-097).
+        var selection = await _repository.GetSelectionReglementsAsync(declarationId);
+        var selectionSet = new HashSet<string>(selection ?? Enumerable.Empty<string>());
+        candidatesList = candidatesList.Where(c => selectionSet.Contains(c.Affectation.NumeroRapprochement)).ToList();
+
+        var candidates = candidatesList.ToList();
 
         // TASK-080 : garde-fou d'exclusivité — un règlement déjà Proposee/Integree dans une
         // AUTRE déclaration (EnCours ou Cloturee) de la même société ne doit pas devenir
@@ -199,7 +220,7 @@ public class DeclarationWorkflowService
         // jamais remplacer un motif de rejet déjà posé (DejaDeclare, HorsPeriode, etc.).
         await AppliquerExclusiviteInterDeclarationAsync(candidates, declaration.SocieteId, declarationId);
 
-        var orchestrateur = BuildOrchestrateur(grfConnectionString);
+        var orchestrateur = await BuildOrchestrateurAsync(grfConnectionString, declaration.SocieteId);
 
         var affectations = candidates.Where(c => c.EstEligible).Select(c => c.Affectation).ToList();
         var modele = orchestrateur.Traiter(affectations, 2);
@@ -340,7 +361,10 @@ public class DeclarationWorkflowService
 
         var ecIds = lignes.Concat(lignesExcluesIncoherence)
             .Where(l => l.EC_Id > 0).Select(l => l.EC_Id).Distinct().ToList();
-        var ecIdsEnErreur = await _repository.GetEcIdsEnErreurAsync(ecIds);
+        // TASK-118 : la sentinelle ERREUR du cache est désormais scopée par SO_Id (EC_Id seul
+        // peut collisionner entre deux bases Sage distinctes) — bornée à la société de CETTE
+        // déclaration, jamais à une autre.
+        var ecIdsEnErreur = await _repository.GetEcIdsEnErreurAsync(declarationPourReintegration?.SocieteId ?? 0, ecIds);
 
         var mvIds = lignes.Where(l => l.MV_Id > 0).Select(l => l.MV_Id).Distinct().ToList();
         var mvPointsActuels = await _repository.GetMvPointsActuelsAsync(mvIds);
@@ -388,11 +412,15 @@ public class DeclarationWorkflowService
         {
             if (ecIdsEnErreur.Contains(l.EC_Id))
             {
+                var message = string.IsNullOrWhiteSpace(l.NumeroRapprochement)
+                    ? $"Facture {l.NumeroFacture} exclue de la valorisation (EC_Id={l.EC_Id}) : incohérence Sage HT/TVA/TTC détectée — vérification manuelle requise avant clôture. Ligne non valorisée, aucune valeur déclarée pour cette pièce."
+                    : $"Facture {l.NumeroFacture}, règlement {l.NumeroRapprochement} exclue de la valorisation (EC_Id={l.EC_Id}) : incohérence Sage HT/TVA/TTC détectée — vérification manuelle requise avant clôture. Ligne non valorisée, aucune valeur déclarée pour cette pièce.";
+
                 alertes.Add(new Alerte
                 {
                     Niveau = NiveauAlerte.Warning,
                     Code = "LIGNE_FIGEE_A_REVERIFIER",
-                    Message = $"Facture {l.NumeroFacture} exclue de la valorisation (EC_Id={l.EC_Id}) : incohérence Sage HT/TVA/TTC détectée — vérification manuelle requise avant clôture. Ligne non valorisée, aucune valeur déclarée pour cette pièce.",
+                    Message = message,
                     RefLigne = l.NumeroFacture
                 });
             }
@@ -422,8 +450,20 @@ public class DeclarationWorkflowService
         var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
         var dateFin = dateDebut.AddMonths(1).AddDays(-1);
         var grfConnectionString = _connectionFactory.GetGrfConnectionString();
-        var candidats = await _selectionService.SelectionnerExpliqueeAsync(
+        var candidatsList = await _selectionService.SelectionnerExpliqueeAsync(
             declaration.SocieteId, dateDebut, dateFin, grfConnectionString);
+
+        if (domaine == "Decaissement")
+        {
+            candidatsList = candidatsList.Where(c => c.Affectation.Source == SourceAffectation.Decaissement 
+                                                    || c.Affectation.Source == SourceAffectation.Espece 
+                                                    || c.Affectation.Source == SourceAffectation.Depense).ToList();
+        }
+        else if (domaine == "Encaissement")
+        {
+            candidatsList = candidatsList.Where(c => c.Affectation.Source == SourceAffectation.Encaissement).ToList();
+        }
+        var candidats = candidatsList.ToList();
 
         var aReintegrer = candidats
             .Where(c => clesLiberees.Contains((c.Affectation.NumeroFacture, c.Affectation.NumeroRapprochement)))
@@ -432,7 +472,7 @@ public class DeclarationWorkflowService
 
         await AppliquerExclusiviteInterDeclarationAsync(aReintegrer, declaration.SocieteId, declarationId);
 
-        var orchestrateur = BuildOrchestrateur(grfConnectionString);
+        var orchestrateur = await BuildOrchestrateurAsync(grfConnectionString, declaration.SocieteId);
         var affectationsEligibles = aReintegrer.Where(c => c.EstEligible).Select(c => c.Affectation).ToList();
         var modele = orchestrateur.Traiter(affectationsEligibles, 2);
 
@@ -453,16 +493,16 @@ public class DeclarationWorkflowService
     /// <summary>
     /// TASK-078 : resynchronise UNE pièce (EC_Id) après correction côté Sage — relit
     /// explicitement l'OM pour cette seule facture (effet de bord : réécrit
-    /// GRC_VENTILATION_SAGE_CACHE via l'orchestrateur, même pipeline que TASK-072/076/077,
+    /// DM_VENTILATION_SAGE_CACHE via l'orchestrateur, même pipeline que TASK-072/076/077,
     /// aucune règle dupliquée) et réinitialise une éventuelle validation antérieure (les faits
     /// ont changé). Retourne (trouvee, resolue) : resolue=true si la pièce n'est plus en erreur
     /// après relecture.
     /// </summary>
     public async Task<(bool Trouvee, bool Resolue)> ResynchroniserLigneAsync(Guid declarationId, int ecId)
     {
-        var lignes = (await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null))
-            .Where(l => l.EC_Id == ecId)
-            .ToList();
+        var lignesDec = await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var lignesEnc = await _repository.GetLignesAsync(declarationId, "Encaissement", 1, int.MaxValue, null, null);
+        var lignes = lignesDec.Concat(lignesEnc).Where(l => l.EC_Id == ecId).ToList();
         if (lignes.Count == 0) return (false, false);
         var ligne = lignes[0];
 
@@ -470,20 +510,20 @@ public class DeclarationWorkflowService
         if (declaration == null) return (false, false);
 
         var grfConnectionString = _connectionFactory.GetGrfConnectionString();
-        var orchestrateur = BuildOrchestrateur(grfConnectionString);
+        var orchestrateur = await BuildOrchestrateurAsync(grfConnectionString, declaration.SocieteId);
 
         // Purge d'abord la ligne de cache existante : sans ça, une sentinelle ERREUR portant déjà
         // des montants bruts capturés (TASK-076) ferait considérer TryServireDepuisCache la pièce
         // comme définitivement réglée et ne relirait jamais Sage — même après correction ERP,
         // « Resynchroniser » n'aurait alors aucun effet réel.
         var persistenceCs = _configuration.GetConnectionString("PersistenceConnection") ?? "";
-        new VentilationSageCacheRepository().SupprimerEntrees(ecId, persistenceCs);
+        new VentilationSageCacheRepository().SupprimerEntrees(declaration.SocieteId, ecId, persistenceCs);
 
         var affectation = new AffectationADeclarer
         {
             NumeroFacture = ligne.NumeroFacture,
             NumeroRapprochement = ligne.NumeroRapprochement,
-            Sens = SensAffectation.Achat,
+            Sens = ligne.Domaine == "Encaissement" ? SensAffectation.Vente : SensAffectation.Achat,
             EC_Type = ligne.EcType,
             EC_Id = ligne.EC_Id,
             MV_Id = ligne.MV_Id,
@@ -497,14 +537,14 @@ public class DeclarationWorkflowService
 
         await _repository.ReinitialiserValidationIncoherenceAsync(declarationId, ecId);
 
-        var toujoursEnErreur = await _repository.GetEcIdsEnErreurAsync(new[] { ecId });
+        var toujoursEnErreur = await _repository.GetEcIdsEnErreurAsync(declaration.SocieteId, new[] { ecId });
         return (true, !toujoursEnErreur.Contains(ecId));
     }
 
     /// <summary>
     /// Rafraîchit la valorisation TVA (famille B) pour une période bornée, sans déclaration.
     /// Sélectionne les factures éligibles de la période, lit les OM Sage et remplit
-    /// GRC_VENTILATION_SAGE_CACHE (effet de bord de l'orchestrateur). Aucune ligne de déclaration
+    /// DM_VENTILATION_SAGE_CACHE (effet de bord de l'orchestrateur). Aucune ligne de déclaration
     /// écrite, aucun DT_Id touché. Utilisé par le bouton « Rafraîchir » de l'écran Factures.
     /// Retourne le nombre de factures éligibles traitées.
     /// </summary>
@@ -532,7 +572,7 @@ public class DeclarationWorkflowService
             + $"{totalFacturesLues} facture(s) lues depuis RT_ECHEANCE, "
             + $"{affectations.Count} valorisable(s) (éligibles + non rapprochées + non affectées) ===");
 
-        var orchestrateur = BuildOrchestrateur(grfConnectionString);
+        var orchestrateur = await BuildOrchestrateurAsync(grfConnectionString, soId);
         var modele = orchestrateur.Traiter(affectations, 2); // effet de bord : écriture du cache
 
         // Rapport transparent : les alertes de l'orchestrateur portent le motif exact par facture.
@@ -551,29 +591,34 @@ public class DeclarationWorkflowService
     /// Construit l'orchestrateur de déclaration avec la config worker Sage et la connexion de
     /// persistance (cache TVA). Factorisé pour être partagé entre le chargement des candidates
     /// et le rafraîchissement autonome de la valorisation.
+    ///
+    /// TASK-118 : la connexion Sage (Server/Database/User/Password du worker OM) n'est plus
+    /// statique (<c>connections.json:SageConnection</c>) — elle est résolue dynamiquement par
+    /// <paramref name="soId"/> via <see cref="IDbConnectionFactory.GetSageConnectionInfoAsync"/>
+    /// (P_SOCIETE.SO_ErpDb + SO_ErpUserApp/SO_ErpPasswdApp, Server/User/Password SQL toujours
+    /// ceux de GrfConnection — confirmation PO 18/07/2026). Échec explicite (exception) propagé
+    /// tel quel si le SO_Id est introuvable ou sans SO_ErpDb — aucun repli silencieux.
     /// </summary>
-    private OrchestrateurDeclaration BuildOrchestrateur(string grfConnectionString)
+    private async Task<OrchestrateurDeclaration> BuildOrchestrateurAsync(string grfConnectionString, int soId)
     {
-        var sageCs = _configuration.GetConnectionString("SageConnection") ?? "";
-        var builder = new System.Data.SqlClient.SqlConnectionStringBuilder(sageCs);
+        var sageInfo = await _connectionFactory.GetSageConnectionInfoAsync(soId);
+        var sageCs = sageInfo.ConnectionString;
+        var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(sageCs);
         var workerExe = _configuration.GetSection("WorkerConfig")?["WorkerExePath"] ?? "SageTaxReader.Console.exe";
 
         // Déploiement mono-dossier : un chemin worker relatif est résolu à côté de l'exe de l'API.
         if (!Path.IsPathRooted(workerExe))
             workerExe = Path.Combine(AppContext.BaseDirectory, workerExe);
 
-        // Identifiants de l'utilisateur APPLICATIF Sage (Objets Métier), distincts du login SQL.
-        // Le worker les mappe sur Loggable.UserName/UserPwd pour ouvrir la base commerciale.
-        // À défaut de section SageOM, on retombe sur le login SQL (comportement historique).
-        var sageOmUser = _configuration.GetSection("SageOM")?["User"];
-        var sageOmPwd = _configuration.GetSection("SageOM")?["Password"];
-
+        // TASK-118 : identifiants Sage OM (Objets Métier, distincts du login SQL) désormais
+        // exclusivement issus de P_SOCIETE.SO_ErpUserApp/SO_ErpPasswdApp pour ce SO_Id — la
+        // section statique connections.json:SageOM est devenue obsolète (non lue).
         var workerConfig = new WorkerConfig
         {
             Server = builder.DataSource,
             Database = builder.InitialCatalog,
-            User = string.IsNullOrEmpty(sageOmUser) ? builder.UserID : sageOmUser,
-            Password = string.IsNullOrEmpty(sageOmPwd) ? builder.Password : sageOmPwd,
+            User = sageInfo.OmUser ?? "",
+            Password = sageInfo.OmPassword ?? "",
             WorkerExePath = workerExe
         };
         var invoker = new WorkerInvoker();
@@ -582,7 +627,7 @@ public class DeclarationWorkflowService
         return new OrchestrateurDeclaration(
             invoker, workerConfig, lecteurFgr, grfConnectionString, sageCs,
             ventilationCache: null, persistenceConnectionString: persistenceCs,
-            log: JournaliserValorisation);
+            log: JournaliserValorisation, soId: soId);
     }
 
     public static List<LigneCandidate> MapLignesCandidates(Guid declarationId, string domaine, IEnumerable<AffectationCandidate> candidates, DeclarationModele modele)
@@ -593,39 +638,8 @@ public class DeclarationWorkflowService
         {
             if (!c.EstEligible)
             {
-                var etat = c.Motif == MotifRejet.NonRapproche ? EtatLigne.Reportee : EtatLigne.Exclue;
-                // TASK-080 : message précis (numéro de la déclaration concurrente) plutôt que le
-                // libellé générique — la revalidation (RevaliderLignesFigeesAsync) reconnaît aussi
-                // ces lignes via PrefixeDejaEnCoursAilleurs, donc ce préfixe doit rester exact.
-                var motifTexte = c.Motif == MotifRejet.DejaEnCoursAilleurs && !string.IsNullOrEmpty(c.ConflitDeclarationNumero)
-                    ? $"{PrefixeDejaEnCoursAilleurs}{c.ConflitDeclarationNumero}"
-                    : c.MotifLibelle;
-                lignes.Add(new LigneCandidate
-                {
-                    Id = Guid.NewGuid(),
-                    DeclarationId = declarationId,
-                    Etat = etat,
-                    Domaine = domaine,
-                    MotifRejet = motifTexte,
-                    NumeroFacture = c.Affectation.NumeroFacture,
-                    NumeroRapprochement = c.Affectation.NumeroRapprochement,
-                    TiersNom = c.Affectation.Tiers.Nom,
-                    TiersIdentifiantFiscal = c.Affectation.Tiers.IdentifiantFiscal,
-                    TiersICE = c.Affectation.Tiers.Ice,
-                    HT = c.Affectation.MontantAffecte,
-                    Taux = 0,
-                    TVA = 0,
-                    TTC = 0,
-                    Prorata = 0, // non valorisé — motif explicite ci-dessus, jamais un prorata muet
-                    MontantAffecte = c.Affectation.MontantAffecte,
-                    ModePaiement = c.Affectation.ModePaiement,
-                    DatePaiement = c.Affectation.DatePaiement,
-                    DateFacture = c.Affectation.DateFacture,
-                    Source = c.Affectation.Source.ToString(),
-                    EcType = c.Affectation.EC_Type,
-                    EC_Id = c.Affectation.EC_Id,
-                    MV_Id = c.Affectation.MV_Id
-                });
+                // TASK-097 : Tout ce qui n'est pas déclarable ne produit aucune ligne du tout
+                continue;
             }
             else
             {
@@ -639,7 +653,7 @@ public class DeclarationWorkflowService
                     {
                         Id = Guid.NewGuid(),
                         DeclarationId = declarationId,
-                        Etat = EtatLigne.Exclue,
+                        Etat = EtatLigne.Proposee, // TASK-097 : La ligne reste Proposee
                         Domaine = domaine,
                         MotifRejet = motif,
                         NumeroFacture = c.Affectation.NumeroFacture,
@@ -651,7 +665,7 @@ public class DeclarationWorkflowService
                         Taux = 0,
                         TVA = 0,
                         TTC = 0,
-                        Prorata = 0, // non valorisé — motif explicite ci-dessus, jamais un prorata muet
+                        Prorata = 0,
                         MontantAffecte = c.Affectation.MontantAffecte,
                         ModePaiement = c.Affectation.ModePaiement,
                         DatePaiement = c.Affectation.DatePaiement,
@@ -725,7 +739,9 @@ public class DeclarationWorkflowService
         };
 
         // Récupère toutes les lignes (tous domaines confondus)
-        var toutes = await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var toutesDec = await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var toutesEnc = await _repository.GetLignesAsync(declarationId, "Encaissement", 1, int.MaxValue, null, null);
+        var toutes = toutesDec.Concat(toutesEnc).ToList();
         // TASK-071 : les lignes Proposee sont les lignes valorisées éligibles qui seront posées
         // Integree par CloturerDeclarationAsync avant figeage — le checkup (pré-flight ④ ou
         // interne à la clôture) doit les évaluer comme telles, sinon l'alerte AUCUNE_LIGNE_INTEGREE
@@ -770,6 +786,56 @@ public class DeclarationWorkflowService
             });
         }
 
+        // Alerte explicite pour les règlements sélectionnés mais exclus du calcul (non éligibles)
+        var selection = await _repository.GetSelectionReglementsAsync(declarationId);
+        if (selection != null && selection.Count > 0)
+        {
+            var selectionSet = new HashSet<string>(selection);
+            var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
+            var dateFin = dateDebut.AddMonths(1).AddDays(-1);
+            var grfConnectionString = _connectionFactory.GetGrfConnectionString();
+            var candidates = await _selectionService.SelectionnerExpliqueeAsync(
+                declaration.SocieteId, dateDebut, dateFin, grfConnectionString);
+            var candidatesList = candidates.ToList();
+
+            await AppliquerExclusiviteInterDeclarationAsync(candidatesList, declaration.SocieteId, declarationId);
+
+            var selectedCandidates = candidatesList
+                .Where(c => selectionSet.Contains(c.Affectation.NumeroRapprochement))
+                .ToList();
+
+            foreach (var c in selectedCandidates)
+            {
+                if (!c.EstEligible && (
+                    c.Motif == MotifRejet.EcTypeHorsPerimetre ||
+                    c.Motif == MotifRejet.Impaye ||
+                    c.Motif == MotifRejet.Annule ||
+                    c.Motif == MotifRejet.NonComptabilise ||
+                    c.Motif == MotifRejet.NonAffecte))
+                {
+                    string message = c.Motif switch
+                    {
+                        MotifRejet.EcTypeHorsPerimetre => c.Affectation.EC_Type == 1
+                            ? $"Règlement impayé — non déclarable (à traiter phase 2) : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)"
+                            : $"Règlement hors périmètre ({ReglementRapprochementRow.LibelleEcType(c.Affectation.EC_Type)}) — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)",
+                        MotifRejet.Impaye => $"Règlement impayé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)",
+                        MotifRejet.Annule => $"Règlement annulé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)",
+                        MotifRejet.NonComptabilise => $"Règlement non comptabilisé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)",
+                        MotifRejet.NonAffecte => $"Règlement non affecté — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)",
+                        _ => $"Règlement exclu ({c.MotifLibelle}) — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)"
+                    };
+
+                    model.Alertes.Add(new Alerte
+                    {
+                        Niveau = NiveauAlerte.Warning,
+                        Code = "REGLEMENT_EXCLU",
+                        Message = message,
+                        RefLigne = c.Affectation.NumeroFacture ?? "Global"
+                    });
+                }
+            }
+        }
+
         // Contrôle ICE manquant sur les lignes intégrées ou éligibles
         foreach (var l in integrees.Where(l => string.IsNullOrWhiteSpace(l.TiersICE)))
         {
@@ -782,6 +848,22 @@ public class DeclarationWorkflowService
             });
         }
 
+        // Contrôle facture non ventilée/introuvable sur les lignes intégrées ou éligibles
+        foreach (var l in integrees.Where(l => !string.IsNullOrEmpty(l.MotifRejet)))
+        {
+            var message = string.IsNullOrWhiteSpace(l.NumeroRapprochement)
+                ? $"Ligne en anomalie de recalcul : {l.MotifRejet}"
+                : $"Ligne en anomalie de recalcul (facture {l.NumeroFacture}, règlement {l.NumeroRapprochement}) : {l.MotifRejet}";
+
+            model.Alertes.Add(new Alerte
+            {
+                Niveau = NiveauAlerte.Error,
+                Code = "FACTURE_NON_VENTILEE",
+                Message = message,
+                RefLigne = l.NumeroFacture
+            });
+        }
+
         // TASK-077 : remonte au checkup pré-intégration (étape ④) les avertissements de
         // revalidation des lignes déjà figées (incohérence Sage / règlement dépointé APRÈS
         // le figeage) — sinon ils restent invisibles à l'étape ④ alors qu'ils polluent déjà
@@ -789,11 +871,193 @@ public class DeclarationWorkflowService
         // Niveau Warning (non bloquant, décision PO) : n'empêche jamais la clôture.
         if (declaration.Statut != Declaration.Application.Entities.StatutDeclaration.Cloturee)
         {
-            var alertesRevalidation = await RevaliderLignesFigeesAsync(declarationId, "Decaissement");
-            model.Alertes.AddRange(alertesRevalidation);
+            var alertesDec = await RevaliderLignesFigeesAsync(declarationId, "Decaissement");
+            var alertesEnc = await RevaliderLignesFigeesAsync(declarationId, "Encaissement");
+            model.Alertes.AddRange(alertesDec);
+            model.Alertes.AddRange(alertesEnc);
         }
 
         return model;
+    }
+
+    /// <summary>
+    /// TASK-144 : diagnostic explicatif en ligne d'une ligne en anomalie. LECTURE SEULE STRICTE —
+    /// aucune écriture, aucun recalcul de valorisation, aucune NOUVELLE lecture OM Sage (le motif
+    /// d'échec déjà tenté est relu depuis le cache DM_VENTILATION_SAGE_CACHE). Le seul accès Sage
+    /// est un SELECT sur F_DOCREGL (contrôle collision DO_Numero), base résolue dynamiquement par
+    /// SO_Id (TASK-118). Retourne null si l'échéance est introuvable pour cette déclaration.
+    /// </summary>
+    public async Task<DiagnosticLigneResultat?> DiagnostiquerLigneAsync(Guid declarationId, int ecId)
+    {
+        var declaration = await _repository.GetByIdAsync(declarationId);
+        if (declaration == null) throw new ArgumentException("Déclaration introuvable");
+        if (ecId <= 0) return null;
+
+        var soId = declaration.SocieteId;
+
+        // Bloc 1 — identité de l'échéance consultée (RT_ECHEANCE, base GRF, lecture seule).
+        var echeance = await _repository.GetEcheanceDiagnosticAsync(soId, ecId);
+        if (echeance == null) return null;
+
+        // Bloc 2 — motif de l'échec de valorisation OM déjà persisté (cache), jamais relu côté Sage.
+        var motifCache = await _repository.GetMotifErreurCacheAsync(soId, ecId);
+
+        // Motif technique de la ligne elle-même (message posé au recalcul), pour la traduction métier.
+        var motifLigne = await ResoudreMotifLigneAsync(declarationId, ecId);
+        var traduction = DiagnosticMotifMetier.Traduire(motifLigne, motifCache);
+
+        var resultat = new DiagnosticLigneResultat
+        {
+            EC_Id = echeance.EC_Id,
+            EC_No = echeance.EC_No,
+            DoNumero = echeance.DO_Numero,
+            TiersCode = echeance.CT_Code,
+            TiersIntitule = echeance.CT_Intitule,
+            MontantDevise = echeance.EC_MtDevise,
+            Origine = ReglementRapprochementRow.LibelleEcType(echeance.EC_Type),
+            MotifTechnique = string.IsNullOrWhiteSpace(motifLigne) ? (motifCache ?? "") : motifLigne,
+            MotifErreurCache = motifCache,
+            ExplicationMetier = traduction.Explication,
+            ActionRecommandee = traduction.Action,
+            CodeMotifReconnu = traduction.Code
+        };
+
+        // Bloc 3 — contrôle collision DO_Numero, INDÉPENDANT du bloc 2. On ne le présente jamais
+        // comme la cause automatique de l'anomalie (cf. cas réel FA2600106, TASK-143).
+        var memeNumero = await _repository.GetEcheancesMemeDoNumeroAsync(soId, echeance.DO_Numero);
+        if (memeNumero.Count > 1)
+        {
+            resultat.CollisionDetectee = true;
+
+            // Verdict F_DOCREGL : lecture seule sur la base Sage résolue dynamiquement par SO_Id.
+            var sageInfo = await _connectionFactory.GetSageConnectionInfoAsync(soId);
+            var ecNos = memeNumero.Select(e => e.EC_No).ToList();
+            var docs = await _repository.GetDocumentsReglementSageAsync(sageInfo.ConnectionString, ecNos);
+
+            foreach (var e in memeNumero)
+            {
+                docs.TryGetValue(e.EC_No, out var doc);
+                resultat.Collisions.Add(new DiagnosticCollisionEcheance
+                {
+                    EC_Id = e.EC_Id,
+                    EC_No = e.EC_No,
+                    TiersCode = e.CT_Code,
+                    TiersIntitule = e.CT_Intitule,
+                    ADocumentSage = doc != null,
+                    DoPieceSage = doc?.DO_Piece,
+                    DateDocSage = doc?.DR_Date,
+                    EstLigneConsultee = e.EC_Id == ecId
+                });
+            }
+
+            var consultee = resultat.Collisions.First(c => c.EstLigneConsultee);
+            var nbAutresAvecDoc = resultat.Collisions.Count(c => !c.EstLigneConsultee && c.ADocumentSage);
+            var nbOrphelins = resultat.Collisions.Count(c => !c.ADocumentSage);
+            resultat.CollisionCommentaire = DiagnosticMotifMetier.CommentaireCollision(
+                consultee.ADocumentSage, nbAutresAvecDoc, nbOrphelins);
+        }
+
+        // Bloc 4 (TASK-147) — cache PÉRIMÉ : Sage a relu cette pièce APRÈS la création de la
+        // déclaration, avec succès (MotifErreur NULL), alors que la ligne affiche encore le motif
+        // de rejet figé à la création. Lecture seule stricte (aucune nouvelle lecture Sage) —
+        // réutilise la même dernière lecture déjà relue pour le bloc 2 ci-dessus.
+        var derniereLecture = await _repository.GetDerniereLectureCacheAsync(soId, ecId);
+        if (derniereLecture != null
+            && derniereLecture.MotifErreur == null
+            && derniereLecture.DateLecture > declaration.DateCreation)
+        {
+            resultat.CachePerime = true;
+            resultat.CacheDateLecture = derniereLecture.DateLecture;
+            resultat.CachePerimeCommentaire =
+                $"Sage a relu cette facture avec succès le {derniereLecture.DateLecture:dd/MM/yyyy HH:mm} — "
+                + "après la création de cette déclaration. Un recalcul de cette ligne devrait résoudre l'anomalie.";
+        }
+
+        return resultat;
+    }
+
+    /// <summary>
+    /// TASK-147 : recalcule UNE ligne Proposee dont le cache de ventilation a été relu avec succès
+    /// APRÈS la création de la déclaration (cache PÉRIMÉ, cf. <see cref="DiagnostiquerLigneAsync"/>
+    /// bloc 4). Ne redéclenche AUCUNE nouvelle lecture OM Sage — reconstruit la (les) ligne(s)
+    /// candidate(s) directement depuis les buckets déjà en cache, à l'identique de la branche
+    /// "taxesLines" de <see cref="MapLignesCandidates"/> (aucune règle de valorisation dupliquée,
+    /// seule la source du bucket change : cache déjà persisté au lieu d'un run d'orchestrateur).
+    /// Garde-fou : n'écrit RIEN si le cache n'est pas effectivement plus récent que la déclaration
+    /// et sans erreur (mêmes conditions que le diagnostic) — jamais de redéclenchement OM ici.
+    /// </summary>
+    public async Task<(bool Trouvee, bool Recalculee, string Message)> RecalculerLigneDepuisCacheAsync(Guid declarationId, int ecId)
+    {
+        var declaration = await _repository.GetByIdAsync(declarationId);
+        if (declaration == null) return (false, false, "Déclaration introuvable.");
+        if (ecId <= 0) return (false, false, "EC_Id invalide.");
+
+        var lignesDec = await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var lignesEnc = await _repository.GetLignesAsync(declarationId, "Encaissement", 1, int.MaxValue, null, null);
+        var lignes = lignesDec.Concat(lignesEnc).Where(l => l.EC_Id == ecId).ToList();
+        if (lignes.Count == 0) return (false, false, $"Aucune ligne trouvée pour EC_Id={ecId} sur cette déclaration.");
+
+        // TASK-147 : action bornée aux lignes encore Proposee (pas Integree/Exclue/Reportée/Ecartée
+        // — un recalcul sur une ligne déjà figée sortirait du périmètre de cette TASK, cf. garde-fou).
+        if (lignes.Any(l => l.Etat != EtatLigne.Proposee))
+            return (false, false, "Cette action ne s'applique qu'à une ligne encore à l'état 'Proposée'.");
+
+        var soId = declaration.SocieteId;
+        var derniereLecture = await _repository.GetDerniereLectureCacheAsync(soId, ecId);
+        if (derniereLecture == null || derniereLecture.MotifErreur != null || derniereLecture.DateLecture <= declaration.DateCreation)
+            return (false, false, "Le cache n'est pas plus récent (ou toujours en erreur) — rien à recalculer sans nouvelle lecture Sage.");
+
+        var buckets = await _repository.GetBucketsCacheAsync(soId, ecId);
+        if (buckets.Count == 0)
+            return (false, false, "Le cache est marqué à jour sans erreur mais ne porte aucun bucket de taux exploitable — incohérence à signaler, aucune écriture effectuée.");
+
+        // Reconstruction : les colonnes non financières (facture/tiers/paiement/source) sont
+        // conservées à l'identique de la ligne existante, seuls HT/Taux/TVA/TTC/Etat/MotifRejet
+        // changent — même forme que la branche "taxesLines" de MapLignesCandidates.
+        var reference = lignes[0];
+        var nouvellesLignes = buckets.Select(b => new LigneCandidate
+        {
+            Id = Guid.NewGuid(),
+            DeclarationId = declarationId,
+            Etat = EtatLigne.Proposee,
+            Domaine = reference.Domaine,
+            MotifRejet = "",
+            NumeroFacture = reference.NumeroFacture,
+            NumeroRapprochement = reference.NumeroRapprochement,
+            TiersNom = reference.TiersNom,
+            TiersIdentifiantFiscal = reference.TiersIdentifiantFiscal,
+            TiersICE = reference.TiersICE,
+            HT = b.HT,
+            Taux = b.Taux,
+            TVA = b.Tva,
+            TTC = b.TTC,
+            Prorata = 0,
+            MontantAffecte = reference.MontantAffecte,
+            ModePaiement = reference.ModePaiement,
+            DatePaiement = reference.DatePaiement,
+            DateFacture = reference.DateFacture,
+            Source = reference.Source,
+            EcType = reference.EcType,
+            EC_Id = reference.EC_Id,
+            MV_Id = reference.MV_Id
+        }).ToList();
+
+        await _repository.SupprimerLignesParEcIdAsync(declarationId, ecId);
+        await _repository.SaveLignesCandidatesAsync(nouvellesLignes);
+
+        return (true, true, $"Ligne recalculée depuis le cache (lecture du {derniereLecture.DateLecture:dd/MM/yyyy HH:mm}) — {nouvellesLignes.Count} bucket(s) de taux.");
+    }
+
+    /// <summary>
+    /// TASK-144 : retrouve le message de motif (MotifRejet) porté par la ligne candidate de cette
+    /// déclaration pour l'EC_Id donné, tous domaines confondus. Lecture seule.
+    /// </summary>
+    private async Task<string?> ResoudreMotifLigneAsync(Guid declarationId, int ecId)
+    {
+        var dec = await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var enc = await _repository.GetLignesAsync(declarationId, "Encaissement", 1, int.MaxValue, null, null);
+        var ligne = dec.Concat(enc).FirstOrDefault(l => l.EC_Id == ecId && !string.IsNullOrWhiteSpace(l.MotifRejet));
+        return ligne?.MotifRejet;
     }
 
     public async Task CloturerDeclarationAsync(Guid declarationId)
@@ -818,7 +1082,9 @@ public class DeclarationWorkflowService
         // ── TASK-071 : pose Integree sur les lignes valorisées Proposee — seul chemin du tunnel
         // actuel (①→⑥) capable d'atteindre cet état ; ⑤/DomainGrid reste verrouillé par ④.
         // Réutilise UpdateLignesEtatBulkByIdsAsync (aucune logique de transition dupliquée).
-        var toutes = await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var toutesDec = await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var toutesEnc = await _repository.GetLignesAsync(declarationId, "Encaissement", 1, int.MaxValue, null, null);
+        var toutes = toutesDec.Concat(toutesEnc).ToList();
         var aIntegrer = toutes.Where(l => l.Etat == EtatLigne.Proposee).Select(l => l.Id).ToList();
         if (aIntegrer.Any())
             await _repository.UpdateLignesEtatBulkByIdsAsync(aIntegrer, EtatLigne.Integree);
@@ -835,6 +1101,13 @@ public class DeclarationWorkflowService
 
         if (numerosRapprochement.Any())
             await _repository.TamponnerAffectationsAsync(dtId, numerosRapprochement);
+
+        // ── TASK-094 (Option B) : copie la même valeur sur DM_ENTTVA.DT_Id — posée
+        // inconditionnellement (même sans affectation à tamponner), pour que le diagnostic
+        // (DiagnostiquerDtIdAsync) dispose toujours de la valeur RÉELLEMENT posée par cet appel,
+        // sans dépendre d'un recalcul de DeriveDtId potentiellement exécuté par un runtime .NET
+        // différent (cf. incident 14/07/2026).
+        await _repository.SetDtIdDeclarationAsync(declarationId, dtId);
     }
 
     /// <summary>
@@ -863,6 +1136,12 @@ public class DeclarationWorkflowService
         var numerosRapprochement = await GetNumerosRapprochementIntegresAsync(declarationId);
         if (numerosRapprochement.Any())
             await _repository.DetamponnerAffectationsAsync(dtId, numerosRapprochement);
+
+        // ── TASK-094 (Option B) : efface DM_ENTTVA.DT_Id inconditionnellement, symétrique de la
+        // pose — même si aucune affectation n'a pu être détamponnée (ex. tampon RT_AFFECTATION
+        // déjà absent avant réouverture), la déclaration n'est plus Cloturee et ne doit plus
+        // porter un DT_Id qui ne correspond plus à rien.
+        await _repository.SetDtIdDeclarationAsync(declarationId, null);
 
         await _repository.UpdateStatutAsync(declarationId, StatutDeclaration.EnCours);
 
@@ -908,8 +1187,11 @@ public class DeclarationWorkflowService
     /// </summary>
     private async Task<List<string>> GetNumerosRapprochementDeclarationAsync(Guid declarationId)
     {
-        var lignes = await _repository.GetLignesAsync(
+        var lignesDec = await _repository.GetLignesAsync(
             declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var lignesEnc = await _repository.GetLignesAsync(
+            declarationId, "Encaissement", 1, int.MaxValue, null, null);
+        var lignes = lignesDec.Concat(lignesEnc).ToList();
         return lignes
             .Where(l => !string.IsNullOrWhiteSpace(l.NumeroRapprochement))
             .Select(l => l.NumeroRapprochement)
@@ -923,8 +1205,58 @@ public class DeclarationWorkflowService
     /// OverflowException sur int.MinValue). Reste un dérivé de hashcode (collisions
     /// théoriquement possibles) : c'est pourquoi la pose ET le retrait du tampon sont
     /// toujours bornés aux numéros de rapprochement de la déclaration concernée.
+    /// Réutilisé tel quel (TASK-094) par <see cref="DiagnostiquerDtIdAsync"/> — aucune seconde
+    /// implémentation du calcul.
     /// </summary>
     private static int DeriveDtId(Guid id) => id.GetHashCode() & int.MaxValue;
+
+    /// <summary>
+    /// TASK-094 — diagnostic lecture seule d'un ou plusieurs tampons DT_Id observés sur
+    /// RT_AFFECTATION : identifie, pour chaque DT_Id, la déclaration correspondante ou un
+    /// <see cref="DiagnosticDtIdResultat.Orphelin"/> explicite si aucune ne matche (déclaration
+    /// disparue, donnée de test, ou tout autre écart — cf. incident 14/07/2026 `TVA1-2026-01`).
+    /// Transforme en requête reproductible l'archéologie SQL manuelle faite lors de cet incident.
+    /// Priorité (Option B) à la valeur RÉELLEMENT posée <see cref="DeclarationEntete.DT_Id"/> quand
+    /// elle est renseignée (immunise contre toute divergence de <see cref="DeriveDtId"/> entre
+    /// runtimes .NET, cf. incident) ; à défaut (déclaration close avant la migration TASK-094),
+    /// repli sur le recalcul (Option A) — best-effort documenté, pas une garantie.
+    /// Aucune écriture : ni sur RT_AFFECTATION/RT_MOUVEMENT, ni sur DM_ENTTVA.
+    /// </summary>
+    /// <param name="dtIds">
+    /// DT_Id à diagnostiquer. Si null/vide, diagnostique TOUTES les valeurs DT_Id distinctes
+    /// actuellement présentes sur RT_AFFECTATION (périmètre complet, usage incident/audit).
+    /// </param>
+    public async Task<IReadOnlyList<DiagnosticDtIdResultat>> DiagnostiquerDtIdAsync(IEnumerable<int>? dtIds = null)
+    {
+        var cibles = dtIds?.Distinct().ToList() ?? new List<int>();
+        if (cibles.Count == 0)
+            cibles = (await _repository.GetDistinctDtIdsAffectationsAsync()).Distinct().ToList();
+
+        var declarations = await _repository.GetToutesDeclarationsAsync();
+
+        // Regroupement défensif (collision DeriveDtId théoriquement possible, TASK-028) — ne
+        // masque jamais un DT_Id ambigu derrière une seule correspondance choisie arbitrairement.
+        var parHash = declarations
+            .GroupBy(d => d.DT_Id ?? DeriveDtId(d.Id))
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        return cibles.Select(dtId =>
+        {
+            if (parHash.TryGetValue(dtId, out var matches) && matches.Count > 0)
+            {
+                var d = matches[0];
+                return new DiagnosticDtIdResultat
+                {
+                    DtId = dtId,
+                    Orphelin = false,
+                    DeclarationId = d.Id,
+                    DeclarationNumero = d.Numero,
+                    DeclarationStatut = d.Statut
+                };
+            }
+            return new DiagnosticDtIdResultat { DtId = dtId, Orphelin = true };
+        }).ToList();
+    }
 
     /// <summary>
     /// Numéros de rapprochement distincts des lignes intégrées de la déclaration
@@ -932,8 +1264,11 @@ public class DeclarationWorkflowService
     /// </summary>
     private async Task<List<string>> GetNumerosRapprochementIntegresAsync(Guid declarationId)
     {
-        var lignes = await _repository.GetLignesAsync(
+        var lignesDec = await _repository.GetLignesAsync(
             declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var lignesEnc = await _repository.GetLignesAsync(
+            declarationId, "Encaissement", 1, int.MaxValue, null, null);
+        var lignes = lignesDec.Concat(lignesEnc).ToList();
         return lignes
             .Where(l => l.Etat == EtatLigne.Integree && !string.IsNullOrWhiteSpace(l.NumeroRapprochement))
             .Select(l => l.NumeroRapprochement)

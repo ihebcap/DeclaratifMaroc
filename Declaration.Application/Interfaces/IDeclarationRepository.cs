@@ -129,13 +129,15 @@ public interface IDeclarationRepository
 
     // ─── Revalidation des lignes figées (TASK-077, lecture seule stricte) ──────
     /// <summary>
-    /// Parmi les <paramref name="ecIds"/> fournis, retourne ceux actuellement marqués en erreur
-    /// dans le cache de ventilation (sentinelle <c>CodeTaxe='ERREUR'</c>, TASK-072/076). Ne
-    /// duplique pas la règle de détection : lit seulement le résultat déjà écrit par
-    /// l'orchestrateur (<c>GRC_VENTILATION_SAGE_CACHE</c>, PersistenceConnection). Utilisé pour
-    /// détecter qu'une ligne déjà figée dans DM_LGTVA est devenue incohérente après coup.
+    /// Parmi les <paramref name="ecIds"/> fournis (pour la société <paramref name="soId"/>),
+    /// retourne ceux actuellement marqués en erreur dans le cache de ventilation (sentinelle
+    /// <c>CodeTaxe='ERREUR'</c>, TASK-072/076). Ne duplique pas la règle de détection : lit
+    /// seulement le résultat déjà écrit par l'orchestrateur (<c>DM_VENTILATION_SAGE_CACHE</c>,
+    /// PersistenceConnection). Utilisé pour détecter qu'une ligne déjà figée dans DM_LGTVA est
+    /// devenue incohérente après coup. TASK-118 : borné à <paramref name="soId"/> — EC_Id seul
+    /// peut collisionner entre deux bases Sage physiquement distinctes.
     /// </summary>
-    Task<HashSet<int>> GetEcIdsEnErreurAsync(IEnumerable<int> ecIds);
+    Task<HashSet<int>> GetEcIdsEnErreurAsync(int soId, IEnumerable<int> ecIds);
 
     /// <summary>
     /// État MV_Point courant (RT_MOUVEMENT, GrfConnection) pour les <paramref name="mvIds"/>
@@ -183,4 +185,85 @@ public interface IDeclarationRepository
     /// le même pipeline de figeage que l'initial).
     /// </summary>
     Task DeleteLignesAsync(IEnumerable<Guid> ligneIds);
+
+    // ─── Diagnostic tampon DT_Id (TASK-094, lecture seule stricte) ─────────────
+    /// <summary>
+    /// Toutes les déclarations existantes, quelle que soit la société — nécessaire pour
+    /// recalculer <c>DeriveDtId</c> sur l'ensemble du référentiel lors d'un diagnostic
+    /// (contrairement à <see cref="GetAllAsync"/>, borné à une société pour l'écran liste).
+    /// Admin uniquement (garde posée par l'appelant).
+    /// </summary>
+    Task<IEnumerable<DeclarationEntete>> GetToutesDeclarationsAsync();
+
+    /// <summary>
+    /// Valeurs distinctes de <c>RT_AFFECTATION.DT_Id</c> (non nulles) présentes en base GRF —
+    /// SELECT strictement lecture seule (GrfConnection), aucune écriture. Sert de périmètre par
+    /// défaut au diagnostic quand aucun <c>DT_Id</c> n'est fourni explicitement.
+    /// </summary>
+    Task<IEnumerable<int>> GetDistinctDtIdsAffectationsAsync();
+
+    /// <summary>
+    /// TASK-094 (Option B) — persiste (ou efface, <paramref name="dtId"/> = null) le tampon
+    /// <c>DT_Id</c> sur <c>DM_ENTTVA.DT_Id</c> pour cette déclaration. Posé à la clôture
+    /// (<see cref="Declaration.Application.Services.DeclarationWorkflowService.CloturerDeclarationAsync"/>)
+    /// avec la même valeur que celle tamponnée sur <c>RT_AFFECTATION</c>, effacé à la réouverture
+    /// (symétrique de <see cref="DetamponnerAffectationsAsync"/>). Base de persistance
+    /// (PersistenceConnection) — jamais GRF.
+    /// </summary>
+    Task SetDtIdDeclarationAsync(Guid declarationId, int? dtId);
+
+    // TASK-097 : Gestion de la sélection des règlements
+    Task SaveSelectionReglementsAsync(Guid declarationId, IEnumerable<string> selectedNumeroReglements);
+    Task<List<string>> GetSelectionReglementsAsync(Guid declarationId);
+
+    // ─── Diagnostic explicatif en ligne d'une anomalie (TASK-144, lecture seule stricte) ──────
+    /// <summary>
+    /// TASK-144 : échéance RT_ECHEANCE (base GRF) consultée — identité Sage exacte (EC_No, DO_Numero,
+    /// tiers RT_ECHEANCE, montant devise). SELECT strictement lecture seule. Null si l'EC_Id est
+    /// introuvable pour cette société.
+    /// </summary>
+    Task<EcheanceDiagnosticRow?> GetEcheanceDiagnosticAsync(int soId, int ecId);
+
+    /// <summary>
+    /// TASK-144 : autres échéances RT_ECHEANCE (même société) partageant le MÊME DO_Numero que
+    /// l'échéance consultée — collision potentielle de numéro de pièce entre tiers (mémoire
+    /// grf-do-numero-collision-multi-tiers). Inclut l'échéance consultée elle-même. Lecture seule.
+    /// </summary>
+    Task<IReadOnlyList<EcheanceCollisionRow>> GetEcheancesMemeDoNumeroAsync(int soId, string doNumero);
+
+    /// <summary>
+    /// TASK-144 : motif d'échec déjà persisté pour cet EC_Id dans le cache de ventilation
+    /// (DM_VENTILATION_SAGE_CACHE.MotifErreur, sentinelle CodeTaxe='ERREUR'). Réutilise le résultat
+    /// de la dernière lecture OM — ne redéclenche JAMAIS une lecture Sage. Null si aucune sentinelle.
+    /// </summary>
+    Task<string?> GetMotifErreurCacheAsync(int soId, int ecId);
+
+    /// <summary>
+    /// TASK-144 : présence d'un document de règlement Sage réel (table F_DOCREGL, base Sage résolue
+    /// dynamiquement par SO_Id — la chaîne est fournie par l'appelant, jamais codée en dur) pour les
+    /// EC_No fournis (jointure EC_No = DR_No, cf. AUDIT-TASK-143). SELECT strictement lecture seule
+    /// sur la base Sage. Clé du dictionnaire = EC_No (= DR_No) ; un EC_No absent = échéance orpheline.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, DocumentReglementSageRow>> GetDocumentsReglementSageAsync(
+        string sageConnectionString, IEnumerable<int> ecNos);
+
+    // ─── Recalcul d'une ligne périmée depuis un cache déjà relu (TASK-147) ─────
+    /// <summary>
+    /// TASK-147 : dernière lecture connue du cache (succès OU erreur) pour cet EC_Id — sert à
+    /// détecter un cache PÉRIMÉ (relu avec succès après la création de la déclaration). Ne
+    /// redéclenche AUCUNE lecture Sage.
+    /// </summary>
+    Task<CacheLectureRow?> GetDerniereLectureCacheAsync(int soId, int ecId);
+
+    /// <summary>
+    /// TASK-147 : buckets de taux déjà lus avec succès (CodeTaxe &lt;&gt; 'ERREUR') pour cet EC_Id —
+    /// sert à reconstruire la ligne candidate sans redéclencher de lecture Sage.
+    /// </summary>
+    Task<IReadOnlyList<CacheBucketRow>> GetBucketsCacheAsync(int soId, int ecId);
+
+    /// <summary>
+    /// TASK-147 : supprime la/les ligne(s) DM_LGTVA périmée(s) d'un EC_Id avant reconstruction
+    /// depuis le cache à jour.
+    /// </summary>
+    Task SupprimerLignesParEcIdAsync(Guid declarationId, int ecId);
 }
