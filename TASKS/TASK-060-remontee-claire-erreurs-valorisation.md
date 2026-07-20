@@ -7,17 +7,17 @@
 > confirmée : le backend calcule et transmet déjà le détail complet, mais **rien ne l'affiche**.
 
 ## Constat (preuve code, aucune supposition)
-1. **Le backend construit déjà le détail complet** — `Declaration.Application/Services/DeclarationWorkflowService.cs:460,463` :
+1. **Le backend construit déjà le détail complet** — `Declaration.Application/Services/DeclarationWorkflowService.cs:1048,1051` :
    ```csharp
    public record RapportValorisation(int FacturesTraitees, IReadOnlyList<MotifValorisation> Erreurs);
    public record MotifValorisation(string Code, string Message, string RefLigne);
    ```
    `Erreurs` est une liste plate (une entrée par facture en erreur), sans agrégation par `Code`.
-2. **L'endpoint transmet tout au front** — `Declaration.API/Controllers/FacturesController.cs:107-126`,
+2. **L'endpoint transmet tout au front** — `Declaration.API/Controllers/FacturesController.cs:140-163`,
    `POST /factures/rafraichir-valorisation` renvoie `{ FacturesTraitees, NbErreurs, Erreurs[] }` avec
    le tableau complet (Code/Message/RefLigne), pas seulement un compteur.
 3. **Le front reçoit le détail mais ne l'affiche pas** —
-   `declaration-tva-web/src/FactureInterrogation.tsx:174-196`, `handleRefreshValorisation` :
+   `declaration-tva-web/src/FactureInterrogation.tsx:218-238`, `handleRefreshValorisation` :
    - `console.warn('Motifs de non-valorisation :', res.data?.erreurs)` → détail **uniquement dans la
      console navigateur**.
    - `showToast(\`Valorisation — ${n} traitée(s), ${nbErr} en erreur (voir console / logs serveur)\`, 'error')`

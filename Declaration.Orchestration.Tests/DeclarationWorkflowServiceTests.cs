@@ -50,10 +50,10 @@ namespace Declaration.Orchestration.Tests
             var lignes = DeclarationWorkflowService.MapLignesCandidates(declarationId, domaine, candidates, modele);
 
             // Assert
-            // 1 pour F1 (Non éligible)
+            // 0 pour F1 (Non éligible) - non généré suite à TASK-097
             // 1 pour F2 (Sans taxes)
             // 2 pour F3 (Taxes)
-            Assert.Equal(4, lignes.Count);
+            Assert.Equal(3, lignes.Count);
             
             // Vérifier que chaque ligne possède bien le NumeroRapprochement "REG-001"
             foreach (var ligne in lignes)

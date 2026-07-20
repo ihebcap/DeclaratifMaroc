@@ -36,13 +36,29 @@ namespace Declaration.Core
             return EtatConformite.Conforme;
         }
 
+        // Validation bloquante à l'export XML DGI.
+        // CDC §4.8/§5.2 : ne PAS bloquer sur une longueur fixe (8 pour l'IF, 15 pour l'ICE) sans
+        // confirmation du format exact attendu par le fisc (le fichier réellement accepté contient
+        // des identifiants fournisseurs de 7 chiffres). On bloque uniquement sur une valeur vide
+        // (après nettoyage) ou contenant un espace/tabulation résiduel. Point ouvert §5.2 : format
+        // de longueur définitif à confirmer par le PO/fiscaliste.
         public static void ValiderPourExport(string? identifiantFiscal, string? ice, int ord)
         {
-            if (!EstIfValide(identifiantFiscal))
-                throw new ApplicationException($"Ligne {ord}: L'identifiant fiscal du tiers est invalide (doit faire 8 caractères sans espaces).");
-                
-            if (!EstIceValide(ice))
-                throw new ApplicationException($"Ligne {ord}: L'ICE du tiers est invalide (doit faire 15 caractères sans espaces).");
+            if (string.IsNullOrWhiteSpace(identifiantFiscal) || ContientEspace(identifiantFiscal))
+                throw new ApplicationException($"Ligne {ord}: L'identifiant fiscal du tiers est invalide (vide ou contenant un espace).");
+
+            if (string.IsNullOrWhiteSpace(ice) || ContientEspace(ice))
+                throw new ApplicationException($"Ligne {ord}: L'ICE du tiers est invalide (vide ou contenant un espace).");
+        }
+
+        private static bool ContientEspace(string? valeur)
+        {
+            if (valeur == null) return false;
+            foreach (var c in valeur)
+            {
+                if (char.IsWhiteSpace(c)) return true;
+            }
+            return false;
         }
     }
 }

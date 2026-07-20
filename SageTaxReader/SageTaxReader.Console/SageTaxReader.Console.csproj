@@ -7,6 +7,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <!-- TASK-101 : même sélection de version que SageTaxReader.Core (doit être passée identique
+         aux deux projets, ex. -p:SageInteropVersion=v7, pour rester cohérente). -->
+    <SageInteropVersion Condition="'$(SageInteropVersion)'==''">v12</SageInteropVersion>
+    <AssemblyName Condition="'$(SageInteropVersion)'=='v12'">SageTaxReader.Console</AssemblyName>
+    <AssemblyName Condition="'$(SageInteropVersion)'!='v12'">SageTaxReader.Console.$(SageInteropVersion)</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

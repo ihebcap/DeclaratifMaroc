@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>DeclaratifMaroc</AssemblyName>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <!-- Installeur unique livrable au client (Deploy-All.ps1) : un seul .exe, payload API/front/
+         workers/WinSW embarqué en ressource (cf. PayloadExtractor) plutôt que copié à côté. -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Décodage de la sortie console WinSW dans la page de code OEM réelle du poste (ex. 850 en
+         France) — .NET Core n'embarque plus les code pages ANSI/OEM par défaut, cf.
+         WinSwServiceManager.OemEncoding (bug d'encodage constaté en essai réel le 19/07/2026). -->
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- LicenceConstants.ApLicenceSubject uniquement (SetupData.cs) — source unique de vérité
+         partagée avec Declaration.API, pour ne plus dupliquer cette valeur entre les deux projets
+         (TASK-115, complément du 19/07/2026). -->
+    <ProjectReference Include="..\Declaration.Application\Declaration.Application.csproj" />
+  </ItemGroup>
+
+  <!-- Gabarit WinSW + script de récupération, copiés à côté de l'exe UNIQUEMENT en dev (fallback
+       AppContext.BaseDirectory de PayloadExtractor). Quand payload.zip existe (build installeur
+       unique, Deploy-All.ps1), ce contenu est déjà dedans en ressource embarquée -> ne pas le
+       dupliquer à côté de l'exe, sinon installer\ n'est plus un fichier unique. -->
+  <ItemGroup Condition="!Exists('payload.zip')">
+    <None Include="WinSW\DeclaratifMaroc.winsw.xml.template" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="WinSW\Get-WinSW.ps1" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- payload.zip : généré par Deploy-All.ps1 (API + front + workers + WinSW), n'existe pas en
+       build dev normal -> l'embedded resource est simplement absente, PayloadExtractor retombe
+       sur AppContext.BaseDirectory (voir commentaire de la classe). -->
+  <ItemGroup Condition="Exists('payload.zip')">
+    <EmbeddedResource Include="payload.zip" LogicalName="Declaration.Setup.payload.zip" />
+  </ItemGroup>
+
+</Project>

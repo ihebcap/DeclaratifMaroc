@@ -43,6 +43,7 @@ public class RapprochementController : ControllerBase
         [FromQuery] DateTime? debut,
         [FromQuery] DateTime? fin,
         [FromQuery] int soId,
+        [FromQuery] Guid? declarationId = null,
         [FromQuery] int[]? mode = null,
         [FromQuery] bool[]? rapprocheBanque = null,
         [FromQuery] bool[]? declare = null,
@@ -81,6 +82,7 @@ public class RapprochementController : ControllerBase
         // (liste + COUNT) : multi-sélection réelle pour les énumérations/booléens, plages NULL-safe.
         var filter = new RapprochementFilter
         {
+            DeclarationId = declarationId,
             Modes = mode,
             RapprocheBanque = rapprocheBanque,
             Declare = declare,

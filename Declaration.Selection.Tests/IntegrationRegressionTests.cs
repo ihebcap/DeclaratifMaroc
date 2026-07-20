@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using Declaration.Core.Model;
 using Declaration.Selection;
 
 namespace Declaration.Selection.Tests
@@ -56,6 +57,23 @@ namespace Declaration.Selection.Tests
             // Si ce n'est pas le cas, le correctif TASK-050 n'a pas d'effet → alerte.
             Assert.True(newResultEligibles.Count >= oldResult.Count,
                 $"TASK-050 : le nouveau surensemble ({newResultEligibles.Count}) doit être ≥ à l'ancien ({oldResult.Count}).");
+        }
+
+        [Fact]
+        public async Task TestIntegration_SelectionnerAffectationsVente_Task084()
+        {
+            int soId = 1;
+            DateTime dateDebut = new DateTime(2000, 1, 1);
+            DateTime dateFin = new DateTime(2050, 12, 31);
+
+            var service = new SelectionnerAffectationsService();
+            var result = (await service.SelectionnerAffectationsAsync(soId, dateDebut, dateFin, _connectionString)).ToList();
+            
+            var ventes = result.Where(x => x.Sens == SensAffectation.Vente).ToList();
+            foreach (var v in ventes)
+            {
+                Assert.Equal(SourceAffectation.Encaissement, v.Source);
+            }
         }
     }
 }

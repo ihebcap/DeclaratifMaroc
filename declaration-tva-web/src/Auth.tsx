@@ -76,7 +76,7 @@ export function Auth({ onLogin }: { onLogin: (user: User) => void }) {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h1 className="auth-title">Déclaration TVA</h1>
+        <h1 className="auth-title">Déclaratif Maroc</h1>
         <p className="auth-subtitle">Accès sécurisé à l'espace de gestion</p>
         
         {error && (

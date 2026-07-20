@@ -6,11 +6,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <!-- TASK-101 : version du DLL interop Objets Métiers Sage ciblée par ce build.
+         v10 sert aussi les clients v11 (DLL confirmés bit-à-bit identiques, cf. TASK-101). -->
+    <SageInteropVersion Condition="'$(SageInteropVersion)'==''">v12</SageInteropVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <Reference Include="Interop.Objets100cLib">
-      <HintPath>..\libs\Interop.Objets100cLib.dll</HintPath>
+      <HintPath>..\libs\$(SageInteropVersion)\Interop.Objets100cLib.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
   </ItemGroup>

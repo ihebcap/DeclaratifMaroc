@@ -7,8 +7,8 @@ import { test, expect } from '@playwright/test';
 test('Sélecteur de colonnes — masquage + persistance (Rapprochement bancaire)', async ({ page }) => {
   test.setTimeout(60000);
   await page.goto('/');
-  await page.fill('input[type="text"]', 'admin');
-  await page.fill('input[type="password"]', 'admin');
+  await page.fill('input[type="text"]', 'Admin');
+  await page.fill('input[type="password"]', 'Admin');
 
   const select = page.getByRole('combobox');
   await select.waitFor({ state: 'attached' });

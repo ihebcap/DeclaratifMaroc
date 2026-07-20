@@ -322,7 +322,8 @@ class MockServer {
     const equilibre = {
       totalSources,
       totalCandidates: totalSources, // En mock, candidates == sources
-      isValid: true
+      isValid: false,
+      ecart: 368517.56
     };
 
     const integrated = d.lignes.filter(l => l.statutLigne === 'Intégrée');

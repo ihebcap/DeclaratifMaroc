@@ -55,7 +55,12 @@ export const reglementKey = (row: ReglementRow) => `${row.numeroReglement}__${ro
 
 type Statut = 'eligible' | 'controle' | 'bloque';
 
-// Statut dérivé — 3 valeurs, JAMAIS masqué (mémoire grf-valorisation-tracabilite-blocage-om) :
+// Statut dérivé — 3 valeurs. Principe « jamais masqué » (mémoire grf-valorisation-tracabilite-blocage-om),
+// avec UNE exception ciblée et voulue par le PO (TASK-140) : le cas « déjà déclaré » (row.declare) est
+// désormais RETIRÉ du jeu de données de l'écran ① Sélection en amont (cf. fetchAll), sa traçabilité
+// déplacée vers l'écran Rapprochement global (numéro de déclaration). Les autres cas `bloque` restent
+// affichés. La branche `row.declare` ci-dessous demeure (statut/badge cohérents si une ligne déclarée
+// devait réapparaître), mais n'est plus atteinte en pratique dans cet écran.
 //  - bloque   : déjà déclaré (verrou DT_Id, TASK-028) OU aucune affectation (rien à valoriser) ;
 //  - controle : affectation partielle (reste à affecter ≠ 0) — nécessite un contrôle avant sélection ;
 //  - eligible : entièrement affecté et non déclaré.
@@ -65,6 +70,7 @@ type Statut = 'eligible' | 'controle' | 'bloque';
 function statutDe(row: ReglementRow): Statut {
   if (row.declare) return 'bloque';
   if (row.nbFacturesAffectees === 0) return 'bloque';
+  if (row.origine && row.origine.startsWith('Autre (')) return 'bloque';
   if (Math.abs(row.resteAAffecter ?? 0) > 0.005) return 'controle';
   return 'eligible';
 }
@@ -75,12 +81,30 @@ const STATUT_META: Record<Statut, { label: string; bg: string; text: string; ico
   bloque: { label: 'Bloqué', bg: 'var(--status-blocking-bg)', text: 'var(--status-blocking-text)', icon: XCircle },
 };
 
-function StatutBadge({ statut }: { statut: Statut }) {
+function StatutBadge({ row }: { row: ReglementRow }) {
+  const statut = statutDe(row);
   const m = STATUT_META[statut];
   const Icon = m.icon;
+  let label = m.label;
+  let title: string | undefined;
+  if (statut === 'bloque') {
+    if (row.origine === 'Autre (1)') {
+      label = 'Impayé (Bloqué)';
+    } else if (row.origine && row.origine.startsWith('Autre (')) {
+      label = 'Hors périmètre (Bloqué)';
+    } else if (row.nbFacturesAffectees === 0) {
+      label = 'Non affecté (Bloqué)';
+    } else if (row.declare) {
+      label = 'Déjà déclaré (Bloqué)';
+    }
+  } else if (statut === 'controle') {
+    // TASK-141 : rendre visible LE motif unique du statut « À contrôler »
+    // (affectation partielle) — la donnée resteAAffecter existe déjà, on la restitue.
+    title = `Reste à affecter : ${formatMoney(row.resteAAffecter ?? 0)}`;
+  }
   return (
-    <span style={{ background: m.bg, color: m.text, padding: '2px 8px', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-      <Icon size={11} />{m.label}
+    <span title={title} style={{ background: m.bg, color: m.text, padding: '2px 8px', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+      <Icon size={11} />{label}
     </span>
   );
 }
@@ -93,7 +117,29 @@ function affecteLabel(row: ReglementRow): string {
     return `${row.nbFacturesAffectees} facture${row.nbFacturesAffectees > 1 ? 's' : ''}`;
   }
   const pct = row.montant > 0 ? Math.round((row.montantAffecte / row.montant) * 100) : 0;
-  return `partiel ${pct} %`;
+  // TASK-141 : l'arrondi entier peut afficher « 100 % » alors qu'un reste non nul subsiste
+  // (sinon le statut serait Éligible). On adjoint le reste réel pour lever l'ambiguïté.
+  return `partiel ${pct} % (reste ${formatMoney(row.resteAAffecter ?? 0)})`;
+}
+
+function DomaineBadge({ domaine }: { domaine: string }) {
+  const map: Record<string, { bg: string; text: string }> = {
+    Encaissement: { bg: '#e0f2fe', text: '#0369a1' }, // bleu
+    Décaissement: { bg: '#f3e8ff', text: '#6b21a8' }, // violet
+  };
+  const c = map[domaine] || { bg: '#f3f4f6', text: '#374151' };
+  return (
+    <span style={{
+      background: c.bg,
+      color: c.text,
+      padding: '2px 8px',
+      borderRadius: '4px',
+      fontSize: '0.75rem',
+      fontWeight: 600
+    }}>
+      {domaine || '—'}
+    </span>
+  );
 }
 
 const COLUMNS: Col[] = [
@@ -101,7 +147,8 @@ const COLUMNS: Col[] = [
   { key: 'date', label: 'Date', sortKey: 'date', width: '100px' },
   { key: 'echeance', label: 'Échéance', filterType: 'date', width: '110px' },
   { key: 'mode', label: 'Mode', filterType: 'list', width: '100px' },
-  { key: 'tiers', label: 'Fournisseur', filterType: 'list' },
+  { key: 'domaine', label: 'Domaine', filterType: 'list', width: '120px' },
+  { key: 'tiers', label: 'Tiers', filterType: 'list' },
   { key: 'montant', label: 'Montant', align: 'right', sortKey: 'montant', width: '130px' },
   { key: 'affecte', label: 'Affecté', align: 'center', width: '120px' },
   { key: 'rapprocheBanque', label: 'Rappr. banque', align: 'center', filterType: 'list', width: '120px' },
@@ -137,16 +184,22 @@ export function ReglementsSelection({
   type,
   periode,
   selectedKeys,
+  selectedRows,
   onSelectionChange,
   showToast,
+  savedSelection = null,
+  declarationId,
 }: {
   societeId: number;
   exercice: number;
   type: number;
   periode: number;
   selectedKeys: Set<string>;
+  selectedRows: ReglementRow[];
   onSelectionChange: (keys: Set<string>, rows: ReglementRow[]) => void;
   showToast: (m: string, t?: 'success' | 'error' | 'warning') => void;
+  savedSelection?: string[] | null;
+  declarationId: string;
 }) {
   const { debut, fin } = useMemo(() => periodeBounds(exercice, type, periode), [exercice, type, periode]);
 
@@ -167,6 +220,16 @@ export function ReglementsSelection({
   // vivant même quand une ligne sort du jeu affiché après filtrage.
   const knownRowsRef = useRef<Map<string, ReglementRow>>(new Map());
 
+  // Initialiser knownRowsRef avec les lignes déjà sélectionnées passées par le parent
+  useEffect(() => {
+    selectedRows.forEach(row => {
+      const key = reglementKey(row);
+      if (!knownRowsRef.current.has(key)) {
+        knownRowsRef.current.set(key, row);
+      }
+    });
+  }, [selectedRows]);
+
   const parentRef = useRef<HTMLDivElement>(null);
 
   const { visibleColumns, visibleKeys, toggle: toggleColumn, reset: resetColumns } = useColumnPrefs('grf.cols.reglements', COLUMNS);
@@ -186,16 +249,20 @@ export function ReglementsSelection({
     return () => { cancelled = true; };
   }, [debut, fin, societeId]);
 
-  const fetchAll = useCallback(async () => {
+  // TASK-125 : `cancelled` évite qu'une réponse tardive et périmée (ex. après une rafale de
+  // rendus/refetch déclenchée par un showToast non stabilisé, TASK-125) n'écrase un résultat plus
+  // frais — même garde que l'effet voisin `distincts` ci-dessus.
+  const fetchAll = useCallback(async (cancelled: { current: boolean }) => {
     setLoading(true);
     try {
       const params: any = {
         debut,
         fin,
         sort: `${sortConfig.key}_${sortConfig.desc ? 'desc' : 'asc'}`,
-        // Règlement-first : périmètre décaissement uniquement pour l'écran ①
+        // Règlement-first : périmètre décaissement + encaissement pour l'écran ①
         // (le back applique de toute façon MV_Domaine IN (0,1), jamais MV_DECAISSE).
-        domaine: ['Décaissement'],
+        domaine: ['Décaissement', 'Encaissement'],
+        declarationId,
       };
       const mode = filters['mode'];
       if (Array.isArray(mode) && mode.length > 0) params.mode = mode[0];
@@ -233,31 +300,92 @@ export function ReglementsSelection({
         if (chunk.length === 0 || items.length >= totalCount) break;
         serverPage += 1;
       }
-      setAllData(items);
-      items.forEach(r => knownRowsRef.current.set(reglementKey(r), r));
+      if (cancelled.current) return;
+      // TASK-140 : les règlements déjà déclarés (verrou DT_Id, statut « Déjà déclaré (Bloqué) »)
+      // sont RETIRÉS du jeu de l'écran ① Sélection — sans valeur pour une NOUVELLE déclaration, ils
+      // encombraient la lecture (signalement PO, TVA1-2026-02). Exception CIBLÉE au principe « jamais
+      // masqué » (mémoire grf-valorisation-tracabilite-blocage-om) : la traçabilité n'est pas perdue,
+      // le numéro de la déclaration verrou est désormais visible dans l'écran Rapprochement global.
+      // Filtrage STRICTEMENT front (l'endpoint partagé reste intouché — cf. en-tête, TASK-054). Les
+      // AUTRES statuts `bloque` (non affecté, « Autre (impayé) ») restent affichés (non-régression).
+      const visibles = items.filter(r => !r.declare);
+      setAllData(visibles);
+      visibles.forEach(r => knownRowsRef.current.set(reglementKey(r), r));
     } catch (e) {
+      if (cancelled.current) return;
       console.error(e);
       showToast('Erreur lors du chargement des règlements', 'error');
       setAllData([]);
     } finally {
-      setLoading(false);
+      if (!cancelled.current) setLoading(false);
     }
-  }, [debut, fin, filters, sortConfig, showToast, societeId]);
+  }, [debut, fin, filters, sortConfig, showToast, societeId, declarationId]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => {
+    const cancelled = { current: false };
+    fetchAll(cancelled);
+    return () => { cancelled.current = true; };
+  }, [fetchAll]);
+
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    initializedRef.current = false;
+  }, [declarationId]);
+
+  useEffect(() => {
+    if (savedSelection === null || allData.length === 0 || loading) return;
+
+    if (!initializedRef.current) {
+      // If the parent already has a selection, preserve it instead of loading default or saved selection
+      if (selectedKeys.size > 0) {
+        initializedRef.current = true;
+        return;
+      }
+
+      if (savedSelection.length > 0) {
+        // Restaurer la sélection sauvegardée
+        const keys = new Set<string>();
+        const rows: ReglementRow[] = [];
+        allData.forEach(r => {
+          if (savedSelection.includes(r.numeroReglement)) {
+            const key = reglementKey(r);
+            keys.add(key);
+            rows.push(r);
+          }
+        });
+        onSelectionChange(keys, rows);
+      } else {
+        // Nouvelle déclaration : coche tout par défaut
+        const keys = new Set<string>();
+        const rows: ReglementRow[] = [];
+        allData.forEach(r => {
+          if (statutDe(r) !== 'bloque') {
+            const key = reglementKey(r);
+            keys.add(key);
+            rows.push(r);
+          }
+        });
+        onSelectionChange(keys, rows);
+      }
+      initializedRef.current = true;
+    }
+  }, [allData, loading, savedSelection, onSelectionChange, selectedKeys.size]);
 
   // Filtre État — dérivé, absent du DTO serveur : appliqué ici sur le jeu COMPLET (jamais une
   // page), donc le compteur affiché reste toujours exact vis-à-vis de la liste rendue.
   const etatFilter = filters['statut'];
   const tiersFilter = filters['tiers'];
   const numeroFilter = filters['numeroReglement'];
+  const domaineFilter = filters['domaine'];
   const data = useMemo(() => {
     let result = allData;
     if (Array.isArray(etatFilter) && etatFilter.length > 0) result = result.filter(r => etatFilter.includes(statutDe(r)));
     if (Array.isArray(tiersFilter) && tiersFilter.length > 0) result = result.filter(r => tiersFilter.includes(r.tiers));
     if (Array.isArray(numeroFilter) && numeroFilter.length > 0) result = result.filter(r => numeroFilter.includes(r.numeroReglement));
+    if (Array.isArray(domaineFilter) && domaineFilter.length > 0) result = result.filter(r => domaineFilter.includes(r.domaine));
     return result;
-  }, [allData, etatFilter, tiersFilter, numeroFilter]);
+  }, [allData, etatFilter, tiersFilter, numeroFilter, domaineFilter]);
 
   const rowVirtualizer = useVirtualizer({
     count: data.length,
@@ -289,6 +417,7 @@ export function ReglementsSelection({
     if (key === 'statut') return ETAT_OPTIONS;
     if (key === 'tiers') return [...new Set(allData.map(r => r.tiers))].filter(Boolean).sort().map(v => ({ label: v, value: v }));
     if (key === 'numeroReglement') return [...new Set(allData.map(r => r.numeroReglement))].filter(Boolean).sort().map(v => ({ label: v, value: v }));
+    if (key === 'domaine') return [...new Set(allData.map(r => r.domaine))].filter(Boolean).sort().map(v => ({ label: v, value: v }));
     return [];
   };
 
@@ -319,13 +448,14 @@ export function ReglementsSelection({
     switch (col.key) {
       case 'date': return formatDate(row.date);
       case 'echeance': return row.echeance ? formatDate(row.echeance) : <span style={{ color: 'var(--text-secondary)' }}>—</span>;
+      case 'domaine': return <DomaineBadge domaine={row.domaine} />;
       case 'dateRapprochement': return row.dateRapprochement ? formatDate(row.dateRapprochement) : <span style={{ color: 'var(--text-secondary)' }}>—</span>;
       case 'montant': return formatMoney(row.montant);
       case 'affecte': return affecteLabel(row);
       case 'rapprocheBanque': return row.rapprocheBanque
         ? <span style={{ color: 'var(--status-ok-text)', fontWeight: 600 }}>Oui</span>
         : <span style={{ color: 'var(--text-secondary)' }}>Non</span>;
-      case 'statut': return <StatutBadge statut={statutDe(row)} />;
+      case 'statut': return <StatutBadge row={row} />;
       default: return (row as any)[col.key];
     }
   };
@@ -333,10 +463,8 @@ export function ReglementsSelection({
   const activeFilterCount = Object.keys(filters).length;
 
   const selectedTotal = useMemo(() => {
-    let sum = 0;
-    knownRowsRef.current.forEach((row, key) => { if (selectedKeys.has(key)) sum += row.montant; });
-    return sum;
-  }, [selectedKeys]);
+    return selectedRows.reduce((sum, r) => sum + r.montant, 0);
+  }, [selectedRows]);
 
   const colStyle = (col: Col): React.CSSProperties =>
     col.width ? { flex: `0 0 ${col.width}`, width: col.width } : { flex: '1 1 0', minWidth: '160px' };
@@ -346,7 +474,7 @@ export function ReglementsSelection({
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <div ref={parentRef} style={{ flexGrow: 1, overflow: 'auto', position: 'relative', background: 'white' }}>
-        <div style={{ minWidth: '1230px', fontSize: '0.8125rem' }}>
+        <div style={{ minWidth: '1350px', fontSize: '0.8125rem' }}>
           <div style={{ display: 'flex', position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderBottom: '1px solid var(--border-color)' }}>
             <div style={{ flex: '0 0 40px', width: '40px', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} title="Sélectionner toutes les lignes visibles (éligibles/à contrôler)" />

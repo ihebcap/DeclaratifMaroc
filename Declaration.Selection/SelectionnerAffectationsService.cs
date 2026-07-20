@@ -144,7 +144,7 @@ namespace Declaration.Selection
               AND M.MV_DECAISSE = @decaisseOui AND M.MV_Compta = @comptabilise 
               AND M.MV_Annule = @annuleNon AND M.MV_Impaye = @nonImpaye
               AND (
-                  (A.DT_Id IS NULL AND {RegleDatePeriode.DateReferenceSqlM} >= @debut AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude) -- période via DateReference (TASK-062, source unique) ; rapproché → MV_PointDate
+                  (A.DT_Id IS NULL AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude) -- TASK-099 : coupure de période (rattrapage, plus de borne basse) via DateReference (TASK-062) ; rapproché → MV_PointDate
                   OR (@dtId IS NOT NULL AND A.DT_Id = @dtId)
               )
               AND M.MV_Type != @modeEspece -- Exclure l'espèce
@@ -175,7 +175,7 @@ namespace Declaration.Selection
               AND M.MV_Compta = @comptabilise 
               AND M.MV_Annule = @annuleNon AND M.MV_Impaye = @nonImpaye
               AND (
-                  (A.DT_Id IS NULL AND {RegleDatePeriode.DateReferenceSqlM} >= @debut AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude) -- espèce → MV_Date via DateReference ; borne haute homogène < @finExclude (TASK-062, fin du double comptage <= @finInclude)
+                  (A.DT_Id IS NULL AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude) -- TASK-099 : coupure de période (rattrapage, plus de borne basse) ; espèce → MV_Date via DateReference (TASK-062)
                   OR (@dtId IS NOT NULL AND A.DT_Id = @dtId)
               )
               AND M.MV_Type = @modeEspece -- Filtre espèce
@@ -207,7 +207,7 @@ namespace Declaration.Selection
               AND M.MV_DECAISSE = @decaisseOui AND M.MV_Compta = @comptabilise 
               AND M.MV_Annule = @annuleNon
               AND (
-                  (A.DT_Id IS NULL AND {RegleDatePeriode.DateReferenceSqlM} >= @debut AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude) -- période via DateReference (TASK-062, source unique) ; rapproché → MV_PointDate
+                  (A.DT_Id IS NULL AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude) -- TASK-099 : coupure de période (rattrapage, plus de borne basse) via DateReference (TASK-062) ; rapproché → MV_PointDate
                   OR (@dtId IS NOT NULL AND A.DT_Id = @dtId)
               )
               AND E.EC_Type IN (@ecTypeFactureErp, @ecTypeSolde, @ecTypeFgr) -- liste blanche : vraies factures + solde
@@ -239,7 +239,7 @@ namespace Declaration.Selection
               AND M.MV_Compta = @comptabilise 
               AND M.MV_Annule = @annuleNon AND M.MV_Impaye = @nonImpaye
               AND (
-                  (A.DT_Id IS NULL AND {RegleDatePeriode.DateReferenceSqlM} >= @debut AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude) -- période via DateReference (TASK-062, source unique) ; rapproché → MV_PointDate
+                  (A.DT_Id IS NULL AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude) -- TASK-099 : coupure de période (rattrapage, plus de borne basse) via DateReference (TASK-062) ; rapproché → MV_PointDate
                   OR (@dtId IS NOT NULL AND A.DT_Id = @dtId)
               )
               AND E.EC_Type IN (@ecTypeFactureErp, @ecTypeSolde, @ecTypeFgr) -- liste blanche : vraies factures + solde

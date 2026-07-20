@@ -212,7 +212,7 @@ namespace Declaration.Orchestration.Tests
 
             public Task DetamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => Task.CompletedTask;
 
-            public Task<HashSet<int>> GetEcIdsEnErreurAsync(IEnumerable<int> ecIds)
+            public Task<HashSet<int>> GetEcIdsEnErreurAsync(int soId, IEnumerable<int> ecIds)
             {
                 GetEcIdsEnErreurAppele = true;
                 return Task.FromResult(new HashSet<int>(ecIds.Where(id => EcIdsEnErreur.Contains(id))));
@@ -272,6 +272,36 @@ namespace Declaration.Orchestration.Tests
                 Lignes.RemoveAll(l => ids.Contains(l.Id));
                 return Task.CompletedTask;
             }
+
+            public Task<IEnumerable<DeclarationEntete>> GetToutesDeclarationsAsync() => throw new NotImplementedException();
+            public Task<IEnumerable<int>> GetDistinctDtIdsAffectationsAsync() => throw new NotImplementedException();
+            public Task SetDtIdDeclarationAsync(Guid declarationId, int? dtId) => throw new NotImplementedException();
+
+            public Task SaveSelectionReglementsAsync(Guid declarationId, IEnumerable<string> selectedNumeroReglements) => Task.CompletedTask;
+            public Task<List<string>> GetSelectionReglementsAsync(Guid declarationId) => Task.FromResult(new List<string>());
+
+
+            public Task<EcheanceDiagnosticRow?> GetEcheanceDiagnosticAsync(int soId, int ecId)
+                => throw new NotImplementedException();
+
+            public Task<IReadOnlyList<EcheanceCollisionRow>> GetEcheancesMemeDoNumeroAsync(int soId, string doNumero)
+                => throw new NotImplementedException();
+
+            public Task<string?> GetMotifErreurCacheAsync(int soId, int ecId)
+                => throw new NotImplementedException();
+
+            public Task<IReadOnlyDictionary<int, DocumentReglementSageRow>> GetDocumentsReglementSageAsync(
+                string sageConnectionString, IEnumerable<int> ecNos)
+                => throw new NotImplementedException();
+
+            public Task<CacheLectureRow?> GetDerniereLectureCacheAsync(int soId, int ecId)
+                => throw new NotImplementedException();
+
+            public Task<IReadOnlyList<CacheBucketRow>> GetBucketsCacheAsync(int soId, int ecId)
+                => throw new NotImplementedException();
+
+            public Task SupprimerLignesParEcIdAsync(Guid declarationId, int ecId)
+                => Task.CompletedTask;
         }
     }
 }

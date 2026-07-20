@@ -5,12 +5,11 @@ using System.Security.Claims;
 using System.Text;
 using Dapper;
 using Declaration.Application.Interfaces;
+using Declaration.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using Tresorerie.Dapper;
-using Tresorerie.Dapper.Repositories;
 
 namespace Declaration.API.Controllers;
 
@@ -29,8 +28,12 @@ public class AuthController : ControllerBase
 
     /// <summary>
     /// TASK-074 : authentification réelle contre P_UTILISATEUR (GRF standard), remplace le mock
-    /// (tout login + mot de passe "admin"). Réutilise le hashage legacy déjà validé dans GRC_WEB
-    /// (Tresorerie.Infrastructure.PasswordHasher contre UT_Hash/UT_Salt) plutôt que le réécrire.
+    /// (tout login + mot de passe "admin"). TASK-115 : requête Dapper directe (plus de dépendance
+    /// binaire à Tresorerie.Dapper.UtilisateurRepository/ConnectionProvider — cette DLL legacy,
+    /// figée sur System.Data.SqlClient, obligeait à faire cohabiter deux providers SQL natifs dans
+    /// le même publish self-contained aux côtés de Microsoft.Data.SqlClient). Hachage repris à
+    /// l'identique (HMACSHA512, même clé) dans <see cref="PasswordHasher"/> pour rester compatible
+    /// avec les valeurs UT_HASH/UT_SALT déjà stockées.
     /// Le JWT porte désormais UT_Id, UT_Admin et les sociétés autorisées (P_SOCUTILISATEUR),
     /// consommés par la garde société (GetAll) et la garde de réouverture (TASK-073).
     /// </summary>
@@ -41,20 +44,20 @@ public class AuthController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrEmpty(request.Password))
             return Unauthorized(new { Message = "Identifiants invalides." });
 
-        var connectionString = _connectionFactory.GetGrfConnectionString();
-        var connectionProvider = new ConnectionProvider { ConnectionString = connectionString };
-        var userRepository = new UtilisateurRepository(connectionProvider);
+        using var connection = _connectionFactory.CreateGrfConnection();
+        var user = connection.QuerySingleOrDefault<UtilisateurRow>(
+            @"SELECT UT_Id AS No, UT_Login AS Login, UT_Admin AS IsAdmin, UT_Actif AS IsActif,
+                     UT_HASH AS Hash, UT_SALT AS Salt, UT_Nom AS Nom, UT_Prenom AS Prenom
+              FROM P_UTILISATEUR WHERE UT_Login = @Login",
+            new { Login = request.Username });
 
-        var user = userRepository.Get(request.Username);
         if (user == null || !user.IsActif)
             return Unauthorized(new { Message = "Identifiants invalides." });
 
-        var hasher = new Tresorerie.Infrastructure.PasswordHasher();
-        var computedHash = hasher.Hash(request.Password, user.Salt);
+        var computedHash = PasswordHasher.Hash(request.Password, user.Salt);
         if (computedHash == null || user.Hash == null || !computedHash.SequenceEqual(user.Hash))
             return Unauthorized(new { Message = "Identifiants invalides." });
 
-        using var connection = _connectionFactory.CreateGrfConnection();
         var societesAutorisees = user.IsAdmin
             ? Array.Empty<int>()
             : connection.Query<int>("SELECT SO_Id FROM P_SOCUTILISATEUR WHERE UT_Id = @UtId", new { UtId = user.No }).ToArray();
@@ -98,4 +101,17 @@ public class LoginRequest
 {
     public string Username { get; set; } = "";
     public string Password { get; set; } = "";
+}
+
+/// <summary>TASK-115 : mapping Dapper de P_UTILISATEUR, remplace Tresorerie.Dapper.Models.Utilisateur.</summary>
+public class UtilisateurRow
+{
+    public int No { get; set; }
+    public string Login { get; set; } = "";
+    public bool IsAdmin { get; set; }
+    public bool IsActif { get; set; }
+    public byte[] Hash { get; set; } = Array.Empty<byte>();
+    public byte[] Salt { get; set; } = Array.Empty<byte>();
+    public string? Nom { get; set; }
+    public string? Prenom { get; set; }
 }

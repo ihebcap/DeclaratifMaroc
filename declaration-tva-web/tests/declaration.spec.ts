@@ -4,8 +4,9 @@ import { execSync } from 'child_process';
 test.beforeAll(async () => {
   try {
     execSync('powershell -File ../reset.ps1');
+    execSync('powershell -File ../make_eligible.ps1');
   } catch (e) {
-    console.error("Failed to reset DB:", e);
+    console.error("Failed to reset DB / make eligible:", e);
   }
 });
 
@@ -15,8 +16,8 @@ test('Parcours complet: Création, Règlements, Affectations, Calcul, Intégrati
 
   // Login
   await page.goto('/');
-  await page.fill('input[type="text"]', 'admin');
-  await page.fill('input[type="password"]', 'admin');
+  await page.fill('input[type="text"]', 'Admin');
+  await page.fill('input[type="password"]', 'Admin');
   
   const select = page.getByRole('combobox');
   await select.waitFor({ state: 'attached' });
@@ -45,49 +46,55 @@ test('Parcours complet: Création, Règlements, Affectations, Calcul, Intégrati
   // Wait for loading spinner to disappear (data loaded)
   await page.waitForSelector('.animate-spin', { state: 'detached' });
   
-  // Check the select-all checkbox
-  await page.locator('input[type="checkbox"]').first().click();
+  // Wait for selected total to stabilize (default selection is checked by default)
+  const totalSelector = page.locator('text=/Total sélectionné : .+/');
+  await expect(totalSelector).toBeVisible();
+  
+  // Clear the default selection of all rows to avoid browser resource exhaustion in drill
+  const currentTotal = await totalSelector.innerText();
+  if (!currentTotal.includes('0,00 MAD')) {
+    await page.locator('input[type="checkbox"]').first().click();
+    await expect(totalSelector).toContainText('0,00 MAD');
+  }
+  
+  // Select specific Decaissements that are guaranteed to have affectations in the database
+  await page.locator('div[style*="absolute"]').filter({ hasText: 'RF26060080' }).locator('input[type="checkbox"]').click();
+  await page.locator('div[style*="absolute"]').filter({ hasText: 'RF26060107' }).locator('input[type="checkbox"]').click();
+  await page.locator('div[style*="absolute"]').filter({ hasText: 'RF26060057' }).locator('input[type="checkbox"]').click();
+  await expect(totalSelector).not.toHaveText(/Total sélectionné : 0,00\s*MAD/);
   await page.waitForTimeout(500);
   
   // Take screenshot overview
   await page.screenshot({ path: '../VERIFY/05-workstation-overview.png' });
   
-  // Click CTA to step 2
-  await page.click('button:has-text("Analyser TVA")');
+  // Open the drill
+  await page.click('button:has-text("Détail des lignes")');
   await page.waitForTimeout(1000);
 
-  // Step 2: Affectations
+  // Take screenshot of the drill (Affectations)
   await page.screenshot({ path: '../VERIFY/06-factures-face-ne-declare-pas.png' });
+
+  // Return to selection
+  await page.click('button:has-text("Retour à la sélection")');
+  await page.waitForTimeout(500);
+
+  // Proceed to verification & integration (Passer au calcul)
   await page.click('button:has-text("Passer au calcul")');
   await page.waitForTimeout(1000);
 
-  // Step 3: Calcul
-  // Wait for loading spinner to disappear in Calcul step
+  // Step 3: Vérifier & Intégrer
+  // Wait for checkup and lines to load (loading spinner disappears)
   await page.waitForSelector('.animate-spin', { state: 'detached' });
   await page.screenshot({ path: '../VERIFY/09-actions-masse.png' });
-  await page.click('button:has-text("Passer à l\'intégration")');
-  await page.waitForTimeout(1000);
-
-  // Step 4: Intégration
-  // Wait for checkup to load (loading spinner disappears)
-  await page.waitForSelector('.animate-spin', { state: 'detached' });
   await page.waitForSelector('#btn-confirmer-integration');
   await page.screenshot({ path: '../VERIFY/07-cloture-verrouillee.png' });
   
-  // Confirm integration
+  // Confirm integration (should trigger automatic redirection)
   await page.click('#btn-confirmer-integration');
-  await page.waitForTimeout(2000);
-  
-  // Continuer vers le contrôle
-  await page.click('button:has-text("Continuer vers le contrôle")');
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
 
-  // Step 5: Contrôle
+  // Step 3: Déclaration (unified post-integration check & export screen)
+  await expect(page.locator('button:has-text("Générer XML")')).toBeVisible();
   await page.screenshot({ path: '../VERIFY/08-drill-preuves-modal.png' });
-  await page.click('button:has-text("Passer à la synthèse")');
-  await page.waitForTimeout(1000);
-
-  // Step 6: Synthèse
-  await expect(page.locator('button:has-text("Générer les fichiers")')).toBeVisible();
   await page.screenshot({ path: '../VERIFY/10-synthese-overview.png' });
 });

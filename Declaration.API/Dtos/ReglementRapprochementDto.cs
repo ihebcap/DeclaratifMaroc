@@ -36,6 +36,7 @@ public sealed record ReglementRapprochementDto
         ResteAAffecter = r.ResteAAffecter;
         Origine = r.Origine;
         Declare = r.EstDeclare;
+        NumeroDeclaration = r.NumeroDeclaration;   // TASK-140 : numéro de la déclaration verrou (null si non résolu — jamais inventé)
     }
 
     [JsonPropertyName("numeroReglement")]
@@ -91,4 +92,10 @@ public sealed record ReglementRapprochementDto
 
     [JsonPropertyName("declare")]
     public bool Declare { get; }
+
+    // TASK-140 : numéro de la déclaration qui verrouille ce règlement (null si non déclaré/non résolu).
+    // Additif (contrat étendu, rien retiré) : affiché par l'écran Rapprochement global à la place du
+    // simple booléen ; l'écran ① Sélection, lui, retire ces lignes côté front.
+    [JsonPropertyName("numeroDeclaration")]
+    public string? NumeroDeclaration { get; }
 }

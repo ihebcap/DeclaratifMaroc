@@ -16,7 +16,11 @@ namespace Declaration.Export.Xml
             if (modele == null) throw new ArgumentNullException(nameof(modele));
             if (modele.EnTete == null) throw new ArgumentException("L'en-tête de la déclaration est manquant.");
             
-            var lignesFiltrees = modele.Lignes.Where(l => !l.IsReport).ToList();
+            // Exclut la TVA collectée (Encaissement client) de l'export XML Simpl-TVA.
+            // Confirmation définitive du PO (14/07/2026) : le dépôt XML ne porte QUE la TVA déductible.
+            var lignesFiltrees = modele.Lignes
+                .Where(l => !l.IsReport && l.Source != SourceAffectation.Encaissement)
+                .ToList();
             if (!lignesFiltrees.Any()) throw new ApplicationException("Aucune ligne à exporter.");
 
             // Fichier : {Numero}-{Exercice}-{M|T}{période}.xml
@@ -34,7 +38,9 @@ namespace Declaration.Export.Xml
             }
 
             var sb = new StringBuilder();
-            sb.Append("\r\n<DeclarationReleveDeduction>\r\n");
+            // Prolog XML + xmlns:xsi obligatoires (CDC §2.1)
+            sb.Append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n");
+            sb.Append("<DeclarationReleveDeduction xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\r\n");
             sb.Append($"<identifiantFiscal>{modele.EnTete.IdentifiantSociete}</identifiantFiscal>\r\n");
             sb.Append($"<annee>{modele.EnTete.Exercice}</annee>\r\n");
             
@@ -49,28 +55,24 @@ namespace Declaration.Export.Xml
             foreach (var ligne in lignesFiltrees)
             {
                 // Validation Maroc
-                ValidationIdentiteFiscale.ValiderPourExport(ligne.Tiers?.IdentifiantFiscal, ligne.Tiers?.Ice, ord);
+                ValidationIdentiteFiscale.ValiderPourExport(ligne.Tiers?.IdentifiantFiscal?.Trim(), ligne.Tiers?.Ice?.Trim(), ord);
 
                 string modeId = MapModePaiement(ligne.ModePaiement);
 
-                // Arrondi: Ne PAS re-arrondir, formatage seul
-                // Décimal: NumberFormatInfo InvariantCulture pour le "."
-                NumberFormatInfo nfi = new CultureInfo("en-US", false).NumberFormat;
-
                 sb.Append("<rd>\r\n");
                 sb.Append($"<ord>{ord}</ord>\r\n");
-                sb.Append($"<num>{EscapeXml(ligne.NumeroFacture)}</num>\r\n");
-                sb.Append($"<des>{EscapeXml(ligne.Designation)}</des>\r\n");
-                sb.Append($"<mht>{ligne.HT.ToString("0.00", nfi)}</mht>\r\n");
-                sb.Append($"<tva>{ligne.Tva.ToString("0.00", nfi)}</tva>\r\n");
-                sb.Append($"<ttc>{ligne.Ttc.ToString("0.00", nfi)}</ttc>\r\n");
+                sb.Append($"<num>{EscapeXml(ligne.NumeroFacture?.Trim())}</num>\r\n");
+                sb.Append($"<des>{EscapeXml(ligne.Designation?.Trim())}</des>\r\n");
+                sb.Append($"<mht>{FormatDecimal(ligne.HT)}</mht>\r\n");
+                sb.Append($"<tva>{FormatDecimal(ligne.Tva)}</tva>\r\n");
+                sb.Append($"<ttc>{FormatDecimal(ligne.Ttc)}</ttc>\r\n");
                 sb.Append("<refF>");
-                sb.Append($"<if>{EscapeXml(ligne.Tiers.IdentifiantFiscal)}</if>");
-                sb.Append($"<nom>{EscapeXml(ligne.Tiers.Nom)}</nom>");
-                sb.Append($"<ice>{EscapeXml(ligne.Tiers.Ice)}</ice>");
+                sb.Append($"<if>{EscapeXml(ligne.Tiers.IdentifiantFiscal?.Trim())}</if>");
+                sb.Append($"<nom>{EscapeXml(ligne.Tiers.Nom?.Trim())}</nom>");
+                sb.Append($"<ice>{EscapeXml(ligne.Tiers.Ice?.Trim())}</ice>");
                 sb.Append("</refF>\r\n");
-                sb.Append($"<tx>{ligne.Taux.ToString("0.00", nfi)}</tx>\r\n");
-                sb.Append($"<prorata>{ligne.Prorata.ToString("0.00", nfi)}</prorata>\r\n");
+                // tx en fraction décimale (0.2 pour 20 %), conversion locale à l'export XML (CDC §2.2/§2.5)
+                sb.Append($"<tx>{FormatDecimal(ligne.Taux / 100m)}</tx>\r\n");
                 sb.Append($"<mp><id>{modeId}</id></mp>\r\n");
                 sb.Append($"<dpai>{(ligne.DatePaiement.HasValue ? ligne.DatePaiement.Value.ToString("yyyy-MM-dd") : "")}</dpai>\r\n");
                 sb.Append($"<dfac>{(ligne.DateFacture.HasValue ? ligne.DateFacture.Value.ToString("yyyy-MM-dd") : "")}</dfac>\r\n");
@@ -93,6 +95,13 @@ namespace Declaration.Export.Xml
             }
 
             return zipPath;
+        }
+
+        // Formatage decimal en culture invariante ("." décimal), sans arrondi supplémentaire
+        // ni padding de zéros forcé (CDC §2.5 : entiers sans décimale, pleine précision préservée).
+        private static string FormatDecimal(decimal value)
+        {
+            return value.ToString("0.##########", CultureInfo.InvariantCulture);
         }
 
         private string MapModePaiement(string mode)

@@ -20,6 +20,13 @@ namespace Declaration.Orchestration
 
         private readonly IVentilationSageCacheRepository _ventilationCache;
 
+        // TASK-118 : société (SO_Id) traitée par cette instance — scope le cache de ventilation
+        // Sage (DM_VENTILATION_SAGE_CACHE) pour éviter toute collision d'EC_Id entre deux bases
+        // Sage physiquement distinctes. Défaut 0 = comportement historique mono-Sage (tous les
+        // appelants antérieurs à TASK-118, notamment les tests unitaires avec des connexions
+        // factices, n'ont qu'une seule société implicite).
+        private readonly int _soId;
+
         // Journal optionnel : chaque échec worker/cache y est écrit (jamais avalé en silence).
         private readonly Action<string>? _log;
 
@@ -31,7 +38,8 @@ namespace Declaration.Orchestration
             string sageConnectionString,
             IVentilationSageCacheRepository? ventilationCache = null,
             string persistenceConnectionString = "",
-            Action<string>? log = null)
+            Action<string>? log = null,
+            int soId = 0)
         {
             _invoker = invoker;
             _config = config;
@@ -41,6 +49,7 @@ namespace Declaration.Orchestration
             _ventilationCache = ventilationCache ?? new VentilationSageCacheRepository();
             _persistenceConnectionString = persistenceConnectionString;
             _log = log;
+            _soId = soId;
         }
 
         public DeclarationModele Traiter(IEnumerable<AffectationADeclarer> affectations, int n)
@@ -139,7 +148,7 @@ namespace Declaration.Orchestration
                                     TotalTtc = doc.TotalTtc
                                 }
                                 : null;
-                            _ventilationCache.MarquerEnErreur(a.EC_Id, doc.MotifErreur, _persistenceConnectionString, montantsBruts);
+                            _ventilationCache.MarquerEnErreur(_soId, a.EC_Id, doc.MotifErreur, _persistenceConnectionString, montantsBruts);
                         }
                         catch (Exception ex)
                         {
@@ -164,7 +173,7 @@ namespace Declaration.Orchestration
                             + "aucun paiement pointé (token MV NULL, non déclarable).");
                     }
 
-                    var entries = BuildEntries(a.EC_Id, doc, token);
+                    var entries = BuildEntries(_soId, a.EC_Id, doc, token);
                     try
                     {
                         _ventilationCache.UpsertEntries(entries, _persistenceConnectionString);
@@ -180,7 +189,7 @@ namespace Declaration.Orchestration
             // ── Matérialisation FGR (EC_Type=111) : lecture SQL directe (RT_HISTCOMPTA), ────
             // jamais via le batch OM ci-dessus (celui-ci ne prend que sageAffectations,
             // EC_Type=0). Sans ce bloc, une facture FGR (ex. FF260076) n'est jamais écrite
-            // dans GRC_VENTILATION_SAGE_CACHE malgré une lecture facture-first correcte —
+            // dans DM_VENTILATION_SAGE_CACHE malgré une lecture facture-first correcte —
             // le lecteur FGR n'était appelé qu'au moment de la déclaration finale
             // (resoudreFacture), jamais pour la matérialisation du cache.
             if (!string.IsNullOrEmpty(_persistenceConnectionString))
@@ -219,7 +228,7 @@ namespace Declaration.Orchestration
                             + "aucun paiement pointé (token MV NULL, non déclarable).");
                     }
 
-                    var entries = BuildEntries(a.EC_Id, doc, token);
+                    var entries = BuildEntries(_soId, a.EC_Id, doc, token);
                     try
                     {
                         _ventilationCache.UpsertEntries(entries, _persistenceConnectionString);
@@ -314,7 +323,7 @@ namespace Declaration.Orchestration
                                     TotalTtc = doc.TotalTtc
                                 }
                                 : null;
-                            _ventilationCache.MarquerEnErreur(affectation.EC_Id, doc.MotifErreur, _persistenceConnectionString, montantsBruts);
+                            _ventilationCache.MarquerEnErreur(_soId, affectation.EC_Id, doc.MotifErreur, _persistenceConnectionString, montantsBruts);
                         }
                         catch (Exception ex)
                         {
@@ -343,7 +352,7 @@ namespace Declaration.Orchestration
             IReadOnlyList<VentilationSageCacheEntry> entries;
             try
             {
-                entries = _ventilationCache.GetEntries(ecId, _persistenceConnectionString);
+                entries = _ventilationCache.GetEntries(_soId, ecId, _persistenceConnectionString);
             }
             catch (Exception)
             {
@@ -440,7 +449,7 @@ namespace Declaration.Orchestration
                         TotalParafiscale = null,
                         TotalTtc = firstEntry.TotalTtc
                     };
-                    _ventilationCache.MarquerEnErreur(ecId, motif, _persistenceConnectionString, montantsBruts);
+                    _ventilationCache.MarquerEnErreur(_soId, ecId, motif, _persistenceConnectionString, montantsBruts);
                 }
                 catch (Exception ex)
                 {
@@ -478,10 +487,11 @@ namespace Declaration.Orchestration
         }
 
         private static IEnumerable<VentilationSageCacheEntry> BuildEntries(
-            int ecId, DocumentTaxesInfo doc, PaiementToken? token)
+            int soId, int ecId, DocumentTaxesInfo doc, PaiementToken? token)
         {
             return doc.LignesTaxe.Select(l => new VentilationSageCacheEntry
             {
+                SO_Id        = soId,
                 EC_Id        = ecId,
                 Taux         = l.Taux,
                 BaseHT       = l.BaseHT,

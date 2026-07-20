@@ -1,17 +1,14 @@
 import { useState, useEffect } from 'react';
 import {
-    ChevronLeft, Loader2, Landmark, GitMerge, Calculator, Lock,
-    ShieldCheck, FileOutput, CheckCircle2, Circle, ArrowRight,
-    XCircle,
+    ChevronLeft, Loader2, Landmark, Lock,
+    ShieldCheck, CheckCircle2, Circle, ArrowRight,
 } from 'lucide-react';
 import api from './api';
-import { SynthesePanel } from './SynthesePanel';
+import { DeclarationFinalePanel } from './DeclarationFinalePanel';
 import { ReglementsSelection, periodeBounds } from './ReglementsSelection';
 import type { ReglementRow } from './ReglementsSelection';
 import { AffectationsDrill } from './AffectationsDrill';
-import { CalculTvaPanel } from './CalculTvaPanel';
-import { IntegrationPanel } from './IntegrationPanel';
-import { ControleDeclarationPanel } from './ControleDeclarationPanel';
+import { VerifierIntegrerPanel } from './VerifierIntegrerPanel';
 import { formatMoney, formatDate } from './utils';
 
 export type DomaineTVA = 'Décaissement' | 'Encaissement' | 'Dépense' | 'Frais bancaire';
@@ -20,15 +17,12 @@ export type DomaineTVA = 'Décaissement' | 'Encaissement' | 'Dépense' | 'Frais 
 // pas la facture. Les écrans dédiés ①②④⑤ arrivent en TASK-054/055/057/058 ; en attendant,
 // ils sont affichés en placeholder honnête (aucune donnée factice). ③ et ⑥ réutilisent
 // WorkstationPanel/GenerationPanel existants, intouchables.
-type StepId = 'reglements' | 'affectations' | 'calcul' | 'integration' | 'controle' | 'synthese';
+type StepId = 'reglements' | 'verifier_integrer' | 'declaration';
 
 const STEPS: { id: StepId; label: string; icon: typeof Landmark }[] = [
-    { id: 'reglements', label: 'Règlements', icon: Landmark },
-    { id: 'affectations', label: 'Affectations', icon: GitMerge },
-    { id: 'calcul', label: 'Calcul', icon: Calculator },
-    { id: 'integration', label: 'Intégration', icon: Lock },
-    { id: 'controle', label: 'Contrôle', icon: ShieldCheck },
-    { id: 'synthese', label: 'Synthèse', icon: FileOutput },
+    { id: 'reglements', label: 'Sélection', icon: Landmark },
+    { id: 'verifier_integrer', label: 'Vérifier & Intégrer', icon: Lock },
+    { id: 'declaration', label: 'Déclaration', icon: ShieldCheck },
 ];
 
 // StatutDeclaration (back, WorkflowEntities.cs) : 0=EnCours, 1=Cloturee, 2=Generee, 3=Deposee.
@@ -44,9 +38,8 @@ function isIntegree(statut: number | undefined) {
 // ③④ restent groupées tant que 056/057 n'exposent pas de gate plus fin — c'est un
 // placeholder honnête, pas une simulation de règle métier. ② requiert désormais une
 // sélection réelle en ① (TASK-054 : le règlement pilote, pas de drill sans sélection).
-function isUnlocked(stepId: StepId, integree: boolean, hasSelection: boolean) {
-    if (stepId === 'controle' || stepId === 'synthese') return integree;
-    if (stepId === 'affectations') return integree || hasSelection;
+function isUnlocked(stepId: StepId, integree: boolean) {
+    if (stepId === 'declaration') return integree;
     return true;
 }
 
@@ -56,20 +49,67 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
     const [activeStep, setActiveStep] = useState<StepId>('reglements');
     const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
     const [selectedRows, setSelectedRows] = useState<ReglementRow[]>([]);
-    // Données de ③ à transmettre à ④ en source unique (pas de recalcul front)
-    const [calcTVA, setCalcTVA] = useState<{ totalTVA: number; nbLignes: number }>({ totalTVA: 0, nbLignes: 0 });
-    // ⑤ : garde-fou — export bloqué si des anomalies 🔴 existent (TASK-058)
-    const [hasBloquants, setHasBloquants] = useState(false);
+    const [showDrill, setShowDrill] = useState(false);
+    const [savedSelection, setSavedSelection] = useState<string[] | null>(null);
 
     const fetchInfo = async () => {
         try {
             const res = await api.get(`/declarations/${declarationId}`);
             setInfo(res.data);
             if (isIntegree(res.data.statut)) {
-                setActiveStep(prev => (prev === 'controle' || prev === 'synthese') ? prev : 'integration');
+                setActiveStep('declaration');
             }
+
+            // TASK-097 : Charger la sélection sauvegardée
+            const selRes = await api.get(`/declarations/${declarationId}/selection`);
+            setSavedSelection(selRes.data);
         } catch (e) {
             console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const persisterSelection = async () => {
+        const selectedNumbers = selectedRows.map(r => r.numeroReglement);
+        await api.post(`/declarations/${declarationId}/selection`, selectedNumbers);
+        setSavedSelection(selectedNumbers);
+    };
+
+    const handlePasserAuCalcul = async () => {
+        if (integree) {
+            goTo('verifier_integrer');
+            return;
+        }
+        setLoading(true);
+        try {
+            await persisterSelection();
+            goTo('verifier_integrer');
+        } catch (e: any) {
+            console.error(e);
+            showToast(e?.response?.data?.message || 'Erreur lors de la sauvegarde de la sélection', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // TASK-109 : le premier figeage back (ConstruireLignesFigeesAsync) filtre sur la
+    // sélection PERSISTÉE côté serveur, jamais sur selectedRows (état front) — seul
+    // « Passer au calcul » persistait jusqu'ici. Ouvrir « Détail des lignes » sans ce
+    // même appel préalable pouvait donc figer zéro ligne (sélection serveur vide/périmée)
+    // pour une sélection front pourtant non vide.
+    const handleOuvrirDrill = async () => {
+        if (integree) {
+            setShowDrill(true);
+            return;
+        }
+        setLoading(true);
+        try {
+            await persisterSelection();
+            setShowDrill(true);
+        } catch (e: any) {
+            console.error(e);
+            showToast(e?.response?.data?.message || 'Erreur lors de la sauvegarde de la sélection', 'error');
         } finally {
             setLoading(false);
         }
@@ -84,25 +124,25 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
     if (!info) return <div>Erreur de chargement</div>;
 
     const integree = isIntegree(info.statut);
-    const readOnlyStep = integree && (activeStep === 'reglements' || activeStep === 'affectations' || activeStep === 'calcul');
+    const readOnlyStep = integree && (activeStep === 'reglements' || activeStep === 'verifier_integrer');
     const hasSelection = selectedKeys.size > 0;
 
     const goTo = (id: StepId) => {
-        if (!isUnlocked(id, integree, hasSelection)) return;
+        if (!isUnlocked(id, integree)) return;
         setActiveStep(id);
     };
 
     const nextStep = (id: StepId, label: string) => (
         <BottomBar>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>Étape {STEPS.findIndex(s => s.id === activeStep) + 1}/6</span>
-            <button onClick={() => goTo(id)} disabled={!isUnlocked(id, integree, hasSelection)} className="btn btn-primary" style={ctaStyle}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>Étape {STEPS.findIndex(s => s.id === activeStep) + 1}/{STEPS.length}</span>
+            <button onClick={() => goTo(id)} disabled={!isUnlocked(id, integree)} className="btn btn-primary" style={ctaStyle}>
                 {label} <ArrowRight size={16} />
             </button>
         </BottomBar>
     );
 
     // Bandeau bas dédié à ① (TASK-054) : total vivant de la sélection + CTA unique,
-    // désactivé tant qu'aucun règlement éligible/à contrôler n'est sélectionné.
+    // désactivé tant qu'aucun règlement éligible/à contrôler n'est sélectionné (sauf en mode intégré).
     const reglementsBottomBar = (
         <BottomBar>
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
@@ -110,9 +150,28 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
                     ? <>{selectedKeys.size} règlement{selectedKeys.size > 1 ? 's' : ''} sélectionné{selectedKeys.size > 1 ? 's' : ''} · Total {formatMoney(selectedRows.reduce((s, r) => s + r.montant, 0))}</>
                     : 'Sélectionnez au moins un règlement pour continuer'}
             </span>
-            <button onClick={() => goTo('affectations')} disabled={!hasSelection || readOnlyStep} className="btn btn-primary" style={ctaStyle}>
-                Analyser TVA <ArrowRight size={16} />
-            </button>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                    onClick={handleOuvrirDrill}
+                    disabled={(!hasSelection && !integree) || loading}
+                    className="btn"
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        background: 'white', color: 'var(--text-primary)', border: '1px solid var(--border-color)',
+                        padding: '0.5rem 1rem', borderRadius: '4px', cursor: (!hasSelection && !integree) ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: '0.875rem',
+                    }}
+                >
+                    Détail des lignes
+                </button>
+                <button
+                    onClick={handlePasserAuCalcul}
+                    disabled={(!hasSelection && !integree) || loading}
+                    className="btn btn-primary"
+                    style={ctaStyle}
+                >
+                    Passer au calcul <ArrowRight size={16} />
+                </button>
+            </div>
         </BottomBar>
     );
 
@@ -141,14 +200,43 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
         </div>
     );
 
+    if (showDrill) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-primary)' }}>
+                {integree && (
+                    <div style={{ padding: '0.5rem 1.5rem', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', color: 'var(--status-ok-text)', fontSize: '0.8125rem', fontWeight: 500, flexShrink: 0 }}>
+                        Déclaration intégrée — drill en lecture (lecture seule).
+                    </div>
+                )}
+                {/* Header for returning to step 1 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'white', flexShrink: 0 }}>
+                    <button onClick={() => setShowDrill(false)} className="btn" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.4rem 0.8rem', fontSize: '0.8125rem', cursor: 'pointer', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'white' }}>
+                        <ChevronLeft size={16} /> Retour à la sélection
+                    </button>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginLeft: '1rem' }}>
+                        Détail des affectations — {info.numero}
+                    </span>
+                </div>
+                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <AffectationsDrill
+                        declarationId={declarationId}
+                        selectedRows={selectedRows}
+                        readOnly={readOnlyStep}
+                        showToast={showToast}
+                    />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-primary)' }}>
-            <StepBar activeStep={activeStep} integree={integree} hasSelection={hasSelection} onSelect={goTo} leading={titleSlot} trailing={trailingSlot} />
+            <StepBar activeStep={activeStep} integree={integree} onSelect={goTo} leading={titleSlot} trailing={trailingSlot} />
 
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {readOnlyStep && (
                     <div style={{ padding: '0.5rem 1.5rem', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', color: 'var(--status-ok-text)', fontSize: '0.8125rem', fontWeight: 500, flexShrink: 0 }}>
-                        Déclaration intégrée — cette étape est figée (lecture seule).
+                        Déclaration intégrée — {activeStep === 'reglements' ? 'Sélection figée' : 'Vérification figée'} (lecture seule).
                     </div>
                 )}
 
@@ -160,99 +248,55 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
                             type={info.type}
                             periode={info.periode}
                             selectedKeys={selectedKeys}
+                            selectedRows={selectedRows}
                             onSelectionChange={(keys, rows) => { setSelectedKeys(keys); setSelectedRows(rows); }}
                             showToast={showToast}
+                            savedSelection={savedSelection}
+                            declarationId={declarationId}
                         />
                     )}
-                    {activeStep === 'affectations' && (
-                        <AffectationsDrill
+                    {activeStep === 'verifier_integrer' && (
+                        <VerifierIntegrerPanel
                             declarationId={declarationId}
                             selectedRows={selectedRows}
                             readOnly={readOnlyStep}
-                            showToast={showToast}
-                        />
-                    )}
-                    {activeStep === 'calcul' && (
-                        <CalculTvaPanel
-                            declarationId={declarationId}
-                            selectedRows={selectedRows}
-                            readOnly={readOnlyStep}
-                            showToast={showToast}
-                            onCalcSummary={(totalTVA, nbLignes) => setCalcTVA({ totalTVA, nbLignes })}
-                        />
-                    )}
-                    {activeStep === 'integration' && (
-                        <IntegrationPanel
-                            declarationId={declarationId}
-                            nbLignes={calcTVA.nbLignes}
-                            totalTVA={calcTVA.totalTVA}
-                            nbReglements={selectedRows.length}
                             integree={integree}
                             showToast={showToast}
                             onIntegrationSuccess={fetchInfo}
                         />
                     )}
-                    {activeStep === 'controle' && (
-                        <ControleDeclarationPanel
-                            declarationId={declarationId}
-                            showToast={showToast}
-                            onHasBloquants={setHasBloquants}
-                        />
-                    )}
-                    {activeStep === 'synthese' && (
-                        <SynthesePanel
+                    {activeStep === 'declaration' && (
+                        <DeclarationFinalePanel
                             declarationId={declarationId}
                             statut={info.statut}
                             showToast={showToast}
-                            onClotured={fetchInfo}
                             onBack={onBack}
                         />
                     )}
                 </div>
 
                 {activeStep === 'reglements' && reglementsBottomBar}
-                {activeStep === 'affectations' && nextStep('calcul', 'Passer au calcul')}
-                {activeStep === 'calcul' && nextStep('integration', '→ Passer à l\'intégration')}
-                {activeStep === 'integration' && integree && nextStep('controle', 'Continuer vers le contrôle')}
-                {activeStep === 'controle' && (
-                    <BottomBar>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>Étape 5/6</span>
-                        {hasBloquants && (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8125rem', color: 'var(--status-blocking-text)', fontWeight: 600 }}>
-                                <XCircle size={14} /> Corriger les anomalies 🔴 avant de continuer
-                            </span>
-                        )}
-                        <button
-                            onClick={() => goTo('synthese')}
-                            disabled={hasBloquants || !isUnlocked('synthese', integree, hasSelection)}
-                            className="btn btn-primary"
-                            title={hasBloquants ? 'Des anomalies bloquantes empêchent la progression' : undefined}
-                            style={ctaStyle}
-                        >
-                            Passer à la synthèse <ArrowRight size={16} />
-                        </button>
-                    </BottomBar>
-                )}
+                {activeStep === 'verifier_integrer' && integree && nextStep('declaration', 'Continuer vers la déclaration')}
             </div>
         </div>
     );
 }
 
-function StepBar({ activeStep, integree, hasSelection, onSelect, leading, trailing }: { activeStep: StepId; integree: boolean; hasSelection: boolean; onSelect: (id: StepId) => void; leading?: React.ReactNode; trailing?: React.ReactNode }) {
+function StepBar({ activeStep, integree, onSelect, leading, trailing }: { activeStep: StepId; integree: boolean; onSelect: (id: StepId) => void; leading?: React.ReactNode; trailing?: React.ReactNode }) {
     return (
         <div style={{ display: 'flex', alignItems: 'stretch', background: 'white', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
             {leading}
             <div style={{ display: 'flex', flex: 1, overflowX: 'auto' }}>
             {STEPS.map((step, i) => {
-                const unlocked = isUnlocked(step.id, integree, hasSelection);
+                const unlocked = isUnlocked(step.id, integree);
                 const isActive = activeStep === step.id;
-                const isDone = integree && (step.id === 'reglements' || step.id === 'affectations' || step.id === 'calcul' || step.id === 'integration');
+                const isDone = integree && (step.id === 'reglements' || step.id === 'verifier_integrer');
                 return (
                     <button
                         key={step.id}
                         onClick={() => onSelect(step.id)}
                         disabled={!unlocked}
-                        title={unlocked ? step.label : (step.id === 'affectations' ? `${step.label} — sélectionnez un règlement en ①` : `${step.label} — nécessite l'intégration`)}
+                        title={unlocked ? step.label : `${step.label} — nécessite l'intégration`}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '0.35rem',
                             padding: '0.6rem 0.7rem',

@@ -2,18 +2,37 @@
   "_comment": "Fichier de connexion UNIQUE et PARTAGE par toutes les apps/API sous GRF. Editer uniquement ce fichier. Il est copie a cote de chaque exe au build.",
 
   "ConnectionStrings": {
-    "GrfConnection": "Server=.\\sql2022;Database=GR_EMA_DISTRIBUTION;User Id=sa;Password=1234;TrustServerCertificate=True;",
-    "SageConnection": "Server=.\\sql2022;Database=NEW_EMA DISTRIBUTION;User Id=sa;Password=1234;TrustServerCertificate=True;",
-    "PersistenceConnection": "Server=.\\sql2022;Database=GR_EMA_DISTRIBUTION;User Id=sa;Password=1234;TrustServerCertificate=True;"
+    "GrfConnection": "Server=DESKTOP-5BFKKEP;Database=GR_EMA_DISTRIBUTION;User Id=sa;Password=1234;TrustServerCertificate=True;",
+    "SageConnection": "Server=DESKTOP-5BFKKEP;Database=NEW_EMA DISTRIBUTION;User Id=sa;Password=1234;TrustServerCertificate=True;",
+    "PersistenceConnection": "Server=DESKTOP-5BFKKEP;Database=GR_EMA_DISTRIBUTION;User Id=sa;Password=1234;TrustServerCertificate=True;"
   },
 
-  "_comment_SageOM": "Identifiants de l'utilisateur APPLICATIF Sage (Objets Metier) - distincts du login SQL ci-dessus. Requis par le worker pour ouvrir la base commerciale.",
+  "_comment_SageConnection_TASK118": "TASK-118 : depuis le 18/07/2026, la cle ConnectionStrings.SageConnection ci-dessus N'EST PLUS LUE par Declaration.API. La connexion Sage est resolue dynamiquement par SO_Id (Server/User/Password = ceux de GrfConnection, Database = P_SOCIETE.SO_ErpDb). Conservee uniquement pour compatibilite avec Declaration.Setup (qui edite encore ce champ) -- sans effet sur le runtime.",
+
+  "_comment_SageOM": "TASK-118 : cette section N'EST PLUS LUE par Declaration.API -- les identifiants Sage OM (Objets Metier) sont desormais lus par societe depuis P_SOCIETE.SO_ErpUserApp/SO_ErpPasswdApp. Conservee uniquement pour compatibilite avec Declaration.Setup.",
   "SageOM": {
     "User": "<Administrateur>",
     "Password": "P@ssw0rd"
   },
 
+  "_comment_Jwt": "TASK-114 : cle reelle de signature JWT pour cet environnement, distincte de la cle de dev committee dans appsettings.json. Generee aleatoirement, ne JAMAIS reporter dans un fichier versionne dans un autre depot/environnement.",
+  "JwtSettings": {
+    "SecretKey": "5gmDkhlYx94MLiJHpBvaOwQqNZIFeT02UEX7n6PdszftroAb"
+  },
+
   "WorkerConfig": {
     "WorkerExePath": "D:\\_vibe\\GRF\\SageTaxReader\\SageTaxReader.Console\\bin\\Debug\\net48\\SageTaxReader.Console.exe"
+  },
+
+  "_comment_ServerConfig": "TASK-115 : port d'ecoute Kestrel, saisi au formulaire de setup. Defaut 5000 si absent.",
+  "ServerConfig": {
+    "Port": 5000
+  },
+
+  "_comment_ApLicence": "TASK-117 : adresse/port/timeout du serveur ApLicence.Server, saisis via Declaration.Setup (parametres de deploiement, varient par client). Le subject N'EST PLUS ICI (retire) -- il est fige en dur dans Declaration.API/Program.cs (anti-contournement, decision PO TASK-002/GRLicence 17/07/2026) : un fichier de config sur le poste client serait modifiable par quiconque y a acces disque. Un champ Subject laisse ici serait sans effet et pourrait induire en erreur.",
+  "ApLicence": {
+    "ServerAddress": "127.0.0.1",
+    "ServerPort": 8003,
+    "TimeoutSeconds": 5
   }
 }

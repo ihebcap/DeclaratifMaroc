@@ -50,7 +50,7 @@ const COLUMNS: Col[] = [
   { key: 'nbFacturesAffectees', label: 'Factures', align: 'center', filterType: 'number', width: '90px' },
   { key: 'resteAAffecter', label: 'Reste à affecter', align: 'right', sortKey: 'reste', filterType: 'number', width: '140px' },
   { key: 'origine', label: 'Origine', filterType: 'list', width: '120px' },
-  { key: 'declare', label: 'Déclaré', align: 'center', filterType: 'list', width: '100px' },
+  { key: 'declare', label: 'Déclaré', align: 'center', filterType: 'list', width: '150px' },
 ];
 
 // Reste à affecter significatif (tolérance centimes) → transparence de l'écart.
@@ -69,6 +69,24 @@ function OuiNonBadge({ value, trueColor = { bg: 'var(--status-ok-bg)', text: 'va
       {value ? 'Oui' : 'Non'}
     </span>
   );
+}
+
+// TASK-140 — colonne « Déclaré » : affiche le NUMÉRO de la déclaration verrou (ex. TVA1-2026-02)
+// quand il est résolu, au lieu du simple booléen Oui/Non — la traçabilité déplacée depuis l'écran ①
+// Sélection (où ces règlements sont désormais retirés) atterrit ici, avec plus de détail qu'avant.
+// Repli sur le badge Oui/Non : `declare === true` sans numéro (sélectionné dans une autre déclaration
+// EnCours, pas encore close → aucun DT_Id posé) ⇒ « Oui » ; non déclaré ⇒ « Non ». Jamais de valeur
+// inventée (le numéro vient du back, null si non résolu).
+function DeclareBadge({ numero, declare }: { numero?: string | null; declare: boolean }) {
+  if (numero) {
+    return (
+      <span title={numero} style={{ background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', maxWidth: '100%', overflow: 'hidden' }}>
+        <CheckCircle2 size={11} style={{ flexShrink: 0 }} />
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{numero}</span>
+      </span>
+    );
+  }
+  return <OuiNonBadge value={declare} trueColor={{ bg: '#e0e7ff', text: '#4338ca' }} />;
 }
 
 function OrigineChip({ origine }: { origine: string }) {
@@ -303,7 +321,7 @@ export function RapprochementInterrogation({ societeId, showToast }: { societeId
           </span>
         );
       case 'point': return <OuiNonBadge value={!!v} />;
-      case 'declare': return <OuiNonBadge value={!!v} trueColor={{ bg: '#e0e7ff', text: '#4338ca' }} />;
+      case 'declare': return <DeclareBadge numero={row.numeroDeclaration} declare={!!v} />;
       case 'origine': return <OrigineChip origine={v} />;
       case 'domaine': return <DomaineChip domaine={v} />;
       case 'resteAAffecter':
@@ -503,7 +521,7 @@ function ReglementDetail({ row, onClose }: { row: any, onClose: () => void }) {
           {line('Échéance pièce', row.echeance ? formatDate(row.echeance) : '—')}
           {line('Code banque', row.banqueCode || '—')}
           {line('Origine (preuve TVA)', <OrigineChip origine={row.origine} />)}
-          {line('Déclaré (verrou)', <OuiNonBadge value={!!row.declare} trueColor={{ bg: '#e0e7ff', text: '#4338ca' }} />)}
+          {line('Déclaré (verrou)', <DeclareBadge numero={row.numeroDeclaration} declare={!!row.declare} />)}
 
           <div style={{ marginTop: '1rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
             L'origine indique la source de la TVA des factures affectées :{' '}

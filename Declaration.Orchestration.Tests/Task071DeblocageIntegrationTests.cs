@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -44,6 +45,43 @@ namespace Declaration.Orchestration.Tests
                 logger: NullLogger<DeclarationWorkflowService>.Instance);
 
             return (service, repo, declarationId);
+        }
+
+        /// <summary>Reflète le calcul privé DeriveDtId (source unique, non dupliqué dans le test).</summary>
+        private static int DeriveDtId(Guid id)
+        {
+            var methode = typeof(DeclarationWorkflowService).GetMethod(
+                "DeriveDtId", BindingFlags.NonPublic | BindingFlags.Static)!;
+            return (int)methode.Invoke(null, new object[] { id })!;
+        }
+
+        [Fact]
+        public async Task CloturerDeclarationAsync_PoseDtIdSurDmEnttva_TASK094OptionB()
+        {
+            var (service, repo, declarationId) = CreerService(new[]
+            {
+                new LigneCandidate { Etat = EtatLigne.Proposee, HT = 1000m, TVA = 200m, TTC = 1200m, TiersICE = "ICE1", NumeroFacture = "F1", NumeroRapprochement = "REG-1" },
+            });
+
+            await service.CloturerDeclarationAsync(declarationId);
+
+            Assert.Equal(DeriveDtId(declarationId), repo.Declarations[declarationId].DT_Id);
+        }
+
+        [Fact]
+        public async Task ReouvriDeclarationAsync_EffaceDtIdSurDmEnttva_TASK094OptionB()
+        {
+            var (service, repo, declarationId) = CreerService(new[]
+            {
+                new LigneCandidate { Etat = EtatLigne.Proposee, HT = 1000m, TVA = 200m, TTC = 1200m, TiersICE = "ICE1", NumeroFacture = "F1", NumeroRapprochement = "REG-1" },
+            });
+            await service.CloturerDeclarationAsync(declarationId);
+            Assert.NotNull(repo.Declarations[declarationId].DT_Id);
+
+            await service.ReouvriDeclarationAsync(declarationId, "Admin");
+
+            Assert.Null(repo.Declarations[declarationId].DT_Id);
+            Assert.Equal(StatutDeclaration.EnCours, repo.Declarations[declarationId].Statut);
         }
 
         [Fact]
@@ -155,7 +193,7 @@ namespace Declaration.Orchestration.Tests
             // TASK-077 : GetCheckupAsync exerce désormais la revalidation légère — ce fake n'a
             // aucune ligne avec EC_Id/MV_Id renseigné (hors périmètre de ces tests TASK-071),
             // donc rien à signaler ni à backfiller ; réponses vides plutôt que NotImplementedException.
-            public Task<HashSet<int>> GetEcIdsEnErreurAsync(IEnumerable<int> ecIds) => Task.FromResult(new HashSet<int>());
+            public Task<HashSet<int>> GetEcIdsEnErreurAsync(int soId, IEnumerable<int> ecIds) => Task.FromResult(new HashSet<int>());
 
             public Task<Dictionary<int, int?>> GetMvPointsActuelsAsync(IEnumerable<int> mvIds) => Task.FromResult(new Dictionary<int, int?>());
 
@@ -181,6 +219,41 @@ namespace Declaration.Orchestration.Tests
                 Lignes.RemoveAll(l => ids.Contains(l.Id));
                 return Task.CompletedTask;
             }
+
+            public Task<IEnumerable<DeclarationEntete>> GetToutesDeclarationsAsync() => throw new NotImplementedException();
+            public Task<IEnumerable<int>> GetDistinctDtIdsAffectationsAsync() => throw new NotImplementedException();
+
+            public Task SetDtIdDeclarationAsync(Guid declarationId, int? dtId)
+            {
+                Declarations[declarationId].DT_Id = dtId;
+                return Task.CompletedTask;
+            }
+
+            public Task SaveSelectionReglementsAsync(Guid declarationId, IEnumerable<string> selectedNumeroReglements) => Task.CompletedTask;
+            public Task<List<string>> GetSelectionReglementsAsync(Guid declarationId) => Task.FromResult(new List<string>());
+
+
+            public Task<EcheanceDiagnosticRow?> GetEcheanceDiagnosticAsync(int soId, int ecId)
+                => throw new NotImplementedException();
+
+            public Task<IReadOnlyList<EcheanceCollisionRow>> GetEcheancesMemeDoNumeroAsync(int soId, string doNumero)
+                => throw new NotImplementedException();
+
+            public Task<string?> GetMotifErreurCacheAsync(int soId, int ecId)
+                => throw new NotImplementedException();
+
+            public Task<IReadOnlyDictionary<int, DocumentReglementSageRow>> GetDocumentsReglementSageAsync(
+                string sageConnectionString, IEnumerable<int> ecNos)
+                => throw new NotImplementedException();
+
+            public Task<CacheLectureRow?> GetDerniereLectureCacheAsync(int soId, int ecId)
+                => throw new NotImplementedException();
+
+            public Task<IReadOnlyList<CacheBucketRow>> GetBucketsCacheAsync(int soId, int ecId)
+                => throw new NotImplementedException();
+
+            public Task SupprimerLignesParEcIdAsync(Guid declarationId, int ecId)
+                => Task.CompletedTask;
         }
     }
 }

@@ -3,6 +3,7 @@
     <Project Path="SageTaxReader/SageTaxReader.Contracts/SageTaxReader.Contracts.csproj" />
   </Folder>
   <Project Path="Declaration.API/Declaration.API.csproj" />
+  <Project Path="Declaration.Setup/Declaration.Setup.csproj" />
   <Project Path="Declaration.Application/Declaration.Application.csproj" />
   <Project Path="Declaration.Controle/Declaration.Controle.csproj" />
   <Project Path="Declaration.Controle.Tests/Declaration.Controle.Tests.csproj" />

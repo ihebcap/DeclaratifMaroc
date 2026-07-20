@@ -109,8 +109,10 @@ namespace Declaration.Orchestration.Tests
         public bool PaymentPresent { get; set; } = true;
         public bool PaymentPointMatches { get; set; } = true;
 
-        public IReadOnlyList<VentilationSageCacheEntry> GetEntries(int ecId, string _)
-            => _store.TryGetValue(ecId, out var list) ? list : new List<VentilationSageCacheEntry>();
+        public IReadOnlyList<VentilationSageCacheEntry> GetEntries(int soId, int ecId, string _)
+            => _store.TryGetValue(ecId, out var list)
+                ? list.Where(e => e.SO_Id == soId).ToList()
+                : new List<VentilationSageCacheEntry>();
 
         public PaiementToken? GetCurrentPaiementToken(int ecId, string _)
         {
@@ -132,13 +134,13 @@ namespace Declaration.Orchestration.Tests
 
         // TASK-072 : purge toute ventilation existante et la remplace par une sentinelle unique.
         // TASK-076 : persiste en plus les montants bruts (si fournis) sur la ligne sentinelle.
-        public void MarquerEnErreur(int ecId, string motif, string _, MontantsBrutsErreur? montantsBruts = null)
+        public void MarquerEnErreur(int soId, int ecId, string motif, string _, MontantsBrutsErreur? montantsBruts = null)
         {
             _store[ecId] = new List<VentilationSageCacheEntry>
             {
                 new()
                 {
-                    EC_Id = ecId, Taux = -1, CodeTaxe = "ERREUR", MotifErreur = motif,
+                    SO_Id = soId, EC_Id = ecId, Taux = -1, CodeTaxe = "ERREUR", MotifErreur = motif,
                     BrutHT = montantsBruts?.TotalHTNet,
                     BrutTva = montantsBruts?.TotalTva,
                     BrutParafiscale = montantsBruts?.TotalParafiscale,
@@ -157,7 +159,7 @@ namespace Declaration.Orchestration.Tests
         public bool HasEntry(int ecId) => _store.ContainsKey(ecId) && _store[ecId].Count > 0;
 
         // TASK-078 : purge sans réécrire (utilisé par ResynchroniserLigneAsync).
-        public void SupprimerEntrees(int ecId, string _) => _store.Remove(ecId);
+        public void SupprimerEntrees(int soId, int ecId, string _) => _store.Remove(ecId);
     }
 
     internal static class T
@@ -240,7 +242,7 @@ namespace Declaration.Orchestration.Tests
 
             Assert.Equal(1, inv.TotalCalls);          // OM lu une fois
             Assert.True(repo.HasEntry(1));            // ligne brute conservée
-            var rows = repo.GetEntries(1, "fake-pers");
+            var rows = repo.GetEntries(0, 1, "fake-pers");
             Assert.All(rows, r => Assert.Null(r.Token_MV_Id));   // token NULL = non déclarable
         }
 
@@ -327,7 +329,7 @@ namespace Declaration.Orchestration.Tests
             Assert.Empty(modele.Lignes);
             Assert.Contains(modele.Alertes, a => a.Code == "FACTURE_ILLISIBLE_OM");
             Assert.True(repo.HasEntry(20));
-            var rows = repo.GetEntries(20, "fake-pers");
+            var rows = repo.GetEntries(0, 20, "fake-pers");
             Assert.Single(rows);
             Assert.Equal("ERREUR", rows[0].CodeTaxe);
             Assert.Equal(ErroneousWorkerInvoker.Motif, rows[0].MotifErreur);
@@ -364,7 +366,7 @@ namespace Declaration.Orchestration.Tests
 
             orch.Traiter(new[] { T.Aff("FAC076", 40) }, 1);
 
-            var rows = repo.GetEntries(40, "fake-pers");
+            var rows = repo.GetEntries(0, 40, "fake-pers");
             Assert.Single(rows);
             Assert.Equal("ERREUR", rows[0].CodeTaxe);
             Assert.Equal(ErroneousWorkerInvoker.BrutHT, rows[0].BrutHT);
@@ -403,7 +405,7 @@ namespace Declaration.Orchestration.Tests
             Assert.Empty(modele.Lignes);
             Assert.Contains(modele.Alertes, a => a.Code == "FACTURE_ILLISIBLE_OM");
             // La ligne corrompue a été purgée et remplacée par la sentinelle (auto-guérison du cache).
-            var rows = repo.GetEntries(30, "fake-pers");
+            var rows = repo.GetEntries(0, 30, "fake-pers");
             Assert.Single(rows);
             Assert.Equal("ERREUR", rows[0].CodeTaxe);
         }
@@ -425,7 +427,7 @@ namespace Declaration.Orchestration.Tests
     // Cible : .\sql2022 / GR_EMA_DISTRIBUTION
     //   Même moteur SQL Server et même base que la prod.
     //   EC_Id réservés ≥ 900000 pour éviter toute collision.
-    //   La table GRC_VENTILATION_SAGE_CACHE est créée par le DDL
+    //   La table DM_VENTILATION_SAGE_CACHE est créée par le DDL
     //   002_Cache_Ventilation_Sage.sql (doit être appliqué au préalable sur la base).
     //   Teardown : DELETE WHERE EC_Id IN (plage de test).
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -451,11 +453,16 @@ namespace Declaration.Orchestration.Tests
         // Plage d'EC_Id réservée pour les tests (jamais présente en prod)
         private const string TestEcIds = "900001,900002,900003,900004,900005,900006,900007,900010,900011,900012";
 
+        // TASK-118 : SO_Id de test — distinct du SO_Id=1 réel (GR_EMA_DISTRIBUTION), pour ne
+        // jamais collisionner avec les données de prod tout en exerçant le filtre SO_Id du cache.
+        internal const int TestSoId = 777001;
+
         // DDL de la table cache (idempotent — IF NOT EXISTS)
         private const string EnsureTableSql = @"
-            IF OBJECT_ID('GRC_VENTILATION_SAGE_CACHE','U') IS NULL
+            IF OBJECT_ID('DM_VENTILATION_SAGE_CACHE','U') IS NULL
             BEGIN
-                CREATE TABLE [GRC_VENTILATION_SAGE_CACHE] (
+                CREATE TABLE [DM_VENTILATION_SAGE_CACHE] (
+                    [SO_Id]          INT             NOT NULL,
                     [EC_Id]          INT             NOT NULL,
                     [Taux]           DECIMAL(18,4)   NOT NULL,
                     [BaseHT]         DECIMAL(18,4)   NOT NULL,
@@ -470,47 +477,47 @@ namespace Declaration.Orchestration.Tests
                     [DateLecture]    DATETIME2       NOT NULL DEFAULT GETUTCDATE(),
                     [Source]         NVARCHAR(100)   NOT NULL DEFAULT 'OM',
                     [MotifErreur]    NVARCHAR(500)   NULL,
-                    CONSTRAINT [PK_GRC_VENTILATION_SAGE_CACHE] PRIMARY KEY ([EC_Id], [Taux])
+                    CONSTRAINT [PK_DM_VENTILATION_SAGE_CACHE] PRIMARY KEY ([SO_Id], [EC_Id], [Taux])
                 );
-                CREATE INDEX [IX_GRC_VENTILATION_SAGE_CACHE_ECId]
-                ON [GRC_VENTILATION_SAGE_CACHE] ([EC_Id]);
+                CREATE INDEX [IX_DM_VENTILATION_SAGE_CACHE_ECId]
+                ON [DM_VENTILATION_SAGE_CACHE] ([EC_Id]);
             END
             ELSE IF NOT EXISTS (
                 SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = 'GRC_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'MotifErreur'
+                WHERE TABLE_NAME = 'DM_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'MotifErreur'
             )
             BEGIN
-                ALTER TABLE [GRC_VENTILATION_SAGE_CACHE] ADD [MotifErreur] NVARCHAR(500) NULL;
+                ALTER TABLE [DM_VENTILATION_SAGE_CACHE] ADD [MotifErreur] NVARCHAR(500) NULL;
             END;
 
             -- TASK-076 : montants bruts Sage (sentinelle d'erreur uniquement).
             IF NOT EXISTS (
                 SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = 'GRC_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'BrutHT'
+                WHERE TABLE_NAME = 'DM_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'BrutHT'
             )
             BEGIN
-                ALTER TABLE [GRC_VENTILATION_SAGE_CACHE] ADD [BrutHT] DECIMAL(18,4) NULL;
+                ALTER TABLE [DM_VENTILATION_SAGE_CACHE] ADD [BrutHT] DECIMAL(18,4) NULL;
             END;
             IF NOT EXISTS (
                 SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = 'GRC_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'BrutTva'
+                WHERE TABLE_NAME = 'DM_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'BrutTva'
             )
             BEGIN
-                ALTER TABLE [GRC_VENTILATION_SAGE_CACHE] ADD [BrutTva] DECIMAL(18,4) NULL;
+                ALTER TABLE [DM_VENTILATION_SAGE_CACHE] ADD [BrutTva] DECIMAL(18,4) NULL;
             END;
             IF NOT EXISTS (
                 SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = 'GRC_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'BrutParafiscale'
+                WHERE TABLE_NAME = 'DM_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'BrutParafiscale'
             )
             BEGIN
-                ALTER TABLE [GRC_VENTILATION_SAGE_CACHE] ADD [BrutParafiscale] DECIMAL(18,4) NULL;
+                ALTER TABLE [DM_VENTILATION_SAGE_CACHE] ADD [BrutParafiscale] DECIMAL(18,4) NULL;
             END;
             IF NOT EXISTS (
                 SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = 'GRC_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'BrutTtc'
+                WHERE TABLE_NAME = 'DM_VENTILATION_SAGE_CACHE' AND COLUMN_NAME = 'BrutTtc'
             )
             BEGIN
-                ALTER TABLE [GRC_VENTILATION_SAGE_CACHE] ADD [BrutTtc] DECIMAL(18,4) NULL;
+                ALTER TABLE [DM_VENTILATION_SAGE_CACHE] ADD [BrutTtc] DECIMAL(18,4) NULL;
             END";
 
         public Task024SqlServerIntegrationTests()
@@ -519,7 +526,7 @@ namespace Declaration.Orchestration.Tests
             conn.Open();
             conn.Execute(EnsureTableSql);
             // Nettoyer les éventuelles données de tests précédents
-            conn.Execute($"DELETE FROM GRC_VENTILATION_SAGE_CACHE WHERE EC_Id IN ({TestEcIds})");
+            conn.Execute($"DELETE FROM DM_VENTILATION_SAGE_CACHE WHERE EC_Id IN ({TestEcIds})");
         }
 
         public void Dispose()
@@ -528,7 +535,7 @@ namespace Declaration.Orchestration.Tests
             {
                 using var conn = new SqlConnection(SqlServerCs);
                 conn.Open();
-                conn.Execute($"DELETE FROM GRC_VENTILATION_SAGE_CACHE WHERE EC_Id IN ({TestEcIds})");
+                conn.Execute($"DELETE FROM DM_VENTILATION_SAGE_CACHE WHERE EC_Id IN ({TestEcIds})");
             }
             catch { /* best-effort */ }
         }
@@ -545,13 +552,13 @@ namespace Declaration.Orchestration.Tests
 
             // Vérifie la table
             var tableExists = conn.ExecuteScalar<int>(
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='GRC_VENTILATION_SAGE_CACHE'");
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='DM_VENTILATION_SAGE_CACHE'");
             Assert.Equal(1, tableExists);
 
             // Vérifie les colonnes clés et leurs types SQL Server
             var cols = conn.Query(
                 "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS " +
-                "WHERE TABLE_NAME='GRC_VENTILATION_SAGE_CACHE'")
+                "WHERE TABLE_NAME='DM_VENTILATION_SAGE_CACHE'")
                 .ToDictionary(r => (string)r.COLUMN_NAME, r => (string)r.DATA_TYPE);
 
             Assert.Equal("int",       cols["EC_Id"]);
@@ -569,13 +576,13 @@ namespace Declaration.Orchestration.Tests
             var repo = Repo();
             var entry = new VentilationSageCacheEntry
             {
-                EC_Id = 900001, Taux = 20, BaseHT = 1000, MontantTva = 200, TTC = 1200,
+                SO_Id = TestSoId, EC_Id = 900001, Taux = 20, BaseHT = 1000, MontantTva = 200, TTC = 1200,
                 CodeTaxe = "TVA20", TotalHT = 1000, TotalTva = 200, TotalTtc = 1200,
                 Token_MV_Id = 42, Token_MV_Point = 1
             };
 
             repo.UpsertEntries(new[] { entry }, SqlServerCs);
-            var rows = repo.GetEntries(900001, SqlServerCs);
+            var rows = repo.GetEntries(TestSoId, 900001, SqlServerCs);
 
             Assert.Single(rows);
             Assert.Equal(900001, rows[0].EC_Id);
@@ -594,7 +601,7 @@ namespace Declaration.Orchestration.Tests
             var repo = Repo();
             var entry = new VentilationSageCacheEntry
             {
-                EC_Id = 900002, Taux = 20, BaseHT = 500, MontantTva = 100, TTC = 600,
+                SO_Id = TestSoId, EC_Id = 900002, Taux = 20, BaseHT = 500, MontantTva = 100, TTC = 600,
                 CodeTaxe = "TVA20", TotalHT = 500, TotalTva = 100, TotalTtc = 600,
                 Token_MV_Id = 11, Token_MV_Point = 1
             };
@@ -604,7 +611,7 @@ namespace Declaration.Orchestration.Tests
             entry.BaseHT = 800; entry.MontantTva = 160; entry.TTC = 960;
             repo.UpsertEntries(new[] { entry }, SqlServerCs); // 2e upsert → UPDATE
 
-            var rows = repo.GetEntries(900002, SqlServerCs);
+            var rows = repo.GetEntries(TestSoId, 900002, SqlServerCs);
             Assert.Single(rows);            // pas de doublon
             Assert.Equal(800m, (decimal)rows[0].BaseHT);  // valeur mise à jour
         }
@@ -622,7 +629,8 @@ namespace Declaration.Orchestration.Tests
                 connectionString: "fake-grf",
                 sageConnectionString: "fake-sage",
                 ventilationCache: repo,
-                persistenceConnectionString: SqlServerCs);
+                persistenceConnectionString: SqlServerCs,
+                soId: TestSoId);
 
             var aff = T.Aff("T024-FAC001", ecId: 900003);
 
@@ -635,7 +643,7 @@ namespace Declaration.Orchestration.Tests
             Assert.Equal(1, inv.TotalCalls); // toujours 1
 
             // La ligne est bien en base
-            Assert.NotEmpty(repo.GetEntries(900003, SqlServerCs));
+            Assert.NotEmpty(repo.GetEntries(TestSoId, 900003, SqlServerCs));
         }
 
         // ── IT-5 — Dépointage (token diverge) → OM rappelé sur SQL Server ────
@@ -648,7 +656,7 @@ namespace Declaration.Orchestration.Tests
 
             var orch = new OrchestrateurDeclaration(
                 inv, T.Cfg, new StubLecteurFgr(),
-                "fake-grf", "fake-sage", repo, SqlServerCs);
+                "fake-grf", "fake-sage", repo, SqlServerCs, soId: TestSoId);
 
             var aff = T.Aff("T024-FAC002", ecId: 900004);
 
@@ -674,7 +682,7 @@ namespace Declaration.Orchestration.Tests
 
             var orch = new OrchestrateurDeclaration(
                 inv, T.Cfg, new StubLecteurFgr(),
-                "fake-grf", "fake-sage", repo, SqlServerCs);
+                "fake-grf", "fake-sage", repo, SqlServerCs, soId: TestSoId);
 
             var aff = T.Aff("T024-FAC003", ecId: 900005);
 
@@ -700,15 +708,15 @@ namespace Declaration.Orchestration.Tests
             var repo = Repo();
             var ventilationReelle = new VentilationSageCacheEntry
             {
-                EC_Id = 900006, Taux = 20, BaseHT = 1000, MontantTva = 200, TTC = 1200,
+                SO_Id = TestSoId, EC_Id = 900006, Taux = 20, BaseHT = 1000, MontantTva = 200, TTC = 1200,
                 CodeTaxe = "TVA20", TotalHT = 1000, TotalTva = 200, TotalTtc = 1200,
                 Token_MV_Id = 42, Token_MV_Point = 1
             };
             repo.UpsertEntries(new[] { ventilationReelle }, SqlServerCs);
 
-            repo.MarquerEnErreur(900006, "Incohérence Sage : HT+TVA ≠ TTC.", SqlServerCs);
+            repo.MarquerEnErreur(TestSoId, 900006, "Incohérence Sage : HT+TVA ≠ TTC.", SqlServerCs);
 
-            var rows = repo.GetEntries(900006, SqlServerCs);
+            var rows = repo.GetEntries(TestSoId, 900006, SqlServerCs);
             Assert.Single(rows); // la ventilation réelle a été purgée
             Assert.Equal("ERREUR", rows[0].CodeTaxe);
             Assert.Equal(-1, (int)rows[0].Taux);
@@ -731,7 +739,7 @@ namespace Declaration.Orchestration.Tests
             {
                 new VentilationSageCacheEntry
                 {
-                    EC_Id = 900007, Taux = 20, CodeTaxe = "D20",
+                    SO_Id = TestSoId, EC_Id = 900007, Taux = 20, CodeTaxe = "D20",
                     BaseHT = 1720251.20, MontantTva = 344050.24, TTC = 2064301.44,
                     TotalHT = 1720251.20, TotalTva = 344050.24, TotalTtc = 20700.00,
                     Token_MV_Id = 42, Token_MV_Point = 1
@@ -739,7 +747,7 @@ namespace Declaration.Orchestration.Tests
             }, SqlServerCs);
 
             var orch = new OrchestrateurDeclaration(inv, T.Cfg, new StubLecteurFgr(),
-                "fake-grf", "fake-sage", repo, SqlServerCs);
+                "fake-grf", "fake-sage", repo, SqlServerCs, soId: TestSoId);
 
             var modele = orch.Traiter(new[] { T.Aff("IT8-FC2501717", ecId: 900007) }, 1);
 
@@ -747,7 +755,7 @@ namespace Declaration.Orchestration.Tests
             Assert.Empty(modele.Lignes);
             Assert.Contains(modele.Alertes, a => a.Code == "FACTURE_ILLISIBLE_OM");
 
-            var rows = repo.GetEntries(900007, SqlServerCs);
+            var rows = repo.GetEntries(TestSoId, 900007, SqlServerCs);
             Assert.Single(rows);
             Assert.Equal("ERREUR", rows[0].CodeTaxe);
             Assert.Contains("Incohérence Sage", rows[0].MotifErreur);
@@ -764,9 +772,9 @@ namespace Declaration.Orchestration.Tests
                 TotalHTNet = 1720251.20, TotalTva = 344050.24, TotalParafiscale = 0, TotalTtc = 20700.00
             };
 
-            repo.MarquerEnErreur(900012, "Incohérence Sage : HT+TVA ≠ TTC.", SqlServerCs, montantsBruts);
+            repo.MarquerEnErreur(TestSoId, 900012, "Incohérence Sage : HT+TVA ≠ TTC.", SqlServerCs, montantsBruts);
 
-            var rows = repo.GetEntries(900012, SqlServerCs);
+            var rows = repo.GetEntries(TestSoId, 900012, SqlServerCs);
             Assert.Single(rows);
             Assert.Equal("ERREUR", rows[0].CodeTaxe);
             Assert.Equal(1720251.20, rows[0].BrutHT!.Value, precision: 2);
@@ -775,7 +783,72 @@ namespace Declaration.Orchestration.Tests
             Assert.Equal(20700.00, rows[0].BrutTtc!.Value, precision: 2);
         }
 
-        // ── IT-Dump — Génère VERIFY/TASK-024_verify.md ────────────────────────
+        // ═══════════════════════════════════════════════════════════════════════════════
+    // TASK-106 — Token de paiement espèce : exemption MV_Point bornée à Espece
+    //
+    // Exerce directement VentilationSageCacheRepository.GetCurrentPaiementToken (pas de
+    // stub) sur des lignes RT_AFFECTATION/RT_MOUVEMENT RÉELLES déjà présentes dans
+    // GR_EMA_DISTRIBUTION (même moteur/base que la prod) — lecture seule, aucune écriture.
+    // RT_ECHEANCE/RT_MOUVEMENT portent ~100 colonnes NOT NULL sans défaut (schéma répliqué
+    // Sage) : y injecter des lignes synthétiques est trop fragile/coûteux pour un test ;
+    // les règlements espèce cités dans la TASK-106 (RF26030013→17, RF26010010→12) existent
+    // déjà réellement en base et suffisent à prouver le comportement, sans aucune mutation.
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    public class Task106TokenEspeceTests
+    {
+        private const string SqlServerCs = Task024SqlServerIntegrationTests.SqlServerCs;
+
+        // Règlements espèce fournisseur réels cités dans TASK-106 (MV_Domaine=1, MV_Type=0
+        // Espece, MV_Point=0 — jamais rapprochés en banque) : avant le correctif, 0/8 produisaient
+        // un token (GetCurrentPaiementToken renvoyait NULL, cf. valorisation.log « token MV NULL »).
+        private static readonly (string Numero, int EcId)[] ReglementsEspeceReels =
+        {
+            ("RF26010010", 18233), ("RF26010011", 18268), ("RF26010012", 18267),
+            ("RF26030013", 18227), ("RF26030014", 18211), ("RF26030015", 18266),
+            ("RF26030016", 18319), ("RF26030017", 19866),
+        };
+
+        [Fact]
+        public void Espece_ReglementsReels_TASK106_TokenNonNul_8sur8()
+        {
+            var repo = new VentilationSageCacheRepository();
+            var echecs = new System.Collections.Generic.List<string>();
+
+            foreach (var (numero, ecId) in ReglementsEspeceReels)
+            {
+                var token = repo.GetCurrentPaiementToken(ecId, SqlServerCs);
+                if (token == null) echecs.Add(numero);
+            }
+
+            Assert.True(echecs.Count == 0,
+                $"TASK-106 : {echecs.Count}/8 règlements espèce toujours en token NULL : {string.Join(", ", echecs)}");
+        }
+
+        [Fact]
+        public void NonEspece_NonRapprochee_TokenResteNull_NonRegressionTask099()
+        {
+            // RF26010005 : virement (MV_Type=3), MV_Point=0 (non rapproché) → doit rester
+            // non déclarable. L'exemption MV_Point reste strictement bornée à l'espèce.
+            var repo = new VentilationSageCacheRepository();
+            var token = repo.GetCurrentPaiementToken(18269, SqlServerCs);
+
+            Assert.Null(token);
+        }
+
+        [Fact]
+        public void NonEspece_Rapprochee_TokenNonNul_ComportementInchange()
+        {
+            // RF26010001 : virement (MV_Type=3), MV_Point=1 (rapproché) → déjà déclarable
+            // avant TASK-106, doit le rester (aucune régression).
+            var repo = new VentilationSageCacheRepository();
+            var token = repo.GetCurrentPaiementToken(18219, SqlServerCs);
+
+            Assert.NotNull(token);
+        }
+    }
+
+    // ── IT-Dump — Génère VERIFY/TASK-024_verify.md ────────────────────────
 
         [Fact]
         public void ITDump_Verify_Task024_SQLServer()
@@ -783,7 +856,7 @@ namespace Declaration.Orchestration.Tests
             // Scénario IT-4 (0 OM)
             var repo4 = Repo(); var inv4 = new CountingWorkerInvoker();
             var orch4 = new OrchestrateurDeclaration(inv4, T.Cfg, new StubLecteurFgr(),
-                "fake-grf", "fake-sage", repo4, SqlServerCs);
+                "fake-grf", "fake-sage", repo4, SqlServerCs, soId: TestSoId);
             var aff4 = T.Aff("T024-DUMP01", ecId: 900010);
             var m1 = orch4.Traiter(new[] { aff4 }, 1);
             var m2 = orch4.Traiter(new[] { aff4 }, 1);
@@ -792,7 +865,7 @@ namespace Declaration.Orchestration.Tests
             // Scénario IT-5 (dépointage)
             var repo5 = Repo(); var inv5 = new CountingWorkerInvoker();
             var orch5 = new OrchestrateurDeclaration(inv5, T.Cfg, new StubLecteurFgr(),
-                "fake-grf", "fake-sage", repo5, SqlServerCs);
+                "fake-grf", "fake-sage", repo5, SqlServerCs, soId: TestSoId);
             var aff5 = T.Aff("T024-DUMP02", ecId: 900011);
             orch5.Traiter(new[] { aff5 }, 1);
             repo5.ForcedToken = new() { MV_Id = 99, MV_Point = 0 };
@@ -808,7 +881,7 @@ namespace Declaration.Orchestration.Tests
 ## Moteur de test
 
 - Connexion : `Server=.\sql2022;Database=GR_EMA_DISTRIBUTION`
-- Table : `GRC_VENTILATION_SAGE_CACHE` (DDL `002_Cache_Ventilation_Sage.sql`)
+- Table : `DM_VENTILATION_SAGE_CACHE` (DDL `002_Cache_Ventilation_Sage.sql`)
 - Repository : `VentilationSageCacheRepository` — SQL Server exclusif (MERGE)
 
 ## Critères de validation

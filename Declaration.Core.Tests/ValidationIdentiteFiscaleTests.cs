@@ -33,18 +33,35 @@ namespace Declaration.Core.Tests
             ValidationIdentiteFiscale.ValiderPourExport("12345678", "123456789012345", 1);
         }
 
+        // F4 / CDC §4.8 : ValiderPourExport ne bloque plus sur une longueur ≠ 8/15,
+        // uniquement sur vide (après nettoyage) ou espace/tabulation résiduel.
         [Fact]
-        public void ValiderPourExport_IfInvalide_LanceApplicationException()
+        public void ValiderPourExport_IfVide_LanceApplicationException()
         {
-            var ex = Assert.Throws<ApplicationException>(() => ValidationIdentiteFiscale.ValiderPourExport("123", "123456789012345", 1));
+            var ex = Assert.Throws<ApplicationException>(() => ValidationIdentiteFiscale.ValiderPourExport("", "123456789012345", 1));
             Assert.Contains("L'identifiant fiscal du tiers est invalide", ex.Message);
         }
 
         [Fact]
-        public void ValiderPourExport_IceInvalide_LanceApplicationException()
+        public void ValiderPourExport_IfAvecEspace_LanceApplicationException()
         {
-            var ex = Assert.Throws<ApplicationException>(() => ValidationIdentiteFiscale.ValiderPourExport("12345678", "123", 2));
-            Assert.Contains("L'ICE du tiers est invalide", ex.Message);
+            var ex = Assert.Throws<ApplicationException>(() => ValidationIdentiteFiscale.ValiderPourExport("12 45", "123456789012345", 1));
+            Assert.Contains("L'identifiant fiscal du tiers est invalide", ex.Message);
+        }
+
+        [Fact]
+        public void ValiderPourExport_IceVideOuAvecEspace_LanceApplicationException()
+        {
+            Assert.Throws<ApplicationException>(() => ValidationIdentiteFiscale.ValiderPourExport("12345678", "", 2));
+            Assert.Throws<ApplicationException>(() => ValidationIdentiteFiscale.ValiderPourExport("12345678", "12345 78901234", 2));
+        }
+
+        [Fact]
+        public void ValiderPourExport_IfSeptChiffresEtIceNonStandard_NeLancePas()
+        {
+            // Cas réel du fichier accepté : IF à 7 chiffres, longueurs variables (CDC §5.2)
+            ValidationIdentiteFiscale.ValiderPourExport("1084334", "001544256000053", 1);
+            ValidationIdentiteFiscale.ValiderPourExport("1234567", "12345", 2);
         }
     }
 }

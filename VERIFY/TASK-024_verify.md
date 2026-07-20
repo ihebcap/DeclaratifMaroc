@@ -7,7 +7,7 @@
 ## Moteur de test
 
 - Connexion : `Server=.\sql2022;Database=GR_EMA_DISTRIBUTION`
-- Table : `GRC_VENTILATION_SAGE_CACHE` (DDL `002_Cache_Ventilation_Sage.sql`)
+- Table : `DM_VENTILATION_SAGE_CACHE` (DDL `002_Cache_Ventilation_Sage.sql`)
 - Repository : `VentilationSageCacheRepository` — SQL Server exclusif (MERGE)
 
 ## Critères de validation

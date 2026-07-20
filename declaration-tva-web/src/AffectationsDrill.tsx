@@ -59,18 +59,28 @@ const NON_VALORISE = new Set([2, 3, 4]);
 type PageFetchResult = { items: LigneAffectation[]; alertes: AlertRevalidationRaw[] };
 type AlertRevalidationRaw = { type: string; message: string; code: string; refLigne: string };
 
-async function fetchLignesReglement(declarationId: string, numeroRapprochement: string): Promise<PageFetchResult> {
-  const size = 200;
+function getApiDomaine(dom: string): string {
+  if (dom === 'Encaissement') return 'Encaissement';
+  return 'Decaissement';
+}
+
+// TASK-111 : une grosse sélection (150+ règlements) déclenchait autant de requêtes HTTP en
+// parallèle qu'il y a de règlements → ERR_INSUFFICIENT_RESOURCES (plafond connexions navigateur).
+// Le filtre `numeroRapprochement` accepte déjà une liste côté back (TASK-067B,
+// BuildLigneFilterWhere/DeclarationRepository.cs) — on regroupe donc par domaine (au plus 2 valeurs :
+// Encaissement/Decaissement) et on émet UN appel paginé par domaine, jamais un par règlement.
+async function fetchLignesPourReglements(declarationId: string, domaine: string, numeros: string[]): Promise<PageFetchResult> {
+  const size = 500;
   let page = 1;
   let items: LigneAffectation[] = [];
   let alertes: AlertRevalidationRaw[] = [];
   for (;;) {
     const res = await api.get(`/declarations/${declarationId}/lignes`, {
       params: {
-        domaine: 'Decaissement',
+        domaine,
         page,
         size,
-        filter: JSON.stringify({ numeroRapprochement }),
+        filter: JSON.stringify({ numeroRapprochement: numeros }),
       },
     });
     const chunk: LigneAffectation[] = res.data.items || [];
@@ -83,25 +93,81 @@ async function fetchLignesReglement(declarationId: string, numeroRapprochement: 
   return { items, alertes };
 }
 
+type SelectionFetchResult = {
+  dataByReglement: Record<string, LigneAffectation[]>;
+  alertes: AlertRevalidationRaw[];
+  /** Numéros de règlement dont le chargement a échoué (échec réseau/serveur isolé au domaine). */
+  echecs: string[];
+};
+
+// Un seul appel par domaine (≤2 au total, quel que soit N) — un échec réseau isolé sur un domaine
+// n'efface pas les règlements de l'autre domaine, et ses règlements sont nommément identifiés
+// (jamais un message générique masquant lequel a échoué, TASK-111).
+async function fetchLignesSelection(declarationId: string, selectedRows: ReglementRow[]): Promise<SelectionFetchResult> {
+  const numerosParDomaine = new Map<string, string[]>();
+  selectedRows.forEach(r => {
+    const d = getApiDomaine(r.domaine);
+    if (!numerosParDomaine.has(d)) numerosParDomaine.set(d, []);
+    numerosParDomaine.get(d)!.push(r.numeroReglement);
+  });
+
+  const parDomaine = await Promise.all(
+    [...numerosParDomaine.entries()].map(async ([domaine, numeros]) => {
+      try {
+        return { numeros, result: await fetchLignesPourReglements(declarationId, domaine, numeros) };
+      } catch (e) {
+        console.error(e);
+        return { numeros, result: null };
+      }
+    })
+  );
+
+  const dataByReglement: Record<string, LigneAffectation[]> = {};
+  selectedRows.forEach(r => { dataByReglement[r.numeroReglement] ??= []; });
+  const alertes: AlertRevalidationRaw[] = [];
+  const echecs: string[] = [];
+
+  parDomaine.forEach(({ numeros, result }) => {
+    if (!result) { echecs.push(...numeros); return; }
+    alertes.push(...result.alertes);
+    result.items.forEach(l => {
+      (dataByReglement[l.numeroRapprochement] ??= []).push(l);
+    });
+  });
+
+  return { dataByReglement, alertes, echecs };
+}
+
+// Identifie nommément les règlements en échec (jamais un « Erreur… » générique masquant lequel,
+// cf. Périmètre TASK-111) — borné à 10 numéros affichés pour rester lisible sur une grosse sélection.
+function echecsMessage(echecs: string[]): string {
+  const affiches = echecs.slice(0, 10).join(', ');
+  const suffixe = echecs.length > 10 ? `… (+${echecs.length - 10} autre(s))` : '';
+  return `Échec du chargement pour ${echecs.length} règlement(s) : ${affiches}${suffixe}`;
+}
+
 // Relecture après intégration (TASK-075) : aucune sélection de règlements en
 // session (le state local n'est jamais réhydraté au rechargement), donc on
 // charge TOUTES les lignes de la déclaration figée par declarationId — même
 // endpoint que le parcours normal, juste sans filtre de règlement.
 async function fetchAllLignesDeclaration(declarationId: string): Promise<PageFetchResult> {
   const size = 500;
-  let page = 1;
   let items: LigneAffectation[] = [];
   let alertes: AlertRevalidationRaw[] = [];
-  for (;;) {
-    const res = await api.get(`/declarations/${declarationId}/lignes`, {
-      params: { domaine: 'Decaissement', page, size },
-    });
-    const chunk: LigneAffectation[] = res.data.items || [];
-    items = items.concat(chunk);
-    alertes = alertes.concat(res.data.alertes || []);
-    const total = res.data.totalCount ?? chunk.length;
-    if (chunk.length === 0 || items.length >= total) break;
-    page += 1;
+  const domaines = ['Decaissement', 'Encaissement'];
+  for (const d of domaines) {
+    let page = 1;
+    for (;;) {
+      const res = await api.get(`/declarations/${declarationId}/lignes`, {
+        params: { domaine: d, page, size },
+      });
+      const chunk: LigneAffectation[] = res.data.items || [];
+      items = items.concat(chunk);
+      alertes = alertes.concat(res.data.alertes || []);
+      const total = res.data.totalCount ?? chunk.length;
+      if (chunk.length === 0 || items.length >= total) break;
+      page += 1;
+    }
   }
   return { items, alertes };
 }
@@ -239,6 +305,10 @@ const GRID_COLUMNS: GCol[] = [
   { key: 'tiers', label: 'Tiers', filterType: 'list' },
   { key: 'origine', label: 'Orig.', filterType: 'list', width: '90px' },
   { key: 'statutConformite', label: 'Conf.', align: 'center', filterType: 'list', width: '110px' },
+  // TASK-105 : marqueur persistant + filtre — le flag `incoherenceValidee` (déjà remonté du
+  // back, TASK-078) ne disparaît jamais après validation, contrairement au bandeau rouge
+  // (dérivé des seules alertes ACTIVES, cf. facturesIncoherentes) qui s'éteint volontairement.
+  { key: 'incoherenceValidee', label: 'Incoh.', align: 'center', filterType: 'list', width: '110px' },
   { key: 'tauxTVA', label: 'Taux', align: 'right', filterType: 'list', width: '90px' },
   { key: 'paye', label: 'Payé', align: 'right', filterType: 'number', width: '120px' },
   { key: 'ttc', label: 'TTC', align: 'right', filterType: 'number', width: '120px' },
@@ -257,6 +327,7 @@ function rawCell(row: GridRow, key: string): string | number | null {
     case 'prorata': return row.prorata;
     case 'baseTva': return row.baseTva;
     case 'tva': return row.tva;
+    case 'incoherenceValidee': return row.incoherenceValidee ? 'Oui' : 'Non';
     default: return (row as unknown as Record<string, string>)[key] ?? '';
   }
 }
@@ -321,13 +392,10 @@ export function AffectationsDrill({
         setDataByReglement(grouped);
         setAlertesIncoherence(alertes.filter(a => a.code === 'LIGNE_FIGEE_A_REVERIFIER'));
       } else {
-        const entries = await Promise.all(
-          selectedRows.map(async r => [r.numeroReglement, await fetchLignesReglement(declarationId, r.numeroReglement)] as const)
-        );
-        setDataByReglement(Object.fromEntries(entries.map(([k, v]) => [k, v.items])));
-        setAlertesIncoherence(
-          entries.flatMap(([, v]) => v.alertes).filter(a => a.code === 'LIGNE_FIGEE_A_REVERIFIER')
-        );
+        const { dataByReglement: grouped, alertes, echecs } = await fetchLignesSelection(declarationId, selectedRows);
+        setDataByReglement(grouped);
+        setAlertesIncoherence(alertes.filter(a => a.code === 'LIGNE_FIGEE_A_REVERIFIER'));
+        if (echecs.length > 0) showToast(echecsMessage(echecs), 'error');
       }
     } catch (e) {
       console.error(e);
@@ -353,14 +421,11 @@ export function AffectationsDrill({
           setDataByReglement(grouped);
           setAlertesIncoherence(alertes.filter(a => a.code === 'LIGNE_FIGEE_A_REVERIFIER'));
         } else {
-          const entries = await Promise.all(
-            selectedRows.map(async r => [r.numeroReglement, await fetchLignesReglement(declarationId, r.numeroReglement)] as const)
-          );
+          const { dataByReglement: grouped, alertes, echecs } = await fetchLignesSelection(declarationId, selectedRows);
           if (cancelled) return;
-          setDataByReglement(Object.fromEntries(entries.map(([k, v]) => [k, v.items])));
-          setAlertesIncoherence(
-            entries.flatMap(([, v]) => v.alertes).filter(a => a.code === 'LIGNE_FIGEE_A_REVERIFIER')
-          );
+          setDataByReglement(grouped);
+          setAlertesIncoherence(alertes.filter(a => a.code === 'LIGNE_FIGEE_A_REVERIFIER'));
+          if (echecs.length > 0) showToast(echecsMessage(echecs), 'error');
         }
       } catch (e) {
         console.error(e);
@@ -447,6 +512,8 @@ export function AffectationsDrill({
     if (key === 'tiers') return distinct(allRows.map(r => r.tiers)).filter(Boolean).map(v => ({ label: v, value: v }));
     if (key === 'origine') return distinct(allRows.map(r => r.origine)).filter(Boolean).map(v => ({ label: v, value: v }));
     if (key === 'statutConformite') return distinct(allRows.map(r => r.statutConformite)).filter(Boolean).map(v => ({ label: v, value: v }));
+    // TASK-105 : liste fixe (booléen) — pas de dérivation utile depuis les lignes chargées.
+    if (key === 'incoherenceValidee') return [{ label: 'Oui', value: 'Oui' }, { label: 'Non', value: 'Non' }];
     if (key === 'tauxTVA') {
       return [...new Set(allRows.map(r => r.tauxTVA).filter((t): t is number => t != null))]
         .sort((a, b) => a - b)
@@ -571,14 +638,21 @@ export function AffectationsDrill({
           {/* Corps */}
           {filteredRows.map((r, i) => {
             const estIncoherente = r.ecId > 0 && facturesIncoherentes.has(r.factureNumero);
+            // TASK-105 : teinte persistante (ambre) une fois l'incohérence validée — l'alerte
+            // active (rouge) prime tant qu'elle existe ; jamais un retour silencieux au blanc.
+            const estValidee = !estIncoherente && r.incoherenceValidee;
             const next = filteredRows[i + 1];
             const derniereLigneDuGroupe = !next || next.numeroReglement !== r.numeroReglement || next.factureNumero !== r.factureNumero;
+            const prev = filteredRows[i - 1];
+            const premiereLigneDuGroupe = !prev || prev.numeroReglement !== r.numeroReglement || prev.factureNumero !== r.factureNumero;
+            const rowBg = estIncoherente ? '#fff1f2' : estValidee ? 'var(--status-warning-bg)' : 'white';
+            const rowBgHover = estIncoherente ? 'var(--status-blocking-bg)' : estValidee ? '#fef3c7' : 'var(--bg-secondary)';
             return (
               <Fragment key={r.key}>
                 <div
-                  style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: estIncoherente ? '#fff1f2' : 'white' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = estIncoherente ? 'var(--status-blocking-bg)' : 'var(--bg-secondary)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = estIncoherente ? '#fff1f2' : 'white')}
+                  style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: rowBg }}
+                  onMouseEnter={e => (e.currentTarget.style.background = rowBgHover)}
+                  onMouseLeave={e => (e.currentTarget.style.background = rowBg)}
                 >
                   {r.nonValorise ? (
                     <>
@@ -594,7 +668,7 @@ export function AffectationsDrill({
                   ) : (
                     visibleColumns.map(col => (
                       <div key={col.key} style={{ ...colStyle(col), padding: '0.4rem 0.75rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: colJustify(col), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {renderGridCell(col, r)}
+                        {renderGridCell(col, r, premiereLigneDuGroupe)}
                       </div>
                     ))
                   )}
@@ -639,7 +713,12 @@ export function AffectationsDrill({
 
         {filteredRows.length === 0 && !loading && (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-            Aucune affectation ne correspond aux filtres.
+            {activeFilterCount > 0
+              ? 'Aucune affectation ne correspond aux filtres.'
+              // TASK-109 : aucun filtre actif — le message "filtres" serait trompeur.
+              // Ce cas couvre à la fois "rien n'a encore été chargé" et "les règlements
+              // sélectionnés n'ont réellement aucune affectation" (motif métier).
+              : "Aucune affectation trouvée pour les règlements sélectionnés."}
           </div>
         )}
       </div>
@@ -659,7 +738,7 @@ function GridCell({ col, children }: { col: GCol; children: React.ReactNode }) {
   );
 }
 
-function renderGridCell(col: GCol, r: GridRow): React.ReactNode {
+function renderGridCell(col: GCol, r: GridRow, premiereLigneDuGroupe: boolean): React.ReactNode {
   switch (col.key) {
     case 'statutConformite':
       return (
@@ -667,10 +746,23 @@ function renderGridCell(col: GCol, r: GridRow): React.ReactNode {
           {r.statutConformite}
         </span>
       );
+    // TASK-105 : marqueur persistant — reste affiché après « Valider l'incohérence »,
+    // contrairement au bandeau rouge (éteint dès que l'alerte est consommée côté back).
+    case 'incoherenceValidee':
+      return r.incoherenceValidee ? (
+        <span
+          style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '99px', background: '#fef3c7', color: 'var(--status-warning-text)', fontWeight: 600 }}
+          title="Incohérence Sage validée en connaissance de cause — décision tracée, ligne et totaux inchangés"
+        >
+          Validée
+        </span>
+      ) : '—';
     case 'tauxTVA': return r.tauxTVA == null ? '—' : `${r.tauxTVA}%`;
-    case 'paye': return formatMoney(r.paye);
-    case 'ttc': return r.ttc == null ? '—' : formatMoney(r.ttc);
-    case 'prorata': return `${r.prorata.toFixed(2)}%`;
+    // Payé/TTC/Prorata sont facture-level (répétés à l'identique sur chaque ligne de taux
+    // du même groupe, TASK-104) — n'afficher qu'une fois par facture pour éviter la re-somme.
+    case 'paye': return premiereLigneDuGroupe ? formatMoney(r.paye) : '';
+    case 'ttc': return premiereLigneDuGroupe ? (r.ttc == null ? '—' : formatMoney(r.ttc)) : '';
+    case 'prorata': return premiereLigneDuGroupe ? `${r.prorata.toFixed(2)}%` : '';
     case 'baseTva': return r.baseTva == null ? '—' : formatMoney(r.baseTva);
     case 'tva': return <strong>{formatMoney(r.tva)}</strong>;
     default: return (r as unknown as Record<string, string>)[col.key];

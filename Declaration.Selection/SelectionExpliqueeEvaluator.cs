@@ -76,15 +76,16 @@ namespace Declaration.Selection
 
             if (motif == MotifRejet.Eligible)
             {
-                // Période située par la DATE DE RÉFÉRENCE (TASK-062, source unique RegleDatePeriode),
-                // borne haute homogène < finExclude sur les 3 chemins. Gate EstDeclarable : espèce
-                // (auto-rapprochée) OU rapproché banque (MV_Point=1).
+                // Période située par la DATE DE RÉFÉRENCE (TASK-062, source unique RegleDatePeriode).
+                // TASK-099 : la période devient une simple date de COUPURE (fin de période) — plus de
+                // borne basse (rattrapage de l'arriéré déclarable jamais déclaré, cf. RF26060125).
+                // Gate EstDeclarable : espèce (auto-rapprochée) OU rapproché banque (MV_Point=1).
                 // ⚠️ Keying espèce sur `source == Espece` (et NON MV_Type) : le comportement facture-first
                 //    de l'espèce reste GELÉ tant que le PO n'a pas arbitré (dépense/client espèce inchangés).
                 if (source == SourceAffectation.Espece)
                 {
                     // Espèce fournisseur : DateReference = MV_Date (= DatePaiement).
-                    if (r.DatePaiement < debut || r.DatePaiement >= finExclude)
+                    if (r.DatePaiement >= finExclude)
                         motif = MotifRejet.HorsPeriode;
                 }
                 else if (r.MV_Point != GrfEnums.Point_Oui)
@@ -95,7 +96,7 @@ namespace Declaration.Selection
                 else
                 {
                     // Non-espèce rapproché : DateReference = MV_PointDate.
-                    if (r.MV_PointDate == null || r.MV_PointDate < debut || r.MV_PointDate >= finExclude)
+                    if (r.MV_PointDate == null || r.MV_PointDate >= finExclude)
                         motif = MotifRejet.HorsPeriode;
                 }
             }

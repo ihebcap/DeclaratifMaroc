@@ -1,0 +1,29 @@
+<!--
+TASK-115 : gabarit de configuration WinSW pour le service Windows "Déclaratif Maroc".
+Declaration.Setup recopie ce fichier à côté du binaire WinSW renommé (ex. DeclaratifMaroc.exe)
+sous le nom DeclaratifMaroc.xml, en substituant les placeholders {{...}} — jamais édité à la main.
+
+Nommage produit (pas module) : cf. TASK-115 §Risques — le service s'appelle "DeclaratifMaroc",
+jamais "DeclarationTVA"/"TVA" seul, pour ne pas devenir trompeur à l'arrivée du 2e module.
+-->
+<service>
+  <id>{{SERVICE_ID}}</id>
+  <name>{{SERVICE_NAME}}</name>
+  <description>Déclaratif Maroc — service applicatif (API + fichiers statiques front)</description>
+
+  <!-- %BASE% = dossier contenant cet exe WinSW, résolu automatiquement par WinSW -->
+  <executable>%BASE%\Declaration.API.exe</executable>
+  <workingdirectory>%BASE%</workingdirectory>
+
+  <startmode>Automatic</startmode>
+
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="30 sec"/>
+  <resetfailure>1 hour</resetfailure>
+
+  <logpath>%BASE%\logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+</service>

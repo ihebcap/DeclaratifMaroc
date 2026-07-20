@@ -37,6 +37,23 @@ public sealed class ReglementRapprochementRow
     public int? EcTypeMin { get; set; }            // MIN(RT_ECHEANCE.EC_Type) des affectations
     public int? EcTypeMax { get; set; }            // MAX(RT_ECHEANCE.EC_Type) des affectations
     public int NbDeclare { get; set; }             // nb d'affectations avec DT_Id NOT NULL (TASK-028)
+    public int NbSelectionAutre { get; set; }      // nb d'autres déclarations EnCours ayant sélectionné ce règlement (TASK-097)
+
+    // ─── TASK-140 — identification de la déclaration verrou ─────────────────────
+    // DT_Id (tampon TASK-028) porté par les affectations, pour résoudre le NUMÉRO de la déclaration
+    // qui a verrouillé ce règlement (JOIN applicatif vers DM_ENTTVA, bases Dapper distinctes).
+    public int? DtId { get; set; }                 // MAX(AF.DT_Id) des affectations (NULL si non déclaré)
+    public int? DtIdMin { get; set; }              // MIN(AF.DT_Id) — sert UNIQUEMENT à détecter une incohérence
+
+    /// <summary>
+    /// Numéro de la déclaration verrou (ex. « TVA1-2026-02 »), résolu APPLICATIVEMENT depuis
+    /// <c>DM_ENTTVA.DT_Id</c> (base de persistance distincte de GRF — cf. DeclarationRepository).
+    /// NULL si le règlement n'est pas verrouillé par un DT_Id (non déclaré, ou seulement sélectionné
+    /// dans une autre déclaration EnCours non encore close → aucun DT_Id posé). Jamais inventé.
+    /// En cas d'incohérence (DtIdMin ≠ DtId, ne devrait pas arriver — verrouillage atomique TASK-028),
+    /// porte un libellé explicite des DEUX numéros plutôt qu'un choix arbitraire (transparence).
+    /// </summary>
+    public string? NumeroDeclaration { get; set; }
 
     // ─── Indicateurs dérivés (rendus VISIBLES, jamais absorbés) ────────────────
 
@@ -76,8 +93,8 @@ public sealed class ReglementRapprochementRow
     public DateTime? DateReference =>
         Declaration.Selection.RegleDatePeriode.DateReferencePour(MvType, MvPoint, MvPointDate, MvDate);
 
-    /// <summary>Déclaré : au moins une affectation porte le tampon DT_Id (lecture seule).</summary>
-    public bool EstDeclare => NbDeclare > 0;
+    /// <summary>Déclaré : au moins une affectation porte le tampon DT_Id (lecture seule) OU sélectionné dans une autre déclaration EnCours.</summary>
+    public bool EstDeclare => NbDeclare > 0 || NbSelectionAutre > 0;
 
     /// <summary>Libellé métier de l'origine (EC_Type des affectations).</summary>
     public string Origine => LibelleOrigine(EcTypeMin, EcTypeMax);
@@ -197,6 +214,8 @@ public sealed class ReglementRapprochementDistincts
 /// </summary>
 public sealed class RapprochementFilter
 {
+    public Guid? DeclarationId { get; init; } // Optionnel : déclaration courante pour exclure sa propre sélection (TASK-097)
+
     // Énumération + booléens en multi-sélection réelle (int : MV_Type ; bool → 0/1 côté SQL).
     public IReadOnlyList<int>? Modes { get; init; }
     public IReadOnlyList<bool>? RapprocheBanque { get; init; }

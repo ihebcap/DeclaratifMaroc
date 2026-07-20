@@ -70,7 +70,7 @@ namespace Declaration.Orchestration.Tests
         }
 
         [Fact]
-        public void MapLignesCandidates_MotifDejaEnCoursAilleurs_MessagePreciseLaDeclarationConcurrente()
+        public void MapLignesCandidates_MotifDejaEnCoursAilleurs_NeGeneresAucuneLigne()
         {
             var declarationId = Guid.NewGuid();
             var candidat = NouveauCandidatEligible("F1", "REG-1");
@@ -80,9 +80,7 @@ namespace Declaration.Orchestration.Tests
             var lignes = DeclarationWorkflowService.MapLignesCandidates(
                 declarationId, "Decaissement", new[] { candidat }, new DeclarationModele());
 
-            var ligne = Assert.Single(lignes);
-            Assert.Equal(EtatLigne.Exclue, ligne.Etat);
-            Assert.Equal("Déjà pris en compte dans la déclaration TVA2-2026-01", ligne.MotifRejet);
+            Assert.Empty(lignes);
         }
 
         [Fact]
@@ -96,6 +94,10 @@ namespace Declaration.Orchestration.Tests
                 SocieteId = 1, Exercice = 2026, Periode = 1, Numero = "TVA1-2026-01"
             };
             repo.Conflits["F1|REG-1"] = "TVA2-2026-01";
+            // TASK-097 : le filtre de sélection s'applique désormais inconditionnellement — la
+            // sélection persistée doit donc inclure les deux règlements du scénario pour que ce
+            // test continue à isoler UNIQUEMENT le garde-fou d'exclusivité TASK-080.
+            repo.Selection = new List<string> { "REG-1", "REG-2" };
 
             var selection = new FakeSelectionExpliqueeService(new[]
             {
@@ -108,14 +110,43 @@ namespace Declaration.Orchestration.Tests
             await service.ChargerCandidatesSiNecessaireAsync(declarationId, "Decaissement");
 
             var lignes = repo.Lignes.Where(l => l.DeclarationId == declarationId).ToList();
-            var ligneF1 = lignes.Single(l => l.NumeroFacture == "F1");
-            Assert.Equal(EtatLigne.Exclue, ligneF1.Etat);
-            Assert.Equal("Déjà pris en compte dans la déclaration TVA2-2026-01", ligneF1.MotifRejet);
 
-            // F2 n'est pas en conflit : passe par le pipeline normal (non testé ici en détail,
-            // seul le garde-fou d'exclusivité est sous test), mais ne doit jamais porter ce motif.
+            // F1 est en conflit et n'est pas éligible : il ne produit aucune ligne du tout
+            Assert.DoesNotContain(lignes, l => l.NumeroFacture == "F1");
+
+            // F2 n'est pas en conflit : il passe et produit une ligne
             var ligneF2 = lignes.Single(l => l.NumeroFacture == "F2");
-            Assert.DoesNotContain("Déjà pris en compte", ligneF2.MotifRejet);
+            Assert.DoesNotContain("Déjà pris en compte", ligneF2.MotifRejet ?? "");
+        }
+
+        [Fact]
+        public async Task ChargerCandidatesSiNecessaireAsync_SelectionJamaisPersistee_NeFigeAucunCandidat()
+        {
+            // TASK-097 (régression VERIFY) : si /lignes est appelé avant tout POST /selection
+            // (aucune ligne DM_SELECTION_REGLEMENT pour cette déclaration — repo.Selection reste
+            // au défaut `null`), le figeage doit produire ZÉRO ligne, jamais l'intégralité des
+            // candidats éligibles du mois. Avant correctif, `selection.Any()` faux ⇒ filtre
+            // ignoré ⇒ tous les candidats étaient figés (bug d'origine que TASK-097 devait corriger).
+            var declarationId = Guid.NewGuid();
+            var repo = new FakeDeclarationRepository();
+            repo.Declarations[declarationId] = new DeclarationEntete
+            {
+                Id = declarationId, Statut = StatutDeclaration.EnCours,
+                SocieteId = 1, Exercice = 2026, Periode = 1, Numero = "TVA1-2026-01"
+            };
+            Assert.Null(repo.Selection); // sélection jamais persistée
+
+            var selection = new FakeSelectionExpliqueeService(new[]
+            {
+                NouveauCandidatEligible("F1", "REG-1", ecType: 4),
+                NouveauCandidatEligible("F2", "REG-2", ecType: 4)
+            });
+            var service = CreerService(repo, selection);
+
+            await service.ChargerCandidatesSiNecessaireAsync(declarationId, "Decaissement");
+
+            var lignes = repo.Lignes.Where(l => l.DeclarationId == declarationId).ToList();
+            Assert.Empty(lignes);
         }
 
         [Fact]
@@ -194,8 +225,9 @@ namespace Declaration.Orchestration.Tests
         {
             public System.Data.IDbConnection CreateGrfConnection() => throw new NotImplementedException();
             public string GetGrfConnectionString() => "fake-grf";
-            public System.Data.IDbConnection CreateSageConnection() => throw new NotImplementedException();
             public System.Data.IDbConnection CreatePersistenceConnection() => throw new NotImplementedException();
+            public Task<Declaration.Application.Interfaces.SageConnectionInfo> GetSageConnectionInfoAsync(int soId) =>
+                Task.FromResult(new Declaration.Application.Interfaces.SageConnectionInfo { ConnectionString = "" });
         }
 
         /// <summary>Implémentation minimale d'IConfiguration en mémoire (aucun package additionnel requis).</summary>
@@ -254,6 +286,13 @@ namespace Declaration.Orchestration.Tests
 
             /// <summary>Clé "NumeroFacture|NumeroRapprochement" -> numéro de la déclaration concurrente.</summary>
             public Dictionary<string, string> Conflits { get; } = new();
+
+            /// <summary>
+            /// TASK-097 : sélection de règlements persistée (null par défaut = "jamais sauvegardée",
+            /// ce que <see cref="GetSelectionReglementsAsync"/> traduit en liste vide — reproduit
+            /// fidèlement l'invariant serveur : sélection absente ⇒ zéro candidat figé, jamais tous).
+            /// </summary>
+            public List<string>? Selection { get; set; }
 
             public Task<DeclarationEntete?> GetByIdAsync(Guid id) =>
                 Task.FromResult(Declarations.TryGetValue(id, out var d) ? d : null);
@@ -316,7 +355,7 @@ namespace Declaration.Orchestration.Tests
             public Task TamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => Task.CompletedTask;
             public Task DetamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => Task.CompletedTask;
 
-            public Task<HashSet<int>> GetEcIdsEnErreurAsync(IEnumerable<int> ecIds) => Task.FromResult(new HashSet<int>());
+            public Task<HashSet<int>> GetEcIdsEnErreurAsync(int soId, IEnumerable<int> ecIds) => Task.FromResult(new HashSet<int>());
             public Task<Dictionary<int, int?>> GetMvPointsActuelsAsync(IEnumerable<int> mvIds) => Task.FromResult(new Dictionary<int, int?>());
             public Task UpdateLigneClesAsync(Guid ligneId, int ecId, int mvId) => Task.CompletedTask;
 
@@ -336,6 +375,36 @@ namespace Declaration.Orchestration.Tests
                 Lignes.RemoveAll(l => ids.Contains(l.Id));
                 return Task.CompletedTask;
             }
+
+            public Task<IEnumerable<DeclarationEntete>> GetToutesDeclarationsAsync() => throw new NotImplementedException();
+            public Task<IEnumerable<int>> GetDistinctDtIdsAffectationsAsync() => throw new NotImplementedException();
+            public Task SetDtIdDeclarationAsync(Guid declarationId, int? dtId) => throw new NotImplementedException();
+
+            public Task SaveSelectionReglementsAsync(Guid declarationId, IEnumerable<string> selectedNumeroReglements) => Task.CompletedTask;
+            public Task<List<string>> GetSelectionReglementsAsync(Guid declarationId) => Task.FromResult(Selection ?? new List<string>());
+
+
+            public Task<EcheanceDiagnosticRow?> GetEcheanceDiagnosticAsync(int soId, int ecId)
+                => throw new NotImplementedException();
+
+            public Task<IReadOnlyList<EcheanceCollisionRow>> GetEcheancesMemeDoNumeroAsync(int soId, string doNumero)
+                => throw new NotImplementedException();
+
+            public Task<string?> GetMotifErreurCacheAsync(int soId, int ecId)
+                => throw new NotImplementedException();
+
+            public Task<IReadOnlyDictionary<int, DocumentReglementSageRow>> GetDocumentsReglementSageAsync(
+                string sageConnectionString, IEnumerable<int> ecNos)
+                => throw new NotImplementedException();
+
+            public Task<CacheLectureRow?> GetDerniereLectureCacheAsync(int soId, int ecId)
+                => throw new NotImplementedException();
+
+            public Task<IReadOnlyList<CacheBucketRow>> GetBucketsCacheAsync(int soId, int ecId)
+                => throw new NotImplementedException();
+
+            public Task SupprimerLignesParEcIdAsync(Guid declarationId, int ecId)
+                => Task.CompletedTask;
         }
     }
 }

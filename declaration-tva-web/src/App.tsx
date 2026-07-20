@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   LogOut, LayoutDashboard, Landmark, FileText, FileCheck,
-  Receipt, Scissors, Send, BarChart3, Lock, Construction,
+  Receipt, Scissors, Send, BarChart3, Lock, Construction, ShieldAlert, AlertTriangle,
 } from 'lucide-react';
 import './index.css';
 import './App.css';
@@ -11,6 +11,7 @@ import { CreateDeclarationModal } from './CreateDeclarationModal';
 import { DeclarationStepper } from './DeclarationStepper';
 import { RapprochementInterrogation } from './RapprochementInterrogation';
 import { FactureInterrogation } from './FactureInterrogation';
+import { getLicenceStatus, type LicenceStatusDto } from './api';
 
 export interface User {
   login: string;
@@ -72,10 +73,43 @@ function App() {
   
   const [toast, setToast] = useState<{message: string, type: 'success'|'error'|'warning'} | null>(null);
 
-  const showToast = (message: string, type: 'success'|'error'|'warning' = 'success') => {
+  // TASK-117 : statut de licence ApLicence, lu une fois au chargement — le blocage s'applique
+  // indépendamment de l'authentification (CDC ApLicence §1.3), donc vérifié avant l'écran de
+  // connexion. `null` = vérification en cours ; le point de contrôle back (middleware) reste la
+  // seule vraie barrière, ce check front n'est qu'un rendu honnête du message renvoyé par l'API.
+  const [licenceStatus, setLicenceStatus] = useState<LicenceStatusDto | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getLicenceStatus()
+      .then(status => { if (!cancelled) setLicenceStatus(status); })
+      .catch((err: any) => {
+        // Le middleware de blocage (Program.cs) répond 503 + { message } quand la licence est
+        // invalide — axios traite ce statut comme une erreur, d'où ce catch. Serveur totalement
+        // injoignable : même traitement, jamais "valide par défaut" (fail-closed, cf. back).
+        if (!cancelled) {
+          setLicenceStatus({
+            estValide: false,
+            message: err?.response?.data?.message ?? 'Merci de vérifier la licence',
+            alerteProcheExpiration: false,
+            joursRestants: null,
+            dateExpiration: null,
+          });
+        }
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // TASK-125 : mémoïsée (useCallback) — une identité recréée à chaque rendu d'App propage un
+  // nouveau showToast jusqu'à ReglementsSelection.fetchAll (dépendance de son useCallback), qui
+  // redéclenche alors le useEffect de fetch. Si ce fetch échoue et affiche un toast, App se
+  // re-rend, régénère showToast, et reboucle — tempête de requêtes auto-entretenue confirmée en
+  // reproduction réelle (~1000 requêtes /rapprochement en quelques secondes), qui laisse la grille
+  // et la sélection bloquées à 0 durablement même après retour à la normale du réseau.
+  const showToast = useCallback((message: string, type: 'success'|'error'|'warning' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
-  };
+  }, []);
 
   const handleLogin = (u: User) => {
     sessionStorage.setItem('tva_user', JSON.stringify(u));
@@ -87,12 +121,32 @@ function App() {
     setUser(null);
   };
 
+  // TASK-117 : le blocage de licence est indépendant de l'authentification (CDC ApLicence §1.3) —
+  // vérifié avant même l'écran de connexion. Tant que le premier check n'a pas répondu,
+  // `licenceStatus` vaut `null` (état "Inconnue" côté back également, fail-closed par défaut).
+  if (licenceStatus === null) {
+    return <LicenceGate variant="loading" />;
+  }
+  if (!licenceStatus.estValide) {
+    return <LicenceGate variant="blocked" message={licenceStatus.message} />;
+  }
+
   if (!user) {
-    return <Auth onLogin={handleLogin} />;
+    return (
+      <>
+        {licenceStatus.alerteProcheExpiration && (
+          <LicenceExpirationBanner joursRestants={licenceStatus.joursRestants} dateExpiration={licenceStatus.dateExpiration} />
+        )}
+        <Auth onLogin={handleLogin} />
+      </>
+    );
   }
 
   return (
     <>
+      {licenceStatus.alerteProcheExpiration && (
+        <LicenceExpirationBanner joursRestants={licenceStatus.joursRestants} dateExpiration={licenceStatus.dateExpiration} />
+      )}
       <Dashboard user={user} onLogout={handleLogout} showToast={showToast} />
       {toast && (
         <div style={{
@@ -107,6 +161,48 @@ function App() {
         </div>
       )}
     </>
+  );
+}
+
+// TASK-117 : point de rendu unique du blocage de licence (message fixe renvoyé par l'API,
+// "Merci de vérifier la licence") — écran plein, aucune donnée métier affichée derrière.
+function LicenceGate({ variant, message }: { variant: 'loading' | 'blocked'; message?: string | null }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '2rem',
+      backgroundColor: 'var(--bg-primary, #ffffff)', color: 'var(--text-primary)',
+    }}>
+      <ShieldAlert size={48} style={{ color: variant === 'blocked' ? 'var(--danger-color, #ef4444)' : 'var(--text-secondary)', marginBottom: '1rem' }} />
+      <h1 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: 600 }}>
+        {variant === 'loading' ? 'Vérification de la licence…' : (message || 'Merci de vérifier la licence')}
+      </h1>
+      {variant === 'blocked' && (
+        <p style={{ margin: 0, maxWidth: 460, fontSize: '0.875rem', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+          L'accès à l'application est bloqué tant qu'aucune licence valide n'a été vérifiée.
+          Contactez votre administrateur.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// TASK-117 : bannière d'alerte J-30 (CDC ApLicence §1.4) — n'apparaît jamais bloquante,
+// affichée uniquement quand licenceStatus.estValide === true.
+function LicenceExpirationBanner({ joursRestants, dateExpiration }: { joursRestants: number | null; dateExpiration: string | null }) {
+  const dateTexte = dateExpiration ? new Date(dateExpiration).toLocaleDateString('fr-FR') : null;
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem',
+      backgroundColor: '#fef3c7', color: 'var(--status-warning-text)', fontSize: '0.8125rem', fontWeight: 500,
+    }}>
+      <AlertTriangle size={16} />
+      <span>
+        Licence proche de l'expiration
+        {joursRestants !== null ? ` — ${joursRestants} jour${joursRestants > 1 ? 's' : ''} restant${joursRestants > 1 ? 's' : ''}` : ''}
+        {dateTexte ? ` (échéance le ${dateTexte})` : ''}.
+      </span>
+    </div>
   );
 }
 
@@ -202,6 +298,7 @@ function Dashboard({ user, onLogout, showToast }: { user: User; onLogout: () => 
             <DeclarationList
               societeId={user.societeId}
               isAdmin={user.isAdmin}
+              currentUserName={user.nom || user.login}
               onOpenDeclaration={(id) => setCurrentDeclarationId(id)}
               onCreateNew={() => setIsCreateModalOpen(true)}
               showToast={showToast}

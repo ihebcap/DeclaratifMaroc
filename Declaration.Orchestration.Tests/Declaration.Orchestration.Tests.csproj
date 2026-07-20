@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -24,6 +24,7 @@
     <ProjectReference Include="..\SageTaxReader\SageTaxReader.Contracts\SageTaxReader.Contracts.csproj" />
     <ProjectReference Include="..\Declaration.Application\Declaration.Application.csproj" />
     <ProjectReference Include="..\Declaration.Selection\Declaration.Selection.csproj" />
+    <ProjectReference Include="..\Declaration.API\Declaration.API.csproj" />
   </ItemGroup>
 
 </Project>

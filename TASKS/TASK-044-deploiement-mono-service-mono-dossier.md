@@ -8,6 +8,16 @@ de déploiement**. Pas de service séparé pour le worker, pas d'hébergement fr
 Le socle est déjà en place (livré en marge de la traçabilité, cf. mémoire
 `grf-valorisation-tracabilite-blocage-om`) :
 - Le front est déjà servi par l'API via `wwwroot` (`app.UseStaticFiles()`).
+  ⚠️ **Bug constaté en production (17/07/2026)** : `GET /` renvoie 404. `Program.cs:98` appelle
+  `UseStaticFiles()` seul, sans `UseDefaultFiles()` ni `MapFallbackToFile("index.html")` — la
+  middleware ne mappe donc jamais `/` vers `wwwroot/index.html`, elle ne sert que les chemins de
+  fichiers explicites. Jamais détecté avant car en dev le front tourne sur Vite (`:5173`), jamais
+  via `wwwroot`. **À corriger avant toute installation prod** : remplacer la ligne par
+  `app.UseDefaultFiles(); app.UseStaticFiles();` ou, plus robuste (couvre aussi un futur routage
+  côté front), `app.MapFallbackToFile("index.html");` après `MapControllers()`. Cause aggravante
+  constatée en parallèle : `wwwroot/` n'existait même pas dans `deploy/` — l'étape A.2
+  (`npm run build` + copie du `dist/`) n'avait pas été faite ; à ne pas confondre avec le bug
+  ci-dessus (les deux causent un 404, indépendamment l'une de l'autre).
 - Le worker `SageTaxReader.Console.exe` (net48) est lancé par `WorkerInvoker` via `Process.Start`.
 - `WorkerExePath` est désormais **résolu relatif à l'exe** (défaut `SageTaxReader.Console.exe`) :
   `if (!Path.IsPathRooted(workerExe)) workerExe = Path.Combine(AppContext.BaseDirectory, workerExe)`.

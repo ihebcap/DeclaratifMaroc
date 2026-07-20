@@ -16,16 +16,21 @@ export function DomainGrid({
     initialFilters,
     readonly = false,
     onRowClick,
-    columns
-}: { 
-    declarationId: string, 
-    domaine?: DomaineTVA, 
+    columns,
+    colsStorageKey
+}: {
+    declarationId: string,
+    domaine?: DomaineTVA,
     onActionDone: () => void,
     showToast: (m: string, t?: any) => void,
     initialFilters?: Record<string, any>,
     readonly?: boolean,
     onRowClick?: (row: any) => void,
-    columns?: { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date' }[]
+    columns?: { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date', width?: string, derived?: boolean }[],
+    // TASK-142 : clé de persistance des colonnes visibles. Un jeu de colonnes non-standard (ex. drill
+    // incohérence avec Montant TVA + Écart) DOIT utiliser sa propre clé, sinon il hérite des préférences
+    // enregistrées pour la grille par défaut (qui ne connaît pas ces colonnes) → elles seraient masquées.
+    colsStorageKey?: string
 }) {
     const [data, setData] = useState<any[]>([]);
     const [total, setTotal] = useState(0);
@@ -44,7 +49,27 @@ export function DomainGrid({
     const size = 100; // items per page
     const parentRef = useRef<HTMLDivElement>(null);
 
-    type ColumnDef = { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date' };
+    // TASK-142 : `derived` = colonne purement calculée en rendu à partir de champs déjà chargés
+    // (ex. « Écart » = montantHT+montantTVA−montantTTC). Aucune clé correspondante côté API → on ne
+    // doit ni la trier ni la filtrer (sinon on enverrait une clé inconnue au back, cf. garde-fou).
+    type ColumnDef = { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date', width?: string, derived?: boolean };
+    // TASK-110 : largeur bornée par colonne (pattern AffectationsDrill.tsx GridCell/colStyle) —
+    // évite qu'un motif d'écartement long étire toute la ligne ; défaut 200px sinon spécifié.
+    const DEFAULT_COL_WIDTH = '200px';
+    const colMaxWidth = (col: ColumnDef) => col.width || DEFAULT_COL_WIDTH;
+    // TASK-138 : source UNIQUE de largeur de colonne, partagée par l'en-tête ET par chaque ligne
+    // (pattern colStyle de AffectationsDrill.tsx). Toutes les colonnes de DomainGrid ont une largeur
+    // fixe (colMaxWidth défaut 200px) → flex non extensible « 0 0 width » : l'en-tête et le corps ne
+    // peuvent plus diverger, contrairement au calcul de layout d'un <table> + <tr position:absolute>
+    // (cause des deux échecs TASK-113 v1/v2).
+    const colStyle = (col: ColumnDef): React.CSSProperties => ({
+        flex: `0 0 ${colMaxWidth(col)}`,
+        width: colMaxWidth(col),
+    });
+    const CHECKBOX_W = '40px';
+    const isNumericCol = (key: string) => ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA', 'ecart'].includes(key);
+    // TASK-142 : écart d'équilibre par ligne, dérivé en pur affichage (aucun appel/recalcul serveur).
+    const ligneEcart = (row: any) => Number(row?.montantHT || 0) + Number(row?.montantTVA || 0) - Number(row?.montantTTC || 0);
     const defaultColumns: ColumnDef[] = [
         { key: 'factureNumero', label: 'N° Facture', filterType: 'text' },
         // TASK-034 : colonne « Désignation » retirée — aucune source dans LigneCandidate
@@ -56,10 +81,10 @@ export function DomainGrid({
         { key: 'montantTTC', label: 'Montant TTC', filterType: 'number' },
         { key: 'source', label: 'Source', filterType: 'list' },
         { key: 'statutLigne', label: 'Statut', filterType: 'list' },
-        { key: 'motif', label: 'Motif Écartement', filterType: 'text' }
+        { key: 'motif', label: 'Motif Écartement', filterType: 'text', width: '280px' }
     ];
     const gridColumns: ColumnDef[] = columns || defaultColumns;
-    const { visibleColumns, visibleKeys, toggle: toggleColumn, reset: resetColumns } = useColumnPrefs('grf.cols.domain', gridColumns);
+    const { visibleColumns, visibleKeys, toggle: toggleColumn, reset: resetColumns } = useColumnPrefs(colsStorageKey || 'grf.cols.domain', gridColumns);
 
     const fetchPage = useCallback(async () => {
         setLoading(true);
@@ -179,7 +204,9 @@ export function DomainGrid({
     });
 
     const renderCell = (key: string, val: any) => {
-        if (['ht', 'tva', 'ttc', 'montantHT', 'montantTTC'].includes(key)) return formatMoney(val);
+        // TASK-142 : montantTVA (2ᵉ opérande de l'égalité isolée par le drill) + ecart (dérivé) manquaient
+        // à la liste des colonnes monétaires → ils s'affichaient en brut. Ajoutés ici.
+        if (['ht', 'tva', 'ttc', 'montantHT', 'montantTVA', 'montantTTC', 'ecart'].includes(key)) return formatMoney(val);
         if (key === 'taux' || key === 'tauxTVA') return `${val}%`;
         if (key === 'etat' || key === 'statutLigne') {
             let label = val;
@@ -201,6 +228,16 @@ export function DomainGrid({
     };
 
     const totalPages = Math.ceil(total / size);
+
+    // TASK-138 : largeur totale de la grille = somme des largeurs fixes (+ colonne case à cocher),
+    // bornée à 1000px minimum (reprise du minWidth de l'ancien <table>). Sert de minWidth au wrapper
+    // interne afin que l'en-tête et les lignes virtualisées (width:100% du wrapper) partagent
+    // exactement la même largeur — condition de l'alignement strict.
+    const gridMinWidth = Math.max(
+        1000,
+        (readonly ? 0 : parseInt(CHECKBOX_W, 10)) +
+            visibleColumns.reduce((sum: number, col: ColumnDef) => sum + parseInt(colMaxWidth(col), 10), 0)
+    );
 
     return (
         <div style={{ background: 'white', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -256,46 +293,66 @@ export function DomainGrid({
             )}
 
             {/* Grid Container */}
+            {/* TASK-138 : rendu flexbox <div> (pattern AffectationsDrill.tsx) en remplacement du
+                <table> + <colgroup> + <tr position:absolute> virtualisés — les deux itérations
+                TASK-113 (v1 tableLayout:fixed+colgroup, v2 + width explicite) n'ont pas corrigé le
+                désalignement en test réel. Ici l'en-tête et les lignes utilisent la MÊME fonction de
+                largeur (colStyle), et le wrapper interne impose une largeur commune (gridMinWidth) :
+                l'alignement est garanti par construction, sans dépendre du calcul de layout d'un
+                tableau. Virtualisation @tanstack/react-virtual conservée (lignes = <div>
+                position:absolute). Rôles ARIA posés pour compenser l'abandon du <table> sémantique. */}
             <div ref={parentRef} style={{ flexGrow: 1, overflow: 'auto', position: 'relative' }}>
-                <table style={{ width: '100%', minWidth: '1000px', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
-                    <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                        <tr>
-                            {!readonly && (
-                                <th style={{ padding: '0.5rem 1rem', width: '40px', borderBottom: '1px solid var(--border-color)', borderRight: '1px solid var(--border-color)' }}>
-                                    <input type="checkbox" checked={selectAllFilters || (selectedIds.size > 0 && selectedIds.size === data.length)} onChange={handleToggleAll} />
-                                </th>
-                            )}
-                            {visibleColumns.map((col: ColumnDef) => (
-                                <th key={col.key} style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border-color)', borderRight: '1px solid var(--border-color)', textAlign: ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA'].includes(col.key) ? 'right' : 'left', cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort(col.key)}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA'].includes(col.key) ? 'flex-end' : 'flex-start', gap: '0.25rem' }}>
-                                        {col.label}
-                                        {sortConfig?.key === col.key && (
-                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{sortConfig?.desc ? '▼' : '▲'}</span>
-                                        )}
-                                        <ExcelFilter 
-                                            filterType={col.filterType} 
-                                            options={(distincts[col.key] || []).map(v => ({label: v, value: v}))} 
+                <div role="table" style={{ minWidth: `${gridMinWidth}px`, fontSize: '0.8125rem' }}>
+                    {/* En-tête collant */}
+                    <div role="row" style={{ display: 'flex', position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderBottom: '1px solid var(--border-color)' }}>
+                        {!readonly && (
+                            <div role="columnheader" style={{ flex: `0 0 ${CHECKBOX_W}`, width: CHECKBOX_W, padding: '0.5rem 1rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center' }}>
+                                <input type="checkbox" checked={selectAllFilters || (selectedIds.size > 0 && selectedIds.size === data.length)} onChange={handleToggleAll} />
+                            </div>
+                        )}
+                        {visibleColumns.map((col: ColumnDef) => (
+                            <div
+                                key={col.key}
+                                role="columnheader"
+                                onClick={col.derived ? undefined : () => handleSort(col.key)}
+                                style={{ ...colStyle(col), padding: '0.5rem 1rem', borderRight: '1px solid var(--border-color)', cursor: col.derived ? 'default' : 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: isNumericCol(col.key) ? 'flex-end' : 'flex-start', gap: '0.25rem' }}
+                            >
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{col.label}</span>
+                                {/* TASK-142 : colonne dérivée (Écart) non triable/non filtrable — aucune clé
+                                    envoyée au back (garde-fou : ne pas transmettre de clé inexistante côté API). */}
+                                {!col.derived && sortConfig?.key === col.key && (
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{sortConfig?.desc ? '▼' : '▲'}</span>
+                                )}
+                                {!col.derived && (
+                                    <span onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center' }}>
+                                        <ExcelFilter
+                                            filterType={col.filterType}
+                                            options={(distincts[col.key] || []).map(v => ({label: v, value: v}))}
                                             selectedValues={Array.isArray(filters[col.key]) ? filters[col.key] as string[] : []}
                                             textValue={typeof filters[col.key] === 'string' ? filters[col.key] as string : ''}
-                                            onChange={(val) => handleFilterChange(col.key, val)} 
+                                            onChange={(val) => handleFilterChange(col.key, val)}
                                         />
-                                    </div>
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+                                    </span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Corps virtualisé */}
+                    <div role="rowgroup" style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
                         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                             const row = data[virtualRow.index];
                             if (!row) return null;
                             const isSelected = selectedIds.has(row.id);
 
                             return (
-                                <tr 
-                                    key={row.id} 
+                                <div
+                                    key={row.id}
+                                    role="row"
                                     onClick={() => onRowClick && onRowClick(row)}
-                                    style={{ 
-                                        position: 'absolute', top: 0, left: 0, width: '100%', 
+                                    style={{
+                                        display: 'flex',
+                                        position: 'absolute', top: 0, left: 0, width: '100%',
                                         transform: `translateY(${virtualRow.start}px)`,
                                         height: `${virtualRow.size}px`,
                                         borderBottom: '1px solid var(--border-color)',
@@ -304,20 +361,35 @@ export function DomainGrid({
                                     }}
                                 >
                                     {!readonly && (
-                                        <td style={{ padding: '0.5rem 1rem', width: '40px', borderRight: '1px solid var(--border-color)' }} onClick={(e) => e.stopPropagation()}>
+                                        <div role="cell" style={{ flex: `0 0 ${CHECKBOX_W}`, width: CHECKBOX_W, padding: '0.5rem 1rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
                                             <input type="checkbox" checked={isSelected || selectAllFilters} onChange={() => handleToggleOne(row.id)} disabled={selectAllFilters} />
-                                        </td>
+                                        </div>
                                     )}
-                                    {visibleColumns.map((col: ColumnDef) => (
-                                        <td key={col.key} style={{ padding: '0.5rem 1rem', borderRight: '1px solid var(--border-color)', textAlign: ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA'].includes(col.key) ? 'right' : 'left', whiteSpace: 'nowrap' }}>
-                                            {renderCell(col.key, row[col.key])}
-                                        </td>
-                                    ))}
-                                </tr>
+                                    {visibleColumns.map((col: ColumnDef) => {
+                                        // TASK-142 : valeur de la colonne « Écart » calculée en rendu ; toutes les
+                                        // autres colonnes lisent la donnée API telle quelle (row[col.key]).
+                                        const cellVal = col.key === 'ecart' ? ligneEcart(row) : row[col.key];
+                                        // Mise en évidence de la ligne fautive (HT+TVA ≠ TTC), tolérance 0,005
+                                        // pour absorber les arrondis d'affichage.
+                                        const ecartAnormal = col.key === 'ecart' && Math.abs(cellVal) > 0.005;
+                                        return (
+                                        <div
+                                            key={col.key}
+                                            role="cell"
+                                            style={{ ...colStyle(col), padding: '0.5rem 1rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: isNumericCol(col.key) ? 'flex-end' : 'flex-start', overflow: 'hidden', background: ecartAnormal ? 'var(--status-blocking-bg)' : undefined, color: ecartAnormal ? 'var(--status-blocking-text)' : undefined, fontWeight: ecartAnormal ? 700 : undefined }}
+                                            title={typeof row[col.key] === 'string' ? row[col.key] : undefined}
+                                        >
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {renderCell(col.key, cellVal)}
+                                            </span>
+                                        </div>
+                                        );
+                                    })}
+                                </div>
                             );
                         })}
-                    </tbody>
-                </table>
+                    </div>
+                </div>
                 {data.length === 0 && !loading && (
                     <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                         Aucune ligne trouvée.

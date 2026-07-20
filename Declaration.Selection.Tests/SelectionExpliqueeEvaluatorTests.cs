@@ -159,6 +159,50 @@ namespace Declaration.Selection.Tests
         }
 
         // ──────────────────────────────────────────────────────────────────────────────────
+        // TASK-099 — Rattrapage : la période devient une simple date de COUPURE (fin de
+        // période), plus de borne basse. Un règlement rapproché/payé largement AVANT le début
+        // de la période demandée, jamais déclaré, doit rester éligible (cas RF26060125 : ne
+        // plus se perdre définitivement entre deux mois).
+        // ──────────────────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public async Task Evaluer_RapprocheBienAvantDebut_JamaisDeclare_ResteEligible_Task099()
+        {
+            var row = CreateValidRow();
+            row.MV_PointDate = _debut.AddMonths(-6); // rapproché 6 mois avant le début de la période demandée
+
+            var result = await SelectionExpliqueeEvaluator.EvaluerAsync(row, _debut, _fin, SensAffectation.Achat, null);
+
+            Assert.True(result.EstEligible);
+            Assert.Equal(MotifRejet.Eligible, result.Motif);
+        }
+
+        [Fact]
+        public async Task Evaluer_EspecePayeeBienAvantDebut_JamaisDeclaree_ResteEligible_Task099()
+        {
+            var row = CreateValidRow(GrfEnums.Domaine_ReglementFournisseur, GrfEnums.ModePaiement_Espece);
+            row.DatePaiement = _debut.AddYears(-1); // payée un an avant le début de la période demandée
+
+            var result = await SelectionExpliqueeEvaluator.EvaluerAsync(row, _debut, _fin, SensAffectation.Achat, null);
+
+            Assert.True(result.EstEligible);
+            Assert.Equal(MotifRejet.Eligible, result.Motif);
+        }
+
+        [Fact]
+        public async Task Evaluer_HorsPeriodeApresLaFin_ResteRejeteMemeSansBorneBasse_Task099()
+        {
+            // La borne haute (coupure de période) reste, elle, strictement appliquée.
+            var row = CreateValidRow();
+            row.MV_PointDate = _finExclude; // après la fin de période
+
+            var result = await SelectionExpliqueeEvaluator.EvaluerAsync(row, _debut, _fin, SensAffectation.Achat, null);
+
+            Assert.False(result.EstEligible);
+            Assert.Equal(MotifRejet.HorsPeriode, result.Motif);
+        }
+
+        // ──────────────────────────────────────────────────────────────────────────────────
         // TASK-062 — Date de référence de période (DateReference) unique
         // ──────────────────────────────────────────────────────────────────────────────────
 
@@ -401,6 +445,43 @@ namespace Declaration.Selection.Tests
             var candidate = new AffectationCandidate { Motif = motif };
             Assert.False(candidate.EstEligible,
                 $"Motif={motif} ne doit jamais être déclarable (gate rapprochement TASK-050).");
+        }
+
+        [Fact]
+        public async Task Evaluer_ClientEncaissementValid_ReturnsEligible_Task084()
+        {
+            var row = CreateValidRow(GrfEnums.Domaine_ReglementClient);
+            row.MV_DECAISSE = GrfEnums.Decaisse_Non; // Encaissement
+            var result = await SelectionExpliqueeEvaluator.EvaluerAsync(row, _debut, _fin, SensAffectation.Vente, null);
+
+            Assert.True(result.EstEligible);
+            Assert.Equal(MotifRejet.Eligible, result.Motif);
+            Assert.Equal(SensAffectation.Vente, result.Affectation.Sens);
+            Assert.Equal(SourceAffectation.Encaissement, result.Affectation.Source);
+        }
+
+        [Fact]
+        public async Task Evaluer_ClientEncaissementNonRapproche_ReturnsNonRapproche_Task084()
+        {
+            var row = CreateValidRow(GrfEnums.Domaine_ReglementClient);
+            row.MV_DECAISSE = GrfEnums.Decaisse_Non;
+            row.MV_Point = 0; // Non rapproché
+            var result = await SelectionExpliqueeEvaluator.EvaluerAsync(row, _debut, _fin, SensAffectation.Vente, null);
+
+            Assert.False(result.EstEligible);
+            Assert.Equal(MotifRejet.NonRapproche, result.Motif);
+        }
+
+        [Fact]
+        public async Task Evaluer_ClientEncaissementImpaye_ReturnsImpaye_Task084()
+        {
+            var row = CreateValidRow(GrfEnums.Domaine_ReglementClient);
+            row.MV_DECAISSE = GrfEnums.Decaisse_Non;
+            row.MV_Impaye = GrfEnums.Impaye_Impaye;
+            var result = await SelectionExpliqueeEvaluator.EvaluerAsync(row, _debut, _fin, SensAffectation.Vente, null);
+
+            Assert.False(result.EstEligible);
+            Assert.Equal(MotifRejet.Impaye, result.Motif);
         }
     }
 }

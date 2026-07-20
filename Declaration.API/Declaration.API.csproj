@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
@@ -12,12 +12,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.29" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.29" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.9" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
-    <!-- TASK-074 : requis par Tresorerie.Dapper.dll (BaseRepository/UtilisateurRepository) -->
-    <PackageReference Include="System.Data.SqlClient" Version="4.9.1" />
+    <!-- TASK-117 : verification de licence ApLicence (lecture seule, repo separe D:\_vibe\GRLicence) -->
+    <PackageReference Include="GRLicence" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,22 +25,21 @@
     <ProjectReference Include="..\Declaration.Application\Declaration.Application.csproj" />
   </ItemGroup>
 
-  <!-- TASK-074 : authentification réelle contre P_UTILISATEUR — réutilise le hashage/repo legacy
-       déjà validé dans GRC_WEB plutôt que de le réécrire (Tresorerie.Core/.Dapper/.Infrastructure).
-       Jeu volontairement minimal (4 DLL) : le reste de l'arbre Trésorerie (Sage/DevExpress/Ninject)
-       n'est pas nécessaire pour la seule authentification et ne doit pas coupler Declaration à GRC_WEB. -->
+  <!-- TASK-117 : GRLicence.1.1.0 (nuget-local) ne packe pas les DLL ApLicence.* qu'il referencait en
+       prive (bug de packaging du repo separe D:\_vibe\GRLicence, son .nupkg ne contient que
+       GRLicence.dll). Sans ces references, le chargement d'assembly echoue au runtime avec une
+       FileNotFoundException qui echappe meme au try/catch interne de LicenceMonitor (le type Licence
+       ne peut pas etre resolu pour JITter la methode). Copies identiques a celles utilisees par
+       GRLicence lui-meme (D:\_vibe\GRLicence\libs\ApLicence), memes versions garanties. -->
   <ItemGroup>
-    <Reference Include="Tresorerie.Core">
-      <HintPath>libs\Tresorerie\Tresorerie.Core.dll</HintPath>
+    <Reference Include="ApLicence.Common">
+      <HintPath>libs\ApLicence\ApLicence.Common.dll</HintPath>
     </Reference>
-    <Reference Include="Tresorerie.Dapper">
-      <HintPath>libs\Tresorerie\Tresorerie.Dapper.dll</HintPath>
+    <Reference Include="ApLicence.Core">
+      <HintPath>libs\ApLicence\ApLicence.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Tresorerie.Infrastructure">
-      <HintPath>libs\Tresorerie\Tresorerie.Infrastructure.dll</HintPath>
-    </Reference>
-    <Reference Include="DapperExtensions">
-      <HintPath>libs\Tresorerie\DapperExtensions.dll</HintPath>
+    <Reference Include="ApLicence.Core.Net">
+      <HintPath>libs\ApLicence\ApLicence.Core.Net.dll</HintPath>
     </Reference>
   </ItemGroup>
 

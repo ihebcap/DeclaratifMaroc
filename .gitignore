@@ -9,8 +9,8 @@
 *.exe
 *.dll
 *.pdb
-# ...but keep required reference libs
-!SageTaxReader/libs/Interop.Objets100cLib.dll
+# ...but keep required reference libs (interop Sage, un dossier par version — TASK-101)
+!SageTaxReader/libs/v*/Interop.Objets100cLib.dll
 
 # ---- Web (Node / Vite / Playwright) ----
 node_modules/
@@ -22,6 +22,9 @@ declaration-tva-web/test_error_before.png
 # ---- Logs & throwaway output ----
 *.log
 test_output.txt
+/test-results/
+scratch/
+deploy/
 
 # ---- Legacy GRFN black box (222 MB of vendored binaries, not versioned) ----
 GRFWinform/

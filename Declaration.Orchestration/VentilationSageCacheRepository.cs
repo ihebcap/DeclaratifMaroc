@@ -12,7 +12,8 @@ namespace Declaration.Orchestration
     /// CIBLE EXCLUSIVE : SQL Server (base de persistance GRF/GRC dédiée).
     /// Aucun SQLite, aucun fallback fichier.
     ///
-    /// - Lecture/écriture du cache : table GRC_VENTILATION_SAGE_CACHE (PersistenceConnection SQL Server).
+    /// - Lecture/écriture du cache : table DM_VENTILATION_SAGE_CACHE (PersistenceConnection SQL Server).
+    ///   TASK-118 : clé (SO_Id, EC_Id, Taux) — SO_Id désambiguïse EC_Id entre bases Sage distinctes.
     /// - Validation du paiement : requête locale sur RT_AFFECTATION/RT_MOUVEMENT (GrfConnection SQL Server).
     /// </summary>
     public class VentilationSageCacheRepository : IVentilationSageCacheRepository
@@ -21,18 +22,18 @@ namespace Declaration.Orchestration
         // Lecture du cache
         // ──────────────────────────────────────────────────────────────────────
 
-        public IReadOnlyList<VentilationSageCacheEntry> GetEntries(int ecId, string persistenceConnectionString)
+        public IReadOnlyList<VentilationSageCacheEntry> GetEntries(int soId, int ecId, string persistenceConnectionString)
         {
             using var conn = new SqlConnection(persistenceConnectionString);
             conn.Open();
             var sql = @"
-                SELECT EC_Id, Taux, BaseHT, MontantTva, TTC, CodeTaxe,
+                SELECT SO_Id, EC_Id, Taux, BaseHT, MontantTva, TTC, CodeTaxe,
                        TotalHT, TotalTva, TotalTtc,
                        Token_MV_Id, Token_MV_Point, MotifErreur,
                        BrutHT, BrutTva, BrutParafiscale, BrutTtc
-                FROM   GRC_VENTILATION_SAGE_CACHE
-                WHERE  EC_Id = @EcId";
-            return conn.Query<VentilationSageCacheEntry>(sql, new { EcId = ecId })
+                FROM   DM_VENTILATION_SAGE_CACHE
+                WHERE  SO_Id = @SoId AND EC_Id = @EcId";
+            return conn.Query<VentilationSageCacheEntry>(sql, new { SoId = soId, EcId = ecId })
                        .ToList();
         }
 
@@ -42,25 +43,35 @@ namespace Declaration.Orchestration
 
         /// <summary>
         /// Retourne le token de paiement courant pour l'EC_Id donné depuis RT_AFFECTATION/RT_MOUVEMENT.
-        /// Critères identiques à la sélection d'éligibilité : affectation présente + MV_Point = 1.
-        /// Retourne null si aucune affectation pointée n'existe (facture non/dépayée).
+        /// Critères identiques à la sélection d'éligibilité (<c>SelectionExpliqueeEvaluator</c>) :
+        /// affectation présente + (MV_Point = 1 OU règlement fournisseur en espèce — TASK-106).
+        /// Retourne null si aucune affectation valide n'existe (facture non/dépayée).
         /// </summary>
         public virtual PaiementToken? GetCurrentPaiementToken(int ecId, string grfConnectionString)
         {
             using var conn = new SqlConnection(grfConnectionString);
             conn.Open();
 
-            // On sélectionne le premier MV pointé (MV_Point = 1) lié à cette échéance.
-            // Si plusieurs affectations → on prend la première ; le token est identique
-            // car c'est l'état du mouvement (pointé/dépointé) qui compte.
+            // TASK-106 : l'espèce n'a pas d'état de rapprochement bancaire (MV_Point reste à 0),
+            // exactement comme SelectionExpliqueeEvaluator.cs:85 l'exempte de MV_Point à l'éligibilité.
+            // Bornage STRICT à la source Espèce (MV_Domaine = Domaine_ReglementFournisseur (1) ET
+            // MV_Type = ModePaiement_Espece (0)) : jamais généralisé à un non-espèce non rapproché
+            // (régression fiscale directe de TASK-099 sinon). Token de fraîcheur = MV_Id + MV_Point
+            // tel que lu (pas de valeur figée) : si l'espèce est un jour rapprochée, MV_Point passe à 1
+            // et le cache est naturellement invalidé (comparaison stricte côté OrchestrateurDeclaration).
+            // On sélectionne le premier MV pointé (MV_Point = 1) lié à cette échéance ; si plusieurs
+            // affectations → on prend la première ; le token est identique car c'est l'état du
+            // mouvement (pointé/dépointé, ou espèce) qui compte.
             var sql = @"
                 SELECT TOP 1
                     M.MV_Id    AS MV_Id,
                     M.MV_Point AS MV_Point
                 FROM RT_AFFECTATION A
                 JOIN RT_MOUVEMENT   M ON M.MV_Id = A.MV_Id
-                WHERE A.EC_Id    = @EcId
-                  AND M.MV_Point = 1";
+                WHERE A.EC_Id = @EcId
+                  AND (M.MV_Point = 1
+                       OR (M.MV_Domaine = 1 AND M.MV_Type = 0))
+                ORDER BY M.MV_Point DESC";
 
             return conn.QuerySingleOrDefault<PaiementToken>(sql, new { EcId = ecId });
         }
@@ -84,31 +95,33 @@ namespace Declaration.Orchestration
         /// DELETE puis INSERT dans la même connexion — jamais de MERGE ici, la sentinelle
         /// doit être seule (aucun bucket réel résiduel ne doit rester mêlé).
         /// </summary>
-        public virtual void MarquerEnErreur(int ecId, string motif, string persistenceConnectionString,
+        public virtual void MarquerEnErreur(int soId, int ecId, string motif, string persistenceConnectionString,
             MontantsBrutsErreur? montantsBruts = null)
         {
             using var conn = new SqlConnection(persistenceConnectionString);
             conn.Open();
             using var tx = conn.BeginTransaction();
 
-            conn.Execute("DELETE FROM GRC_VENTILATION_SAGE_CACHE WHERE EC_Id = @EcId", new { EcId = ecId }, tx);
+            conn.Execute("DELETE FROM DM_VENTILATION_SAGE_CACHE WHERE SO_Id = @SoId AND EC_Id = @EcId",
+                new { SoId = soId, EcId = ecId }, tx);
 
             // TASK-076 : BrutHT/BrutTva/BrutParafiscale/BrutTtc portent les montants Sage tels que
             // lus au moment de la détection (AVANT exclusion) — NULL si non fournis (jamais une
             // valeur inventée). Sert l'investigation manuelle côté ERP sur l'écran Factures.
             conn.Execute(@"
-                INSERT INTO GRC_VENTILATION_SAGE_CACHE
-                    (EC_Id, Taux, BaseHT, MontantTva, TTC, CodeTaxe,
+                INSERT INTO DM_VENTILATION_SAGE_CACHE
+                    (SO_Id, EC_Id, Taux, BaseHT, MontantTva, TTC, CodeTaxe,
                      TotalHT, TotalTva, TotalTtc,
                      Token_MV_Id, Token_MV_Point, DateLecture, Source, MotifErreur,
                      BrutHT, BrutTva, BrutParafiscale, BrutTtc)
                 VALUES
-                    (@EcId, -1, 0, 0, 0, 'ERREUR',
+                    (@SoId, @EcId, -1, 0, 0, 0, 'ERREUR',
                      0, 0, 0,
                      NULL, NULL, @DateLecture, 'OM', @Motif,
                      @BrutHT, @BrutTva, @BrutParafiscale, @BrutTtc)",
                 new
                 {
+                    SoId = soId,
                     EcId = ecId,
                     DateLecture = DateTime.UtcNow,
                     Motif = motif,
@@ -126,11 +139,12 @@ namespace Declaration.Orchestration
         /// cache miss (relecture Sage réelle), y compris si la sentinelle actuelle porte déjà des
         /// montants bruts capturés (TASK-076, qui sinon la considérerait définitivement réglée).
         /// </summary>
-        public virtual void SupprimerEntrees(int ecId, string persistenceConnectionString)
+        public virtual void SupprimerEntrees(int soId, int ecId, string persistenceConnectionString)
         {
             using var conn = new SqlConnection(persistenceConnectionString);
             conn.Open();
-            conn.Execute("DELETE FROM GRC_VENTILATION_SAGE_CACHE WHERE EC_Id = @EcId", new { EcId = ecId });
+            conn.Execute("DELETE FROM DM_VENTILATION_SAGE_CACHE WHERE SO_Id = @SoId AND EC_Id = @EcId",
+                new { SoId = soId, EcId = ecId });
         }
 
         // ──────────────────────────────────────────────────────────────────────
@@ -145,16 +159,18 @@ namespace Declaration.Orchestration
             using var conn = new SqlConnection(persistenceConnectionString);
             conn.Open();
 
-            // TASK-076/077 : purge toute sentinelle ERREUR résiduente (Taux=-1) pour ces EC_Id AVANT
-            // d'écrire des buckets réels — sinon les deux coexistent (clé MERGE (EC_Id,Taux) distincte)
-            // et cassent l'hypothèse « une seule ligne ERREUR » utilisée par TryServireDepuisCache
+            // TASK-076/077 : purge toute sentinelle ERREUR résiduente (Taux=-1) pour ces (SO_Id,EC_Id)
+            // AVANT d'écrire des buckets réels — sinon les deux coexistent (clé MERGE distincte) et
+            // cassent l'hypothèse « une seule ligne ERREUR » utilisée par TryServireDepuisCache
             // (cache miss forcé, revalidation rétroactive). Une écriture normale supplante toujours
-            // une sentinelle d'erreur précédente pour le même EC_Id.
-            foreach (var ecId in list.Select(e => e.EC_Id).Distinct())
+            // une sentinelle d'erreur précédente pour la même (société, facture).
+            // TASK-118 : bornée à SO_Id — sinon une purge pour une société purgerait aussi la
+            // sentinelle d'une AUTRE société dont l'EC_Id collisionne (deux bases Sage distinctes).
+            foreach (var (soId, ecId) in list.Select(e => (e.SO_Id, e.EC_Id)).Distinct())
             {
                 conn.Execute(
-                    "DELETE FROM GRC_VENTILATION_SAGE_CACHE WHERE EC_Id = @EcId AND CodeTaxe = 'ERREUR'",
-                    new { EcId = ecId });
+                    "DELETE FROM DM_VENTILATION_SAGE_CACHE WHERE SO_Id = @SoId AND EC_Id = @EcId AND CodeTaxe = 'ERREUR'",
+                    new { SoId = soId, EcId = ecId });
             }
 
             foreach (var e in list)
@@ -164,9 +180,9 @@ namespace Declaration.Orchestration
         private static void UpsertOne(SqlConnection conn, VentilationSageCacheEntry e)
         {
             var sql = @"
-                MERGE GRC_VENTILATION_SAGE_CACHE AS target
-                USING (SELECT @EC_Id AS EC_Id, @Taux AS Taux) AS source
-                   ON target.EC_Id = source.EC_Id AND target.Taux = source.Taux
+                MERGE DM_VENTILATION_SAGE_CACHE AS target
+                USING (SELECT @SO_Id AS SO_Id, @EC_Id AS EC_Id, @Taux AS Taux) AS source
+                   ON target.SO_Id = source.SO_Id AND target.EC_Id = source.EC_Id AND target.Taux = source.Taux
                 WHEN MATCHED THEN
                     UPDATE SET
                         BaseHT         = @BaseHT,
@@ -181,15 +197,16 @@ namespace Declaration.Orchestration
                         DateLecture    = @DateLecture,
                         Source         = @Source
                 WHEN NOT MATCHED THEN
-                    INSERT (EC_Id, Taux, BaseHT, MontantTva, TTC, CodeTaxe,
+                    INSERT (SO_Id, EC_Id, Taux, BaseHT, MontantTva, TTC, CodeTaxe,
                             TotalHT, TotalTva, TotalTtc,
                             Token_MV_Id, Token_MV_Point, DateLecture, Source)
-                    VALUES (@EC_Id, @Taux, @BaseHT, @MontantTva, @TTC, @CodeTaxe,
+                    VALUES (@SO_Id, @EC_Id, @Taux, @BaseHT, @MontantTva, @TTC, @CodeTaxe,
                             @TotalHT, @TotalTva, @TotalTtc,
                             @Token_MV_Id, @Token_MV_Point, @DateLecture, @Source);";
 
             conn.Execute(sql, new
             {
+                e.SO_Id,
                 e.EC_Id,
                 e.Taux,
                 e.BaseHT,

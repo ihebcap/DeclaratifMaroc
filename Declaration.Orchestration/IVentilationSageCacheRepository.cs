@@ -8,6 +8,10 @@ namespace Declaration.Orchestration
     /// </summary>
     public class VentilationSageCacheEntry
     {
+        // TASK-118 : disambiguation multi-bases Sage — EC_Id n'est unique qu'à l'intérieur d'une
+        // base Sage donnée ; SO_Id (société GRF, référence logique à P_SOCIETE.SO_Id, sans FK)
+        // fait désormais partie de la clé pour éviter toute collision entre deux bases Sage.
+        public int SO_Id { get; set; }
         public int EC_Id { get; set; }
         public double Taux { get; set; }
         public double BaseHT { get; set; }
@@ -74,15 +78,20 @@ namespace Declaration.Orchestration
     public interface IVentilationSageCacheRepository
     {
         /// <summary>
-        /// Récupère toutes les entrées de cache pour une facture donnée.
+        /// Récupère toutes les entrées de cache pour une facture donnée, scopées à la société
+        /// <paramref name="soId"/> (TASK-118 : EC_Id seul ne suffit plus à identifier une facture
+        /// de façon unique dès qu'il existe plusieurs bases Sage physiques).
         /// Retourne une liste vide si la facture n'est pas en cache.
         /// </summary>
-        IReadOnlyList<VentilationSageCacheEntry> GetEntries(int ecId, string persistenceConnectionString);
+        IReadOnlyList<VentilationSageCacheEntry> GetEntries(int soId, int ecId, string persistenceConnectionString);
 
         /// <summary>
         /// Récupère le token de paiement courant depuis la connexion GRF locale
         /// (RT_AFFECTATION + RT_MOUVEMENT, mêmes critères que la sélection d'éligibilité).
-        /// Retourne null si la facture n'est plus payée (affectation absente ou MV_Point != 1).
+        /// TASK-106 : l'espèce fournisseur (MV_Domaine=Fournisseur, MV_Type=Espece) est exemptée
+        /// de MV_Point=1, bornée strictement à cette source (miroir SelectionExpliqueeEvaluator).
+        /// Retourne null si la facture n'est plus payée (affectation absente, et non-espèce non
+        /// rapprochée MV_Point != 1).
         /// </summary>
         PaiementToken? GetCurrentPaiementToken(int ecId, string grfConnectionString);
 
@@ -91,6 +100,8 @@ namespace Declaration.Orchestration
         /// Appelé après une lecture OM réussie. Le token de paiement peut être NULL
         /// (facture lue mais non encore rattachée à un règlement pointé) : la
         /// ventilation « brute » est alors conservée mais non déclarable.
+        /// TASK-118 : chaque entrée porte déjà son <see cref="VentilationSageCacheEntry.SO_Id"/>
+        /// (pas de paramètre séparé — la société peut varier au sein d'un même batch).
         /// </summary>
         void UpsertEntries(IEnumerable<VentilationSageCacheEntry> entries, string persistenceConnectionString);
 
@@ -115,8 +126,9 @@ namespace Declaration.Orchestration
         /// que lus au moment de la détection, AVANT exclusion — persistés sur la ligne sentinelle
         /// pour investigation manuelle côté ERP sur l'écran Factures. NULL = non disponible au
         /// point d'appel (jamais inventé).
+        /// TASK-118 : <paramref name="soId"/> scope la purge/écriture à la bonne base Sage.
         /// </summary>
-        void MarquerEnErreur(int ecId, string motif, string persistenceConnectionString,
+        void MarquerEnErreur(int soId, int ecId, string motif, string persistenceConnectionString,
             MontantsBrutsErreur? montantsBruts = null);
 
         /// <summary>
@@ -125,7 +137,8 @@ namespace Declaration.Orchestration
         /// l'utilisateur : sans cette purge, une sentinelle qui porte déjà des montants bruts
         /// capturés (TASK-076) ferait considérer <c>TryServireDepuisCache</c> la pièce comme
         /// « déjà réglée » et ne relirait jamais Sage, même après correction côté ERP.
+        /// TASK-118 : <paramref name="soId"/> scope la suppression à la bonne base Sage.
         /// </summary>
-        void SupprimerEntrees(int ecId, string persistenceConnectionString);
+        void SupprimerEntrees(int soId, int ecId, string persistenceConnectionString);
     }
 }
