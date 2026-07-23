@@ -130,4 +130,31 @@ namespace Declaration.Core.Model
         public ControleEquilibre ControleEquilibre { get; set; } = new();
         public List<Alerte> Alertes { get; set; } = new();
     }
+
+    /// <summary>TASK-160 : ligne de la feuille "Règlements sélectionnés" de l'export de contrôle.</summary>
+    public class ReglementSelectionneInfo
+    {
+        public string Numero { get; set; } = "";
+        public DateTime? Date { get; set; }
+        public decimal Montant { get; set; }
+        public string Tiers { get; set; } = "";
+        public string Mode { get; set; } = "";
+        public string EtatPointage { get; set; } = "";
+    }
+
+    /// <summary>
+    /// TASK-160 : modèle dédié à l'export de contrôle ad-hoc (réexécutable avant clôture),
+    /// distinct de <see cref="DeclarationModele"/>/<c>ConstruireModeleExportAsync</c> qui n'accepte
+    /// que les lignes Intégrée d'une déclaration Clôturée. Regroupe règlements sélectionnés + lignes
+    /// Intégrée||Proposée + agrégats taux/activité + contrôle d'équilibre.
+    /// </summary>
+    public class ModeleControle
+    {
+        public EnTeteDeclaration EnTete { get; set; } = new EnTeteDeclaration();
+        public List<ReglementSelectionneInfo> ReglementsSelectionnes { get; set; } = new();
+        public List<LigneDeclarationEnrichie> Lignes { get; set; } = new();
+        public List<RecapParTaux> RecapsParTaux { get; set; } = new();
+        public List<RecapParActivite> RecapsParActivite { get; set; } = new();
+        public ControleEquilibre ControleEquilibre { get; set; } = new();
+    }
 }

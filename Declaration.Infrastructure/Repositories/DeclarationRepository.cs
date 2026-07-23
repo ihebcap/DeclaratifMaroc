@@ -172,9 +172,11 @@ public class DeclarationRepository : IDeclarationRepository
         using var connection = _connectionFactory.CreatePersistenceConnection();
         var sql = @"INSERT INTO DM_LGTVA
                     (Id, DeclarationId, Etat, Domaine, MotifRejet, NumeroFacture, NumeroRapprochement, TiersNom,
-                     TiersIdentifiantFiscal, TiersICE, HT, Taux, TVA, TTC, Prorata, MontantAffecte, ModePaiement, DatePaiement, DateFacture, Source, EcType, EC_Id, MV_Id)
+                     TiersIdentifiantFiscal, TiersICE, HT, Taux, TVA, TTC, Prorata, MontantAffecte, ModePaiement, DatePaiement, DateFacture, Source, EcType, EC_Id, MV_Id,
+                     CodeActivite, CodeActiviteModifieManuellement, CodeActiviteModifiePar, CodeActiviteModifieLe)
                     VALUES (@Id, @DeclarationId, @Etat, @Domaine, @MotifRejet, @NumeroFacture, @NumeroRapprochement, @TiersNom,
-                     @TiersIdentifiantFiscal, @TiersICE, @HT, @Taux, @TVA, @TTC, @Prorata, @MontantAffecte, @ModePaiement, @DatePaiement, @DateFacture, @Source, @EcType, @EC_Id, @MV_Id)";
+                     @TiersIdentifiantFiscal, @TiersICE, @HT, @Taux, @TVA, @TTC, @Prorata, @MontantAffecte, @ModePaiement, @DatePaiement, @DateFacture, @Source, @EcType, @EC_Id, @MV_Id,
+                     @CodeActivite, @CodeActiviteModifieManuellement, @CodeActiviteModifiePar, @CodeActiviteModifieLe)";
         foreach (var l in lignes)
         {
             await connection.ExecuteAsync(sql, new {
@@ -200,7 +202,11 @@ public class DeclarationRepository : IDeclarationRepository
                 l.Source,
                 l.EcType,
                 l.EC_Id,
-                l.MV_Id
+                l.MV_Id,
+                l.CodeActivite,
+                l.CodeActiviteModifieManuellement,
+                l.CodeActiviteModifiePar,
+                l.CodeActiviteModifieLe
             });
         }
     }
@@ -1491,6 +1497,66 @@ public class DeclarationRepository : IDeclarationRepository
             if (!result.ContainsKey(r.DR_No)) result[r.DR_No] = r;
         }
         return result;
+    }
+
+    /// <summary>
+    /// TASK-155 : identifiant fiscal RÉEL de la société (base GRF, P_SOCIETE.SO_Identifiant) —
+    /// à ne pas confondre avec SO_Id (clé interne) ni avec SO_DecTvaColNameIdentifiantFrs (nom de
+    /// colonne ERP portant l'IF du TIERS/fournisseur, TASK-048). Vérifié en base réelle (23/07/2026) :
+    /// colonne existante, siège juste après SO_RaisonSocial et à côté de SO_Ice (IF/ICE société).
+    /// Null si la société est introuvable ou si la colonne est vide — jamais un défaut inventé,
+    /// l'appelant doit bloquer explicitement (cf. TASK-151, aucune valeur placeholder).
+    /// </summary>
+    public async Task<string?> GetIdentifiantFiscalSocieteAsync(int soId)
+    {
+        using var connection = _connectionFactory.CreateGrfConnection();
+        return await connection.QuerySingleOrDefaultAsync<string?>(
+            "SELECT SO_Identifiant FROM P_SOCIETE WHERE SO_Id = @SoId", new { SoId = soId });
+    }
+
+    // ─── Code activité TVA — défaut tiers + référentiel (TASK-161, lecture seule GRF) ─────────
+
+    /// <summary>
+    /// TASK-161 : lecture seule stricte de P_SOCIETECODEACTIVITETIERS, jointe à
+    /// P_DECTVAACTIVITE (même base GRF, même connexion — JOIN SQL classique, pas le garde-fou
+    /// TASK-154 qui ne concerne que les jointures CROSS-BASE GRF/Sage) pour résoudre CAT_Id en
+    /// code activité texte (DTA_Code). SCAT_NumeroTiers (colonne additive TASK-161) peut être
+    /// NULL pour tout mapping créé avant/sans l'écran WinForms mis à jour.
+    /// </summary>
+    public async Task<IReadOnlyList<CodeActiviteTiersMappingRow>> GetMappingCodeActiviteTiersAsync(int soId)
+    {
+        using var connection = _connectionFactory.CreateGrfConnection();
+        const string sql = @"
+            SELECT s.SCAT_NumeroTiers AS NumeroTiers, s.SCAT_ErpIntitule AS ErpIntitule, d.DTA_Code AS CodeActivite
+            FROM P_SOCIETECODEACTIVITETIERS s
+            JOIN P_DECTVAACTIVITE d ON d.DTA_Id = s.CAT_Id
+            WHERE s.SO_Id = @SoId";
+        var rows = await connection.QueryAsync<CodeActiviteTiersMappingRow>(sql, new { SoId = soId });
+        return rows.ToList();
+    }
+
+    /// <summary>TASK-161 : référentiel complet P_DECTVAACTIVITE, lecture seule (liste déroulante front).</summary>
+    public async Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync()
+    {
+        using var connection = _connectionFactory.CreateGrfConnection();
+        const string sql = "SELECT DTA_Code AS Code, DTA_Intitule AS Libelle FROM P_DECTVAACTIVITE ORDER BY DTA_Code";
+        var rows = await connection.QueryAsync<CodeActiviteReferentielRow>(sql);
+        return rows.ToList();
+    }
+
+    /// <summary>
+    /// TASK-161 : surcharge manuelle du code activité d'une ligne précise (Id = DM_LGTVA.Id).
+    /// Trace qui/quand, même pattern que ValiderIncoherenceAsync (TASK-078).
+    /// </summary>
+    public async Task UpdateCodeActiviteLigneAsync(Guid ligneId, string codeActivite, string utilisateur)
+    {
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        await connection.ExecuteAsync(
+            @"UPDATE DM_LGTVA
+              SET CodeActivite = @CodeActivite, CodeActiviteModifieManuellement = 1,
+                  CodeActiviteModifiePar = @Utilisateur, CodeActiviteModifieLe = @Maintenant
+              WHERE Id = @Id",
+            new { Id = ligneId.ToString(), CodeActivite = codeActivite, Utilisateur = utilisateur, Maintenant = DateTime.UtcNow });
     }
 }
 

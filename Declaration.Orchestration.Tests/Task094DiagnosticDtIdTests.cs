@@ -155,12 +155,12 @@ namespace Declaration.Orchestration.Tests
         private class FakeSelectionExpliqueeService : ISelectionExpliqueeService
         {
             public Task<IEnumerable<AffectationCandidate>> SelectionnerExpliqueeAsync(
-                int soId, DateTime dateDebut, DateTime dateFin, string connectionString,
+                int soId, DateTime dateDebut, DateTime dateFin, string connectionString, string sageConnectionString,
                 Func<string, SensAffectation, Task<(bool Existe, bool TaxeOk)>>? verifierFacture = null) =>
                 Task.FromResult(Enumerable.Empty<AffectationCandidate>());
 
             public Task<IEnumerable<AffectationCandidate>> LireFacturesDepuisPeriodeAsync(
-                int soId, DateTime dateDebut, DateTime dateFin, string connectionString) =>
+                int soId, DateTime dateDebut, DateTime dateFin, string connectionString, string sageConnectionString) =>
                 Task.FromResult(Enumerable.Empty<AffectationCandidate>());
         }
 
@@ -305,6 +305,11 @@ namespace Declaration.Orchestration.Tests
 
             public Task SupprimerLignesParEcIdAsync(Guid declarationId, int ecId)
                 => Task.CompletedTask;
+
+            public Task<string?> GetIdentifiantFiscalSocieteAsync(int soId) => Task.FromResult<string?>("12345678");
+            public Task<IReadOnlyList<CodeActiviteTiersMappingRow>> GetMappingCodeActiviteTiersAsync(int soId) => Task.FromResult<IReadOnlyList<CodeActiviteTiersMappingRow>>(new List<CodeActiviteTiersMappingRow>());
+            public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync() => Task.FromResult<IReadOnlyList<CodeActiviteReferentielRow>>(new List<CodeActiviteReferentielRow>());
+            public Task UpdateCodeActiviteLigneAsync(Guid ligneId, string codeActivite, string utilisateur) => Task.CompletedTask;
         }
     }
 }

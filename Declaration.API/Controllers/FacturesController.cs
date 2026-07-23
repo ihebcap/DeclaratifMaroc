@@ -136,6 +136,11 @@ public class FacturesController : ControllerBase
     /// Sage et remplit le cache de ventilation (TASK-024). Opération explicite, déclenchée par le
     /// bouton « Rafraîchir » de la liste — synchrone et potentiellement longue (lecture COM Sage).
     /// Aucune écriture de déclaration, aucun DT_Id modifié. Après succès, le front recharge la liste.
+    ///
+    /// TASK-156 : un second appel concurrent pour le MÊME soId (clics rapprochés sur le bouton
+    /// « Rafraîchir ») est rejeté immédiatement par le service (verrou par soId, décision PO
+    /// 23/07/2026 — pas d'attente silencieuse) — remonté ici en 409 Conflict avec un message
+    /// explicite, même pattern que les autres garde-fous métier (cf. DeclarationsController).
     /// </summary>
     [HttpPost("rafraichir-valorisation")]
     public async Task<IActionResult> RafraichirValorisation(
@@ -152,13 +157,20 @@ public class FacturesController : ControllerBase
         if (!PeriodeValide(debut.Value, fin.Value, out var erreurPeriode))
             return BadRequest(new { Message = erreurPeriode });
 
-        var rapport = await _workflowService.RafraichirValorisationAsync(soId, debut.Value, fin.Value);
-
-        return Ok(new
+        try
         {
-            FacturesTraitees = rapport.FacturesTraitees,
-            NbErreurs = rapport.Erreurs.Count,
-            Erreurs = rapport.Erreurs
-        });
+            var rapport = await _workflowService.RafraichirValorisationAsync(soId, debut.Value, fin.Value);
+
+            return Ok(new
+            {
+                FacturesTraitees = rapport.FacturesTraitees,
+                NbErreurs = rapport.Erreurs.Count,
+                Erreurs = rapport.Erreurs
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { Message = ex.Message });
+        }
     }
 }

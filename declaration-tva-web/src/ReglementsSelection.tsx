@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Loader2, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertTriangle, XCircle, FileSpreadsheet } from 'lucide-react';
 import { ExcelFilter } from './ExcelFilter';
 import { ColumnSelector } from './ColumnSelector';
 import { useColumnPrefs } from './useColumnPrefs';
@@ -211,6 +211,7 @@ export function ReglementsSelection({
   // porterait que sur une page romprait cette cohérence).
   const [allData, setAllData] = useState<ReglementRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exportingControle, setExportingControle] = useState(false);
 
   const [filters, setFilters] = useState<Record<string, ListFilterValue>>({});
   const [sortConfig, setSortConfig] = useState<{ key: 'date' | 'montant' | 'reste'; desc: boolean }>({ key: 'date', desc: true });
@@ -466,6 +467,30 @@ export function ReglementsSelection({
     return selectedRows.reduce((sum, r) => sum + r.montant, 0);
   }, [selectedRows]);
 
+  // TASK-160 : export Excel de contrôle (règlements sélectionnés + factures à déclarer + détail
+  // TVA), disponible dès qu'une déclaration existe — même endpoint/pattern que l'export de dépôt
+  // (DeclarationFinalePanel.tsx), téléchargement direct via blob, aucun fichier persisté.
+  const exporterControle = async () => {
+    setExportingControle(true);
+    try {
+      const res = await api.get(`/declarations/${declarationId}/export-controle`, { responseType: 'blob' });
+      const blobUrl = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'Export_controle.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+      showToast('Export de contrôle généré', 'success');
+    } catch (e: any) {
+      console.error(e);
+      showToast(e?.response?.data?.message || e?.response?.data?.Message || 'Erreur lors de l\'export de contrôle', 'error');
+    } finally {
+      setExportingControle(false);
+    }
+  };
+
   const colStyle = (col: Col): React.CSSProperties =>
     col.width ? { flex: `0 0 ${col.width}`, width: col.width } : { flex: '1 1 0', minWidth: '160px' };
   const colJustify = (col: Col) =>
@@ -558,6 +583,20 @@ export function ReglementsSelection({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Total sélectionné : {formatMoney(selectedTotal)}</span>
+          <button
+            onClick={exporterControle}
+            disabled={exportingControle}
+            title="Exporter en Excel les règlements sélectionnés, les factures à déclarer et le détail TVA"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+              background: 'white', border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-md)', padding: '0.4rem 0.75rem',
+              cursor: exportingControle ? 'not-allowed' : 'pointer', opacity: exportingControle ? 0.6 : 1,
+              fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)',
+            }}
+          >
+            {exportingControle ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />} Export de contrôle (Excel)
+          </button>
           <ColumnSelector columns={COLUMNS} visibleKeys={visibleKeys} onToggle={toggleColumn} onReset={resetColumns} />
         </div>
       </div>

@@ -1,5 +1,116 @@
 # TODO — Module Déclaration TVA (GRF)
 
+## 🏷️ Code activité TVA — défaut tiers (lecture seule) + surcharge manuelle par ligne (analyse PO 23/07/2026, 5 points tranchés)
+Demande PO : dans l'ancien applicatif (GénéraFi), le code taxe (taux) est lié à un code activité —
+modèle jugé très difficile à maintenir. Cartographie architecte (`D:\_vibe\apbs-gr_winform\analayse\RAPPORT-CODE-ACTIVITE-TVA.md`) :
+3 tables déjà en base GRF (même `SO_Id` que `P_SOCIETE`) — `P_DECTVAACTIVITE` (référentiel codes
+activité), `P_SOCIETECODEACTIVITETIERS` (mapping tiers→activité, jamais branché sur la TVA jusqu'ici),
+`P_DECTVASOCTAXEACTIVITE` (mapping taxe→activité, mécanisme historique douloureux). **5 décisions PO
+actées en session** : (1) ajouter le numéro tiers sur `P_SOCIETECODEACTIVITETIERS` (ALTER additif,
+fiabilise le matching aujourd'hui en texte libre) ; (2) **pas de nouvel écran web GRF** — paramétrage
+laissé à l'écran Trésorerie WinForms existant, GRF web reste lecture seule sur ces tables ; (3) si
+aucune résolution (tiers non affecté) → **non bloquant**, `"(sans activité)"` (le code activité n'entre
+pas dans le XML DGI) ; (4) **`P_DECTVASOCTAXEACTIVITE` écartée du périmètre** — pas besoin, aucune
+réintroduction du mapping taxe→activité ; (5) le cas confirmé "même facture, deux activités
+différentes" est couvert par une **surcharge manuelle directe sur la ligne** (écran ② Vérifier &
+Intégrer, même pattern que la validation d'incohérence TASK-078), pas par une table de mapping ;
+(6) absence d'écran GRF pour peupler le référentiel = **dette tracée, non bloquante** (tous les clients
+actuels gardent WinForms installé). Seuls manques réels côté GRF : `LigneCandidate` ne porte pas
+`CodeActivite` jusqu'à l'export (gap déjà documenté `DeclarationWorkflowService.cs:1170-1182`,
+TASK-155) et `DM_LGTVA` n'a pas de colonne `CodeActivite` (persistance + édition manuelle au figeage).
+
+| # | Task | Objet | État |
+|---|---|---|---|
+| 1 | [TASK-161](TASKS/TASK-161-code-activite-defaut-tiers-surcharge-ligne.md) | Résolution en cascade : surcharge manuelle ligne > `P_SOCIETECODEACTIVITETIERS` (lecture seule) > colonne Sage > vide (non bloquant). Colonne `CodeActivite` ajoutée à `DM_LGTVA` (auto + éditable), comble le gap TASK-155/impacte le recap TASK-160. Aucune écriture Sage, aucun nouvel écran de paramétrage GRF. | 🎯 **prêt** — dépendance cross-applicatif à coordonner : l'ALTER numéro tiers n'a de valeur que si l'écran WinForms `UcSocieteCodeActiviteTiers` (`apbs-gr_winform`) est aussi mis à jour pour le capturer. |
+
+## 🐞 Popup « Colonnes » ouvert hors écran (signalement PO 23/07/2026, capture écran ① Sélection)
+Signalement PO : clic sur le bouton « Colonnes » (pied de grille, écran ① Sélection) → le popup de
+sélection de colonnes s'ouvre vers le bas et se retrouve caché sous le bas de la fenêtre, inutilisable.
+Cause (code) : `ColumnSelector.tsx:26-33` ouvre toujours le popup en dessous du bouton, sans jamais
+tester l'espace restant ni basculer au-dessus (`flip`) — composant partagé par 6 écrans.
+
+| # | Task | Objet | État |
+|---|---|---|---|
+| 1 | [TASK-158](TASKS/TASK-158-popup-colonnes-cache-sous-bas-ecran.md) | `ColumnSelector.tsx` : basculer le popup au-dessus du bouton quand l'espace en dessous est insuffisant (flip vertical, même logique que le flip horizontal déjà en place). | 🎯 **prêt** — front seul, aucune dépendance. |
+
+## 🐞 Contention rafraîchissement valorisation OM (signalement client 23/07/2026, log serveur)
+Signalement client : `[VALO] batch OM en exception, repli individuel : Timeout lors de l'exécution du worker
+en mode batch.` à deux reprises. Diagnostic architecte sur le log complet : **aucune perte de données**
+(repli individuel TASK-023/072 a fonctionné), mais deux causes racines confirmées en code — (A) aucun
+verrou/anti-rebond sur `RafraichirValorisationAsync` (bouton « Rafraîchir » écran Factures) → 4 cycles
+concurrents observés sur le même `soId`, compétition pour la même session OM/Sage jusqu'au timeout batch
+(300 s, exact) ; (B) `TryServireDepuisCache` ne sert jamais le cache pour une facture sans paiement pointé
+(`currentToken == null`) → relecture OM systématique du même jeu de factures non payées à chaque cycle,
+contredisant le commentaire du code lui-même. Contournement immédiat validé avec le client : redémarrage
+propre du service (WinSW), sans risque de perte (effet de bord cache uniquement, aucune écriture de
+déclaration par ce chemin).
+
+> ✅ **TASK-156 approuvée** (23/07/2026, revue architecte complète : VERIFY relu, diff des 6 fichiers
+> vérifié indépendamment, build+tests rejoués) — verrou anti-chevauchement `soId` étendu en cours de
+> route aux 4 appelants réels de l'orchestrateur OM (pas seulement le bouton Rafraîchir, cf.
+> incident réel du 23/07 14:20 sur le chemin déclaration) + cache OM servi indépendamment du token de
+> paiement (facture non payée stable = 1 seule lecture OM, plus de relecture systématique). Voir
+> `DONE.md`.
+> ⚠️ **Réserves non bloquantes à surveiller** (documentées dans le VERIFY, non résolues) : (1) le
+> rejet 409 explicite côté front n'existe que sur le bouton Rafraîchir — les 3 autres chemins
+> (chargement d'une déclaration, réintégration, resynchronisation) renverront une erreur générique en
+> cas de rejet ; (2) **risque de contention nouvelle** au premier chargement d'une déclaration si le
+> front appelle en parallèle « Decaissement » et « Encaissement » pour le même `soId` — l'un des deux
+> onglets peut désormais échouer au chargement (409) là où il aurait auparavant réussi en silence
+> (au prix, avant ce correctif, d'une double lecture OM). Non vérifié empiriquement (pas d'accès à
+> l'écran réel en environnement de build) — à confirmer en conditions réelles ; si constaté, le
+> contournement est un simple rechargement (le premier onglet aura fini).
+
+## 🔧 WinSW en version pré-release : arrêt du service laisse des process orphelins (signalement client 23/07/2026)
+Signalement client : arrêt du service `DeclaratifMaroc` en échec (`InvalidOperationException` dans
+`WinSW.WrapperService.OnStop → StopTree → StopDescendants`), `Declaration.API.exe` (et ses workers OM
+enfants) restant actifs en arrière-plan après la demande d'arrêt — intervention manuelle nécessaire.
+Cause : bug interne à **WinSW** (tiers), version vendorisée en **pré-release**
+(`Get-WinSW.ps1` : `v3.0.0-alpha.11`), dans sa logique de terminaison de l'arbre de process descendants.
+Lié à TASK-156 (la présence d'un worker OM enfant vivant au moment de l'arrêt expose la fenêtre du bug)
+sans en être une régression — défaut préexistant dans un composant tiers.
+
+| # | Task | Objet | État |
+|---|---|---|---|
+| 1 | [TASK-157](TASKS/TASK-157-winsw-version-stable-arret-service-processus-orphelins.md) | Remplacer la version pré-release de WinSW par une version stable (ou contourner sa gestion de l'arbre de descendants) — test réel obligatoire avec un worker OM vivant au moment de l'arrêt. | 🎯 **prêt** — non bloquant, contournement manuel disponible (tuer les process orphelins) en attendant. |
+
+## 🔴 CRITIQUE — Aucun bouton d'export fonctionnel : endpoints génération/téléchargement en 501 (analyse architecte 23/07/2026)
+Constat suite à TASK-137 (export XML corrigé et approuvé) : `Declaration.Export.Xml.DeclarationXmlExporter`
+n'est appelé nulle part hors de ses propres tests. `Declaration.API/Controllers/DeclarationsController.cs`
+expose `POST {id}/generation` et `GET {id}/fichiers/{type}` mais les deux renvoient un `501 Not
+Implemented` littéral. Côté front, `GenerationPanel.tsx` (atteignable en production via
+`DeclarationStepper.tsx`) a un bouton « Télécharger » qui ne fait qu'un `alert(...)`, aucun appel réseau
+réel. **Un utilisateur ne peut aujourd'hui obtenir aucun fichier de dépôt (XML ni Excel) depuis
+l'application.** Cartographie complète (sources de données manquantes, pattern de connexion à
+réutiliser, contrainte JWT front) dans TASK-155.
+
+**Point bloquant potentiel découvert pendant la cartographie** : aucune colonne d'identifiant fiscal de
+la société elle-même n'a été repérée dans le code actuel lisant `P_SOCIETE` — le champ actuellement
+utilisé ailleurs (`SocieteId`) est l'`SO_Id` interne GRF, pas l'IF réel attendu par le tag XML
+`<identifiantFiscal>`. À vérifier en premier lieu sur le schéma réel de `P_SOCIETE` (étape 0 de
+TASK-155) avant de pouvoir livrer un cycle complet.
+
+> ✅ **TASK-155 approuvée** (23/07/2026) — les deux endpoints sont réellement câblés : IF société
+> résolu et vérifié en base réelle (`P_SOCIETE.SO_Identifiant`, distincte de `SO_Id`), blocage
+> explicite si absente/vide (jamais de placeholder, TASK-151) ; `ConstruireModeleExportAsync`
+> reconstruit le `DeclarationModele` (lignes `Integree`) depuis une déclaration `Cloturée` ;
+> `GenererFichiersExportAsync`/`ObtenirCheminsExportAsync` appellent les exporters XML/Excel
+> existants (non modifiés) et relisent leurs chemins de façon déterministe. Écart de cartographie
+> corrigé : le composant front réellement monté est `DeclarationFinalePanel.tsx` (déjà correct),
+> pas `GenerationPanel.tsx` (composant mort, corrigé par hygiène). Voir `DONE.md`.
+> ⚠️ Réserve non bloquante : cycle complet clôture→génération→téléchargement non rejoué sur une
+> déclaration réelle (aucune `Cloturée` disponible en base de test au moment du VERIFY) — à
+> confirmer par le PO sur un environnement avec une déclaration clôturée réelle.
+
+> ✅ **TASK-154 approuvée** (23/07/2026) — `F_COMPTET` (table Sage) n'est plus jamais lu via la
+> connexion GRF ni via synonyme cross-base : les 4 requêtes de `SelectionExpliqueeService.cs`
+> résolvent désormais la connexion Sage dynamiquement par `SO_Id` et joignent `F_COMPTET` en
+> mémoire (batch `WHERE CT_Num IN @codes`), jamais un JOIN SQL trois-parties. Voir `DONE.md`.
+> ⚠️ Réserve non bloquante : `SelectionnerAffectationsService.cs` (service legacy, hors périmètre de
+> TASK-154, non câblé dans `Declaration.API`) conserve encore 4 `LEFT JOIN F_COMPTET` identiques au
+> défaut corrigé — inoffensif tant qu'il reste inatteignable depuis l'API, mais même cause racine
+> si jamais réactivé/câblé. À traiter si le PO souhaite un jour réutiliser ce comparateur GRFN.
+
 ## 🌙 Lot session 20/07/2026 (worker nocturne) — revue architecte du 20/07/2026
 
 > ✅ **TASK-145/146/148/149/150/151 approuvées** (20/07/2026, revue architecte complète : VERIFY
@@ -89,21 +200,16 @@
 > connexions Dapper distinctes, jamais de JOIN SQL trois-parties). Endpoint partagé `GET
 > /api/rapprochement` resté additif côté serveur, aucun filtrage retiré. Voir `DONE.md`.
 
-## 🔴 CRITIQUE — Export XML "Relevé de déductions" non conforme au CDC DGI (analyse architecte 19/07/2026)
-Analyse architecte demandée par le PO : comparaison de `Declaration.Export.Xml/DeclarationXmlExporter.cs`
-(TASK-011) avec `D:\_vibe\apbs-gr_winform\analayse\CDC-EXPORT-XML-TVA-DEDUCTION.md` (cahier des charges
-externe basé sur un fichier réellement accepté par le portail fiscal marocain). **Constat majeur** :
-TASK-011 avait pour instruction de reproduire fidèlement l'ancien générateur GRFN (décision PO
-antérieure à ce CDC) — plusieurs comportements ainsi reproduits sont en réalité des anomalies non
-conformes (prolog XML/`xmlns:xsi` absents, balise `<prorata>` en trop, blocage IF=8/ICE=15 trop strict).
-**Défaut supplémentaire, propre au nouveau code (pas hérité de GRFN)** : le taux de TVA `<tx>` est
-exporté en valeur pourcentage (`20.00`) au lieu de la fraction décimale attendue (`0.20`) — écart d'un
-facteur 100 sur le taux de TVA déclaré, jamais couvert par un test avec une valeur réaliste. Détail
-complet des 7 constats (sévérité, fichiers, lignes) dans TASK-137.
-
-| # | Task | Objet | État |
-|---|---|---|---|
-| 1 | [TASK-137](TASKS/TASK-137-conformite-export-xml-releve-deductions-cdc.md) | Mise en conformité de l'export XML avec le CDC DGI : taux `tx` en fraction décimale (bloquant), prolog+`xmlns:xsi`, retrait `<prorata>`, assouplissement du blocage IF/ICE, arbitrage arrondi (§5.1 CDC, point ouvert), `Trim()` des champs texte, couverture de test (avoir, taux réaliste, échappement `&`). | 🆕 **à faire** (partiel) — **vérification directe du code (19/07/2026, architecte)** : F1 (`tx` fraction décimale, `DeclarationXmlExporter.cs:75`), F2 (prolog+`xmlns:xsi`, l.42-43), F3 (`<prorata>` retiré) et F4 (blocage IF/ICE assoupli, `ValidationIdentiteFiscale.cs:45-52`) **déjà implémentés en code**, ainsi que F6 (`Trim()`). **Reste bloquant pour clôture** : F5 (arrondi §5.1, formatage encore fixe `"0.00"`, décision PO/fiscaliste non tracée) et la mise à jour de la couverture de test (F2/F3/F4 régressions volontaires + cas F1/F7/`&`) exigées par les critères de validation de la task — VERIFY non ré-instruit (`VERIFY/TASK-137_verify.md` en l'état ne documente pas F5/tests). |
+> ✅ **TASK-137 approuvée** (23/07/2026, revue architecte complète : VERIFY relu, build+tests
+> rejoués indépendamment — `Declaration.Export.Xml.Tests` 13/13, `Declaration.Core.Tests` 34/34,
+> `Declaration.Orchestration.Tests` 137/137, `Declaration.Export.Excel.Tests` 1/1,
+> `Declaration.Selection.Tests` 58/59 échec préexistant sans rapport) — export XML "Relevé de
+> déductions" mis en conformité avec le CDC DGI externe : taux `tx` en fraction décimale (défaut
+> bloquant propre au nouveau code, pas hérité de GRFN), prolog+`xmlns:xsi`, retrait `<prorata>`,
+> assouplissement du blocage IF/ICE (CDC §4.8), formatage decimal sans arrondi forcé, `Trim()`.
+> ⚠️ Réserves non bloquantes à trancher par le PO/fiscaliste avant tout dépôt réel : format exact
+> final IF/ICE (CDC §5.2) et arrondi/précision définitifs des montants (CDC §5.1, `Ventilateur.cs`
+> en amont non touché). Voir `DONE.md`.
 
 ## 🔐 Simplification `DeclarationTVA.sql` + exécution automatique par le setup (PO 19/07/2026)
 Décisions PO actées (session 19/07/2026) : (1) **retrait du login SQL dédié à moindre privilège**
@@ -637,7 +743,7 @@ contre `.\sql2022`/`GR_EMA_DISTRIBUTION`) — voir `DONE.md`.
 |---|---|---|---|
 | 1 | [TASK-044](TASKS/TASK-044-deploiement-mono-service-mono-dossier.md) | **Déploiement mono-service / mono-dossier** : **un seul** service Windows (l'API) qui appelle tout (worker OM inclus) et sert le front, dans **un seul** dossier deploy. Socle déjà en place (front `wwwroot`, `WorkerExePath` relatif à l'exe, `logs/` à côté de l'exe). Reste : `publish.ps1` (build front + `dotnet publish` API + worker net48 → `deploy/`), `connections.json` de déploiement (chemins relatifs, secret hors dépôt), install service (compte Sage+SQL), `DOCS/DEPLOIEMENT.md`. | 🎯 **prêt** — indépendant de TASK-045. Aucune modif métier/worker. |
 | 2 | [TASK-116](DONE_DETAIL/TASK-116-fix-front-non-servi-racine-usedefaultfiles.md) | **Fix bloquant : front non servi sur `/` (404 en prod)** : `Program.cs:98` — `UseStaticFiles()` sans `UseDefaultFiles()` en amont, `GET /` renvoie 404 même `wwwroot` peuplé. Constaté en production 17/07/2026 pendant l'installation en cours. | ✅ **done** — 19/07/2026 (vérifié directement en code par l'architecte : `Program.cs:128-129` `UseDefaultFiles()`+`UseStaticFiles()` dans le bon ordre + `MapFallbackToFile`). Voir DONE.md. |
-| 3 | [TASK-115](IN_PROGRESS/TASK-115-setup-gui-winsw-port-parametrable.md) | **Setup GUI (WinForms) + service via WinSW-x64 + port paramétrable** : un seul exe (install **ou** mise à jour détectée automatiquement) qui saisit connexions SQL/JWT/SageOM/port via formulaire, écrit `connections.json`, installe/met à jour le service Windows via WinSW-x64. Port retiré de tout fichier de config à éditer à la main. | 🔴 **rejetée à nouveau** (18/07/2026) : complément CLI du 18/07 (`Get-WinSW.ps1`/`Publish-Setup.ps1` réels) reconnu mais insuffisant. **Bloquant restant, à la charge du PO** : 3 scénarios GUI réels (install à blanc / mise à jour / port occupé), décision Sage OM (ProgID/CLSID ou acceptation définitive confirmation manuelle). **+ nouvelle réserve (18/07/2026, retour PO après pilotage réel)** : formulaire `TabControl` jugé insatisfaisant → refonte en **assistant multi-écrans (wizard, style Inno Setup)** couvrant tout le formulaire (6 étapes, cf. TASK-115 §Inclus point 6bis) — présentation/navigation uniquement, aucun service touché. TASK-044 explicitement **hors périmètre**, non bloquante pour TASK-115. Cf. `VERIFY/TASK-115_verify.md`. Corrections post-livraison déjà demandées sur ce formulaire traitées et approuvées séparément (TASK-122, cf. `DONE.md`). |
+| 3 | [TASK-115](DONE_DETAIL/TASK-115-setup-gui-winsw-port-parametrable.md) | **Setup GUI (WinForms) + service via WinSW-x64 + port paramétrable** : un seul exe (install **ou** mise à jour détectée automatiquement) qui saisit connexions SQL/JWT/SageOM/port via formulaire, écrit `connections.json`, installe/met à jour le service Windows via WinSW-x64. Port retiré de tout fichier de config à éditer à la main. | ✅ **done** — 23/07/2026 (approuvée PO après test réel d'installation sur 2 environnements : réserve n°1 (3 scénarios GUI) levée par la preuve terrain ; réserve n°3 (Sage OM) et login avec mot de passe réel confirmés/acceptés par le PO à la clôture ; gouvernance — absence de revue indépendante sur les 12 compléments auto-évalués — couverte par cette revue architecte de clôture). Voir `DONE.md` et `DONE_DETAIL/TASK-115_verify.md`. |
 
 > ✅ **TASK-114 livrée et approuvée** (17/07/2026, implémentée en worker exceptionnel — cf. réserve `CLAUDE.md`) : sécurisation JWT + droits SQL dédiés, prérequis de TASK-044 ci-dessus mais indépendante. Voir `DONE.md`.
 

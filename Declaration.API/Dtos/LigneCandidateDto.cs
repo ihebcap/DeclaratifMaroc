@@ -42,6 +42,11 @@ public sealed record LigneCandidateDto
         // exposés en lecture seule (aucune valeur ni total recalculé).
         EcId = l.EC_Id;
         IncoherenceValidee = l.IncoherenceValidee;
+        // TASK-161 : code activité résolu en cascade, exposé en lecture + son état de surcharge
+        // manuelle (même pattern qu'IncoherenceValidee ci-dessus). "" défensif si la colonne SQL
+        // est NULL (ligne figée avant la migration 010).
+        CodeActivite = l.CodeActivite ?? "";
+        CodeActiviteModifieManuellement = l.CodeActiviteModifieManuellement;
     }
 
     [JsonPropertyName("id")]
@@ -102,4 +107,10 @@ public sealed record LigneCandidateDto
 
     [JsonPropertyName("incoherenceValidee")]
     public bool IncoherenceValidee { get; }
+
+    [JsonPropertyName("codeActivite")]
+    public string CodeActivite { get; }
+
+    [JsonPropertyName("codeActiviteModifieManuellement")]
+    public bool CodeActiviteModifieManuellement { get; }
 }

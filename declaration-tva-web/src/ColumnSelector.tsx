@@ -17,11 +17,15 @@ export function ColumnSelector({
   onReset: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [pos, setPos] = useState<{ left: number; top?: number; bottom?: number }>({ left: 0, top: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
   const POPUP_WIDTH = 220;
+  // TASK-158 — hauteur max réelle du popup : maxHeight 280px (liste, l.68 plus bas) + paddings/pied.
+  const POPUP_ESTIMATED_HEIGHT = 340;
+  const VIEWPORT_MARGIN = 8;
+  const GAP = 4;
 
   const computePosition = () => {
     if (!buttonRef.current) return;
@@ -29,7 +33,17 @@ export function ColumnSelector({
     let left = rect.right - POPUP_WIDTH;
     if (left < 8) left = 8;
     if (left + POPUP_WIDTH > window.innerWidth - 8) left = Math.max(8, window.innerWidth - POPUP_WIDTH - 8);
-    setPos({ top: rect.bottom + 4, left });
+
+    const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
+    const spaceAbove = rect.top - VIEWPORT_MARGIN;
+    const openBelow = spaceBelow >= POPUP_ESTIMATED_HEIGHT
+      || (spaceAbove < POPUP_ESTIMATED_HEIGHT && spaceBelow >= spaceAbove);
+
+    if (openBelow) {
+      setPos({ left, top: rect.bottom + GAP });
+    } else {
+      setPos({ left, bottom: window.innerHeight - rect.top + GAP });
+    }
   };
 
   useLayoutEffect(() => {
@@ -60,7 +74,10 @@ export function ColumnSelector({
       ref={popupRef}
       onClick={(e) => e.stopPropagation()}
       style={{
-        position: 'fixed', top: pos.top, left: pos.left, zIndex: 1000,
+        position: 'fixed',
+        left: pos.left,
+        ...(pos.top !== undefined ? { top: pos.top } : { bottom: pos.bottom }),
+        zIndex: 1000,
         background: 'white', border: '1px solid var(--border-color)', borderRadius: '4px',
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: '0.5rem', width: `${POPUP_WIDTH}px`, cursor: 'default',
       }}

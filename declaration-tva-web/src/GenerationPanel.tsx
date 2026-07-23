@@ -1,29 +1,51 @@
 import { useState } from 'react';
-import { Download, FileCode2, FileSpreadsheet, FileText, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { Download, FileCode2, FileSpreadsheet, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 import api from './api';
 
+// TASK-155 : ce composant n'est référencé par aucune route (App.tsx:296 monte DeclarationStepper
+// → DeclarationFinalePanel.tsx pour l'étape ④/⑥, jamais GenerationPanel.tsx) — cartographie
+// corrigée en VERIFY. Alignement fait par hygiène (mêmes clés fichiers.xmlDecaissement/
+// excelCheckup que le contrôleur, téléchargement réel, erreur réelle), mais aucun test manuel
+// n'a de sens sur un composant non monté.
 export function GenerationPanel({ declarationId, onBack }: { declarationId: string, onBack: () => void }) {
     const [generating, setGenerating] = useState(false);
     const [generated, setGenerated] = useState(false);
     const [fichiers, setFichiers] = useState<any>(null);
+    const [erreur, setErreur] = useState<string | null>(null);
 
     const handleGenerate = async () => {
         setGenerating(true);
+        setErreur(null);
         try {
             const res = await api.post(`/declarations/${declarationId}/generation`);
             setFichiers(res.data.fichiers);
             setGenerated(true);
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert('Erreur lors de la génération');
+            const msg = e?.response?.data?.Message || e?.response?.data?.message || 'Erreur lors de la génération';
+            setErreur(msg);
         } finally {
             setGenerating(false);
         }
     };
 
-    const downloadFile = (url: string, name: string) => {
-        // En vrai: window.location.href = url ou create object URL
-        alert(`Téléchargement de ${name} depuis l'URL: ${url}`);
+    const downloadFile = async (url: string, name: string) => {
+        if (!url) return;
+        try {
+            const res = await api.get(url, { responseType: 'blob' });
+            const blobUrl = URL.createObjectURL(res.data);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(blobUrl);
+        } catch (e: any) {
+            console.error(e);
+            const msg = e?.response?.data?.Message || e?.response?.data?.message || 'Erreur lors du téléchargement';
+            setErreur(msg);
+        }
     };
 
     return (
@@ -40,8 +62,13 @@ export function GenerationPanel({ declarationId, onBack }: { declarationId: stri
                 </div>
                 
                 <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {erreur && (
+                        <div style={{ padding: '0.75rem 1rem', borderRadius: '8px', background: 'var(--status-blocking-bg, #fef2f2)', color: 'var(--status-blocking-text, #b91c1c)', fontSize: '0.875rem' }}>
+                            {erreur}
+                        </div>
+                    )}
                     {!generated ? (
-                        <button 
+                        <button
                             onClick={handleGenerate}
                             disabled={generating}
                             className="btn btn-primary"
@@ -77,19 +104,9 @@ export function GenerationPanel({ declarationId, onBack }: { declarationId: stri
                                     <Download size={16} /> Télécharger
                                 </button>
                             </div>
-
-                            <div style={{ padding: '1rem', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                    <FileText size={24} style={{ color: '#dc2626' }} />
-                                    <div>
-                                        <div style={{ fontWeight: 600 }}>Rapport d'anomalies</div>
-                                        <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>PDF des avertissements tolérés</div>
-                                    </div>
-                                </div>
-                                <button onClick={() => downloadFile(fichiers?.rapportAnomalies || '', 'Anomalies.pdf')} className="btn" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <Download size={16} /> Télécharger
-                                </button>
-                            </div>
+                            {/* TASK-155 : pas de "Rapport d'anomalies" PDF — aucun backend ne l'a
+                                jamais produit (ni TASK-010/011 ni TASK-155), fantôme UI signalé au
+                                PO en VERIFY plutôt qu'implémenté silencieusement ici. */}
                         </div>
                     )}
 

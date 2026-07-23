@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Dapper;
@@ -10,14 +11,17 @@ namespace Declaration.Selection
     public class SelectionExpliqueeService : ISelectionExpliqueeService
     {
         public async Task<IEnumerable<AffectationCandidate>> SelectionnerExpliqueeAsync(
-            int soId, 
-            DateTime dateDebut, 
-            DateTime dateFin, 
+            int soId,
+            DateTime dateDebut,
+            DateTime dateFin,
             string connectionString,
+            string sageConnectionString,
             Func<string, SensAffectation, Task<(bool Existe, bool TaxeOk)>>? verifierFacture = null)
         {
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ArgumentException("La chaîne de connexion ne peut pas être vide.", nameof(connectionString));
+            if (string.IsNullOrWhiteSpace(sageConnectionString))
+                throw new ArgumentException("La chaîne de connexion Sage ne peut pas être vide.", nameof(sageConnectionString));
 
             var result = new List<AffectationCandidate>();
 
@@ -48,15 +52,25 @@ namespace Declaration.Selection
                 };
 
                 // 1. Décaissements Fournisseur + Espèces Fournisseur
-                var fournisseurs = await connection.QueryAsync<AffectationCandidateRow>(GetSurensembleFournisseurSql(identiteConfig), param);
-                await MapAndEvaluate(result, fournisseurs, dateDebut, dateFin, SensAffectation.Achat, verifierFacture);
+                var fournisseurs = (await connection.QueryAsync<AffectationCandidateRow>(GetSurensembleFournisseurSql(), param)).ToList();
 
                 // 2. Dépenses
-                var depenses = await connection.QueryAsync<AffectationCandidateRow>(GetSurensembleDepenseSql(identiteConfig), param);
-                await MapAndEvaluate(result, depenses, dateDebut, dateFin, SensAffectation.Achat, verifierFacture);
+                var depenses = (await connection.QueryAsync<AffectationCandidateRow>(GetSurensembleDepenseSql(), param)).ToList();
 
                 // 3. Encaissements Client
-                var encaissements = await connection.QueryAsync<AffectationCandidateRow>(GetSurensembleClientSql(identiteConfig), param);
+                var encaissements = (await connection.QueryAsync<AffectationCandidateRow>(GetSurensembleClientSql(), param)).ToList();
+
+                // TASK-154 : F_COMPTET est une table Sage — plus jamais lue via la connexion GRF
+                // (LEFT JOIN cross-base statique supprimé) ni via un synonyme. Jointure applicative
+                // batchée (un seul SELECT ... WHERE CT_Num IN @codes) sur la connexion Sage déjà
+                // résolue par SO_Id EN AMONT par l'appelant (ce service ne référence pas
+                // Declaration.Infrastructure et ne résout jamais lui-même cette connexion), sur
+                // l'union des tiers des 3 surensembles — jamais une connexion ouverte par tiers.
+                await EnrichirTiersDepuisSageAsync(sageConnectionString, identiteConfig,
+                    fournisseurs.Concat(depenses).Concat(encaissements));
+
+                await MapAndEvaluate(result, fournisseurs, dateDebut, dateFin, SensAffectation.Achat, verifierFacture);
+                await MapAndEvaluate(result, depenses, dateDebut, dateFin, SensAffectation.Achat, verifierFacture);
                 await MapAndEvaluate(result, encaissements, dateDebut, dateFin, SensAffectation.Vente, verifierFacture);
 
                 return result;
@@ -83,7 +97,7 @@ namespace Declaration.Selection
             }
         }
 
-        private string GetSurensembleFournisseurSql(IdentiteFiscaleFournisseurConfig id) => $@"
+        private string GetSurensembleFournisseurSql() => $@"
             SELECT
                 M.MV_Id,
                 M.MV_Domaine,
@@ -104,14 +118,10 @@ namespace Declaration.Selection
                 A.DT_Id,
                 M.CT_Code AS TiersNumero,
                 M.CT_Intitule AS TiersNom,
-                {id.SelectIdentifiantExpression("T")} AS TiersIF,
-                {id.SelectIceExpression("T")} AS TiersICE,
-                M.MV_Numero AS NumeroRapprochement,
-                T.CT_APE AS TiersActivite
+                M.MV_Numero AS NumeroRapprochement
             FROM RT_MOUVEMENT M
             LEFT JOIN RT_AFFECTATION A ON M.MV_Id = A.MV_Id
             LEFT JOIN RT_ECHEANCE E ON A.EC_Id = E.EC_Id
-            LEFT JOIN F_COMPTET T ON T.CT_Num = M.CT_Code
             WHERE M.SO_Id = @so
               AND M.MV_Domaine = @domaineFournisseur
               -- TASK-050 : MV_DECAISSE supprimé — cadrage direction par MV_Domaine=1 seul.
@@ -125,7 +135,7 @@ namespace Declaration.Selection
               AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude
         ";
 
-        private string GetSurensembleDepenseSql(IdentiteFiscaleFournisseurConfig id) => $@"
+        private string GetSurensembleDepenseSql() => $@"
             SELECT
                 M.MV_Id,
                 M.MV_Domaine,
@@ -146,14 +156,10 @@ namespace Declaration.Selection
                 A.DT_Id,
                 M.CT_Code AS TiersNumero,
                 M.CT_Intitule AS TiersNom,
-                {id.SelectIdentifiantExpression("T")} AS TiersIF,
-                {id.SelectIceExpression("T")} AS TiersICE,
-                M.MV_Numero AS NumeroRapprochement,
-                T.CT_APE AS TiersActivite
+                M.MV_Numero AS NumeroRapprochement
             FROM RT_MOUVEMENT M
             LEFT JOIN RT_AFFECTATION A ON M.MV_Id = A.MV_Id
             LEFT JOIN RT_ECHEANCE E ON A.EC_Id = E.EC_Id
-            LEFT JOIN F_COMPTET T ON T.CT_Num = M.CT_Code
             WHERE M.SO_Id = @so
               AND M.MV_Domaine = @domaineDepense
               -- TASK-050 : MV_DECAISSE supprimé — cadrage direction par MV_Domaine=6 seul.
@@ -164,7 +170,7 @@ namespace Declaration.Selection
               AND {RegleDatePeriode.DateReferenceSqlM} < @finExclude
         ";
 
-        private string GetSurensembleClientSql(IdentiteFiscaleFournisseurConfig id) => $@"
+        private string GetSurensembleClientSql() => $@"
             SELECT
                 M.MV_Id,
                 M.MV_Domaine,
@@ -185,14 +191,10 @@ namespace Declaration.Selection
                 A.DT_Id,
                 M.CT_Code AS TiersNumero,
                 M.CT_Intitule AS TiersNom,
-                {id.SelectIdentifiantExpression("T")} AS TiersIF,
-                {id.SelectIceExpression("T")} AS TiersICE,
-                M.MV_Numero AS NumeroRapprochement,
-                T.CT_APE AS TiersActivite
+                M.MV_Numero AS NumeroRapprochement
             FROM RT_MOUVEMENT M
             LEFT JOIN RT_AFFECTATION A ON M.MV_Id = A.MV_Id
             LEFT JOIN RT_ECHEANCE E ON A.EC_Id = E.EC_Id
-            LEFT JOIN F_COMPTET T ON T.CT_Num = M.CT_Code
             WHERE M.SO_Id = @so
               AND M.MV_Domaine = @domaineClient
               -- TASK-050 : MV_DECAISSE supprimé — cadrage direction par MV_Domaine=0 seul.
@@ -216,10 +218,13 @@ namespace Declaration.Selection
             int soId,
             DateTime dateDebut,
             DateTime dateFin,
-            string connectionString)
+            string connectionString,
+            string sageConnectionString)
         {
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ArgumentException("La chaîne de connexion ne peut pas être vide.", nameof(connectionString));
+            if (string.IsNullOrWhiteSpace(sageConnectionString))
+                throw new ArgumentException("La chaîne de connexion Sage ne peut pas être vide.", nameof(sageConnectionString));
 
             var result = new List<AffectationCandidate>();
 
@@ -260,8 +265,12 @@ namespace Declaration.Selection
                 // Note : on lit uniquement les factures fournisseur/dépense (domaines 1 et 6) car
                 // EC_Type=0 est spécifique aux achats ERP. Les encaissements client restent gérés
                 // par SelectionnerExpliqueeAsync (axe paiement, règle TVA-sur-encaissement).
-                var sql = GetFactureFirstSql(identiteConfig);
-                var rows = await connection.QueryAsync<AffectationCandidateRow>(sql, param);
+                var sql = GetFactureFirstSql();
+                var rows = (await connection.QueryAsync<AffectationCandidateRow>(sql, param)).ToList();
+
+                // TASK-154 : F_COMPTET (Sage) rattaché en mémoire, jamais via la connexion GRF —
+                // voir le commentaire équivalent dans SelectionnerExpliqueeAsync.
+                await EnrichirTiersDepuisSageAsync(sageConnectionString, identiteConfig, rows);
 
                 // Évaluation : sens=Achat (EC_Type=0 = factures fournisseur/dépense).
                 // La DÉCLARATION reste strictement gated sur EstEligible (rapproché, MV_Point=1,
@@ -286,7 +295,7 @@ namespace Declaration.Selection
         /// mais tracée pour transparence). Une facture avec règlement non rapproché → NonRapproche
         /// (EstValorisable=true). Lecture seule — aucune écriture RT_*.
         /// </summary>
-        private string GetFactureFirstSql(IdentiteFiscaleFournisseurConfig id) => $@"
+        private string GetFactureFirstSql() => $@"
             SELECT
                 COALESCE(M.MV_Id, 0)            AS MV_Id,
                 COALESCE(M.MV_Domaine, @domaineFournisseur) AS MV_Domaine,
@@ -309,22 +318,17 @@ namespace Declaration.Selection
                 COALESCE(M.CT_Code, E.CT_Code)   AS TiersNumero,
                 -- RT_ECHEANCE a CT_Intitule directement ; fallback si MV absent
                 COALESCE(M.CT_Intitule, E.CT_Intitule) AS TiersNom,
-                {id.SelectIdentifiantExpression("T")} AS TiersIF,
-                {id.SelectIceExpression("T")}     AS TiersICE,
-                M.MV_Numero                      AS NumeroRapprochement,
-                -- CT_APE depuis F_COMPTET (via mouvement si présent, sinon via échéance CT_Code)
-                COALESCE(T.CT_APE, T2.CT_APE)    AS TiersActivite
+                M.MV_Numero                      AS NumeroRapprochement
+                -- TASK-154 : TiersIF/TiersICE/TiersActivite (F_COMPTET, table Sage) ne sont plus
+                -- lus ici — rattachés en mémoire après coup via EnrichirTiersDepuisSageAsync, par
+                -- une jointure applicative sur TiersNumero (= COALESCE(M.CT_Code, E.CT_Code)
+                -- ci-dessus, donc même clé qu'auraient utilisée les anciens LEFT JOIN T/T2).
             FROM RT_ECHEANCE E
             -- Rattachement du règlement (LEFT JOIN : facture sans règlement reste présente)
             LEFT JOIN RT_AFFECTATION A ON E.EC_Id = A.EC_Id
             LEFT JOIN RT_MOUVEMENT M   ON A.MV_Id = M.MV_Id
                                       AND M.SO_Id = @so
                                       AND M.MV_Domaine IN (@domaineFournisseur, @domaineDepense)
-            -- Maître tiers via mouvement (règlement présent)
-            LEFT JOIN F_COMPTET T      ON T.CT_Num = M.CT_Code
-            -- Maître tiers via échéance si pas de mouvement (CT_APE uniquement)
-            -- CORRECTION TASK-050 : E.CT_Code (pas CT_Num — colonne inexistante dans RT_ECHEANCE)
-            LEFT JOIN F_COMPTET T2     ON T2.CT_Num = E.CT_Code
             WHERE E.SO_Id = @so
               -- TASK-052 (suite) : liste blanche complète (0=FC, 4=Solde, 111=FGR), pas seulement
               -- EC_Type_FactureErp — sinon les factures Solde/FGR ne sont jamais lues ici alors que
@@ -340,5 +344,64 @@ namespace Declaration.Selection
               AND E.DO_Domaine = @achatDomaine
         ";
 
+        /// <summary>
+        /// TASK-154 : rattache les colonnes tiers (TiersIF/TiersICE/TiersActivite) portées par
+        /// <c>F_COMPTET</c> — une table Sage, jamais présente dans la base GRF — via une jointure
+        /// APPLICATIVE (dictionnaire en mémoire par <c>CT_Num</c>), après une lecture batchée
+        /// unique sur la connexion Sage déjà résolue par l'appelant (<c>SO_Id</c> → base Sage,
+        /// TASK-118). Jamais de JOIN SQL trois-parties, jamais de synonyme, jamais de connexion
+        /// ouverte par tiers individuel — un seul <c>SELECT ... WHERE CT_Num IN @codes</c> pour
+        /// tous les tiers distincts déjà lus côté GRF. Lecture seule stricte.
+        /// </summary>
+        private static async Task EnrichirTiersDepuisSageAsync(
+            string sageConnectionString,
+            IdentiteFiscaleFournisseurConfig identiteConfig,
+            IEnumerable<AffectationCandidateRow> rows)
+        {
+            var codes = rows
+                .Select(r => r.TiersNumero)
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Distinct()
+                .ToList();
+
+            if (codes.Count == 0) return;
+
+            var sql = $@"
+                SELECT
+                    CT_Num,
+                    {identiteConfig.SelectIdentifiantExpression("F_COMPTET")} AS TiersIF,
+                    {identiteConfig.SelectIceExpression("F_COMPTET")} AS TiersICE,
+                    CT_APE
+                FROM F_COMPTET
+                WHERE CT_Num IN @codes";
+
+            using var sageConnection = new SqlConnection(sageConnectionString);
+            await sageConnection.OpenAsync();
+            var tiersRows = await sageConnection.QueryAsync<TiersFComptetRow>(sql, new { codes });
+
+            var parCode = tiersRows
+                .Where(t => !string.IsNullOrWhiteSpace(t.CT_Num))
+                .GroupBy(t => t.CT_Num)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            foreach (var r in rows)
+            {
+                if (r.TiersNumero != null && parCode.TryGetValue(r.TiersNumero, out var t))
+                {
+                    r.TiersIF = t.TiersIF;
+                    r.TiersICE = t.TiersICE;
+                    r.TiersActivite = t.CT_APE;
+                }
+            }
+        }
+
+        /// <summary>Ligne F_COMPTET (Sage) minimale pour la jointure applicative TASK-154.</summary>
+        private sealed class TiersFComptetRow
+        {
+            public string CT_Num { get; set; } = "";
+            public string? TiersIF { get; set; }
+            public string? TiersICE { get; set; }
+            public string? CT_APE { get; set; }
+        }
     }
 }

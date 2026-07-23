@@ -391,7 +391,9 @@ public class SageTaxReaderService
             MotifErreur = motif
         };
 
-    public IReadOnlyDictionary<string, DocumentTaxesInfo> LireFactures(IEnumerable<(string piece, string sens)> requetes)
+    public IReadOnlyDictionary<string, DocumentTaxesInfo> LireFactures(
+        IEnumerable<(string piece, string sens)> requetes,
+        Action<string, DocumentTaxesInfo>? onPieceCompleted = null)
     {
         var requests = new List<(string piece, string sens)>(requetes);
         var result = new Dictionary<string, DocumentTaxesInfo>();
@@ -514,6 +516,7 @@ public class SageTaxReaderService
             if (lotInterrompu)
             {
                 result[key] = EntreeEnErreur(req, $"Lot interrompu : {motifInterruption}");
+                onPieceCompleted?.Invoke(key, result[key]);
                 continue;
             }
 
@@ -524,12 +527,17 @@ public class SageTaxReaderService
                 motifInterruption = $"Timeout {perPieceTimeout.TotalSeconds}s sur la pièce {req.piece} ({req.sens}) — document peut-être ouvert dans Sage.";
                 result[key] = EntreeEnErreur(req, motifInterruption);
                 lotInterrompu = true;
+                onPieceCompleted?.Invoke(key, result[key]);
                 continue;
             }
 
             result[key] = pieceError != null
                 ? EntreeEnErreur(req, pieceError.Message)
                 : pieceResult!;
+            // TASK-159 : callback immédiat par pièce complétée — permet à l'appelant (Program.cs,
+            // mode batch) de flusher un résultat exploitable ligne par ligne AVANT la fin du lot,
+            // pour pouvoir être récupéré si le process externe est tué sur timeout (WorkerInvoker).
+            onPieceCompleted?.Invoke(key, result[key]);
         }
 
         jobs.CompleteAdding();

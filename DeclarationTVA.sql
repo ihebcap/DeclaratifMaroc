@@ -219,6 +219,29 @@ IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DM_LGT
     ALTER TABLE dbo.DM_LGTVA ADD IncoherenceValideeLe DATETIME NULL;
 GO
 
+-- TASK-161 — code activite TVA resolu en cascade (surcharge ligne > defaut tiers
+-- P_SOCIETECODEACTIVITETIERS > colonne Sage CT_APE > vide), persiste au premier figeage pour
+-- combler le gap deja documente (LigneCandidate ne portait aucun CodeActivite jusqu'ici, impactait
+-- l'export de depot TASK-155 et le recap par activite de l'export de controle TASK-160). NULL (pas
+-- NOT NULL DEFAULT '') : meme convention que TiersNom/NumeroFacture/ModePaiement ci-dessus.
+-- CodeActiviteModifieManuellement/Par/Le : tracabilite de la surcharge manuelle par ligne, meme
+-- pattern que IncoherenceValidee/Par/Le ci-dessus (TASK-078).
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DM_LGTVA') AND name = 'CodeActivite')
+    ALTER TABLE dbo.DM_LGTVA ADD CodeActivite NVARCHAR(50) NULL;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DM_LGTVA') AND name = 'CodeActiviteModifieManuellement')
+    ALTER TABLE dbo.DM_LGTVA ADD CodeActiviteModifieManuellement BIT NOT NULL DEFAULT 0;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DM_LGTVA') AND name = 'CodeActiviteModifiePar')
+    ALTER TABLE dbo.DM_LGTVA ADD CodeActiviteModifiePar NVARCHAR(200) NULL;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DM_LGTVA') AND name = 'CodeActiviteModifieLe')
+    ALTER TABLE dbo.DM_LGTVA ADD CodeActiviteModifieLe DATETIME NULL;
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_DM_LGTVA_DeclarationId_Domaine')
     CREATE INDEX IX_DM_LGTVA_DeclarationId_Domaine
         ON dbo.DM_LGTVA (DeclarationId, Domaine);

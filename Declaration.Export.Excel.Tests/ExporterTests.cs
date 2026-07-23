@@ -131,5 +131,99 @@ namespace Declaration.Export.Excel.Tests
                 }
             }
         }
+
+        // ─── TASK-160 : ExporterExcelControle ───────────────────────────────────
+
+        private ModeleControle GetFixtureControle()
+        {
+            return new ModeleControle
+            {
+                ReglementsSelectionnes = new List<ReglementSelectionneInfo>
+                {
+                    new ReglementSelectionneInfo
+                    {
+                        Numero = "REG-001",
+                        Date = new DateTime(2026, 7, 5),
+                        Montant = 1200m,
+                        Tiers = "Fournisseur A",
+                        Mode = "Virement",
+                        EtatPointage = "Rapproché (05/07/2026)"
+                    }
+                },
+                Lignes = new List<LigneDeclarationEnrichie>
+                {
+                    new LigneDeclarationEnrichie
+                    {
+                        NumeroFacture = "F-001",
+                        Designation = "",
+                        Tiers = new TiersInfo { Nom = "Fournisseur A", IdentifiantFiscal = "IF-A", Ice = "ICE-A" },
+                        HT = 1000m,
+                        Taux = 20m,
+                        Tva = 200m,
+                        Ttc = 1200m,
+                        Prorata = 100m,
+                        ModePaiement = "Virement",
+                        DatePaiement = new DateTime(2026, 7, 15),
+                        DateFacture = new DateTime(2026, 7, 10),
+                        Source = SourceAffectation.Decaissement
+                    }
+                },
+                RecapsParTaux = new List<RecapParTaux>
+                {
+                    new RecapParTaux { Taux = 20m, TotalHT = 1000m, TotalTva = 200m, TotalTtc = 1200m }
+                },
+                RecapsParActivite = new List<RecapParActivite>
+                {
+                    new RecapParActivite { CodeActivite = "", TotalHT = 1000m, TotalTva = 200m, TotalTtc = 1200m }
+                },
+                ControleEquilibre = new ControleEquilibre
+                {
+                    TotalMontantAffecte = 1000m,
+                    TotalDeclareTtc = 1200m,
+                    ResiduExplique = 0m
+                }
+            };
+        }
+
+        [Fact]
+        public void ExporterExcelControle_Genere3FeuillesConformes()
+        {
+            var modele = GetFixtureControle();
+            using var stream = new MemoryStream();
+
+            new Exporter().ExporterExcelControle(modele, stream);
+            stream.Position = 0;
+
+            using var workbook = new XLWorkbook(stream);
+            Assert.Equal(3, workbook.Worksheets.Count);
+
+            var wsReglements = workbook.Worksheet("Règlements sélectionnés");
+            Assert.Equal("Numéro", wsReglements.Cell(1, 1).Value.ToString());
+            Assert.Equal("REG-001", wsReglements.Cell(2, 1).Value.ToString());
+            Assert.Equal(1200m, (decimal)wsReglements.Cell(2, 3).Value.GetNumber());
+            Assert.Equal("Fournisseur A", wsReglements.Cell(2, 4).Value.ToString());
+            Assert.Equal("Rapproché (05/07/2026)", wsReglements.Cell(2, 6).Value.ToString());
+
+            var wsFactures = workbook.Worksheet("Factures à déclarer");
+            Assert.Equal("N° Facture", wsFactures.Cell(1, 1).Value.ToString());
+            Assert.Equal("F-001", wsFactures.Cell(2, 1).Value.ToString());
+            Assert.Equal(1000m, (decimal)wsFactures.Cell(2, 7).Value.GetNumber());
+
+            var wsDetailTva = workbook.Worksheet("Détail TVA");
+            Assert.Equal("Totaux par taux", wsDetailTva.Cell(1, 1).Value.ToString());
+            Assert.Equal(20m, (decimal)wsDetailTva.Cell(3, 1).Value.GetNumber());
+            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(3, 4).Value.GetNumber());
+        }
+
+        [Fact]
+        public void ExporterExcelControle_AucuneEcritureSurDisque_SeulementStream()
+        {
+            var modele = new ModeleControle();
+            using var stream = new MemoryStream();
+
+            new Exporter().ExporterExcelControle(modele, stream);
+
+            Assert.True(stream.Length > 0);
+        }
     }
 }

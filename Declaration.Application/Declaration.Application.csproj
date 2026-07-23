@@ -4,6 +4,9 @@
     <ProjectReference Include="..\Declaration.Core\Declaration.Core.csproj" />
     <ProjectReference Include="..\Declaration.Selection\Declaration.Selection.csproj" />
     <ProjectReference Include="..\Declaration.Orchestration\Declaration.Orchestration.csproj" />
+    <!-- TASK-155 : câblage réel des exports XML (DGI)/Excel depuis GenererFichiersExportAsync. -->
+    <ProjectReference Include="..\Declaration.Export.Xml\Declaration.Export.Xml.csproj" />
+    <ProjectReference Include="..\Declaration.Export.Excel\Declaration.Export.Excel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

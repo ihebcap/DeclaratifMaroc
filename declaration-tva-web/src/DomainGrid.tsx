@@ -17,7 +17,8 @@ export function DomainGrid({
     readonly = false,
     onRowClick,
     columns,
-    colsStorageKey
+    colsStorageKey,
+    codeActiviteOptions
 }: {
     declarationId: string,
     domaine?: DomaineTVA,
@@ -26,11 +27,15 @@ export function DomainGrid({
     initialFilters?: Record<string, any>,
     readonly?: boolean,
     onRowClick?: (row: any) => void,
-    columns?: { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date', width?: string, derived?: boolean }[],
+    columns?: { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date', width?: string, derived?: boolean, editable?: boolean }[],
     // TASK-142 : clé de persistance des colonnes visibles. Un jeu de colonnes non-standard (ex. drill
     // incohérence avec Montant TVA + Écart) DOIT utiliser sa propre clé, sinon il hérite des préférences
     // enregistrées pour la grille par défaut (qui ne connaît pas ces colonnes) → elles seraient masquées.
-    colsStorageKey?: string
+    colsStorageKey?: string,
+    // TASK-161 : options de la liste déroulante pour toute colonne `editable` de clé 'codeActivite'
+    // (référentiel P_DECTVAACTIVITE). Non fourni = colonne affichée en lecture seule même si
+    // `editable` est posé (garde-fou : jamais un select vide silencieux).
+    codeActiviteOptions?: { value: string, label: string }[]
 }) {
     const [data, setData] = useState<any[]>([]);
     const [total, setTotal] = useState(0);
@@ -52,7 +57,7 @@ export function DomainGrid({
     // TASK-142 : `derived` = colonne purement calculée en rendu à partir de champs déjà chargés
     // (ex. « Écart » = montantHT+montantTVA−montantTTC). Aucune clé correspondante côté API → on ne
     // doit ni la trier ni la filtrer (sinon on enverrait une clé inconnue au back, cf. garde-fou).
-    type ColumnDef = { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date', width?: string, derived?: boolean };
+    type ColumnDef = { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date', width?: string, derived?: boolean, editable?: boolean };
     // TASK-110 : largeur bornée par colonne (pattern AffectationsDrill.tsx GridCell/colStyle) —
     // évite qu'un motif d'écartement long étire toute la ligne ; défaut 200px sinon spécifié.
     const DEFAULT_COL_WIDTH = '200px';
@@ -192,6 +197,21 @@ export function DomainGrid({
             onActionDone();
         } catch (e) {
             showToast('Erreur lors de l\'action', 'error');
+        }
+    };
+
+    // TASK-161 : surcharge manuelle du code activité d'une ligne (colonne `editable`, jamais en
+    // lecture seule) — PATCH ciblé par ligne (Id = DM_LGTVA.Id), jamais par EC_Id (une même
+    // facture peut porter deux lignes de taux différents avec deux activités différentes, cas
+    // confirmé PO). Mise à jour optimiste de la ligne locale après succès, pas de refetch complet.
+    const handleCodeActiviteChange = async (row: any, nouveauCode: string) => {
+        try {
+            await api.patch(`/declarations/${declarationId}/lignes/${row.id}/code-activite`, { codeActivite: nouveauCode });
+            setData(prev => prev.map(r => r.id === row.id ? { ...r, codeActivite: nouveauCode, codeActiviteModifieManuellement: true } : r));
+            showToast('Code activité mis à jour.');
+        } catch (e: any) {
+            const message = e?.response?.data?.Message || 'Erreur lors de la mise à jour du code activité';
+            showToast(message, 'error');
         }
     };
 
@@ -372,16 +392,34 @@ export function DomainGrid({
                                         // Mise en évidence de la ligne fautive (HT+TVA ≠ TTC), tolérance 0,005
                                         // pour absorber les arrondis d'affichage.
                                         const ecartAnormal = col.key === 'ecart' && Math.abs(cellVal) > 0.005;
+                                        // TASK-161 : cellule éditable UNIQUEMENT si la colonne le demande
+                                        // explicitement (`editable`), la grille n'est pas en lecture seule, et
+                                        // des options ont été fournies — jamais un select vide silencieux.
+                                        const editableCodeActivite = col.key === 'codeActivite' && col.editable && !readonly && codeActiviteOptions;
                                         return (
                                         <div
                                             key={col.key}
                                             role="cell"
                                             style={{ ...colStyle(col), padding: '0.5rem 1rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: isNumericCol(col.key) ? 'flex-end' : 'flex-start', overflow: 'hidden', background: ecartAnormal ? 'var(--status-blocking-bg)' : undefined, color: ecartAnormal ? 'var(--status-blocking-text)' : undefined, fontWeight: ecartAnormal ? 700 : undefined }}
                                             title={typeof row[col.key] === 'string' ? row[col.key] : undefined}
+                                            onClick={editableCodeActivite ? (e) => e.stopPropagation() : undefined}
                                         >
-                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {renderCell(col.key, cellVal)}
-                                            </span>
+                                            {editableCodeActivite ? (
+                                                <select
+                                                    value={cellVal || ''}
+                                                    onChange={(e) => handleCodeActiviteChange(row, e.target.value)}
+                                                    style={{ width: '100%', fontSize: '0.8125rem', padding: '0.15rem' }}
+                                                >
+                                                    <option value="">(sans activité)</option>
+                                                    {codeActiviteOptions!.map(o => (
+                                                        <option key={o.value} value={o.value}>{o.label}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {renderCell(col.key, cellVal)}
+                                                </span>
+                                            )}
                                         </div>
                                         );
                                     })}

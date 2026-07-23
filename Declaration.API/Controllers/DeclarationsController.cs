@@ -150,6 +150,46 @@ public class DeclarationsController : ControllerBase
     }
 
     /// <summary>
+    /// TASK-161 : surcharge manuelle du code activité d'UNE ligne (écran ② Vérifier & Intégrer) —
+    /// cible <paramref name="ligneId"/> (DM_LGTVA.Id), jamais l'EC_Id (contrairement à
+    /// valider-incoherence) : une même facture peut porter deux lignes de taux différents avec
+    /// deux activités différentes (cas confirmé PO). Bloquée après clôture (409) — le code
+    /// activité reste stable une fois la déclaration close, même si le mapping tiers change
+    /// ensuite.
+    /// </summary>
+    [HttpPatch("{id}/lignes/{ligneId}/code-activite")]
+    public async Task<IActionResult> UpdateCodeActiviteLigne(Guid id, Guid ligneId, [FromBody] UpdateCodeActiviteRequest request)
+    {
+        var utilisateur = User.Identity?.Name ?? "inconnu";
+        try
+        {
+            await _workflowService.ModifierCodeActiviteLigneAsync(id, ligneId, request.CodeActivite ?? "", utilisateur);
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// TASK-161 : référentiel des codes activité (P_DECTVAACTIVITE, lecture seule GRF) — alimente
+    /// la liste déroulante de sélection manuelle côté front. Aucun paramétrage possible ici
+    /// (décision PO point 2 : GRF web reste lecture seule, paramétrage laissé à l'écran
+    /// Trésorerie WinForms existant).
+    /// </summary>
+    [HttpGet("/api/codes-activite")]
+    public async Task<IActionResult> GetCodesActivite()
+    {
+        var referentiel = await _workflowService.GetReferentielCodesActiviteAsync();
+        return Ok(referentiel);
+    }
+
+    /// <summary>
     /// TASK-144 : diagnostic explicatif en ligne d'une ligne en anomalie (identifiée par son EC_Id).
     /// LECTURE SEULE STRICTE — aucune écriture, aucune NOUVELLE lecture OM Sage (le motif d'échec
     /// déjà tenté est relu depuis le cache). Le seul accès Sage est un SELECT F_DOCREGL (contrôle
@@ -459,18 +499,121 @@ public class DeclarationsController : ControllerBase
         }
     }
 
-    // ─── Endpoints délégués à TASK-010/011 ────────────────────────────────────
-    // Ces endpoints sont présents dans le contrat d'API mais leur implémentation
-    // (Export.Xml / Export.Excel / Rapport anomalies) est délivrée par TASK-010/011.
-    // Ils renvoient 501 Not Implemented pour l'instant.
+    // ─── Génération / téléchargement des fichiers de dépôt (TASK-155) ─────────────
+    // Câblage réel de DeclarationXmlExporter (TASK-137) et Declaration.Export.Excel.Exporter
+    // (TASK-010) — la construction du DeclarationModele et l'appel aux deux exporters vivent
+    // dans DeclarationWorkflowService (ConstruireModeleExportAsync/GenererFichiersExportAsync),
+    // ce contrôleur ne fait que traduire les erreurs métier en réponses HTTP explicites.
 
+    /// <summary>
+    /// TASK-155 : génère les fichiers XML (DGI, zippé) et Excel (Checkup) d'une déclaration
+    /// Clôturée. Aucun 500 générique : chaque cas métier (non clôturée, IF société absent,
+    /// fichier déjà existant, IF/ICE tiers invalide, aucune ligne à exporter) est traduit en
+    /// réponse explicite.
+    /// </summary>
     [HttpPost("{id}/generation")]
-    public IActionResult Generation(Guid id)
-        => StatusCode(501, new { Message = "Non implémenté — délégué à TASK-010/011 (Export.Xml + Export.Excel)." });
+    public async Task<IActionResult> Generation(Guid id)
+    {
+        var declaration = await _repository.GetByIdAsync(id);
+        if (declaration == null) return NotFound();
 
+        if (!EstSocieteAutorisee(declaration.SocieteId))
+            return Forbid();
+
+        try
+        {
+            await _workflowService.GenererFichiersExportAsync(id);
+            // TASK-155 : clés alignées sur le contrat DÉJÀ attendu par DeclarationFinalePanel.tsx
+            // (composant réellement monté par DeclarationStepper.tsx/App.tsx — cf. VERIFY, la
+            // cartographie de la task pointait par erreur vers GenerationPanel.tsx, jamais importé
+            // nulle part). Valeurs = URLs relatives consommées telles quelles par `api.get(url,
+            // { responseType: 'blob' })`, jamais un chemin disque exposé au client.
+            return Ok(new
+            {
+                fichiers = new
+                {
+                    xmlDecaissement = $"/declarations/{id}/fichiers/xml",
+                    excelCheckup = $"/declarations/{id}/fichiers/excel"
+                }
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (ApplicationException ex)
+        {
+            // TASK-155 : "existe déjà" (conflit — la génération a déjà eu lieu) se distingue des
+            // autres refus métier de l'exporter (IF/ICE invalide, aucune ligne) — tous deux
+            // délibérément explicites (jamais un 500 générique), jamais un bypass silencieux.
+            if (ex.Message.Contains("existe déjà", StringComparison.OrdinalIgnoreCase))
+                return Conflict(new { Message = ex.Message });
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// TASK-155 : télécharge un fichier déjà généré (<c>type</c> = <c>xml</c> ou <c>excel</c>).
+    /// Aucun état "généré" persisté (cf. cartographie TASK-155 point 7) — la présence du fichier
+    /// sur disque, à l'emplacement déterministe dérivé du Numero/Exercice/Periode de la
+    /// déclaration, EST l'état. 404 si la génération n'a pas encore eu lieu.
+    /// </summary>
     [HttpGet("{id}/fichiers/{type}")]
-    public IActionResult DownloadFichier(Guid id, string type)
-        => StatusCode(501, new { Message = "Non implémenté — délégué à TASK-010/011." });
+    public async Task<IActionResult> DownloadFichier(Guid id, string type)
+    {
+        var declaration = await _repository.GetByIdAsync(id);
+        if (declaration == null) return NotFound();
+
+        if (!EstSocieteAutorisee(declaration.SocieteId))
+            return Forbid();
+
+        string path;
+        string contentType;
+        switch (type.ToLowerInvariant())
+        {
+            case "xml":
+                contentType = "application/zip";
+                break;
+            case "excel":
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                break;
+            default:
+                return BadRequest(new { Message = $"Type de fichier inconnu : '{type}'. Valeurs attendues : xml, excel." });
+        }
+
+        var (xmlZipPath, excelPath) = await _workflowService.ObtenirCheminsExportAsync(id);
+        path = type.ToLowerInvariant() == "xml" ? xmlZipPath : excelPath;
+
+        if (!System.IO.File.Exists(path))
+            return NotFound(new { Message = "Fichier non généré — lancez d'abord la génération (POST .../generation)." });
+
+        return PhysicalFile(path, contentType, System.IO.Path.GetFileName(path));
+    }
+
+    /// <summary>
+    /// TASK-160 : export Excel de contrôle ad-hoc (règlements sélectionnés + factures à déclarer +
+    /// détail TVA), disponible dès que la déclaration existe (EnCours ou Clôturée) — contrairement
+    /// à <c>/generation</c> (réservé à Clôturée). Généré à la volée (flux en mémoire), aucun
+    /// fichier écrit sur disque. Ne remplace pas les grilles interactives du front (décision actée
+    /// TASK-010 §1sexies) ni l'export de dépôt existant (TASK-010/155, endpoints inchangés).
+    /// </summary>
+    [HttpGet("{id}/export-controle")]
+    public async Task<IActionResult> ExportControle(Guid id)
+    {
+        var declaration = await _repository.GetByIdAsync(id);
+        if (declaration == null) return NotFound();
+
+        if (!EstSocieteAutorisee(declaration.SocieteId))
+            return Forbid();
+
+        var bytes = await _workflowService.GenererExcelControleAsync(id);
+        var fileName = $"{declaration.Numero}-export-controle.xlsx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
 
     // ─── Endpoints référentiels ────────────────────────────────────────────────
 
@@ -544,6 +687,12 @@ public class BulkUpdateEtatRequest
 public class ValiderIncoherenceRequest
 {
     public int EcId { get; set; }
+}
+
+/// <summary>TASK-161 — corps de la surcharge manuelle de code activité par ligne.</summary>
+public class UpdateCodeActiviteRequest
+{
+    public string? CodeActivite { get; set; }
 }
 
 public class SocieteDto

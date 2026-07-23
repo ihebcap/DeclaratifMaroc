@@ -111,7 +111,10 @@ namespace Declaration.Selection
                         Nom = row.TiersNom ?? "",
                         IdentifiantFiscal = row.TiersIF ?? "",
                         Ice = row.TiersICE ?? "",
-                        CodeActivite = row.TiersActivite ?? ""
+                        // TASK-161 : niveaux 3/4 de la cascade unique (colonne Sage CT_APE → "").
+                        CodeActivite = Declaration.Core.CodeActiviteResolver.Resoudre(
+                            surchargeManuelle: null, tiersNumero: null, tiersNom: null,
+                            codeActiviteSage: row.TiersActivite)
                     },
                     EC_Type = row.EC_Type ?? 0,
                     EC_Id = row.EC_Id ?? 0

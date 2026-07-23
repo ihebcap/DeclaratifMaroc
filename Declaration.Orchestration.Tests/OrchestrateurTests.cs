@@ -116,6 +116,87 @@ namespace Declaration.Orchestration.Tests
         }
 
         
+        // TASK-159 : simule un batch OM rescapé partiellement (timeout adaptatif atteint après
+        // avoir rendu certaines pièces via streaming NDJSON, cf. WorkerInvoker.InvoquerWorkerBatch)
+        // — seules les pièces réellement absentes du résultat batch doivent déclencher un repli
+        // individuel, jamais celles déjà rendues.
+        public class PartialBatchWorkerInvoker : IWorkerInvoker
+        {
+            private readonly HashSet<string> _rendues;
+            public List<string> AppelsIndividuels { get; } = new List<string>();
+
+            public PartialBatchWorkerInvoker(IEnumerable<string> piecesRenduesParLeBatch)
+            {
+                _rendues = new HashSet<string>(piecesRenduesParLeBatch);
+            }
+
+            public DocumentTaxesInfo? InvoquerWorker(string numeroFacture, string sens, WorkerConfig config, Action<string>? log = null)
+            {
+                AppelsIndividuels.Add(numeroFacture);
+                return new DocumentTaxesInfo
+                {
+                    NumeroPiece = numeroFacture,
+                    Sens = sens,
+                    TotalHT = 1000,
+                    TotalTva = 200,
+                    TotalTtc = 1200,
+                    LignesTaxe = new List<TaxeDetail>
+                    {
+                        new TaxeDetail { Code = "1", Type = "TaxeTypeTVA", Taux = 20, BaseHT = 1000, MontantTva = 200, TTC = 1200 }
+                    }
+                };
+            }
+
+            public List<DocumentTaxesInfo> InvoquerWorkerBatch(IEnumerable<(string numeroFacture, string sens)> requetes, WorkerConfig config, Action<string>? log = null)
+            {
+                // Ne rend QUE les pièces marquées "rendues" — les autres sont réputées perdues
+                // dans le kill du process externe (simule un timeout adaptatif atteint mi-batch).
+                var resultats = new List<DocumentTaxesInfo>();
+                foreach (var req in requetes)
+                {
+                    if (!_rendues.Contains(req.numeroFacture)) continue;
+                    resultats.Add(new DocumentTaxesInfo
+                    {
+                        NumeroPiece = req.numeroFacture,
+                        Sens = req.sens,
+                        TotalHT = 1000,
+                        TotalTva = 200,
+                        TotalTtc = 1200,
+                        LignesTaxe = new List<TaxeDetail>
+                        {
+                            new TaxeDetail { Code = "1", Type = "TaxeTypeTVA", Taux = 20, BaseHT = 1000, MontantTva = 200, TTC = 1200 }
+                        }
+                    });
+                }
+                return resultats;
+            }
+        }
+
+        [Fact]
+        public void Traiter_BatchPartiel_RepliIndividuelCibleUniquementLesPiecesManquantes()
+        {
+            var stubInvoker = new PartialBatchWorkerInvoker(piecesRenduesParLeBatch: new[] { "FAC001", "FAC002" });
+            var config = new WorkerConfig();
+            var orchestrateur = new OrchestrateurDeclaration(stubInvoker, config, new StubLecteurTvaFgr(), "dummy", "dummySage");
+
+            var affectations = new List<AffectationADeclarer>
+            {
+                new AffectationADeclarer { NumeroFacture = "FAC001", Sens = SensAffectation.Vente, MontantAffecte = 600 },
+                new AffectationADeclarer { NumeroFacture = "FAC002", Sens = SensAffectation.Vente, MontantAffecte = 600 },
+                new AffectationADeclarer { NumeroFacture = "FAC003", Sens = SensAffectation.Vente, MontantAffecte = 600 }
+            };
+
+            var modele = orchestrateur.Traiter(affectations, 1);
+
+            // Les 3 pièces doivent être ventilées (aucune perte silencieuse), même si le batch
+            // n'en a rendu que 2 avant interruption.
+            Assert.Equal(3, modele.Lignes.Count);
+
+            // Seule la pièce absente du résultat batch (FAC003) doit avoir déclenché un appel
+            // individuel — FAC001/FAC002, déjà rendues par le batch, ne doivent jamais être relues.
+            Assert.Equal(new[] { "FAC003" }, stubInvoker.AppelsIndividuels);
+        }
+
         [Fact]
         public void DumpVerify_JSON()
         {

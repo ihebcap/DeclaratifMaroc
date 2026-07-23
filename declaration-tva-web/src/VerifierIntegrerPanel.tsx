@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-    Calculator, AlertTriangle, Loader2, Info, Lock, CheckCircle2, XCircle, ShieldCheck, FileStack, ExternalLink, Search
+    Calculator, AlertTriangle, Loader2, Info, Lock, CheckCircle2, XCircle, ShieldCheck, FileStack, ExternalLink, Search, FileSpreadsheet
 } from 'lucide-react';
 import { formatMoney } from './utils';
 import api from './api';
@@ -26,6 +26,20 @@ const incoherenceColumns: { key: string, label: string, filterType: 'list' | 'te
     { key: 'source', label: 'Source', filterType: 'list' },
     { key: 'statutLigne', label: 'Statut', filterType: 'list' },
     { key: 'motif', label: 'Motif Écartement', filterType: 'text', width: '280px' },
+];
+
+// TASK-161 : colonnes du drill « Codes activité » — toutes les lignes du domaine (pas seulement
+// les anomalies), avec la colonne codeActivite rendue éditable (select, cf. DomainGrid) pour la
+// surcharge manuelle par ligne (décision PO : couvre le cas "même facture, deux activités").
+const codeActiviteColumns: { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date', width?: string, derived?: boolean, editable?: boolean }[] = [
+    { key: 'factureNumero', label: 'N° Facture', filterType: 'text' },
+    { key: 'tiers', label: 'Tiers', filterType: 'text' },
+    { key: 'origine', label: 'Origine', filterType: 'list' },
+    { key: 'montantHT', label: 'Montant HT', filterType: 'number' },
+    { key: 'tauxTVA', label: 'Taux TVA', filterType: 'list' },
+    { key: 'montantTTC', label: 'Montant TTC', filterType: 'number' },
+    { key: 'codeActivite', label: 'Code activité', filterType: 'text', width: '220px', editable: true },
+    { key: 'statutLigne', label: 'Statut', filterType: 'list' },
 ];
 
 // ─── Écran ③ Vérifier & Intégrer (TASK-090) ──────────────────────────────────
@@ -268,8 +282,26 @@ export function VerifierIntegrerPanel({
         domaine: DomaineTVA;
         filtre: Record<string, any>;
         label: string;
-        kind?: 'anomalie' | 'incoherence';
+        kind?: 'anomalie' | 'incoherence' | 'codeActivite';
     } | null>(null);
+
+    // TASK-161 : référentiel des codes activité (P_DECTVAACTIVITE), chargé une fois pour
+    // alimenter le select éditable du drill « Codes activité ».
+    const [codeActiviteOptions, setCodeActiviteOptions] = useState<{ value: string, label: string }[]>([]);
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await api.get('/codes-activite');
+                if (cancelled) return;
+                const options = (res.data || []).map((r: any) => ({ value: r.code, label: `${r.code} — ${r.libelle}` }));
+                setCodeActiviteOptions(options);
+            } catch (e) {
+                console.error('Erreur lors du chargement du référentiel des codes activité', e);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, []);
 
     // TASK-144 : panneau de diagnostic explicatif d'une ligne en anomalie (à la demande).
     const [diagnostic, setDiagnostic] = useState<{ ecId: number; factureNumero: string } | null>(null);
@@ -280,6 +312,7 @@ export function VerifierIntegrerPanel({
     const [checkup, setCheckup] = useState<CheckupResult | null>(null);
     const [loadingCheckup, setLoadingCheckup] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [exportingControle, setExportingControle] = useState(false);
     const [confirmed, setConfirmed] = useState(false);
 
     // Chargement des lignes de valorisation
@@ -488,6 +521,30 @@ export function VerifierIntegrerPanel({
         }
     };
 
+    // TASK-160 : export Excel de contrôle (règlements sélectionnés + factures à déclarer + détail
+    // TVA), disponible dès qu'une déclaration existe — même endpoint/pattern que l'export de dépôt
+    // (DeclarationFinalePanel.tsx), téléchargement direct via blob, aucun fichier persisté.
+    const exporterControle = async () => {
+        setExportingControle(true);
+        try {
+            const res = await api.get(`/declarations/${declarationId}/export-controle`, { responseType: 'blob' });
+            const blobUrl = URL.createObjectURL(res.data);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = 'Export_controle.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(blobUrl);
+            showToast('Export de contrôle généré', 'success');
+        } catch (err: any) {
+            console.error(err);
+            showToast(err?.response?.data?.message || err?.response?.data?.Message || 'Erreur lors de l\'export de contrôle', 'error');
+        } finally {
+            setExportingControle(false);
+        }
+    };
+
     // Garde « rien sélectionné » (parcours normal, TASK-054)
     if (!readOnly && selectedRows.length === 0) {
         return (
@@ -545,11 +602,12 @@ export function VerifierIntegrerPanel({
                         ← Retour au contrôle
                     </button>
                     <span style={{ color: 'var(--text-secondary)' }}>
-                        {drillFiltre.kind === 'incoherence' ? 'Drill écart :' : 'Drill anomalie :'}
+                        {drillFiltre.kind === 'incoherence' ? 'Drill écart :' : drillFiltre.kind === 'codeActivite' ? 'Codes activité :' : 'Drill anomalie :'}
                     </span>
                     <span style={{ fontWeight: 600 }}>{drillFiltre.label}</span>
                 </div>
-                {/* Grille filtrée en lecture seule */}
+                {/* Grille filtrée — lecture seule sauf pour le drill « Codes activité » avant
+                    clôture/confirmation (surcharge manuelle par ligne, TASK-161). */}
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                     <DomainGrid
                         declarationId={declarationId}
@@ -557,10 +615,15 @@ export function VerifierIntegrerPanel({
                         onActionDone={() => {}}
                         showToast={showToast}
                         initialFilters={drillFiltre.filtre}
-                        readonly={true}
+                        readonly={drillFiltre.kind === 'codeActivite' ? isReadOnly : true}
                         {...(drillFiltre.kind === 'incoherence' ? {
                             columns: incoherenceColumns,
                             colsStorageKey: 'grf.cols.domain.incoherence',
+                        } : {})}
+                        {...(drillFiltre.kind === 'codeActivite' ? {
+                            columns: codeActiviteColumns,
+                            colsStorageKey: 'grf.cols.domain.codeActivite',
+                            codeActiviteOptions,
                         } : {})}
                     />
                 </div>
@@ -831,35 +894,67 @@ export function VerifierIntegrerPanel({
                     ) : null}
                 </div>
 
-                {!isReadOnly && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem' }}>
                     <button
-                        id="btn-confirmer-integration"
-                        onClick={handleConfirm}
-                        disabled={!canConfirm}
+                        onClick={exporterControle}
+                        disabled={exportingControle}
+                        title="Exporter en Excel les règlements sélectionnés, les factures à déclarer et le détail TVA"
                         style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                            padding: '0.55rem 1.2rem',
-                            borderRadius: '5px',
-                            border: 'none',
-                            fontWeight: 700,
-                            fontSize: '0.875rem',
-                            cursor: canConfirm ? 'pointer' : 'not-allowed',
-                            background: canConfirm
-                                ? 'var(--accent-primary)'
-                                : 'var(--bg-tertiary)',
-                            color: canConfirm ? 'white' : 'var(--text-secondary)',
-                            transition: 'background 0.15s, opacity 0.15s',
-                            opacity: canConfirm ? 1 : 0.65,
+                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                            background: 'white', border: '1px solid var(--border-color)',
+                            borderRadius: 'var(--radius-md)', padding: '0.45rem 0.85rem',
+                            cursor: exportingControle ? 'not-allowed' : 'pointer', opacity: exportingControle ? 0.6 : 1,
+                            fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)',
                         }}
-                        title={hasBloquant ? 'Des contrôles bloquants empêchent l\'intégration' : 'Confirmer et figer la déclaration'}
                     >
-                        {submitting ? (
-                            <><Loader2 size={14} className="animate-spin" /> Intégration en cours…</>
-                        ) : (
-                            <><Lock size={14} /> Confirmer intégration</>
-                        )}
+                        {exportingControle ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />} Export de contrôle (Excel)
                     </button>
-                )}
+
+                    <button
+                        onClick={() => setDrillFiltre({ domaine: selectedTab as DomaineTVA, filtre: {}, label: selectedTab === 'Encaissement' ? 'TVA Collectée (Ventes)' : 'TVA Déductible (Achats)', kind: 'codeActivite' })}
+                        title={isReadOnly
+                            ? 'Consulter le code activité de chaque ligne (lecture seule — déclaration intégrée/clôturée)'
+                            : 'Consulter/modifier le code activité de chaque ligne (surcharge manuelle, écran ② Vérifier & Intégrer)'}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                            background: 'white', border: '1px solid var(--border-color)',
+                            borderRadius: 'var(--radius-md)', padding: '0.45rem 0.85rem',
+                            cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)',
+                        }}
+                    >
+                        Codes activité
+                    </button>
+
+                    {!isReadOnly && (
+                        <button
+                            id="btn-confirmer-integration"
+                            onClick={handleConfirm}
+                            disabled={!canConfirm}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.55rem 1.2rem',
+                                borderRadius: '5px',
+                                border: 'none',
+                                fontWeight: 700,
+                                fontSize: '0.875rem',
+                                cursor: canConfirm ? 'pointer' : 'not-allowed',
+                                background: canConfirm
+                                    ? 'var(--accent-primary)'
+                                    : 'var(--bg-tertiary)',
+                                color: canConfirm ? 'white' : 'var(--text-secondary)',
+                                transition: 'background 0.15s, opacity 0.15s',
+                                opacity: canConfirm ? 1 : 0.65,
+                            }}
+                            title={hasBloquant ? 'Des contrôles bloquants empêchent l\'intégration' : 'Confirmer et figer la déclaration'}
+                        >
+                            {submitting ? (
+                                <><Loader2 size={14} className="animate-spin" /> Intégration en cours…</>
+                            ) : (
+                                <><Lock size={14} /> Confirmer intégration</>
+                            )}
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );

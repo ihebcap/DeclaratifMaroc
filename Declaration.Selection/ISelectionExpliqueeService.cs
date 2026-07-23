@@ -7,11 +7,19 @@ namespace Declaration.Selection
 {
     public interface ISelectionExpliqueeService
     {
+        /// <summary>
+        /// TASK-154 : <paramref name="sageConnectionString"/> est la connexion Sage déjà résolue
+        /// par l'appelant (<c>IDbConnectionFactory.GetSageConnectionInfoAsync(soId)</c>) — ce
+        /// service ne référence pas <c>Declaration.Infrastructure</c> et ne la résout jamais
+        /// lui-même. Utilisée en lecture seule pour rattacher les colonnes tiers (F_COMPTET)
+        /// par une jointure applicative batchée, jamais un JOIN SQL trois-parties.
+        /// </summary>
         Task<IEnumerable<AffectationCandidate>> SelectionnerExpliqueeAsync(
-            int soId, 
-            DateTime dateDebut, 
-            DateTime dateFin, 
+            int soId,
+            DateTime dateDebut,
+            DateTime dateFin,
             string connectionString,
+            string sageConnectionString,
             Func<string, SensAffectation, Task<(bool Existe, bool TaxeOk)>>? verifierFacture = null);
 
         /// <summary>
@@ -25,10 +33,15 @@ namespace Declaration.Selection
         ///   - Motif = HorsPeriode / DejaDeclare / etc. pour les cas exclus
         /// Garde-fou : aucune écriture — lecture seule stricte.
         /// </summary>
+        /// <summary>
+        /// TASK-154 : <paramref name="sageConnectionString"/> est la connexion Sage déjà résolue
+        /// par l'appelant, voir <see cref="SelectionnerExpliqueeAsync"/>.
+        /// </summary>
         Task<IEnumerable<AffectationCandidate>> LireFacturesDepuisPeriodeAsync(
             int soId,
             DateTime dateDebut,
             DateTime dateFin,
-            string connectionString);
+            string connectionString,
+            string sageConnectionString);
     }
 }

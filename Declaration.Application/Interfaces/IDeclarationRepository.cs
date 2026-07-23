@@ -266,4 +266,40 @@ public interface IDeclarationRepository
     /// depuis le cache à jour.
     /// </summary>
     Task SupprimerLignesParEcIdAsync(Guid declarationId, int ecId);
+
+    // ─── Identité fiscale société (TASK-155, export XML/Excel) ─────────────────
+    /// <summary>
+    /// TASK-155 : identifiant fiscal réel de la société (<c>P_SOCIETE.SO_Identifiant</c>, base GRF)
+    /// — distinct du <c>SO_Id</c> interne. Null si société introuvable ou colonne vide ; l'appelant
+    /// doit bloquer explicitement la génération plutôt que d'exporter une valeur par défaut
+    /// (cf. TASK-151, aucune valeur placeholder).
+    /// </summary>
+    Task<string?> GetIdentifiantFiscalSocieteAsync(int soId);
+
+    // ─── Code activité TVA — défaut tiers + référentiel (TASK-161, lecture seule GRF) ─────────
+    /// <summary>
+    /// TASK-161 : mapping tiers→activité pour cette société, lu SANS écriture sur
+    /// <c>P_SOCIETECODEACTIVITETIERS</c> (paramétrage laissé à l'écran Trésorerie WinForms
+    /// existant). Jointure en mémoire faite ici via un simple JOIN SQL vers
+    /// <c>P_DECTVAACTIVITE</c> (même base GRF, même connexion — pas le garde-fou TASK-154 qui ne
+    /// vise que les jointures CROSS-BASE GRF/Sage) pour résoudre <c>CAT_Id</c> en code activité
+    /// texte (<c>DTA_Code</c>). Aucune lecture de <c>P_DECTVASOCTAXEACTIVITE</c> (hors périmètre,
+    /// décision PO TASK-161 point 4).
+    /// </summary>
+    Task<IReadOnlyList<CodeActiviteTiersMappingRow>> GetMappingCodeActiviteTiersAsync(int soId);
+
+    /// <summary>
+    /// TASK-161 : référentiel complet des codes activité (<c>P_DECTVAACTIVITE</c>), lecture seule
+    /// — alimente la liste déroulante de sélection manuelle côté front. Table non scopée par
+    /// société (aucune colonne SO_Id, vérifié sur le schéma réel).
+    /// </summary>
+    Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync();
+
+    /// <summary>
+    /// TASK-161 : surcharge manuelle du code activité d'UNE ligne précise (<paramref name="ligneId"/>
+    /// = <c>DM_LGTVA.Id</c>, jamais par EC_Id — contrairement à <see cref="ValiderIncoherenceAsync"/>,
+    /// une même facture peut porter deux lignes de taux différents avec deux activités différentes,
+    /// cas confirmé PO). Trace qui/quand, même pattern que TASK-078.
+    /// </summary>
+    Task UpdateCodeActiviteLigneAsync(Guid ligneId, string codeActivite, string utilisateur);
 }

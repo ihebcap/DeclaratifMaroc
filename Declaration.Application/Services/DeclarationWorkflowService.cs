@@ -34,6 +34,69 @@ public class DeclarationWorkflowService
     // double-vérification sous verrou rendent le figeage réellement idempotent.
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _figeageLocks = new();
 
+    // TASK-156 : verrou anti-chevauchement par soId, PARTAGÉ par TOUS les appelants de
+    // l'orchestrateur OM (session COM/Sage via SageTaxReader.Console — la ressource contended).
+    // Contention constatée en prod (23/07/2026) : 4 cycles concurrents sur le même soId
+    // (13:58:24→14:02:26), chacun relançant sa propre lecture OM pendant que le premier batch
+    // tournait encore, jusqu'à saturer la ressource et faire échouer le batch au timeout 300 s
+    // codé en dur (Declaration.Orchestration/WorkerInvoker.cs:101).
+    //
+    // PÉRIMÈTRE CORRIGÉ EN COURS DE ROUTE (23/07/2026, après-midi) : un verrou posé UNIQUEMENT
+    // autour de RafraichirValorisationAsync (bouton « Rafraîchir » de l'écran Factures) s'est
+    // révélé insuffisant — un second incident réel a été observé à 14:20:41 (batch de 361 pièces,
+    // AUCUNE ligne [VALO-050] dans le log, donc PAS déclenché par ce bouton). Le PO a confirmé
+    // que ce traitement provenait d'une déclaration (« Passer au calcul »/« Détail des lignes »).
+    // Ce chemin (ConstruireLignesFigeesAsync, via ChargerCandidatesSiNecessaireAsync) appelle le
+    // MÊME orchestrateur.Traiter() sur le MÊME soId, sans jamais partager de verrou avec
+    // RafraichirValorisationAsync — la preuve concrète que le problème n'est pas propre au bouton
+    // Factures, mais à TOUT appelant de l'orchestrateur OM pour un soId donné. D'où ce verrou
+    // UNIQUE, posé par la méthode privée partagée <see cref="ExecuterAvecVerrouOMAsync"/>, appelé
+    // par les 4 sites recensés : RafraichirValorisationAsync, ConstruireLignesFigeesAsync,
+    // ReintegrerReglementsLiberesAsync, ResynchroniserLigneAsync.
+    //
+    // Décision PO actée (23/07/2026) : REJET IMMÉDIAT, UNIFORME sur les 4 chemins — pas d'attente
+    // silencieuse, pas de traitement différencié selon l'appelant (le PO a explicitement écarté
+    // un comportement spécial pour le chemin déclaration vs le chemin Factures). Un second appel
+    // concurrent sur le MÊME soId, peu importe lequel des 4 chemins l'a démarré, est rejeté
+    // explicitement (InvalidOperationException, propagée en 409 par les contrôleurs), l'appelant
+    // doit relancer manuellement une fois le traitement précédent terminé. Clé par soId (jamais un
+    // verrou global) : deux soId distincts restent totalement indépendants, même pattern
+    // SemaphoreSlim(1,1) par clé que _figeageLocks ci-dessus.
+    private static readonly ConcurrentDictionary<int, SemaphoreSlim> _valorisationLocks = new();
+
+    /// <summary>
+    /// TASK-156 : point d'entrée UNIQUE du verrou anti-chevauchement par soId — voir le commentaire
+    /// de <see cref="_valorisationLocks"/> ci-dessus pour le contexte complet (4 appelants
+    /// partagés, rejet immédiat uniforme). <c>WaitAsync(0)</c> n'attend JAMAIS (timeout = 0) :
+    /// il acquiert le verrou s'il est libre, sinon échoue immédiatement — conforme à la décision
+    /// PO (rejet immédiat, jamais une file d'attente silencieuse).
+    /// </summary>
+    private async Task<T> ExecuterAvecVerrouOMAsync<T>(int soId, Func<Task<T>> action)
+    {
+        var gate = _valorisationLocks.GetOrAdd(soId, _ => new SemaphoreSlim(1, 1));
+        if (!await gate.WaitAsync(0))
+        {
+            throw new InvalidOperationException(
+                $"Traitement de valorisation déjà en cours pour cette société (soId={soId}). " +
+                "Veuillez réessayer une fois le traitement précédent terminé.");
+        }
+
+        try
+        {
+            return await action();
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    /// <summary>Surcharge sans valeur de retour de <see cref="ExecuterAvecVerrouOMAsync{T}"/>, même sémantique.</summary>
+    private async Task ExecuterAvecVerrouOMAsync(int soId, Func<Task> action)
+    {
+        await ExecuterAvecVerrouOMAsync<object?>(soId, async () => { await action(); return null; });
+    }
+
     /// <summary>
     /// TASK-080 : préfixe stable du motif d'exclusion inter-déclaration, utilisé à la fois pour
     /// construire le message (avec le numéro de la déclaration concurrente) et pour reconnaître,
@@ -181,51 +244,66 @@ public class DeclarationWorkflowService
     /// (TASK-081) de substituer l'orchestrateur (dépendant d'un worker Sage réel, non mockable
     /// simplement) sans dupliquer la logique de <see cref="ChargerCandidatesSiNecessaireAsync"/>.
     /// </summary>
-    protected virtual async Task<List<LigneCandidate>> ConstruireLignesFigeesAsync(
+    protected virtual Task<List<LigneCandidate>> ConstruireLignesFigeesAsync(
         Guid declarationId, DeclarationEntete declaration, string domaine)
     {
-        var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
-        var dateFin = dateDebut.AddMonths(1).AddDays(-1);
-
-        var grfConnectionString = _connectionFactory.GetGrfConnectionString();
-        var candidatesList = await _selectionService.SelectionnerExpliqueeAsync(
-            declaration.SocieteId, dateDebut, dateFin, grfConnectionString);
-
-        if (domaine == "Decaissement")
+        // TASK-156 : ce chemin (ouverture/calcul d'une déclaration — « Passer au calcul »/« Détail
+        // des lignes ») appelle le MÊME orchestrateur.Traiter() sur le MÊME soId que
+        // RafraichirValorisationAsync — confirmé responsable de l'incident réel du 23/07/2026
+        // 14:20 (batch de 361 pièces sans le moindre log [VALO-050], donc pas déclenché par le
+        // bouton Rafraîchir). Partage le MÊME verrou par soId — voir _valorisationLocks.
+        return ExecuterAvecVerrouOMAsync(declaration.SocieteId, async () =>
         {
-            candidatesList = candidatesList.Where(c => c.Affectation.Source == SourceAffectation.Decaissement 
-                                                    || c.Affectation.Source == SourceAffectation.Espece 
-                                                    || c.Affectation.Source == SourceAffectation.Depense).ToList();
-        }
-        else if (domaine == "Encaissement")
-        {
-            candidatesList = candidatesList.Where(c => c.Affectation.Source == SourceAffectation.Encaissement).ToList();
-        }
+            var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
+            var dateFin = dateDebut.AddMonths(1).AddDays(-1);
 
-        // TASK-097 : Filtre sur le périmètre réel des règlements sélectionnés — toujours appliqué,
-        // y compris quand aucune sélection n'a encore été persistée (selection vide/null), auquel
-        // cas le résultat est ZÉRO candidat et jamais "tous les candidats" (invariance serveur,
-        // cf. réserve bloquante VERIFY TASK-097).
-        var selection = await _repository.GetSelectionReglementsAsync(declarationId);
-        var selectionSet = new HashSet<string>(selection ?? Enumerable.Empty<string>());
-        candidatesList = candidatesList.Where(c => selectionSet.Contains(c.Affectation.NumeroRapprochement)).ToList();
+            var grfConnectionString = _connectionFactory.GetGrfConnectionString();
+            // TASK-154 : connexion Sage résolue par SO_Id AVANT l'appel — F_COMPTET (table Sage) n'est
+            // jamais lu sur la connexion GRF (même pattern que BuildOrchestrateurAsync ci-dessous).
+            var sageInfo = await _connectionFactory.GetSageConnectionInfoAsync(declaration.SocieteId);
+            var candidatesList = await _selectionService.SelectionnerExpliqueeAsync(
+                declaration.SocieteId, dateDebut, dateFin, grfConnectionString, sageInfo.ConnectionString);
 
-        var candidates = candidatesList.ToList();
+            if (domaine == "Decaissement")
+            {
+                candidatesList = candidatesList.Where(c => c.Affectation.Source == SourceAffectation.Decaissement
+                                                        || c.Affectation.Source == SourceAffectation.Espece
+                                                        || c.Affectation.Source == SourceAffectation.Depense).ToList();
+            }
+            else if (domaine == "Encaissement")
+            {
+                candidatesList = candidatesList.Where(c => c.Affectation.Source == SourceAffectation.Encaissement).ToList();
+            }
 
-        // TASK-080 : garde-fou d'exclusivité — un règlement déjà Proposee/Integree dans une
-        // AUTRE déclaration (EnCours ou Cloturee) de la même société ne doit pas devenir
-        // éligible ici, sous peine de double-affectation (le verrou DT_Id/TASK-028 ne se
-        // déclenche, lui, qu'à la clôture — trop tard). Appliqué APRÈS l'évaluateur (qui
-        // ignore toute notion de déclaration) et AVANT la sélection des éligibles, pour ne
-        // jamais remplacer un motif de rejet déjà posé (DejaDeclare, HorsPeriode, etc.).
-        await AppliquerExclusiviteInterDeclarationAsync(candidates, declaration.SocieteId, declarationId);
+            // TASK-097 : Filtre sur le périmètre réel des règlements sélectionnés — toujours appliqué,
+            // y compris quand aucune sélection n'a encore été persistée (selection vide/null), auquel
+            // cas le résultat est ZÉRO candidat et jamais "tous les candidats" (invariance serveur,
+            // cf. réserve bloquante VERIFY TASK-097).
+            var selection = await _repository.GetSelectionReglementsAsync(declarationId);
+            var selectionSet = new HashSet<string>(selection ?? Enumerable.Empty<string>());
+            candidatesList = candidatesList.Where(c => selectionSet.Contains(c.Affectation.NumeroRapprochement)).ToList();
 
-        var orchestrateur = await BuildOrchestrateurAsync(grfConnectionString, declaration.SocieteId);
+            var candidates = candidatesList.ToList();
 
-        var affectations = candidates.Where(c => c.EstEligible).Select(c => c.Affectation).ToList();
-        var modele = orchestrateur.Traiter(affectations, 2);
+            // TASK-080 : garde-fou d'exclusivité — un règlement déjà Proposee/Integree dans une
+            // AUTRE déclaration (EnCours ou Cloturee) de la même société ne doit pas devenir
+            // éligible ici, sous peine de double-affectation (le verrou DT_Id/TASK-028 ne se
+            // déclenche, lui, qu'à la clôture — trop tard). Appliqué APRÈS l'évaluateur (qui
+            // ignore toute notion de déclaration) et AVANT la sélection des éligibles, pour ne
+            // jamais remplacer un motif de rejet déjà posé (DejaDeclare, HorsPeriode, etc.).
+            await AppliquerExclusiviteInterDeclarationAsync(candidates, declaration.SocieteId, declarationId);
 
-        return MapLignesCandidates(declarationId, domaine, candidates, modele);
+            var orchestrateur = await BuildOrchestrateurAsync(grfConnectionString, declaration.SocieteId);
+
+            var affectations = candidates.Where(c => c.EstEligible).Select(c => c.Affectation).ToList();
+            var modele = orchestrateur.Traiter(affectations, 2);
+
+            // TASK-161 : mapping tiers→activité (niveau 2 de la cascade), chargé une seule fois
+            // par société pour tout le lot — jamais un aller-retour GRF par ligne.
+            var (mappingParNumero, mappingParNom) = await ChargerMappingCodeActiviteTiersAsync(declaration.SocieteId);
+
+            return MapLignesCandidates(declarationId, domaine, candidates, modele, mappingParNumero, mappingParNom);
+        });
     }
 
     /// <summary>
@@ -333,8 +411,10 @@ public class DeclarationWorkflowService
                     var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
                     var dateFin = dateDebut.AddMonths(1).AddDays(-1);
                     var grfConnectionString = _connectionFactory.GetGrfConnectionString();
+                    // TASK-154 : connexion Sage résolue par SO_Id AVANT l'appel (F_COMPTET est Sage).
+                    var sageInfo = await _connectionFactory.GetSageConnectionInfoAsync(declaration.SocieteId);
                     var candidats = await _selectionService.SelectionnerExpliqueeAsync(
-                        declaration.SocieteId, dateDebut, dateFin, grfConnectionString);
+                        declaration.SocieteId, dateDebut, dateFin, grfConnectionString, sageInfo.ConnectionString);
 
                     var parCle = candidats
                         .Where(c => c.Affectation.EC_Id > 0)
@@ -438,48 +518,59 @@ public class DeclarationWorkflowService
     /// que de rebasculer l'état de la ligne existante : les lignes Exclue ne portent aucune
     /// valorisation (HT/Taux/TVA/TTC = 0), il faut donc revaloriser, pas seulement changer l'état.
     /// </summary>
-    private async Task ReintegrerReglementsLiberesAsync(
+    private Task ReintegrerReglementsLiberesAsync(
         Guid declarationId, string domaine, DeclarationEntete declaration, List<LigneCandidate> lignesLiberees)
     {
-        if (declaration.Exercice <= 0 || declaration.Periode <= 0) return;
+        if (declaration.Exercice <= 0 || declaration.Periode <= 0) return Task.CompletedTask;
 
-        var clesLiberees = lignesLiberees
-            .Select(l => (l.NumeroFacture, l.NumeroRapprochement))
-            .ToHashSet();
-
-        var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
-        var dateFin = dateDebut.AddMonths(1).AddDays(-1);
-        var grfConnectionString = _connectionFactory.GetGrfConnectionString();
-        var candidatsList = await _selectionService.SelectionnerExpliqueeAsync(
-            declaration.SocieteId, dateDebut, dateFin, grfConnectionString);
-
-        if (domaine == "Decaissement")
+        // TASK-156 : cette variante de réintégration appelle elle aussi orchestrateur.Traiter()
+        // sur le même soId — appelée depuis RevaliderLignesFigeesAsync, y compris depuis la
+        // branche "déjà figé" de ChargerCandidatesSiNecessaireAsync qui ne détient PAS le
+        // _figeageLocks — partage donc le MÊME verrou soId que les 3 autres sites.
+        return ExecuterAvecVerrouOMAsync(declaration.SocieteId, async () =>
         {
-            candidatsList = candidatsList.Where(c => c.Affectation.Source == SourceAffectation.Decaissement 
-                                                    || c.Affectation.Source == SourceAffectation.Espece 
-                                                    || c.Affectation.Source == SourceAffectation.Depense).ToList();
-        }
-        else if (domaine == "Encaissement")
-        {
-            candidatsList = candidatsList.Where(c => c.Affectation.Source == SourceAffectation.Encaissement).ToList();
-        }
-        var candidats = candidatsList.ToList();
+            var clesLiberees = lignesLiberees
+                .Select(l => (l.NumeroFacture, l.NumeroRapprochement))
+                .ToHashSet();
 
-        var aReintegrer = candidats
-            .Where(c => clesLiberees.Contains((c.Affectation.NumeroFacture, c.Affectation.NumeroRapprochement)))
-            .ToList();
-        if (aReintegrer.Count == 0) return;
+            var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
+            var dateFin = dateDebut.AddMonths(1).AddDays(-1);
+            var grfConnectionString = _connectionFactory.GetGrfConnectionString();
+            // TASK-154 : connexion Sage résolue par SO_Id AVANT l'appel (F_COMPTET est Sage).
+            var sageInfo = await _connectionFactory.GetSageConnectionInfoAsync(declaration.SocieteId);
+            var candidatsList = await _selectionService.SelectionnerExpliqueeAsync(
+                declaration.SocieteId, dateDebut, dateFin, grfConnectionString, sageInfo.ConnectionString);
 
-        await AppliquerExclusiviteInterDeclarationAsync(aReintegrer, declaration.SocieteId, declarationId);
+            if (domaine == "Decaissement")
+            {
+                candidatsList = candidatsList.Where(c => c.Affectation.Source == SourceAffectation.Decaissement
+                                                        || c.Affectation.Source == SourceAffectation.Espece
+                                                        || c.Affectation.Source == SourceAffectation.Depense).ToList();
+            }
+            else if (domaine == "Encaissement")
+            {
+                candidatsList = candidatsList.Where(c => c.Affectation.Source == SourceAffectation.Encaissement).ToList();
+            }
+            var candidats = candidatsList.ToList();
 
-        var orchestrateur = await BuildOrchestrateurAsync(grfConnectionString, declaration.SocieteId);
-        var affectationsEligibles = aReintegrer.Where(c => c.EstEligible).Select(c => c.Affectation).ToList();
-        var modele = orchestrateur.Traiter(affectationsEligibles, 2);
+            var aReintegrer = candidats
+                .Where(c => clesLiberees.Contains((c.Affectation.NumeroFacture, c.Affectation.NumeroRapprochement)))
+                .ToList();
+            if (aReintegrer.Count == 0) return;
 
-        var nouvellesLignes = MapLignesCandidates(declarationId, domaine, aReintegrer, modele);
+            await AppliquerExclusiviteInterDeclarationAsync(aReintegrer, declaration.SocieteId, declarationId);
 
-        await _repository.DeleteLignesAsync(lignesLiberees.Select(l => l.Id));
-        await _repository.SaveLignesCandidatesAsync(nouvellesLignes);
+            var orchestrateur = await BuildOrchestrateurAsync(grfConnectionString, declaration.SocieteId);
+            var affectationsEligibles = aReintegrer.Where(c => c.EstEligible).Select(c => c.Affectation).ToList();
+            var modele = orchestrateur.Traiter(affectationsEligibles, 2);
+
+            // TASK-161 : même résolution qu'au premier figeage (ConstruireLignesFigeesAsync).
+            var (mappingParNumero, mappingParNom) = await ChargerMappingCodeActiviteTiersAsync(declaration.SocieteId);
+            var nouvellesLignes = MapLignesCandidates(declarationId, domaine, aReintegrer, modele, mappingParNumero, mappingParNom);
+
+            await _repository.DeleteLignesAsync(lignesLiberees.Select(l => l.Id));
+            await _repository.SaveLignesCandidatesAsync(nouvellesLignes);
+        });
     }
 
     /// <summary>
@@ -489,6 +580,29 @@ public class DeclarationWorkflowService
     /// </summary>
     public Task ValiderIncoherenceLigneAsync(Guid declarationId, int ecId, string utilisateur) =>
         _repository.ValiderIncoherenceAsync(declarationId, ecId, utilisateur);
+
+    /// <summary>
+    /// TASK-161 : surcharge manuelle du code activité d'UNE ligne (écran ② Vérifier &amp;
+    /// Intégrer), niveau 1 (prioritaire) de la cascade — couvre le cas confirmé PO "même facture,
+    /// deux activités" (surcharge posée sur une seule des lignes de la facture, jamais par EC_Id).
+    /// Bloquée après clôture (figée telle quelle, décision PO TASK-161 : stable même si le
+    /// mapping tiers change ensuite) — contrairement à ValiderIncoherenceLigneAsync ci-dessus
+    /// (TASK-078, sans garde de statut), le code activité doit rester immuable une fois la
+    /// déclaration close.
+    /// </summary>
+    public async Task ModifierCodeActiviteLigneAsync(Guid declarationId, Guid ligneId, string codeActivite, string utilisateur)
+    {
+        var declaration = await _repository.GetByIdAsync(declarationId);
+        if (declaration == null) throw new ArgumentException("Déclaration introuvable");
+        if (declaration.Statut == StatutDeclaration.Cloturee)
+            throw new InvalidOperationException("Le code activité ne peut plus être modifié après clôture de la déclaration.");
+
+        await _repository.UpdateCodeActiviteLigneAsync(ligneId, codeActivite ?? "", utilisateur);
+    }
+
+    /// <summary>TASK-161 : référentiel des codes activité, pour la liste déroulante front.</summary>
+    public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync() =>
+        _repository.GetReferentielCodesActiviteAsync();
 
     /// <summary>
     /// TASK-078 : resynchronise UNE pièce (EC_Id) après correction côté Sage — relit
@@ -509,36 +623,42 @@ public class DeclarationWorkflowService
         var declaration = await _repository.GetByIdAsync(declarationId);
         if (declaration == null) return (false, false);
 
-        var grfConnectionString = _connectionFactory.GetGrfConnectionString();
-        var orchestrateur = await BuildOrchestrateurAsync(grfConnectionString, declaration.SocieteId);
-
-        // Purge d'abord la ligne de cache existante : sans ça, une sentinelle ERREUR portant déjà
-        // des montants bruts capturés (TASK-076) ferait considérer TryServireDepuisCache la pièce
-        // comme définitivement réglée et ne relirait jamais Sage — même après correction ERP,
-        // « Resynchroniser » n'aurait alors aucun effet réel.
-        var persistenceCs = _configuration.GetConnectionString("PersistenceConnection") ?? "";
-        new VentilationSageCacheRepository().SupprimerEntrees(declaration.SocieteId, ecId, persistenceCs);
-
-        var affectation = new AffectationADeclarer
+        // TASK-156 : resynchronisation d'une seule pièce — appelle elle aussi orchestrateur.Traiter()
+        // sur le même soId (via le worker OM réel). Partage le MÊME verrou soId que les 3 autres
+        // sites (rejet immédiat uniforme si un autre traitement OM tourne déjà pour ce soId).
+        return await ExecuterAvecVerrouOMAsync(declaration.SocieteId, async () =>
         {
-            NumeroFacture = ligne.NumeroFacture,
-            NumeroRapprochement = ligne.NumeroRapprochement,
-            Sens = ligne.Domaine == "Encaissement" ? SensAffectation.Vente : SensAffectation.Achat,
-            EC_Type = ligne.EcType,
-            EC_Id = ligne.EC_Id,
-            MV_Id = ligne.MV_Id,
-        };
+            var grfConnectionString = _connectionFactory.GetGrfConnectionString();
+            var orchestrateur = await BuildOrchestrateurAsync(grfConnectionString, declaration.SocieteId);
 
-        // Effet de bord voulu : relit Sage pour cette pièce (cache désormais vide, donc traité
-        // comme cache miss) et réécrit la ligne de cache (normale si désormais cohérente,
-        // sentinelle ERREUR sinon) — même pipeline que le reste du garde-fou, aucune règle de
-        // détection dupliquée ici.
-        orchestrateur.Traiter(new[] { affectation }, 1);
+            // Purge d'abord la ligne de cache existante : sans ça, une sentinelle ERREUR portant déjà
+            // des montants bruts capturés (TASK-076) ferait considérer TryServireDepuisCache la pièce
+            // comme définitivement réglée et ne relirait jamais Sage — même après correction ERP,
+            // « Resynchroniser » n'aurait alors aucun effet réel.
+            var persistenceCs = _configuration.GetConnectionString("PersistenceConnection") ?? "";
+            new VentilationSageCacheRepository().SupprimerEntrees(declaration.SocieteId, ecId, persistenceCs);
 
-        await _repository.ReinitialiserValidationIncoherenceAsync(declarationId, ecId);
+            var affectation = new AffectationADeclarer
+            {
+                NumeroFacture = ligne.NumeroFacture,
+                NumeroRapprochement = ligne.NumeroRapprochement,
+                Sens = ligne.Domaine == "Encaissement" ? SensAffectation.Vente : SensAffectation.Achat,
+                EC_Type = ligne.EcType,
+                EC_Id = ligne.EC_Id,
+                MV_Id = ligne.MV_Id,
+            };
 
-        var toujoursEnErreur = await _repository.GetEcIdsEnErreurAsync(declaration.SocieteId, new[] { ecId });
-        return (true, !toujoursEnErreur.Contains(ecId));
+            // Effet de bord voulu : relit Sage pour cette pièce (cache désormais vide, donc traité
+            // comme cache miss) et réécrit la ligne de cache (normale si désormais cohérente,
+            // sentinelle ERREUR sinon) — même pipeline que le reste du garde-fou, aucune règle de
+            // détection dupliquée ici.
+            orchestrateur.Traiter(new[] { affectation }, 1);
+
+            await _repository.ReinitialiserValidationIncoherenceAsync(declarationId, ecId);
+
+            var toujoursEnErreur = await _repository.GetEcIdsEnErreurAsync(declaration.SocieteId, new[] { ecId });
+            return (true, !toujoursEnErreur.Contains(ecId));
+        });
     }
 
     /// <summary>
@@ -548,42 +668,54 @@ public class DeclarationWorkflowService
     /// écrite, aucun DT_Id touché. Utilisé par le bouton « Rafraîchir » de l'écran Factures.
     /// Retourne le nombre de factures éligibles traitées.
     /// </summary>
-    public async Task<RapportValorisation> RafraichirValorisationAsync(int soId, DateTime dateDebut, DateTime dateFin)
+    public Task<RapportValorisation> RafraichirValorisationAsync(int soId, DateTime dateDebut, DateTime dateFin)
     {
-        var grfConnectionString = _connectionFactory.GetGrfConnectionString();
+        // TASK-156 correctif A : rejet immédiat si un traitement OM est déjà en cours pour ce
+        // soId — sur CE chemin (RafraichirValorisationAsync) OU sur l'un des 3 autres appelants
+        // partageant le même verrou (ConstruireLignesFigeesAsync, la réintégration de lignes
+        // libérées, ResynchroniserLigneAsync — voir le commentaire de _valorisationLocks).
+        // Exception explicite, propagée en 409 par FacturesController.
+        return ExecuterAvecVerrouOMAsync(soId, async () =>
+        {
+            var grfConnectionString = _connectionFactory.GetGrfConnectionString();
+            // TASK-154 : connexion Sage résolue par SO_Id AVANT l'appel — c'est ce site précis qui
+            // levait `SqlException 208 : Nom d'objet 'F_COMPTET' non valide` (F_COMPTET est une table
+            // Sage, jamais lue via la connexion GRF).
+            var sageInfo = await _connectionFactory.GetSageConnectionInfoAsync(soId);
 
-        // TASK-050 Partie B — Valorisation facture-first : on lit TOUTES les factures EC_Type=0
-        // de la période depuis RT_ECHEANCE, indépendamment du statut de règlement/rapprochement.
-        // Avant TASK-050, on partait de RT_MOUVEMENT avec filtre MV_DECAISSE → 465+ factures
-        // réglées par chèque (MV_Type=1, MV_DECAISSE=0) étaient silencieusement exclues.
-        // La DÉCLARATION reste strictement gated sur EstEligible (RecalculerLignesCandidatesAsync).
-        var toutesFactures = await _selectionService.LireFacturesDepuisPeriodeAsync(
-            soId, dateDebut, dateFin, grfConnectionString);
+            // TASK-050 Partie B — Valorisation facture-first : on lit TOUTES les factures EC_Type=0
+            // de la période depuis RT_ECHEANCE, indépendamment du statut de règlement/rapprochement.
+            // Avant TASK-050, on partait de RT_MOUVEMENT avec filtre MV_DECAISSE → 465+ factures
+            // réglées par chèque (MV_Type=1, MV_DECAISSE=0) étaient silencieusement exclues.
+            // La DÉCLARATION reste strictement gated sur EstEligible (RecalculerLignesCandidatesAsync).
+            var toutesFactures = await _selectionService.LireFacturesDepuisPeriodeAsync(
+                soId, dateDebut, dateFin, grfConnectionString, sageInfo.ConnectionString);
 
-        // Valorisation d'affichage : inclut Eligible, NonRapproche (TASK-049) et NonAffecte (TASK-052).
-        // - Eligible     → règlement rapproché dans la période, non déclaré (EstValorisable=true)
-        // - NonRapproche → affecté mais non rapproché : cache token NULL, jamais servi déclarable
-        // - NonAffecte   → aucun règlement affecté : cache token NULL, jamais servi déclarable
-        // Les autres motifs (HorsPeriode, DejaDeclare, etc.) ne sont pas valorisés (EstValorisable=false).
-        var affectations = toutesFactures.Where(c => c.EstValorisable).Select(c => c.Affectation).ToList();
-        var totalFacturesLues = toutesFactures.Count();
+            // Valorisation d'affichage : inclut Eligible, NonRapproche (TASK-049) et NonAffecte (TASK-052).
+            // - Eligible     → règlement rapproché dans la période, non déclaré (EstValorisable=true)
+            // - NonRapproche → affecté mais non rapproché : cache token NULL, jamais servi déclarable
+            // - NonAffecte   → aucun règlement affecté : cache token NULL, jamais servi déclarable
+            // Les autres motifs (HorsPeriode, DejaDeclare, etc.) ne sont pas valorisés (EstValorisable=false).
+            var affectations = toutesFactures.Where(c => c.EstValorisable).Select(c => c.Affectation).ToList();
+            var totalFacturesLues = toutesFactures.Count();
 
-        JournaliserValorisation($"[VALO-050] === Rafraîchissement facture-first soId={soId} {dateDebut:yyyy-MM-dd}→{dateFin:yyyy-MM-dd} : "
-            + $"{totalFacturesLues} facture(s) lues depuis RT_ECHEANCE, "
-            + $"{affectations.Count} valorisable(s) (éligibles + non rapprochées + non affectées) ===");
+            JournaliserValorisation($"[VALO-050] === Rafraîchissement facture-first soId={soId} {dateDebut:yyyy-MM-dd}→{dateFin:yyyy-MM-dd} : "
+                + $"{totalFacturesLues} facture(s) lues depuis RT_ECHEANCE, "
+                + $"{affectations.Count} valorisable(s) (éligibles + non rapprochées + non affectées) ===");
 
-        var orchestrateur = await BuildOrchestrateurAsync(grfConnectionString, soId);
-        var modele = orchestrateur.Traiter(affectations, 2); // effet de bord : écriture du cache
+            var orchestrateur = await BuildOrchestrateurAsync(grfConnectionString, soId);
+            var modele = orchestrateur.Traiter(affectations, 2); // effet de bord : écriture du cache
 
-        // Rapport transparent : les alertes de l'orchestrateur portent le motif exact par facture.
-        var erreurs = modele.Alertes
-            .Where(a => a.Niveau == Declaration.Core.Model.NiveauAlerte.Error)
-            .Select(a => new MotifValorisation(a.Code, a.Message, a.RefLigne))
-            .ToList();
+            // Rapport transparent : les alertes de l'orchestrateur portent le motif exact par facture.
+            var erreurs = modele.Alertes
+                .Where(a => a.Niveau == Declaration.Core.Model.NiveauAlerte.Error)
+                .Select(a => new MotifValorisation(a.Code, a.Message, a.RefLigne))
+                .ToList();
 
-        JournaliserValorisation($"[VALO-050] === Fin : {affectations.Count} traitée(s), {erreurs.Count} en erreur ===");
+            JournaliserValorisation($"[VALO-050] === Fin : {affectations.Count} traitée(s), {erreurs.Count} en erreur ===");
 
-        return new RapportValorisation(affectations.Count, erreurs);
+            return new RapportValorisation(affectations.Count, erreurs);
+        });
     }
 
 
@@ -630,7 +762,32 @@ public class DeclarationWorkflowService
             log: JournaliserValorisation, soId: soId);
     }
 
-    public static List<LigneCandidate> MapLignesCandidates(Guid declarationId, string domaine, IEnumerable<AffectationCandidate> candidates, DeclarationModele modele)
+    /// <summary>
+    /// TASK-161 : charge le mapping tiers→activité (P_SOCIETECODEACTIVITETIERS, lecture seule)
+    /// pour cette société et le réduit à deux dictionnaires (par numéro tiers, par intitulé ERP en
+    /// repli) consommés par <see cref="Declaration.Core.CodeActiviteResolver"/>. Un doublon de clé
+    /// (mapping ambigu côté WinForms) retient arbitrairement le premier — jamais une exception qui
+    /// bloquerait tout le figeage pour un problème de paramétrage tiers.
+    /// </summary>
+    private async Task<(IReadOnlyDictionary<string, string> ParNumero, IReadOnlyDictionary<string, string> ParNom)>
+        ChargerMappingCodeActiviteTiersAsync(int soId)
+    {
+        var rows = await _repository.GetMappingCodeActiviteTiersAsync(soId);
+        var parNumero = rows
+            .Where(r => !string.IsNullOrWhiteSpace(r.NumeroTiers) && !string.IsNullOrWhiteSpace(r.CodeActivite))
+            .GroupBy(r => r.NumeroTiers!, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First().CodeActivite, StringComparer.Ordinal);
+        var parNom = rows
+            .Where(r => !string.IsNullOrWhiteSpace(r.ErpIntitule) && !string.IsNullOrWhiteSpace(r.CodeActivite))
+            .GroupBy(r => r.ErpIntitule, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().CodeActivite, StringComparer.OrdinalIgnoreCase);
+        return (parNumero, parNom);
+    }
+
+    public static List<LigneCandidate> MapLignesCandidates(
+        Guid declarationId, string domaine, IEnumerable<AffectationCandidate> candidates, DeclarationModele modele,
+        IReadOnlyDictionary<string, string>? mappingCodeActiviteParNumero = null,
+        IReadOnlyDictionary<string, string>? mappingCodeActiviteParNom = null)
     {
         var lignes = new List<LigneCandidate>();
 
@@ -643,6 +800,16 @@ public class DeclarationWorkflowService
             }
             else
             {
+                // TASK-161 : niveaux 2/3/4 de la cascade unique (surcharge ligne exclue ici — cette
+                // méthode ne construit que des lignes NOUVELLES, sans surcharge possible encore).
+                var codeActivite = Declaration.Core.CodeActiviteResolver.Resoudre(
+                    surchargeManuelle: null,
+                    tiersNumero: c.Affectation.Tiers.Numero,
+                    tiersNom: c.Affectation.Tiers.Nom,
+                    codeActiviteSage: c.Affectation.Tiers.CodeActivite,
+                    mappingParNumero: mappingCodeActiviteParNumero,
+                    mappingParNom: mappingCodeActiviteParNom);
+
                 var taxesLines = modele.Lignes.Where(l => l.NumeroFacture == c.Affectation.NumeroFacture).ToList();
                 if (!taxesLines.Any())
                 {
@@ -673,7 +840,8 @@ public class DeclarationWorkflowService
                         Source = c.Affectation.Source.ToString(),
                         EcType = c.Affectation.EC_Type,
                         EC_Id = c.Affectation.EC_Id,
-                        MV_Id = c.Affectation.MV_Id
+                        MV_Id = c.Affectation.MV_Id,
+                        CodeActivite = codeActivite
                     });
                 }
                 else
@@ -704,7 +872,8 @@ public class DeclarationWorkflowService
                             Source = c.Affectation.Source.ToString(),
                             EcType = c.Affectation.EC_Type,
                             EC_Id = c.Affectation.EC_Id,
-                            MV_Id = c.Affectation.MV_Id
+                            MV_Id = c.Affectation.MV_Id,
+                            CodeActivite = codeActivite
                         });
                     }
                 }
@@ -794,8 +963,10 @@ public class DeclarationWorkflowService
             var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
             var dateFin = dateDebut.AddMonths(1).AddDays(-1);
             var grfConnectionString = _connectionFactory.GetGrfConnectionString();
+            // TASK-154 : connexion Sage résolue par SO_Id AVANT l'appel (F_COMPTET est Sage).
+            var sageInfo = await _connectionFactory.GetSageConnectionInfoAsync(declaration.SocieteId);
             var candidates = await _selectionService.SelectionnerExpliqueeAsync(
-                declaration.SocieteId, dateDebut, dateFin, grfConnectionString);
+                declaration.SocieteId, dateDebut, dateFin, grfConnectionString, sageInfo.ConnectionString);
             var candidatesList = candidates.ToList();
 
             await AppliquerExclusiviteInterDeclarationAsync(candidatesList, declaration.SocieteId, declarationId);
@@ -878,6 +1049,318 @@ public class DeclarationWorkflowService
         }
 
         return model;
+    }
+
+    /// <summary>
+    /// TASK-155 : reconstruit le <see cref="DeclarationModele"/> complet (entête + lignes) d'une
+    /// déclaration, pour l'export XML (CDC DGI, TASK-137) et Excel (TASK-010). Seules les lignes
+    /// réellement <see cref="EtatLigne.Integree"/> sont exportées — Proposee/Exclue/Reportee/Ecartee
+    /// n'ont jamais été retenues par la clôture (TASK-071) et ne doivent pas apparaître dans un
+    /// dépôt officiel. <c>Designation</c> reste vide (gap connu DM_LGTVA/LigneCandidate, hors
+    /// périmètre TASK-155 — cf. cartographie de la task, comportement déjà accepté par TASK-011).
+    /// </summary>
+    /// <exception cref="ArgumentException">Déclaration introuvable.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Identifiant fiscal de la société absent de <c>P_SOCIETE.SO_Identifiant</c> — jamais de
+    /// valeur placeholder exportée (règle actée TASK-151), la génération doit être bloquée
+    /// explicitement pour que le PO/l'ERP renseigne la donnée.
+    /// </exception>
+    public async Task<DeclarationModele> ConstruireModeleExportAsync(Guid declarationId)
+    {
+        var declaration = await _repository.GetByIdAsync(declarationId);
+        if (declaration == null) throw new ArgumentException("Déclaration introuvable");
+
+        var identifiantFiscal = await _repository.GetIdentifiantFiscalSocieteAsync(declaration.SocieteId);
+        if (string.IsNullOrWhiteSpace(identifiantFiscal))
+            throw new InvalidOperationException(
+                $"Identifiant fiscal de la société (SO_Id={declaration.SocieteId}) non configuré " +
+                "(P_SOCIETE.SO_Identifiant absent ou vide) — génération impossible. Contactez le " +
+                "PO/l'administrateur ERP pour renseigner cette donnée avant de générer le dépôt.");
+
+        var enTete = new EnTeteDeclaration
+        {
+            IdentifiantSociete = identifiantFiscal.Trim(),
+            Exercice = declaration.Exercice,
+            Numero = declaration.Numero,
+            Type = declaration.Type == Declaration.Application.Entities.TypePeriode.Mensuelle
+                ? Core.Model.TypePeriode.Mensuelle
+                : Core.Model.TypePeriode.Trimestrielle
+        };
+        if (declaration.Type == Declaration.Application.Entities.TypePeriode.Mensuelle)
+            enTete.MoisPeriode = declaration.Periode;
+        else
+            enTete.TrimestrePeriode = declaration.Periode;
+
+        var lignesDec = await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var lignesEnc = await _repository.GetLignesAsync(declarationId, "Encaissement", 1, int.MaxValue, null, null);
+        var lignesIntegrees = lignesDec.Concat(lignesEnc).Where(l => l.Etat == EtatLigne.Integree).ToList();
+
+        var modele = new DeclarationModele { EnTete = enTete };
+        foreach (var l in lignesIntegrees)
+        {
+            modele.Lignes.Add(new LigneDeclarationEnrichie
+            {
+                NumeroFacture = l.NumeroFacture,
+                NumeroRapprochement = l.NumeroRapprochement,
+                Designation = "",
+                Tiers = new TiersInfo
+                {
+                    Nom = l.TiersNom,
+                    IdentifiantFiscal = l.TiersIdentifiantFiscal,
+                    Ice = l.TiersICE
+                },
+                // TASK-161 : gap TASK-155 comblé — CodeActivite résolu en cascade et persisté sur
+                // la ligne au figeage (jamais null en pratique, cf. LigneCandidate.CodeActivite ;
+                // "??" défensif pour une ligne figée avant la migration 010, colonne SQL NULL).
+                CodeActivite = l.CodeActivite ?? "",
+                HT = l.HT,
+                Taux = l.Taux,
+                Tva = l.TVA,
+                Ttc = l.TTC,
+                Prorata = l.Prorata,
+                ModePaiement = l.ModePaiement,
+                DatePaiement = l.DatePaiement,
+                DateFacture = l.DateFacture,
+                Source = Enum.Parse<SourceAffectation>(l.Source),
+                IsReport = false
+            });
+        }
+
+        return modele;
+    }
+
+    /// <summary>
+    /// TASK-160 : construit le modèle de l'export de contrôle ad-hoc (règlements sélectionnés +
+    /// factures à déclarer + détail TVA), réexécutable à tout moment avant clôture (EnCours ou
+    /// Clôturée), à titre de vérification/partage externe — DISTINCT de
+    /// <see cref="ConstruireModeleExportAsync"/> qui exige une déclaration Clôturée et ne prend
+    /// que les lignes Integree. Aucun blocage sur l'état ni sur l'identifiant fiscal société : si
+    /// le calcul n'a pas encore été lancé, Lignes/Recaps restent simplement vides (jamais une
+    /// erreur), cohérent avec <see cref="GetCheckupAsync"/>.
+    /// </summary>
+    /// <exception cref="ArgumentException">Déclaration introuvable.</exception>
+    public async Task<ModeleControle> ConstruireModeleControleAsync(Guid declarationId)
+    {
+        var declaration = await _repository.GetByIdAsync(declarationId);
+        if (declaration == null) throw new ArgumentException("Déclaration introuvable");
+
+        var modele = new ModeleControle
+        {
+            EnTete = new EnTeteDeclaration
+            {
+                IdentifiantSociete = declaration.SocieteId.ToString(),
+                Exercice = declaration.Exercice,
+                Numero = declaration.Numero,
+                Type = declaration.Type == Declaration.Application.Entities.TypePeriode.Mensuelle
+                    ? Core.Model.TypePeriode.Mensuelle
+                    : Core.Model.TypePeriode.Trimestrielle
+            }
+        };
+        if (declaration.Type == Declaration.Application.Entities.TypePeriode.Mensuelle)
+            modele.EnTete.MoisPeriode = declaration.Periode;
+        else
+            modele.EnTete.TrimestrePeriode = declaration.Periode;
+
+        // Règlements sélectionnés : jointure GetSelectionReglementsAsync (numéros) +
+        // GetReglementsRapprochementAsync (détail), même pattern que ReglementsSelection.tsx.
+        var selection = await _repository.GetSelectionReglementsAsync(declarationId);
+        if (selection.Count > 0)
+        {
+            var selectionSet = new HashSet<string>(selection);
+            var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
+            var dateFin = dateDebut.AddMonths(1).AddDays(-1);
+            var reglements = await _repository.GetReglementsRapprochementAsync(
+                declaration.SocieteId, dateDebut, dateFin,
+                new RapprochementFilter(), 1, int.MaxValue, null);
+
+            modele.ReglementsSelectionnes = reglements
+                .Where(r => selectionSet.Contains(r.MvNumero))
+                .Select(r => new ReglementSelectionneInfo
+                {
+                    Numero = r.MvNumero,
+                    Date = r.MvDate,
+                    Montant = r.MvMontant,
+                    Tiers = r.Tiers ?? "",
+                    Mode = r.Mode,
+                    EtatPointage = r.EstRapprocheBanque
+                        ? $"Rapproché{(r.DateRapprochement.HasValue ? $" ({r.DateRapprochement.Value:dd/MM/yyyy})" : "")}"
+                        : "Non rapproché"
+                })
+                .ToList();
+        }
+
+        // Factures à déclarer : lignes Integree||Proposee (MÊME ensemble que GetCheckupAsync,
+        // TASK-108) — pas seulement Integree, contrairement à ConstruireModeleExportAsync.
+        var lignesDec = await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var lignesEnc = await _repository.GetLignesAsync(declarationId, "Encaissement", 1, int.MaxValue, null, null);
+        var lignesRecap = lignesDec.Concat(lignesEnc)
+            .Where(l => l.Etat == EtatLigne.Integree || l.Etat == EtatLigne.Proposee)
+            .ToList();
+
+        foreach (var l in lignesRecap)
+        {
+            modele.Lignes.Add(new LigneDeclarationEnrichie
+            {
+                NumeroFacture = l.NumeroFacture,
+                NumeroRapprochement = l.NumeroRapprochement,
+                Designation = "",
+                Tiers = new TiersInfo
+                {
+                    Nom = l.TiersNom,
+                    IdentifiantFiscal = l.TiersIdentifiantFiscal,
+                    Ice = l.TiersICE
+                },
+                // TASK-161 : gap TASK-155/TASK-160 comblé — cf. commentaire équivalent de
+                // ConstruireModeleExportAsync ci-dessus.
+                CodeActivite = l.CodeActivite ?? "",
+                HT = l.HT,
+                Taux = l.Taux,
+                Tva = l.TVA,
+                Ttc = l.TTC,
+                Prorata = l.Prorata,
+                ModePaiement = l.ModePaiement,
+                DatePaiement = l.DatePaiement,
+                DateFacture = l.DateFacture,
+                Source = Enum.Parse<SourceAffectation>(l.Source),
+                IsReport = false
+            });
+        }
+
+        // Détail TVA : totaux par taux + contrôle d'équilibre, mêmes agrégats que GetCheckupAsync
+        // (recapTaux/controleEquilibre côté DeclarationsController.GetCheckup, TASK-108).
+        modele.RecapsParTaux = lignesRecap
+            .GroupBy(l => l.Taux)
+            .Select(g => new RecapParTaux
+            {
+                Taux = g.Key,
+                TotalHT = g.Sum(x => x.HT),
+                TotalTva = g.Sum(x => x.TVA),
+                TotalTtc = g.Sum(x => x.TTC)
+            })
+            .OrderByDescending(r => r.Taux)
+            .ToList();
+
+        // TASK-161 : gap comblé — regroupement RÉEL par CodeActivite résolu (au lieu de l'ancien
+        // bucket "" unique et systématique). Le bucket "" reste possible (et attendu, décision PO
+        // TASK-161 point 3) pour toute ligne dont la cascade n'a rien résolu — jamais masqué,
+        // simplement un groupe parmi d'autres désormais.
+        modele.RecapsParActivite = lignesRecap
+            .GroupBy(l => l.CodeActivite ?? "")
+            .Select(g => new RecapParActivite
+            {
+                CodeActivite = g.Key,
+                TotalHT = g.Sum(x => x.HT),
+                TotalTva = g.Sum(x => x.TVA),
+                TotalTtc = g.Sum(x => x.TTC)
+            })
+            .OrderBy(r => r.CodeActivite)
+            .ToList();
+
+        modele.ControleEquilibre = new ControleEquilibre
+        {
+            TotalMontantAffecte = lignesRecap.Sum(l => l.HT),
+            TotalDeclareTtc = lignesRecap.Sum(l => l.TTC),
+            ResiduExplique = 0m
+        };
+
+        return modele;
+    }
+
+    /// <summary>
+    /// TASK-160 : génère le classeur Excel de contrôle en mémoire (flux, aucun fichier disque —
+    /// à la différence de <see cref="GenererFichiersExportAsync"/>), pour téléchargement direct
+    /// via <c>GET {id}/export-controle</c>.
+    /// </summary>
+    /// <exception cref="ArgumentException">Déclaration introuvable.</exception>
+    public async Task<byte[]> GenererExcelControleAsync(Guid declarationId)
+    {
+        var modele = await ConstruireModeleControleAsync(declarationId);
+        using var stream = new MemoryStream();
+        new Declaration.Export.Excel.Exporter().ExporterExcelControle(modele, stream);
+        return stream.ToArray();
+    }
+
+    /// <summary>
+    /// TASK-155 : chemins déterministes des fichiers d'export d'une déclaration — dérivés
+    /// uniquement de son Numero/Exercice/Type/Periode (même construction de nom que
+    /// <see cref="Declaration.Export.Xml.DeclarationXmlExporter.GenererXml"/>), jamais d'un état
+    /// persisté (aucune colonne "généré" en base, cf. cartographie TASK-155 point 7). Le fichier
+    /// sur disque EST l'état — <see cref="GenererFichiersExportAsync"/> l'écrit,
+    /// <see cref="ObtenirCheminsExportAsync"/> le relit pour le téléchargement.
+    /// </summary>
+    private static (string XmlZipPath, string ExcelPath) CalculerCheminsExport(DeclarationEntete declaration, string dossierSortie)
+    {
+        var periodeStr = declaration.Type == Declaration.Application.Entities.TypePeriode.Mensuelle
+            ? $"M{declaration.Periode}"
+            : $"T{declaration.Periode}";
+        var baseFileName = $"{declaration.Numero}-{declaration.Exercice}-{periodeStr}";
+        return (
+            Path.Combine(dossierSortie, $"{baseFileName}.zip"),
+            Path.Combine(dossierSortie, $"{baseFileName}-Checkup.xlsx")
+        );
+    }
+
+    /// <summary>
+    /// TASK-155 : dossier de sortie des exports — même pattern que <see cref="JournaliserValorisation"/>
+    /// (<c>AppContext.BaseDirectory</c>, jamais un chemin absolu codé en dur, le service tournant en
+    /// Windows Service).
+    /// </summary>
+    public static string ObtenirDossierExports() => Path.Combine(AppContext.BaseDirectory, "exports");
+
+    /// <summary>
+    /// TASK-155 : chemins des fichiers d'export d'une déclaration (générés ou non — l'appelant
+    /// teste leur existence sur disque). Utilisé par <c>GET {id}/fichiers/{type}</c>.
+    /// </summary>
+    public async Task<(string XmlZipPath, string ExcelPath)> ObtenirCheminsExportAsync(Guid declarationId)
+    {
+        var declaration = await _repository.GetByIdAsync(declarationId);
+        if (declaration == null) throw new ArgumentException("Déclaration introuvable");
+        return CalculerCheminsExport(declaration, ObtenirDossierExports());
+    }
+
+    /// <summary>
+    /// TASK-155 : câblage réel de <c>POST {id}/generation</c> — construit le modèle (point ci-dessus)
+    /// puis appelle <see cref="Declaration.Export.Xml.DeclarationXmlExporter.GenererXml"/> et
+    /// <see cref="Declaration.Export.Excel.Exporter.ExporterExcel"/> vers le même dossier
+    /// déterministe. Le contrôle d'existence Excel est fait AVANT l'appel XML (qui a son propre
+    /// contrôle interne) pour ne jamais écrire un XML si l'Excel existe déjà — au pire une seule
+    /// écriture partielle reste possible (échec disque après XML, avant Excel), non traité comme
+    /// une transaction (hors périmètre, cf. cartographie TASK-155 point 7 : pas de nouvel état
+    /// persisté pour ce seul besoin).
+    /// </summary>
+    /// <exception cref="ArgumentException">Déclaration introuvable.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Déclaration non Clôturée, ou identifiant fiscal société absent (cf.
+    /// <see cref="ConstruireModeleExportAsync"/>).
+    /// </exception>
+    /// <exception cref="ApplicationException">
+    /// Fichier déjà existant, aucune ligne à exporter, ou IF/ICE tiers invalide (levées par
+    /// l'exporter XML lui-même, TASK-137 — non dupliquées ici).
+    /// </exception>
+    public async Task<(string XmlZipPath, string ExcelPath)> GenererFichiersExportAsync(Guid declarationId)
+    {
+        var declaration = await _repository.GetByIdAsync(declarationId);
+        if (declaration == null) throw new ArgumentException("Déclaration introuvable");
+        if (declaration.Statut != StatutDeclaration.Cloturee)
+            throw new InvalidOperationException("Seule une déclaration Clôturée peut être générée.");
+
+        var modele = await ConstruireModeleExportAsync(declarationId);
+
+        var dossierSortie = ObtenirDossierExports();
+        Directory.CreateDirectory(dossierSortie);
+
+        var (_, excelPath) = CalculerCheminsExport(declaration, dossierSortie);
+        if (File.Exists(excelPath))
+            throw new ApplicationException($"Le fichier {Path.GetFileName(excelPath)} existe déjà.");
+
+        var xmlExporter = new Declaration.Export.Xml.DeclarationXmlExporter();
+        var xmlZipPath = xmlExporter.GenererXml(modele, dossierSortie);
+
+        new Declaration.Export.Excel.Exporter().ExporterExcel(modele, excelPath);
+
+        JournaliserValorisation($"[TASK-155] Déclaration {declaration.Numero} ({declarationId}) — fichiers générés : {Path.GetFileName(xmlZipPath)}, {Path.GetFileName(excelPath)}.");
+
+        return (xmlZipPath, excelPath);
     }
 
     /// <summary>
@@ -1039,7 +1522,17 @@ public class DeclarationWorkflowService
             Source = reference.Source,
             EcType = reference.EcType,
             EC_Id = reference.EC_Id,
-            MV_Id = reference.MV_Id
+            MV_Id = reference.MV_Id,
+            // TASK-161 : CodeActivite est une colonne non-financière (identité tiers, pas un
+            // montant recalculé depuis le cache) — conservée à l'identique de la ligne existante,
+            // même principe que TiersNom/IF/ICE/ModePaiement/Source ci-dessus. Contrairement à
+            // IncoherenceValidee (remis à false ailleurs sur resynchronisation, TASK-078), rien
+            // ici ne rend une éventuelle surcharge manuelle caduque : seuls les montants de taxe
+            // ont changé, pas l'identité du tiers ni sa surcharge.
+            CodeActivite = reference.CodeActivite,
+            CodeActiviteModifieManuellement = reference.CodeActiviteModifieManuellement,
+            CodeActiviteModifiePar = reference.CodeActiviteModifiePar,
+            CodeActiviteModifieLe = reference.CodeActiviteModifieLe
         }).ToList();
 
         await _repository.SupprimerLignesParEcIdAsync(declarationId, ecId);

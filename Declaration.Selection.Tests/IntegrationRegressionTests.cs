@@ -35,7 +35,9 @@ namespace Declaration.Selection.Tests
 
             // Let it fail if db is not available
             var oldResult = (await oldService.SelectionnerAffectationsAsync(soId, dateDebut, dateFin, _connectionString)).ToList();
-            var newResultSurensemble = (await newService.SelectionnerExpliqueeAsync(soId, dateDebut, dateFin, _connectionString, null)).ToList();
+            // TASK-154 : GR_EMA_DISTRIBUTION contient déjà GRF + Sage co-localisés — la même
+            // chaîne de connexion sert donc pour les deux paramètres sans casser ce test.
+            var newResultSurensemble = (await newService.SelectionnerExpliqueeAsync(soId, dateDebut, dateFin, _connectionString, _connectionString, null)).ToList();
             
             var newResultEligibles = newResultSurensemble.Where(x => x.EstEligible).Select(x => x.Affectation).ToList();
 

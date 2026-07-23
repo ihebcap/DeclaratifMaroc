@@ -19,6 +19,7 @@ public class FixtureSelectionExpliqueeService : ISelectionExpliqueeService
         DateTime dateDebut,
         DateTime dateFin,
         string connectionString,
+        string sageConnectionString,
         Func<string, SensAffectation, Task<(bool Existe, bool TaxeOk)>>? verifierFacture = null)
     {
         var candidates = new List<AffectationCandidate>
@@ -116,7 +117,8 @@ public class FixtureSelectionExpliqueeService : ISelectionExpliqueeService
         int soId,
         DateTime dateDebut,
         DateTime dateFin,
-        string connectionString)
+        string connectionString,
+        string sageConnectionString)
     {
         // Fixture : retourne toutes les factures fournisseur (éligibles + non rapprochées).
         // En production, ce serait piloté par RT_ECHEANCE (toutes EC_Type=0 de la période).

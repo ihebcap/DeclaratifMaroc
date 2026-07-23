@@ -60,16 +60,18 @@ class Program
                     requetesTuples.Add((req.NumeroPiece, req.Sens));
                 }
                 
+                // TASK-159 : streaming NDJSON — une ligne JSON par pièce, flushée immédiatement,
+                // au lieu d'un seul tableau JSON écrit à la toute fin. Permet à WorkerInvoker
+                // (process appelant) de récupérer les pièces déjà rendues si ce process est tué
+                // sur timeout avant la fin du lot (gros volume), au lieu de tout perdre.
                 var service = new SageTaxReaderService(server, database, user, pwd);
-                var result = service.LireFactures(requetesTuples);
-                
-                var resultList = new List<DocumentTaxesInfo>();
-                foreach (var val in result.Values)
+                service.LireFactures(requetesTuples, (key, doc) =>
                 {
-                    resultList.Add(val);
-                }
-                
-                Console.WriteLine(JsonSerializer.Serialize(resultList));
+                    Console.Out.Write(JsonSerializer.Serialize(doc));
+                    Console.Out.Write('\n');
+                    Console.Out.Flush();
+                });
+
                 return 0;
             }
             catch (Exception ex)

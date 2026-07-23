@@ -252,9 +252,15 @@ export function FactureInterrogation({ societeId, showToast }: { societeId: numb
         showToast(`Valorisation rafraîchie — ${n} facture(s) traitée(s)`, 'success');
       }
       await fetchPage();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast('Échec du rafraîchissement de la valorisation (lecture Sage)', 'error');
+      // TASK-156 : un clic rapproché sur « Rafraîchir » pendant qu'un cycle est déjà en cours
+      // pour cette société est rejeté immédiatement par le serveur (409, verrou par soId) —
+      // message explicite distinct de l'échec générique (lecture Sage en erreur).
+      const message = e?.response?.status === 409
+        ? (e.response.data?.Message || e.response.data?.message || 'Rafraîchissement déjà en cours pour cette société.')
+        : 'Échec du rafraîchissement de la valorisation (lecture Sage)';
+      showToast(message, 'error');
     } finally {
       setRefreshing(false);
     }

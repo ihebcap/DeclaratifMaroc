@@ -215,16 +215,50 @@ namespace Declaration.Orchestration.Tests
             Assert.Equal(2, inv.TotalCalls);
         }
 
-        [Fact] public void T4_PaiementAbsent_TokenNull_CacheNonServi()
+        // TASK-156 (correctif B) : AVANT ce correctif, une facture sans paiement pointé restait
+        // "dépayée" en permanence (PaymentPresent=false sur toute la durée du test, contrairement
+        // à T3 où le token change de valeur) était relue via OM à CHAQUE cycle — cause racine de
+        // la contention constatée en prod (log 23/07/2026 : mêmes pièces FF260xxx relues
+        // identiques à 3 reprises en ~6 minutes). Le nom/l'assertion de ce test ont changé
+        // (2 → 1 appel OM) : c'est EXACTEMENT le test qui aurait dû échouer et n'existait pas
+        // ("actuellement absent" — TASK-156), l'ancienne assertion figeait le bug comme
+        // comportement attendu.
+        [Fact] public void T4_PaiementAbsent_StablePermanent_CacheServi_UnSeulOM()
         {
             var inv = new CountingWorkerInvoker(); var repo = new InMemoryCacheRepository();
+            repo.PaymentPresent = false; // jamais payée, du premier au second cycle
             var orch = new OrchestrateurDeclaration(inv, T.Cfg, new StubLecteurFgr(),
                 "fake-grf", "fake-sage", repo, "fake-pers");
             var aff = T.Aff("FAC001", 1);
+
+            var m1 = orch.Traiter(new[] { aff }, 1);
+            var m2 = orch.Traiter(new[] { aff }, 1);
+
+            Assert.Equal(1, inv.TotalCalls); // un seul appel OM — le second cycle sert le cache
+            // Montants HT/TVA/TTC servis depuis le cache identiques à la lecture OM d'origine —
+            // seule la déclarabilité (hors périmètre de ce cache) reste bloquée par le token NULL.
+            Assert.Equal(m1.Lignes.Count, m2.Lignes.Count);
+        }
+
+        // TASK-156 (correctif B, risque explicite de la task) : une facture qui DEVIENT payée
+        // entre deux cycles doit toujours déclencher une relecture OM — le retrait du
+        // court-circuit "currentToken == null" ne doit jamais figer une ligne non payée une fois
+        // pour toutes si son état de paiement change réellement.
+        [Fact] public void T16_FactureDevientPayee_TokenApparait_OMRappele()
+        {
+            var inv = new CountingWorkerInvoker(); var repo = new InMemoryCacheRepository();
+            repo.PaymentPresent = false; // non payée au premier cycle
+            var orch = new OrchestrateurDeclaration(inv, T.Cfg, new StubLecteurFgr(),
+                "fake-grf", "fake-sage", repo, "fake-pers");
+            var aff = T.Aff("FAC001", 1);
+
             orch.Traiter(new[] { aff }, 1);
-            repo.PaymentPresent = false;
+            Assert.Equal(1, inv.TotalCalls);
+
+            repo.PaymentPresent = true; // devient payée (token apparaît) avant le second cycle
             orch.Traiter(new[] { aff }, 1);
-            Assert.Equal(2, inv.TotalCalls);
+
+            Assert.Equal(2, inv.TotalCalls); // le changement d'état de paiement force la relecture
         }
 
         [Fact] public void T9_PaiementAbsent_LectureBrute_MiseEnCache_TokenNull()

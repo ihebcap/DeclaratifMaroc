@@ -115,6 +115,44 @@ namespace Declaration.Orchestration
                     // Fallback to individual (même comportement qu'avant) — mais on trace la cause.
                     _log?.Invoke($"[VALO] batch OM en exception, repli individuel : {ex.Message}");
                 }
+
+                // TASK-159 : repli individuel PARALLÉLISÉ (borné), limité aux seules pièces
+                // encore absentes d'omCache après le batch (rescue partiel inclus) — jamais celles
+                // déjà rendues. Degré de parallélisme (4) mesuré en conditions réelles : 5 process
+                // SageTaxReader.Console.exe concurrents contre la même base Sage ont tous abouti
+                // sans erreur (session/licence), marge conservée sous ce seuil vérifié plutôt que
+                // de le saturer. Si le repli séquentiel classique (resoudreFactureBrute) rencontre
+                // encore une clé manquante ensuite (cas résiduel), il reste inchangé en filet de
+                // sécurité.
+                var manquantes = requetes.Where(req =>
+                {
+                    var sens = req.Item2.Equals("Vente", StringComparison.OrdinalIgnoreCase)
+                        ? SensAffectation.Vente : SensAffectation.Achat;
+                    return !omCache.ContainsKey((req.Item1, sens));
+                }).ToList();
+
+                if (manquantes.Any())
+                {
+                    _log?.Invoke($"[VALO] repli individuel parallélisé (degré 4) sur {manquantes.Count} pièce(s) manquante(s).");
+                    System.Threading.Tasks.Parallel.ForEach(
+                        manquantes,
+                        new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = 4 },
+                        req =>
+                        {
+                            var sens = req.Item2.Equals("Vente", StringComparison.OrdinalIgnoreCase)
+                                ? SensAffectation.Vente : SensAffectation.Achat;
+                            DocumentTaxesInfo? doc = null;
+                            try
+                            {
+                                doc = _invoker.InvoquerWorker(req.Item1, req.Item2, _config, _log);
+                            }
+                            catch (Exception ex)
+                            {
+                                _log?.Invoke($"[VALO] lecture OM individuelle {req.Item1} ({req.Item2}) en exception : {ex.Message}");
+                            }
+                            omCache[(req.Item1, sens)] = doc;
+                        });
+                }
             }
 
             // ── Matérialisation : écriture du cache SQL pour les factures lues OM ─────────
@@ -404,7 +442,26 @@ namespace Declaration.Orchestration
                 return null;
             }
 
-            // Validation du paiement : token stocké == état courant local
+            // Validation du paiement : token stocké == état courant local.
+            //
+            // TASK-156 (correctif B) : le token ne court-circuite plus la lecture des MONTANTS
+            // (HT/TVA/TTC) quand il est NULL en permanence (facture NonRapproche/NonAffecte,
+            // « dépayée ») — le contenu OM d'une facture (taux/base TVA) est indépendant du
+            // règlement (cf. commentaire ~163-168 ci-dessus : « la relire plus tard serait du
+            // travail perdu »), donc une facture jamais payée n'a AUCUNE raison d'être relue via
+            // OM à CHAQUE cycle tant que rien n'a changé (cause racine de la contention constatée
+            // en prod, log 23/07/2026 : mêmes pièces FF260xxx relues identiques à 3 reprises en
+            // ~6 minutes). La règle métier « non déclarable sans paiement pointé » reste
+            // appliquée intégralement ailleurs, par le CONSOMMATEUR du document (résolution
+            // EstEligible/EstValorisable en amont, jamais dérivée de ce cache) — retirer ce
+            // court-circuit ici ne rend éligible aucune ligne qui ne l'était pas.
+            //
+            // Le token reste comparé (stocké vs courant, y compris quand l'un des deux est NULL)
+            // pour continuer à détecter un changement RÉEL d'état de paiement — apparition
+            // (facture qui devient payée entre deux cycles), disparition (dépointage) ou mutation
+            // (autre règlement/pointage) — et forcer une relecture OM dans ce cas précis
+            // uniquement. Logique de fraîcheur TASK-023/072 inchangée : seul le court-circuit
+            // permanent sur « toujours NULL » a été retiré, pas la détection de divergence.
             if (!string.IsNullOrEmpty(_connectionString))
             {
                 PaiementToken? currentToken;
@@ -417,12 +474,10 @@ namespace Declaration.Orchestration
                     return null; // Impossible de valider → ne pas servir le cache
                 }
 
-                if (currentToken == null) return null; // Facture dépayée
-
                 var storedToken = entries[0]; // tous les buckets ont le même token
-                if (storedToken.Token_MV_Id != currentToken.MV_Id
-                    || storedToken.Token_MV_Point != currentToken.MV_Point)
-                    return null; // Token diverge → cache périmé
+                if (storedToken.Token_MV_Id != currentToken?.MV_Id
+                    || storedToken.Token_MV_Point != currentToken?.MV_Point)
+                    return null; // Token apparu/disparu/muté → cache périmé, relecture nécessaire
             }
 
             var firstEntry = entries[0];
