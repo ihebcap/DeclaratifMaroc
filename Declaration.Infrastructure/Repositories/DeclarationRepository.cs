@@ -1535,13 +1535,53 @@ public class DeclarationRepository : IDeclarationRepository
         return rows.ToList();
     }
 
-    /// <summary>TASK-161 : référentiel complet P_DECTVAACTIVITE, lecture seule (liste déroulante front).</summary>
-    public async Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync()
+    /// <summary>
+    /// TASK-172 : "Encaissement"/"Decaissement" (mêmes libellés que <c>DM_LGTVA.Domaine</c>) vers
+    /// le codage entier de <c>P_DECTVAACTIVITE.DTA_Domaine</c> (1/2, vérifié en base réelle
+    /// 24/07/2026 : seules ces deux valeurs existent, aucun NULL). Toute autre valeur est un
+    /// paramètre invalide — jamais mappée silencieusement.
+    /// </summary>
+    private static int DomaineVersDtaDomaine(string domaine) => domaine switch
+    {
+        "Encaissement" => 1,
+        "Decaissement" => 2,
+        _ => throw new ArgumentException($"Domaine '{domaine}' invalide — attendu 'Encaissement' ou 'Decaissement'.")
+    };
+
+    /// <summary>
+    /// TASK-161/172 : référentiel P_DECTVAACTIVITE, lecture seule (liste déroulante front).
+    /// <paramref name="domaine"/> optionnel filtre sur DTA_Domaine (1=Encaissement,
+    /// 2=Decaissement) — null retourne le référentiel complet, non filtré.
+    /// </summary>
+    public async Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync(string? domaine = null)
     {
         using var connection = _connectionFactory.CreateGrfConnection();
-        const string sql = "SELECT DTA_Code AS Code, DTA_Intitule AS Libelle FROM P_DECTVAACTIVITE ORDER BY DTA_Code";
-        var rows = await connection.QueryAsync<CodeActiviteReferentielRow>(sql);
+        var sql = "SELECT DTA_Code AS Code, DTA_Intitule AS Libelle, DTA_Domaine AS Domaine FROM P_DECTVAACTIVITE";
+        object? parametres = null;
+        if (!string.IsNullOrEmpty(domaine))
+        {
+            sql += " WHERE DTA_Domaine = @DtaDomaine";
+            parametres = new { DtaDomaine = DomaineVersDtaDomaine(domaine) };
+        }
+        sql += " ORDER BY DTA_Code";
+        var rows = await connection.QueryAsync<CodeActiviteReferentielRow>(sql, parametres);
         return rows.ToList();
+    }
+
+    /// <summary>TASK-172 §4 : domaine (1/2) du code activité, null si absent du référentiel.</summary>
+    public async Task<int?> GetDomaineCodeActiviteAsync(string codeActivite)
+    {
+        using var connection = _connectionFactory.CreateGrfConnection();
+        return await connection.QuerySingleOrDefaultAsync<int?>(
+            "SELECT DTA_Domaine FROM P_DECTVAACTIVITE WHERE DTA_Code = @Code", new { Code = codeActivite });
+    }
+
+    /// <summary>TASK-172 §4 : domaine ("Encaissement"/"Decaissement") de la ligne, null si absente.</summary>
+    public async Task<string?> GetDomaineLigneAsync(Guid ligneId)
+    {
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        return await connection.QuerySingleOrDefaultAsync<string?>(
+            "SELECT Domaine FROM DM_LGTVA WHERE Id = @Id", new { Id = ligneId.ToString() });
     }
 
     /// <summary>

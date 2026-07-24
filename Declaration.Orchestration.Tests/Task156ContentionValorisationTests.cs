@@ -83,7 +83,9 @@ namespace Declaration.Orchestration.Tests
         public Task SupprimerLignesParEcIdAsync(Guid declarationId, int ecId) => throw NotUsed();
         public Task<string?> GetIdentifiantFiscalSocieteAsync(int soId) => throw NotUsed();
         public Task<IReadOnlyList<CodeActiviteTiersMappingRow>> GetMappingCodeActiviteTiersAsync(int soId) => throw NotUsed();
-        public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync() => throw NotUsed();
+        public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync(string? domaine = null) => throw NotUsed();
+        public Task<int?> GetDomaineCodeActiviteAsync(string codeActivite) => throw NotUsed();
+        public Task<string?> GetDomaineLigneAsync(Guid ligneId) => throw NotUsed();
         public Task UpdateCodeActiviteLigneAsync(Guid ligneId, string codeActivite, string utilisateur) => throw NotUsed();
     }
 
@@ -233,7 +235,9 @@ namespace Declaration.Orchestration.Tests
         public Task<IReadOnlyList<CacheBucketRow>> GetBucketsCacheAsync(int soId, int ecId) => throw NotUsed();
         public Task SupprimerLignesParEcIdAsync(Guid declarationId, int ecId) => throw NotUsed();
         public Task<string?> GetIdentifiantFiscalSocieteAsync(int soId) => throw NotUsed();
-        public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync() => throw NotUsed();
+        public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync(string? domaine = null) => throw NotUsed();
+        public Task<int?> GetDomaineCodeActiviteAsync(string codeActivite) => throw NotUsed();
+        public Task<string?> GetDomaineLigneAsync(Guid ligneId) => throw NotUsed();
         public Task UpdateCodeActiviteLigneAsync(Guid ligneId, string codeActivite, string utilisateur) => throw NotUsed();
     }
 

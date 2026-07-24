@@ -292,8 +292,26 @@ public interface IDeclarationRepository
     /// TASK-161 : référentiel complet des codes activité (<c>P_DECTVAACTIVITE</c>), lecture seule
     /// — alimente la liste déroulante de sélection manuelle côté front. Table non scopée par
     /// société (aucune colonne SO_Id, vérifié sur le schéma réel).
+    /// TASK-172 : <paramref name="domaine"/> optionnel ("Encaissement"/"Decaissement", mêmes
+    /// libellés que <c>DM_LGTVA.Domaine</c>) filtre sur <c>DTA_Domaine</c> (1/2, vérifié en base
+    /// réelle — aucune autre valeur ni NULL) ; null = référentiel complet, non filtré.
     /// </summary>
-    Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync();
+    Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync(string? domaine = null);
+
+    /// <summary>
+    /// TASK-172 §4 : domaine (1/2) du code activité <paramref name="codeActivite"/> dans
+    /// <c>P_DECTVAACTIVITE</c> — null si le code n'existe pas dans le référentiel. Sert à valider
+    /// côté serveur qu'un code affecté à une ligne correspond bien à son domaine.
+    /// </summary>
+    Task<int?> GetDomaineCodeActiviteAsync(string codeActivite);
+
+    /// <summary>
+    /// TASK-172 §4 : domaine ("Encaissement"/"Decaissement") de la ligne <paramref name="ligneId"/>
+    /// (<c>DM_LGTVA.Domaine</c>) — null si la ligne n'existe pas. Connexion PersistenceConnection,
+    /// distincte de <see cref="GetDomaineCodeActiviteAsync"/> (GrfConnection) : jamais de jointure
+    /// cross-base (TASK-154), la comparaison se fait en mémoire côté appelant.
+    /// </summary>
+    Task<string?> GetDomaineLigneAsync(Guid ligneId);
 
     /// <summary>
     /// TASK-161 : surcharge manuelle du code activité d'UNE ligne précise (<paramref name="ligneId"/>

@@ -174,6 +174,13 @@ public class DeclarationsController : ControllerBase
         {
             return Conflict(new { Message = ex.Message });
         }
+        catch (ApplicationException ex)
+        {
+            // TASK-172 §4 : code activité inconnu du référentiel ou incompatible avec le domaine de
+            // la ligne — rejet explicite (400), distinct du 409 de clôture ci-dessus, jamais un 500
+            // ni une acceptation silencieuse.
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 
     /// <summary>
@@ -181,11 +188,17 @@ public class DeclarationsController : ControllerBase
     /// la liste déroulante de sélection manuelle côté front. Aucun paramétrage possible ici
     /// (décision PO point 2 : GRF web reste lecture seule, paramétrage laissé à l'écran
     /// Trésorerie WinForms existant).
+    /// TASK-172 : <paramref name="domaine"/> optionnel ("Encaissement"/"Decaissement") filtre le
+    /// référentiel par onglet actif — omis = référentiel complet (non filtré), non-régression du
+    /// comportement TASK-161 pour tout appelant existant.
     /// </summary>
     [HttpGet("/api/codes-activite")]
-    public async Task<IActionResult> GetCodesActivite()
+    public async Task<IActionResult> GetCodesActivite([FromQuery] string? domaine)
     {
-        var referentiel = await _workflowService.GetReferentielCodesActiviteAsync();
+        if (!string.IsNullOrEmpty(domaine) && domaine != "Encaissement" && domaine != "Decaissement")
+            return BadRequest(new { Message = "'domaine' doit valoir 'Encaissement' ou 'Decaissement'." });
+
+        var referentiel = await _workflowService.GetReferentielCodesActiviteAsync(domaine);
         return Ok(referentiel);
     }
 

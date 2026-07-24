@@ -597,12 +597,50 @@ public class DeclarationWorkflowService
         if (declaration.Statut == StatutDeclaration.Cloturee)
             throw new InvalidOperationException("Le code activité ne peut plus être modifié après clôture de la déclaration.");
 
+        if (!string.IsNullOrEmpty(codeActivite))
+        {
+            var domaineLigne = await _repository.GetDomaineLigneAsync(ligneId);
+            if (domaineLigne == null) throw new ArgumentException("Ligne introuvable");
+            await ValiderDomaineCodeActiviteAsync(codeActivite, domaineLigne);
+        }
+
         await _repository.UpdateCodeActiviteLigneAsync(ligneId, codeActivite ?? "", utilisateur);
     }
 
-    /// <summary>TASK-161 : référentiel des codes activité, pour la liste déroulante front.</summary>
-    public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync() =>
-        _repository.GetReferentielCodesActiviteAsync();
+    /// <summary>
+    /// TASK-172 §4 : recroise le domaine réel (P_DECTVAACTIVITE.DTA_Domaine) du code choisi avec le
+    /// domaine de la/les ligne(s) ciblée(s) — décision PO : garde-fou dur côté serveur, un filtre
+    /// front seul n'empêche pas un appel API direct avec un code du mauvais domaine. Lève une
+    /// <see cref="ApplicationException"/> explicite (traduite en 400 par le contrôleur, distincte du
+    /// 409 de clôture) si le code est inconnu du référentiel ou incompatible avec le domaine.
+    /// </summary>
+    private async Task ValiderDomaineCodeActiviteAsync(string codeActivite, string domaineLigne)
+    {
+        var domaineCode = await _repository.GetDomaineCodeActiviteAsync(codeActivite);
+        if (domaineCode == null)
+            throw new ApplicationException($"Code activité « {codeActivite} » inconnu dans le référentiel.");
+
+        var domaineLigneAttendu = domaineLigne switch
+        {
+            "Encaissement" => 1,
+            "Decaissement" => 2,
+            _ => throw new ApplicationException($"Domaine de ligne '{domaineLigne}' inattendu — impossible de valider le code activité.")
+        };
+        if (domaineCode != domaineLigneAttendu)
+        {
+            var libelleLigne = domaineLigne == "Encaissement" ? "Encaissement" : "Décaissement";
+            var libelleCode = domaineCode == 1 ? "Encaissement" : "Décaissement";
+            throw new ApplicationException(
+                $"Code activité « {codeActivite} » réservé au domaine {libelleCode}, incompatible avec une ligne {libelleLigne}.");
+        }
+    }
+
+    /// <summary>
+    /// TASK-172 : référentiel des codes activité, pour la liste déroulante front. <paramref
+    /// name="domaine"/> optionnel ("Encaissement"/"Decaissement") filtre par onglet actif.
+    /// </summary>
+    public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync(string? domaine = null) =>
+        _repository.GetReferentielCodesActiviteAsync(domaine);
 
     /// <summary>
     /// TASK-078 : resynchronise UNE pièce (EC_Id) après correction côté Sage — relit

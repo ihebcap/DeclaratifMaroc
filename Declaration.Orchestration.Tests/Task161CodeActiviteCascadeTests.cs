@@ -304,8 +304,16 @@ namespace Declaration.Orchestration.Tests
                 Task.FromResult<IReadOnlyList<CodeActiviteTiersMappingRow>>(
                     MappingParNumero.Select(kv => new CodeActiviteTiersMappingRow { NumeroTiers = kv.Key, ErpIntitule = "", CodeActivite = kv.Value }).ToList());
 
-            public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync() =>
+            public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync(string? domaine = null) =>
                 Task.FromResult<IReadOnlyList<CodeActiviteReferentielRow>>(new List<CodeActiviteReferentielRow>());
+
+            // TASK-172 §4 : toutes les lignes de ce fake sont Domaine="Decaissement" (2) — tout code
+            // activité est considéré compatible (pas de référentiel réel simulé ici, hors périmètre
+            // de ce fake dédié à la cascade TASK-161).
+            public Task<int?> GetDomaineCodeActiviteAsync(string codeActivite) => Task.FromResult<int?>(2);
+
+            public Task<string?> GetDomaineLigneAsync(Guid ligneId) =>
+                Task.FromResult(Lignes.FirstOrDefault(l => l.Id == ligneId)?.Domaine);
 
             public Task UpdateCodeActiviteLigneAsync(Guid ligneId, string codeActivite, string utilisateur)
             {

@@ -285,14 +285,18 @@ export function VerifierIntegrerPanel({
         kind?: 'anomalie' | 'incoherence' | 'codeActivite';
     } | null>(null);
 
-    // TASK-161 : référentiel des codes activité (P_DECTVAACTIVITE), chargé une fois pour
-    // alimenter le select éditable du drill « Codes activité ».
+    // TASK-161/172 : référentiel des codes activité (P_DECTVAACTIVITE), rechargé/refiltré par
+    // domaine (DTA_Domaine) à chaque ouverture du drill « Codes activité » ou changement d'onglet
+    // pendant que le drill est ouvert — auparavant chargé une seule fois sans filtre (useEffect(...,
+    // []) initial), mélangeant les codes Encaissement et Décaissement dans le même select quel que
+    // soit l'onglet actif.
     const [codeActiviteOptions, setCodeActiviteOptions] = useState<{ value: string, label: string }[]>([]);
     useEffect(() => {
+        if (!drillFiltre || drillFiltre.kind !== 'codeActivite') return;
         let cancelled = false;
         (async () => {
             try {
-                const res = await api.get('/codes-activite');
+                const res = await api.get('/codes-activite', { params: { domaine: drillFiltre.domaine } });
                 if (cancelled) return;
                 const options = (res.data || []).map((r: any) => ({ value: r.code, label: `${r.code} — ${r.libelle}` }));
                 setCodeActiviteOptions(options);
@@ -301,7 +305,7 @@ export function VerifierIntegrerPanel({
             }
         })();
         return () => { cancelled = true; };
-    }, []);
+    }, [drillFiltre?.kind, drillFiltre?.domaine]);
 
     // TASK-144 : panneau de diagnostic explicatif d'une ligne en anomalie (à la demande).
     const [diagnostic, setDiagnostic] = useState<{ ecId: number; factureNumero: string } | null>(null);

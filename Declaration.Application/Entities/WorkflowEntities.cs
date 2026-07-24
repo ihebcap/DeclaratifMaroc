@@ -139,11 +139,15 @@ public class CodeActiviteTiersMappingRow
 /// <summary>
 /// TASK-161 : ligne du référentiel des codes activité (P_DECTVAACTIVITE, lecture seule GRF) —
 /// alimente la liste déroulante de sélection manuelle côté front (écran ② Vérifier & Intégrer).
+/// TASK-172 : <see cref="Domaine"/> expose désormais DTA_Domaine (1 = Encaissement,
+/// 2 = Décaissement — vérifié en base réelle, aucune autre valeur/NULL présente) afin que
+/// l'API puisse filtrer/le front puisse recouper avec le domaine de la ligne éditée.
 /// </summary>
 public class CodeActiviteReferentielRow
 {
     public string Code { get; set; } = "";
     public string Libelle { get; set; } = "";
+    public int Domaine { get; set; }
 }
 
 /// <summary>
