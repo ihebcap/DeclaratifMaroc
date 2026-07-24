@@ -133,6 +133,50 @@ namespace Declaration.Orchestration.Tests
             Assert.DoesNotContain("règlement", alerte.Message);
         }
 
+        [Fact]
+        public async Task GetCheckupAsync_LigneIncoherenceValidee_NeGenerePasAlerteFactureNonVentilee()
+        {
+            // TASK-177 : une incohérence déjà validée explicitement par le PO (IncoherenceValidee=1,
+            // même pattern que RevaliderLignesFigeesAsync) ne doit plus déclencher l'alerte bloquante
+            // FACTURE_NON_VENTILEE — cas réel cité par le PO (FC2501717/RF26040040, FC2501667/RF26030075).
+            var l = new LigneCandidate
+            {
+                Etat = EtatLigne.Proposee,
+                NumeroFacture = "FC2501717",
+                NumeroRapprochement = "RF26040040",
+                MotifRejet = "Incohérence Sage HT/TVA/TTC",
+                IncoherenceValidee = true
+            };
+            var (service, repo, declarationId) = CreerService(new[] { l });
+
+            // Act
+            var model = await service.GetCheckupAsync(declarationId);
+
+            // Assert
+            Assert.DoesNotContain(model.Alertes, a => a.Code == "FACTURE_NON_VENTILEE");
+        }
+
+        [Fact]
+        public async Task GetCheckupAsync_LigneIncoherenceNonValidee_GenereToujoursAlerteFactureNonVentilee()
+        {
+            // Non-régression : une ligne identique mais NON validée doit continuer à bloquer.
+            var l = new LigneCandidate
+            {
+                Etat = EtatLigne.Proposee,
+                NumeroFacture = "FC2501667",
+                NumeroRapprochement = "RF26030075",
+                MotifRejet = "Incohérence Sage HT/TVA/TTC",
+                IncoherenceValidee = false
+            };
+            var (service, repo, declarationId) = CreerService(new[] { l });
+
+            // Act
+            var model = await service.GetCheckupAsync(declarationId);
+
+            // Assert
+            Assert.Contains(model.Alertes, a => a.Code == "FACTURE_NON_VENTILEE");
+        }
+
         private class FakeDeclarationRepository : IDeclarationRepository
         {
             public Dictionary<Guid, DeclarationEntete> Declarations { get; } = new();

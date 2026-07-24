@@ -1113,7 +1113,12 @@ public class DeclarationWorkflowService
         }
 
         // Contrôle facture non ventilée/introuvable sur les lignes intégrées ou éligibles
-        foreach (var l in integrees.Where(l => !string.IsNullOrEmpty(l.MotifRejet)))
+        // TASK-177 : une incohérence déjà VALIDÉE explicitement par le PO (TASK-078, traçabilité
+        // qui/quand sur DM_LGTVA.IncoherenceValidee) ne doit plus bloquer la clôture ici — même
+        // garde que celle déjà appliquée dans RevaliderLignesFigeesAsync (ligne ~465) pour
+        // LIGNE_FIGEE_A_REVERIFIER. Ligne et totaux restent inchangés : seule la génération de
+        // cette alerte Error est supprimée pour la ligne validée.
+        foreach (var l in integrees.Where(l => !string.IsNullOrEmpty(l.MotifRejet) && !l.IncoherenceValidee))
         {
             var message = string.IsNullOrWhiteSpace(l.NumeroRapprochement)
                 ? $"Ligne en anomalie de recalcul : {l.MotifRejet}"
