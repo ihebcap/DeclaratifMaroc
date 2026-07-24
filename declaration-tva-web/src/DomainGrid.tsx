@@ -200,6 +200,36 @@ export function DomainGrid({
         }
     };
 
+    // TASK-173 : affectation en masse du code activité — même sélection (IDs ou domaine+filtre)
+    // que doBulkAction ci-dessus, réutilise le mécanisme :bulk existant (TASK-012) côté back.
+    // N'est proposée que si `codeActiviteOptions` est fourni par l'écran appelant (drill « Codes
+    // activité » de VerifierIntegrerPanel) — jamais sur les 5 autres écrans partageant DomainGrid.
+    const [codeActiviteMasse, setCodeActiviteMasse] = useState('');
+    const [affectationEnCours, setAffectationEnCours] = useState(false);
+    const doBulkCodeActivite = async () => {
+        if ((selectedIds.size === 0 && !selectAllFilters) || !codeActiviteMasse) return;
+        setAffectationEnCours(true);
+        try {
+            await api.post(`/declarations/${declarationId}/lignes/code-activite:bulk`, {
+                ligneIds: selectAllFilters ? undefined : Array.from(selectedIds),
+                filter: selectAllFilters ? JSON.stringify(filters) : undefined,
+                domaine: selectAllFilters ? (domaine || 'Decaissement') : undefined,
+                codeActivite: codeActiviteMasse
+            });
+            showToast(`Code activité affecté à ${selectAllFilters ? total : selectedIds.size} ligne(s).`);
+            setSelectedIds(new Set());
+            setSelectAllFilters(false);
+            setCodeActiviteMasse('');
+            fetchPage();
+            onActionDone();
+        } catch (e: any) {
+            const message = e?.response?.data?.Message || e?.response?.data?.message || 'Erreur lors de l\'affectation en masse du code activité';
+            showToast(message, 'error');
+        } finally {
+            setAffectationEnCours(false);
+        }
+    };
+
     // TASK-161 : surcharge manuelle du code activité d'une ligne (colonne `editable`, jamais en
     // lecture seule) — PATCH ciblé par ligne (Id = DM_LGTVA.Id), jamais par EC_Id (une même
     // facture peut porter deux lignes de taux différents avec deux activités différentes, cas
@@ -276,6 +306,30 @@ export function DomainGrid({
                                     <button onClick={() => doBulkAction('Exclue')} className="btn" style={{ background: 'var(--status-blocking-bg)', color: 'var(--status-blocking-text)', border: '1px solid #fecaca', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><XSquare size={14}/> Exclure</button>
                                     <button onClick={() => doBulkAction('Reportée')} className="btn" style={{ background: '#fef3c7', color: 'var(--status-warning-text-alt)', border: '1px solid var(--status-warning-border)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><Clock size={14}/> Reporter</button>
                                     <button onClick={() => doBulkAction('Proposée')} className="btn" style={{ background: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>Réinitialiser</button>
+                                </div>
+                            )}
+                            {/* TASK-173 : affectation en masse du code activité — visible uniquement quand
+                                l'écran appelant fournit codeActiviteOptions (drill « Codes activité »). */}
+                            {codeActiviteOptions && (selectedIds.size > 0 || selectAllFilters) && (
+                                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', borderLeft: '1px solid var(--border-color)', paddingLeft: '0.75rem' }}>
+                                    <select
+                                        value={codeActiviteMasse}
+                                        onChange={(e) => setCodeActiviteMasse(e.target.value)}
+                                        style={{ fontSize: '0.75rem', padding: '0.2rem' }}
+                                    >
+                                        <option value="">Affecter un code activité…</option>
+                                        {codeActiviteOptions.map(o => (
+                                            <option key={o.value} value={o.value}>{o.label}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={doBulkCodeActivite}
+                                        disabled={!codeActiviteMasse || affectationEnCours}
+                                        className="btn"
+                                        style={{ background: 'white', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}
+                                    >
+                                        {affectationEnCours ? 'Affectation…' : 'Affecter'}
+                                    </button>
                                 </div>
                             )}
                         </>

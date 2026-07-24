@@ -286,6 +286,41 @@ public class DeclarationsController : ControllerBase
     }
 
     /// <summary>
+    /// TASK-173 : affectation en masse du code activité — même mécanique de sélection que
+    /// <see cref="UpdateLignesBulk"/> (TASK-012, liste d'IDs OU domaine+filtre), appliquée à
+    /// <c>CodeActivite</c> au lieu de l'<c>Etat</c> de la ligne. Blocage explicite (400) si la
+    /// sélection mélange Encaissement/Décaissement ou si le code choisi est incompatible avec le
+    /// domaine résolu (décision PO §4, même garde-fou que ModifierCodeActiviteLigneAsync/TASK-172),
+    /// et 409 si la déclaration est Clôturée (même garde que le PATCH unitaire TASK-161).
+    /// </summary>
+    [HttpPost("{id}/lignes/code-activite:bulk")]
+    public async Task<IActionResult> UpdateCodeActiviteBulk(Guid id, [FromBody] BulkUpdateCodeActiviteRequest request)
+    {
+        if ((request.LigneIds == null || request.LigneIds.Count == 0) && string.IsNullOrEmpty(request.Domaine))
+            return BadRequest(new { Message = "Soit LigneIds soit Domaine doit être renseigné." });
+
+        var utilisateur = User.Identity?.Name ?? "inconnu";
+        try
+        {
+            await _workflowService.ModifierCodeActiviteLignesBulkAsync(
+                id, request.LigneIds, request.Domaine, request.Filter, request.CodeActivite ?? "", utilisateur);
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { Message = ex.Message });
+        }
+        catch (ApplicationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Vérifie la cohérence de la déclaration avant clôture.
     /// Retourne les alertes (Info/Warning/Error) + contrôle d'équilibre réels.
     /// Les alertes Error bloquent la clôture.
@@ -708,6 +743,15 @@ public class UpdateEtatRequest
 public class BulkUpdateEtatRequest
 {
     public EtatLigne Etat { get; set; }
+    public List<Guid>? LigneIds { get; set; }
+    public string? Domaine { get; set; }
+    public string? Filter { get; set; }
+}
+
+/// <summary>TASK-173 : même sélection que BulkUpdateEtatRequest, appliquée au code activité.</summary>
+public class BulkUpdateCodeActiviteRequest
+{
+    public string? CodeActivite { get; set; }
     public List<Guid>? LigneIds { get; set; }
     public string? Domaine { get; set; }
     public string? Filter { get; set; }

@@ -87,6 +87,9 @@ namespace Declaration.Orchestration.Tests
         public Task<int?> GetDomaineCodeActiviteAsync(string codeActivite) => throw NotUsed();
         public Task<string?> GetDomaineLigneAsync(Guid ligneId) => throw NotUsed();
         public Task UpdateCodeActiviteLigneAsync(Guid ligneId, string codeActivite, string utilisateur) => throw NotUsed();
+        public Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(IEnumerable<Guid> ligneIds) => throw NotUsed();
+        public Task UpdateCodeActiviteBulkByIdsAsync(IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur) => throw NotUsed();
+        public Task UpdateCodeActiviteBulkAsync(Guid declarationId, string domaine, string? filter, string codeActivite, string utilisateur) => throw NotUsed();
     }
 
     /// <summary>
@@ -239,6 +242,9 @@ namespace Declaration.Orchestration.Tests
         public Task<int?> GetDomaineCodeActiviteAsync(string codeActivite) => throw NotUsed();
         public Task<string?> GetDomaineLigneAsync(Guid ligneId) => throw NotUsed();
         public Task UpdateCodeActiviteLigneAsync(Guid ligneId, string codeActivite, string utilisateur) => throw NotUsed();
+        public Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(IEnumerable<Guid> ligneIds) => throw NotUsed();
+        public Task UpdateCodeActiviteBulkByIdsAsync(IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur) => throw NotUsed();
+        public Task UpdateCodeActiviteBulkAsync(Guid declarationId, string domaine, string? filter, string codeActivite, string utilisateur) => throw NotUsed();
     }
 
     /// <summary>ILogger&lt;T&gt; no-op — aucune dépendance externe (Microsoft.Extensions.Logging.Abstractions

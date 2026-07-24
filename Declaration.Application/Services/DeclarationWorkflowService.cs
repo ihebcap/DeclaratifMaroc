@@ -643,6 +643,50 @@ public class DeclarationWorkflowService
         _repository.GetReferentielCodesActiviteAsync(domaine);
 
     /// <summary>
+    /// TASK-173 : affectation en masse du code activité — même sélection (liste d'IDs ou
+    /// domaine+filtre) que UpdateLignesEtatBulkAsync/ByIdsAsync (TASK-012), même garde de clôture et
+    /// même validation de domaine que ModifierCodeActiviteLigneAsync. Décision PO §4 : une sélection
+    /// mixte Encaissement/Décaissement (par LigneIds) est bloquée explicitement, jamais résolue par
+    /// défaut sur l'un des deux domaines.
+    /// </summary>
+    public async Task ModifierCodeActiviteLignesBulkAsync(
+        Guid declarationId, List<Guid>? ligneIds, string? domaine, string? filter, string codeActivite, string utilisateur)
+    {
+        var declaration = await _repository.GetByIdAsync(declarationId);
+        if (declaration == null) throw new ArgumentException("Déclaration introuvable");
+        if (declaration.Statut == StatutDeclaration.Cloturee)
+            throw new InvalidOperationException("Le code activité ne peut plus être modifié après clôture de la déclaration.");
+
+        string domaineEffectif;
+        if (ligneIds != null && ligneIds.Count > 0)
+        {
+            var domainesDistincts = await _repository.GetDomainesDistinctsLignesAsync(ligneIds);
+            if (domainesDistincts.Count > 1)
+                throw new ApplicationException(
+                    "Sélection mixte Encaissement/Décaissement : l'affectation en masse du code activité doit porter sur un seul domaine à la fois.");
+            if (domainesDistincts.Count == 0)
+                return; // Aucune ligne trouvée pour ces IDs — rien à faire, pas d'erreur.
+            domaineEffectif = domainesDistincts[0];
+        }
+        else if (!string.IsNullOrEmpty(domaine))
+        {
+            domaineEffectif = domaine;
+        }
+        else
+        {
+            throw new ApplicationException("Soit LigneIds soit Domaine doit être renseigné.");
+        }
+
+        if (!string.IsNullOrEmpty(codeActivite))
+            await ValiderDomaineCodeActiviteAsync(codeActivite, domaineEffectif);
+
+        if (ligneIds != null && ligneIds.Count > 0)
+            await _repository.UpdateCodeActiviteBulkByIdsAsync(ligneIds, codeActivite ?? "", utilisateur);
+        else
+            await _repository.UpdateCodeActiviteBulkAsync(declarationId, domaineEffectif, filter, codeActivite ?? "", utilisateur);
+    }
+
+    /// <summary>
     /// TASK-078 : resynchronise UNE pièce (EC_Id) après correction côté Sage — relit
     /// explicitement l'OM pour cette seule facture (effet de bord : réécrit
     /// DM_VENTILATION_SAGE_CACHE via l'orchestrateur, même pipeline que TASK-072/076/077,

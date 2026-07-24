@@ -324,6 +324,38 @@ namespace Declaration.Orchestration.Tests
                 ligne.CodeActiviteModifieLe = DateTime.UtcNow;
                 return Task.CompletedTask;
             }
+
+            public Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(IEnumerable<Guid> ligneIds)
+            {
+                var ids = ligneIds.ToHashSet();
+                IReadOnlyList<string> distincts = Lignes.Where(l => ids.Contains(l.Id)).Select(l => l.Domaine).Distinct().ToList();
+                return Task.FromResult(distincts);
+            }
+
+            public Task UpdateCodeActiviteBulkByIdsAsync(IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur)
+            {
+                var ids = ligneIds.ToHashSet();
+                foreach (var ligne in Lignes.Where(l => ids.Contains(l.Id)))
+                {
+                    ligne.CodeActivite = codeActivite;
+                    ligne.CodeActiviteModifieManuellement = true;
+                    ligne.CodeActiviteModifiePar = utilisateur;
+                    ligne.CodeActiviteModifieLe = DateTime.UtcNow;
+                }
+                return Task.CompletedTask;
+            }
+
+            public Task UpdateCodeActiviteBulkAsync(Guid declarationId, string domaine, string? filter, string codeActivite, string utilisateur)
+            {
+                foreach (var ligne in Lignes.Where(l => l.DeclarationId == declarationId && l.Domaine == domaine))
+                {
+                    ligne.CodeActivite = codeActivite;
+                    ligne.CodeActiviteModifieManuellement = true;
+                    ligne.CodeActiviteModifiePar = utilisateur;
+                    ligne.CodeActiviteModifieLe = DateTime.UtcNow;
+                }
+                return Task.CompletedTask;
+            }
         }
     }
 }

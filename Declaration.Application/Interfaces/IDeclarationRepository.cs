@@ -320,4 +320,25 @@ public interface IDeclarationRepository
     /// cas confirmé PO). Trace qui/quand, même pattern que TASK-078.
     /// </summary>
     Task UpdateCodeActiviteLigneAsync(Guid ligneId, string codeActivite, string utilisateur);
+
+    /// <summary>
+    /// TASK-173 : domaines distincts portés par ces lignes (<c>DM_LGTVA.Domaine</c>) — sert à
+    /// détecter une sélection mixte Encaissement/Décaissement avant une affectation en masse du
+    /// code activité (l'appelant bloque si le résultat contient plus d'une valeur).
+    /// </summary>
+    Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(IEnumerable<Guid> ligneIds);
+
+    /// <summary>
+    /// TASK-173 : affectation en masse du code activité par liste explicite d'IDs — même
+    /// traçabilité qui/quand que <see cref="UpdateCodeActiviteLigneAsync"/>, écriture SQL batch
+    /// (pas de boucle applicative), patron = <see cref="UpdateLignesEtatBulkByIdsAsync"/>.
+    /// </summary>
+    Task UpdateCodeActiviteBulkByIdsAsync(IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur);
+
+    /// <summary>
+    /// TASK-173 : affectation en masse du code activité par domaine + filtre texte (fournisseur/
+    /// facture) — même mécanique de sélection que <see cref="UpdateLignesEtatBulkAsync"/> (TASK-012),
+    /// écriture SQL batch, même traçabilité qui/quand que la surcharge unitaire TASK-161.
+    /// </summary>
+    Task UpdateCodeActiviteBulkAsync(Guid declarationId, string domaine, string? filter, string codeActivite, string utilisateur);
 }

@@ -1598,5 +1598,55 @@ public class DeclarationRepository : IDeclarationRepository
               WHERE Id = @Id",
             new { Id = ligneId.ToString(), CodeActivite = codeActivite, Utilisateur = utilisateur, Maintenant = DateTime.UtcNow });
     }
+
+    /// <summary>TASK-173 : domaines distincts portés par ces lignes — détecte une sélection mixte.</summary>
+    public async Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(IEnumerable<Guid> ligneIds)
+    {
+        var ids = ligneIds.Select(g => g.ToString()).ToList();
+        if (ids.Count == 0) return Array.Empty<string>();
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        var sql = $"SELECT DISTINCT Domaine FROM DM_LGTVA WHERE Id IN ({string.Join(",", ids.Select(id => $"'{id}'"))})";
+        var rows = await connection.QueryAsync<string>(sql);
+        return rows.ToList();
+    }
+
+    /// <summary>TASK-173 : affectation en masse du code activité par liste explicite d'IDs (SQL batch).</summary>
+    public async Task UpdateCodeActiviteBulkByIdsAsync(IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur)
+    {
+        var ids = ligneIds.Select(g => g.ToString()).ToList();
+        if (ids.Count == 0) return;
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        var sql = $@"UPDATE DM_LGTVA
+                     SET CodeActivite = @CodeActivite, CodeActiviteModifieManuellement = 1,
+                         CodeActiviteModifiePar = @Utilisateur, CodeActiviteModifieLe = @Maintenant
+                     WHERE Id IN ({string.Join(",", ids.Select(id => $"'{id}'"))})";
+        await connection.ExecuteAsync(sql, new { CodeActivite = codeActivite, Utilisateur = utilisateur, Maintenant = DateTime.UtcNow });
+    }
+
+    /// <summary>
+    /// TASK-173 : affectation en masse du code activité par domaine + filtre texte (fournisseur/
+    /// facture) — même mécanique de sélection que UpdateLignesEtatBulkAsync (TASK-012), SQL batch.
+    /// </summary>
+    public async Task UpdateCodeActiviteBulkAsync(Guid declarationId, string domaine, string? filter, string codeActivite, string utilisateur)
+    {
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        var sql = @"UPDATE DM_LGTVA
+                    SET CodeActivite = @CodeActivite, CodeActiviteModifieManuellement = 1,
+                        CodeActiviteModifiePar = @Utilisateur, CodeActiviteModifieLe = @Maintenant
+                    WHERE DeclarationId = @DeclarationId AND Domaine = @Domaine ";
+
+        if (!string.IsNullOrEmpty(filter))
+            sql += " AND (NumeroFacture LIKE '%' + @Filter + '%' OR TiersNom LIKE '%' + @Filter + '%') ";
+
+        await connection.ExecuteAsync(sql, new
+        {
+            CodeActivite = codeActivite,
+            Utilisateur = utilisateur,
+            Maintenant = DateTime.UtcNow,
+            DeclarationId = declarationId.ToString(),
+            Domaine = domaine,
+            Filter = filter
+        });
+    }
 }
 
