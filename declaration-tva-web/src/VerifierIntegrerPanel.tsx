@@ -663,6 +663,45 @@ export function VerifierIntegrerPanel({
                         {drillFiltre.kind === 'incoherence' ? 'Drill écart :' : drillFiltre.kind === 'codeActivite' ? 'Codes activité :' : drillFiltre.kind === 'toutes' ? 'Toutes les lignes :' : 'Drill anomalie :'}
                     </span>
                     <span style={{ fontWeight: 600 }}>{drillFiltre.label}</span>
+                    {/* TASK-183 : toggle Achats/Ventes sans quitter le drill « Codes activité » —
+                        même objet drillFiltre que les boutons « Codes activité » de la vue principale
+                        (lignes 978/997), aucune nouvelle logique de fetch (useEffect ligne ~327 déjà
+                        réactif à drillFiltre.domaine). Marquage actif repris des onglets principaux
+                        (bordure basse colorée + texte accent), taille réduite pour tenir dans le bandeau. */}
+                    {drillFiltre.kind === 'codeActivite' && (
+                        <div style={{ display: 'flex', gap: '0.3rem', marginLeft: 'auto' }}>
+                            <button
+                                onClick={() => setDrillFiltre({ domaine: 'Decaissement' as DomaineTVA, filtre: {}, label: 'TVA Déductible (Achats)', kind: 'codeActivite' })}
+                                style={{
+                                    padding: '0.3rem 0.7rem',
+                                    fontSize: '0.8125rem',
+                                    fontWeight: 600,
+                                    border: 'none',
+                                    borderBottom: (drillFiltre.domaine as string) === 'Decaissement' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                                    background: 'none',
+                                    color: (drillFiltre.domaine as string) === 'Decaissement' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                TVA Déductible (Achats)
+                            </button>
+                            <button
+                                onClick={() => setDrillFiltre({ domaine: 'Encaissement', filtre: {}, label: 'TVA Collectée (Ventes)', kind: 'codeActivite' })}
+                                style={{
+                                    padding: '0.3rem 0.7rem',
+                                    fontSize: '0.8125rem',
+                                    fontWeight: 600,
+                                    border: 'none',
+                                    borderBottom: drillFiltre.domaine === 'Encaissement' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                                    background: 'none',
+                                    color: drillFiltre.domaine === 'Encaissement' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                TVA Collectée (Ventes)
+                            </button>
+                        </div>
+                    )}
                 </div>
                 {/* Grille filtrée — lecture seule sauf pour le drill « Codes activité » avant
                     clôture/confirmation (surcharge manuelle par ligne, TASK-161). */}
