@@ -111,9 +111,9 @@ namespace Declaration.Selection
                         Nom = row.TiersNom ?? "",
                         IdentifiantFiscal = row.TiersIF ?? "",
                         Ice = row.TiersICE ?? "",
-                        // TASK-161 : niveaux 3/4 de la cascade unique (colonne Sage CT_APE → "").
+                        // TASK-179 : cascade réduite (colonne Sage CT_APE → "").
                         CodeActivite = Declaration.Core.CodeActiviteResolver.Resoudre(
-                            surchargeManuelle: null, tiersNumero: null, tiersNom: null,
+                            surchargeManuelle: null,
                             codeActiviteSage: row.TiersActivite)
                     },
                     EC_Type = row.EC_Type ?? 0,

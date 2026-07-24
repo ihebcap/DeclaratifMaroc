@@ -123,20 +123,6 @@ public class LigneCandidate
 }
 
 /// <summary>
-/// TASK-161 : ligne de mapping tiers→activité (P_SOCIETECODEACTIVITETIERS, lecture seule GRF,
-/// jamais écrite côté GRF web — paramétrage laissé à l'écran Trésorerie WinForms existant).
-/// <see cref="NumeroTiers"/> peut être null (colonne additive TASK-161, vide tant que l'écran
-/// WinForms n'est pas mis à jour pour la capturer) — <see cref="ErpIntitule"/> reste alors le
-/// seul repli de matching (texte libre, saisi manuellement côté WinForms).
-/// </summary>
-public class CodeActiviteTiersMappingRow
-{
-    public string? NumeroTiers { get; set; }
-    public string ErpIntitule { get; set; } = "";
-    public string CodeActivite { get; set; } = "";
-}
-
-/// <summary>
 /// TASK-161 : ligne du référentiel des codes activité (P_DECTVAACTIVITE, lecture seule GRF) —
 /// alimente la liste déroulante de sélection manuelle côté front (écran ② Vérifier & Intégrer).
 /// TASK-172 : <see cref="Domaine"/> expose désormais DTA_Domaine (1 = Encaissement,

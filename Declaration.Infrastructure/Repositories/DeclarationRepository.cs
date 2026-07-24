@@ -1532,26 +1532,7 @@ public class DeclarationRepository : IDeclarationRepository
             "SELECT SO_Identifiant FROM P_SOCIETE WHERE SO_Id = @SoId", new { SoId = soId });
     }
 
-    // ─── Code activité TVA — défaut tiers + référentiel (TASK-161, lecture seule GRF) ─────────
-
-    /// <summary>
-    /// TASK-161 : lecture seule stricte de P_SOCIETECODEACTIVITETIERS, jointe à
-    /// P_DECTVAACTIVITE (même base GRF, même connexion — JOIN SQL classique, pas le garde-fou
-    /// TASK-154 qui ne concerne que les jointures CROSS-BASE GRF/Sage) pour résoudre CAT_Id en
-    /// code activité texte (DTA_Code). SCAT_NumeroTiers (colonne additive TASK-161) peut être
-    /// NULL pour tout mapping créé avant/sans l'écran WinForms mis à jour.
-    /// </summary>
-    public async Task<IReadOnlyList<CodeActiviteTiersMappingRow>> GetMappingCodeActiviteTiersAsync(int soId)
-    {
-        using var connection = _connectionFactory.CreateGrfConnection();
-        const string sql = @"
-            SELECT s.SCAT_NumeroTiers AS NumeroTiers, s.SCAT_ErpIntitule AS ErpIntitule, d.DTA_Code AS CodeActivite
-            FROM P_SOCIETECODEACTIVITETIERS s
-            JOIN P_DECTVAACTIVITE d ON d.DTA_Id = s.CAT_Id
-            WHERE s.SO_Id = @SoId";
-        var rows = await connection.QueryAsync<CodeActiviteTiersMappingRow>(sql, new { SoId = soId });
-        return rows.ToList();
-    }
+    // ─── Code activité TVA — référentiel (TASK-161, lecture seule GRF) ─────────
 
     /// <summary>
     /// TASK-172 : "Encaissement"/"Decaissement" (mêmes libellés que <c>DM_LGTVA.Domaine</c>) vers

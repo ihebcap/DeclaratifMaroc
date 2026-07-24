@@ -280,18 +280,7 @@ public interface IDeclarationRepository
     /// </summary>
     Task<string?> GetIdentifiantFiscalSocieteAsync(int soId);
 
-    // ─── Code activité TVA — défaut tiers + référentiel (TASK-161, lecture seule GRF) ─────────
-    /// <summary>
-    /// TASK-161 : mapping tiers→activité pour cette société, lu SANS écriture sur
-    /// <c>P_SOCIETECODEACTIVITETIERS</c> (paramétrage laissé à l'écran Trésorerie WinForms
-    /// existant). Jointure en mémoire faite ici via un simple JOIN SQL vers
-    /// <c>P_DECTVAACTIVITE</c> (même base GRF, même connexion — pas le garde-fou TASK-154 qui ne
-    /// vise que les jointures CROSS-BASE GRF/Sage) pour résoudre <c>CAT_Id</c> en code activité
-    /// texte (<c>DTA_Code</c>). Aucune lecture de <c>P_DECTVASOCTAXEACTIVITE</c> (hors périmètre,
-    /// décision PO TASK-161 point 4).
-    /// </summary>
-    Task<IReadOnlyList<CodeActiviteTiersMappingRow>> GetMappingCodeActiviteTiersAsync(int soId);
-
+    // ─── Code activité TVA — référentiel (TASK-161, lecture seule GRF) ─────────
     /// <summary>
     /// TASK-161 : référentiel complet des codes activité (<c>P_DECTVAACTIVITE</c>), lecture seule
     /// — alimente la liste déroulante de sélection manuelle côté front. Table non scopée par

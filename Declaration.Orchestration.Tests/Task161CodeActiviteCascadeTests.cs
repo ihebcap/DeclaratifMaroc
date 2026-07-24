@@ -14,10 +14,10 @@ using Declaration.Selection;
 namespace Declaration.Orchestration.Tests
 {
     /// <summary>
-    /// TASK-161 : cascade de résolution du code activité TVA (surcharge ligne > défaut tiers >
-    /// colonne Sage > vide), gap TASK-155/TASK-160 comblé, cas confirmé PO (une facture, deux
+    /// TASK-161/TASK-179 : cascade de résolution du code activité TVA (surcharge ligne > colonne
+    /// Sage CT_APE > vide), gap TASK-155/TASK-160 comblé, cas confirmé PO (une facture, deux
     /// codes activité différents via surcharge manuelle) et stabilité de la persistance après
-    /// clôture malgré un changement ultérieur du mapping tiers.
+    /// clôture.
     /// </summary>
     public class Task161CodeActiviteCascadeTests
     {
@@ -54,30 +54,16 @@ namespace Declaration.Orchestration.Tests
             return modele;
         }
 
-        // ─── Niveau 2 (mapping tiers) exercé au travers de MapLignesCandidates ──────────────
+        // ─── Cascade réduite (TASK-179) exercée au travers de MapLignesCandidates ──────────────
 
         [Fact]
-        public void MapLignesCandidates_MappingParNumeroTiers_ResoutLeCodeActivite()
-        {
-            var candidat = CreerCandidat("FA001", tiersNumero: "F0146", tiersNom: "PHARMACIE MOUKRIM", codeActiviteSage: "");
-            var modele = ModeleAvecUneLigne("FA001", 20m);
-            var mappingParNumero = new Dictionary<string, string> { ["F0146"] = "80" };
-
-            var lignes = DeclarationWorkflowService.MapLignesCandidates(
-                Guid.NewGuid(), "Decaissement", new[] { candidat }, modele, mappingParNumero, null);
-
-            Assert.Equal("80", Assert.Single(lignes).CodeActivite);
-        }
-
-        [Fact]
-        public void MapLignesCandidates_AucunMappingTiers_ReplieSurColonneSage()
+        public void MapLignesCandidates_CodeActiviteSageRenseigne_ResoutViaCT_APE()
         {
             var candidat = CreerCandidat("FA002", tiersNumero: "F9999", tiersNom: "INCONNU", codeActiviteSage: "81");
             var modele = ModeleAvecUneLigne("FA002", 20m);
 
             var lignes = DeclarationWorkflowService.MapLignesCandidates(
-                Guid.NewGuid(), "Decaissement", new[] { candidat }, modele,
-                new Dictionary<string, string>(), new Dictionary<string, string>());
+                Guid.NewGuid(), "Decaissement", new[] { candidat }, modele);
 
             Assert.Equal("81", Assert.Single(lignes).CodeActivite);
         }
@@ -89,8 +75,7 @@ namespace Declaration.Orchestration.Tests
             var modele = ModeleAvecUneLigne("FA003", 20m);
 
             var lignes = DeclarationWorkflowService.MapLignesCandidates(
-                Guid.NewGuid(), "Decaissement", new[] { candidat }, modele,
-                new Dictionary<string, string>(), new Dictionary<string, string>());
+                Guid.NewGuid(), "Decaissement", new[] { candidat }, modele);
 
             var ligne = Assert.Single(lignes);
             Assert.Equal("", ligne.CodeActivite);
@@ -280,10 +265,10 @@ namespace Declaration.Orchestration.Tests
             Assert.Equal(500m, groupeVide.TotalHT);
         }
 
-        // ─── Persistance après figeage : stable malgré un changement ultérieur du mapping tiers ──
+        // ─── Persistance après figeage : le code activité déjà figé reste stable ──
 
         [Fact]
-        public async Task ChargerCandidatesSiNecessaire_LigneDejaFigee_CodeActiviteInchangeMalgreMappingModifie()
+        public async Task ChargerCandidatesSiNecessaire_LigneDejaFigee_CodeActiviteInchange()
         {
             var declarationId = Guid.NewGuid();
             var repo = new FakeDeclarationRepositoryTask161();
@@ -298,9 +283,6 @@ namespace Declaration.Orchestration.Tests
                 Etat = EtatLigne.Proposee, NumeroFacture = "FA007", CodeActivite = "80", EC_Id = 0
             };
             repo.Lignes.Add(ligneFigee);
-            // Le mapping tiers change APRÈS le figeage — ne doit jamais être relu pour une ligne
-            // déjà persistée (RevaliderLignesFigeesAsync ne recalcule jamais CodeActivite).
-            repo.MappingParNumero["X"] = "99";
 
             var workflowService = new DeclarationWorkflowService(
                 repo, selectionService: null!, connectionFactory: null!, configuration: null!,
@@ -316,7 +298,6 @@ namespace Declaration.Orchestration.Tests
         {
             public Dictionary<Guid, DeclarationEntete> Declarations { get; } = new();
             public List<LigneCandidate> Lignes { get; } = new();
-            public Dictionary<string, string> MappingParNumero { get; } = new();
 
             public Task<DeclarationEntete?> GetByIdAsync(Guid id) =>
                 Task.FromResult(Declarations.TryGetValue(id, out var d) ? d : null);
@@ -385,10 +366,6 @@ namespace Declaration.Orchestration.Tests
             public Task<IReadOnlyList<CacheBucketRow>> GetBucketsCacheAsync(int soId, int ecId) => throw new NotImplementedException();
             public Task SupprimerLignesParEcIdAsync(Guid declarationId, int ecId) => Task.CompletedTask;
             public Task<string?> GetIdentifiantFiscalSocieteAsync(int soId) => Task.FromResult<string?>("12345678");
-
-            public Task<IReadOnlyList<CodeActiviteTiersMappingRow>> GetMappingCodeActiviteTiersAsync(int soId) =>
-                Task.FromResult<IReadOnlyList<CodeActiviteTiersMappingRow>>(
-                    MappingParNumero.Select(kv => new CodeActiviteTiersMappingRow { NumeroTiers = kv.Key, ErpIntitule = "", CodeActivite = kv.Value }).ToList());
 
             public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync(string? domaine = null) =>
                 Task.FromResult<IReadOnlyList<CodeActiviteReferentielRow>>(new List<CodeActiviteReferentielRow>());

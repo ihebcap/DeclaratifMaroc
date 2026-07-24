@@ -59,9 +59,6 @@ namespace Declaration.Orchestration.Tests
             Task.FromResult(Enumerable.Empty<LigneCandidate>());
         public Task<Dictionary<string, List<string>>> GetLignesDistinctsAsync(Guid declarationId, string domaine) =>
             Task.FromResult(new Dictionary<string, List<string>>());
-        public Task<IReadOnlyList<CodeActiviteTiersMappingRow>> GetMappingCodeActiviteTiersAsync(int soId) =>
-            Task.FromResult<IReadOnlyList<CodeActiviteTiersMappingRow>>(new List<CodeActiviteTiersMappingRow>());
-
         public Task<DeclarationEntete?> GetByNumeroAsync(string numero) => throw NotUsed();
         public Task<IEnumerable<DeclarationEntete>> GetAllAsync(int societeId, int? exercice, StatutDeclaration? statut) => throw NotUsed();
         public Task CreateAsync(DeclarationEntete declaration) => throw NotUsed();

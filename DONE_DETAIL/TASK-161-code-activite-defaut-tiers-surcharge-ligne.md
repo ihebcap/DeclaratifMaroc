@@ -1,5 +1,14 @@
 # TASK-161 — Code activité TVA : défaut par tiers (P_SOCIETECODEACTIVITETIERS, lecture seule) + surcharge manuelle par ligne
 
+> ⚠️ **CORRECTION TASK-179 (24/07/2026)** : le niveau 2 "défaut par tiers" décrit dans tout ce
+> document a été **retiré** de la cascade (`CodeActiviteResolver.Resoudre`), sur arbitrage PO
+> (TASK-171 §1, option B). Il n'a jamais fonctionné en réel chez aucun client (TASK-171 :
+> `SCAT_ErpIntitule` n'est pas le nom du tiers) et une colonne absente en base chez un client
+> production (`SCAT_NumeroTiers`) faisait planter en 500 l'écran ③ Vérifier & Intégrer. La cascade
+> livrée aujourd'hui ne compte plus que 3 niveaux : surcharge manuelle par ligne → `F_COMPTET.CT_APE`
+> → `""`. Tout ce qui suit décrit la conception d'origine (4 niveaux, avec mapping tiers) — conservé
+> pour l'historique, mais **ne reflète plus le comportement réel du code**.
+
 ## Contexte
 Demande PO (23/07/2026, session d'analyse architecte) : dans l'ancien applicatif (GénéraFi), chaque code
 taxe Sage (taux, ex. C20/D20) est lié à un code activité — modèle jugé **très difficile à maintenir**,

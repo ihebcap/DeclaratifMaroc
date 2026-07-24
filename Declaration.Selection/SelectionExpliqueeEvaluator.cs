@@ -129,11 +129,11 @@ namespace Declaration.Selection
                         Nom = r.TiersNom ?? "",
                         IdentifiantFiscal = r.TiersIF ?? "",
                         Ice = r.TiersICE ?? "",
-                        // TASK-161 : niveaux 3/4 de la cascade unique (colonne Sage CT_APE → "").
-                        // Les niveaux 1/2 (surcharge ligne, mapping tiers) n'existent qu'au niveau
-                        // de la déclaration/DM_LGTVA, hors de portée de cette évaluation.
+                        // TASK-179 : cascade réduite (colonne Sage CT_APE → ""). La surcharge
+                        // manuelle n'existe qu'au niveau de la déclaration/DM_LGTVA, hors de
+                        // portée de cette évaluation.
                         CodeActivite = Declaration.Core.CodeActiviteResolver.Resoudre(
-                            surchargeManuelle: null, tiersNumero: null, tiersNom: null,
+                            surchargeManuelle: null,
                             codeActiviteSage: r.TiersActivite)
                     },
                     EC_Type = r.EC_Type ?? 0,

@@ -305,7 +305,6 @@ namespace Declaration.Orchestration.Tests
                 Task.FromResult(Reglements.AsEnumerable());
 
             public Task<string?> GetIdentifiantFiscalSocieteAsync(int soId) => throw new NotImplementedException();
-            public Task<IReadOnlyList<CodeActiviteTiersMappingRow>> GetMappingCodeActiviteTiersAsync(int soId) => Task.FromResult<IReadOnlyList<CodeActiviteTiersMappingRow>>(new List<CodeActiviteTiersMappingRow>());
             public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync(string? domaine = null) => Task.FromResult<IReadOnlyList<CodeActiviteReferentielRow>>(new List<CodeActiviteReferentielRow>());
             public Task<int?> GetDomaineCodeActiviteAsync(string codeActivite) => Task.FromResult<int?>(null);
             public Task<string?> GetDomaineLigneAsync(Guid ligneId) => Task.FromResult<string?>(null);

@@ -82,7 +82,6 @@ namespace Declaration.Orchestration.Tests
         public Task<IReadOnlyList<CacheBucketRow>> GetBucketsCacheAsync(int soId, int ecId) => throw NotUsed();
         public Task SupprimerLignesParEcIdAsync(Guid declarationId, int ecId) => throw NotUsed();
         public Task<string?> GetIdentifiantFiscalSocieteAsync(int soId) => throw NotUsed();
-        public Task<IReadOnlyList<CodeActiviteTiersMappingRow>> GetMappingCodeActiviteTiersAsync(int soId) => throw NotUsed();
         public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync(string? domaine = null) => throw NotUsed();
         public Task<int?> GetDomaineCodeActiviteAsync(string codeActivite) => throw NotUsed();
         public Task<string?> GetDomaineLigneAsync(Guid ligneId) => throw NotUsed();
@@ -193,12 +192,6 @@ namespace Declaration.Orchestration.Tests
         public Task SaveLignesCandidatesAsync(IEnumerable<LigneCandidate> lignes) => Task.CompletedTask;
         public Task<IEnumerable<LigneCandidate>> GetLignesAsync(Guid declarationId, string domaine, int page, int pageSize, string? sort, string? filter) =>
             Task.FromResult(Enumerable.Empty<LigneCandidate>());
-
-        // TASK-161 : appelée légitimement par ConstruireLignesFigeesAsync (même chemin que
-        // SaveLignesCandidatesAsync/GetLignesAsync ci-dessus) — pas un appel inattendu à faire
-        // échouer, contrairement aux NotUsed() ci-dessous.
-        public Task<IReadOnlyList<CodeActiviteTiersMappingRow>> GetMappingCodeActiviteTiersAsync(int soId) =>
-            Task.FromResult<IReadOnlyList<CodeActiviteTiersMappingRow>>(new List<CodeActiviteTiersMappingRow>());
 
         public Task<DeclarationEntete?> GetByNumeroAsync(string numero) => throw NotUsed();
         public Task<IEnumerable<DeclarationEntete>> GetAllAsync(int societeId, int? exercice, StatutDeclaration? statut) => throw NotUsed();

@@ -306,11 +306,7 @@ public class DeclarationWorkflowService
             var affectations = candidates.Where(c => c.EstEligible).Select(c => c.Affectation).ToList();
             var modele = orchestrateur.Traiter(affectations, 2);
 
-            // TASK-161 : mapping tiers→activité (niveau 2 de la cascade), chargé une seule fois
-            // par société pour tout le lot — jamais un aller-retour GRF par ligne.
-            var (mappingParNumero, mappingParNom) = await ChargerMappingCodeActiviteTiersAsync(declaration.SocieteId);
-
-            return MapLignesCandidates(declarationId, domaine, candidates, modele, mappingParNumero, mappingParNom);
+            return MapLignesCandidates(declarationId, domaine, candidates, modele);
         });
     }
 
@@ -572,9 +568,7 @@ public class DeclarationWorkflowService
             var affectationsEligibles = aReintegrer.Where(c => c.EstEligible).Select(c => c.Affectation).ToList();
             var modele = orchestrateur.Traiter(affectationsEligibles, 2);
 
-            // TASK-161 : même résolution qu'au premier figeage (ConstruireLignesFigeesAsync).
-            var (mappingParNumero, mappingParNom) = await ChargerMappingCodeActiviteTiersAsync(declaration.SocieteId);
-            var nouvellesLignes = MapLignesCandidates(declarationId, domaine, aReintegrer, modele, mappingParNumero, mappingParNom);
+            var nouvellesLignes = MapLignesCandidates(declarationId, domaine, aReintegrer, modele);
 
             await _repository.DeleteLignesAsync(lignesLiberees.Select(l => l.Id));
             await _repository.SaveLignesCandidatesAsync(nouvellesLignes);
@@ -950,32 +944,8 @@ public class DeclarationWorkflowService
             log: JournaliserValorisation, soId: soId);
     }
 
-    /// <summary>
-    /// TASK-161 : charge le mapping tiers→activité (P_SOCIETECODEACTIVITETIERS, lecture seule)
-    /// pour cette société et le réduit à deux dictionnaires (par numéro tiers, par intitulé ERP en
-    /// repli) consommés par <see cref="Declaration.Core.CodeActiviteResolver"/>. Un doublon de clé
-    /// (mapping ambigu côté WinForms) retient arbitrairement le premier — jamais une exception qui
-    /// bloquerait tout le figeage pour un problème de paramétrage tiers.
-    /// </summary>
-    private async Task<(IReadOnlyDictionary<string, string> ParNumero, IReadOnlyDictionary<string, string> ParNom)>
-        ChargerMappingCodeActiviteTiersAsync(int soId)
-    {
-        var rows = await _repository.GetMappingCodeActiviteTiersAsync(soId);
-        var parNumero = rows
-            .Where(r => !string.IsNullOrWhiteSpace(r.NumeroTiers) && !string.IsNullOrWhiteSpace(r.CodeActivite))
-            .GroupBy(r => r.NumeroTiers!, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.First().CodeActivite, StringComparer.Ordinal);
-        var parNom = rows
-            .Where(r => !string.IsNullOrWhiteSpace(r.ErpIntitule) && !string.IsNullOrWhiteSpace(r.CodeActivite))
-            .GroupBy(r => r.ErpIntitule, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().CodeActivite, StringComparer.OrdinalIgnoreCase);
-        return (parNumero, parNom);
-    }
-
     public static List<LigneCandidate> MapLignesCandidates(
-        Guid declarationId, string domaine, IEnumerable<AffectationCandidate> candidates, DeclarationModele modele,
-        IReadOnlyDictionary<string, string>? mappingCodeActiviteParNumero = null,
-        IReadOnlyDictionary<string, string>? mappingCodeActiviteParNom = null)
+        Guid declarationId, string domaine, IEnumerable<AffectationCandidate> candidates, DeclarationModele modele)
     {
         var lignes = new List<LigneCandidate>();
 
@@ -988,15 +958,11 @@ public class DeclarationWorkflowService
             }
             else
             {
-                // TASK-161 : niveaux 2/3/4 de la cascade unique (surcharge ligne exclue ici — cette
-                // méthode ne construit que des lignes NOUVELLES, sans surcharge possible encore).
+                // TASK-179 : cascade réduite (surcharge ligne exclue ici — cette méthode ne
+                // construit que des lignes NOUVELLES, sans surcharge possible encore).
                 var codeActivite = Declaration.Core.CodeActiviteResolver.Resoudre(
                     surchargeManuelle: null,
-                    tiersNumero: c.Affectation.Tiers.Numero,
-                    tiersNom: c.Affectation.Tiers.Nom,
-                    codeActiviteSage: c.Affectation.Tiers.CodeActivite,
-                    mappingParNumero: mappingCodeActiviteParNumero,
-                    mappingParNom: mappingCodeActiviteParNom);
+                    codeActiviteSage: c.Affectation.Tiers.CodeActivite);
 
                 var taxesLines = modele.Lignes.Where(l => l.NumeroFacture == c.Affectation.NumeroFacture).ToList();
                 if (!taxesLines.Any())

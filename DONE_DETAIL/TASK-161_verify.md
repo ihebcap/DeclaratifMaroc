@@ -1,5 +1,14 @@
 # TASK-161 — VERIFY
 
+> ⚠️ **CORRECTION TASK-179 (24/07/2026)** : le niveau 2 "défaut par tiers" (mapping
+> `P_SOCIETECODEACTIVITETIERS`, méthodes `GetMappingCodeActiviteTiersAsync`/
+> `ChargerMappingCodeActiviteTiersAsync` décrites ci-dessous) a été **retiré** de la cascade —
+> arbitrage PO (TASK-171 §1, option B) : jamais fonctionnel en réel (`SCAT_ErpIntitule` n'est pas le
+> nom du tiers, TASK-171) et cause d'un crash 500 en production chez un client sans la colonne
+> `SCAT_NumeroTiers`. `CodeActiviteResolver.Resoudre` ne prend plus que `surchargeManuelle`/
+> `codeActiviteSage` en paramètres. Ce document décrit le périmètre livré à l'origine (4 niveaux) —
+> conservé pour l'historique, ne reflète plus le code actuel.
+
 ## Implémenté en worker exceptionnel
 
 Rôle inversé, demande explicite du PO/architecte (session du 23/07/2026, prompt dédié « lance
