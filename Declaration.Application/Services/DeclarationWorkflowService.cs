@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -104,6 +105,13 @@ public class DeclarationWorkflowService
     /// autres motifs d'exclusion). Toute modification doit rester cohérente entre les deux usages.
     /// </summary>
     private const string PrefixeDejaEnCoursAilleurs = "Déjà pris en compte dans la déclaration ";
+
+    // TASK-166 : les messages d'avertissement/anomalie construits côté back (chaînes déjà
+    // formées, jamais reformatées par le front) doivent afficher les montants sur 2 décimales,
+    // cohérentes avec formatMoney() (Intl.NumberFormat('fr-FR')) utilisé partout ailleurs dans
+    // l'écran ④ — sinon échelle brute à 6 décimales (ex. "4973,380000 MAD").
+    private static string FormatMontantMessage(decimal montant) =>
+        montant.ToString("N2", CultureInfo.GetCultureInfo("fr-FR"));
 
     public DeclarationWorkflowService(
         IDeclarationRepository repository,
@@ -660,12 +668,15 @@ public class DeclarationWorkflowService
         string domaineEffectif;
         if (ligneIds != null && ligneIds.Count > 0)
         {
-            var domainesDistincts = await _repository.GetDomainesDistinctsLignesAsync(ligneIds);
+            // TASK-173 correctif (rejet architecte 24/07/2026) : GetDomainesDistinctsLignesAsync
+            // est scopé par declarationId — un ligneId d'une autre déclaration (y compris
+            // Clôturée) n'est jamais pris en compte, exactement comme s'il n'existait pas.
+            var domainesDistincts = await _repository.GetDomainesDistinctsLignesAsync(declarationId, ligneIds);
             if (domainesDistincts.Count > 1)
                 throw new ApplicationException(
                     "Sélection mixte Encaissement/Décaissement : l'affectation en masse du code activité doit porter sur un seul domaine à la fois.");
             if (domainesDistincts.Count == 0)
-                return; // Aucune ligne trouvée pour ces IDs — rien à faire, pas d'erreur.
+                return; // Aucune ligne trouvée (pour cette déclaration) parmi ces IDs — rien à faire, pas d'erreur.
             domaineEffectif = domainesDistincts[0];
         }
         else if (!string.IsNullOrEmpty(domaine))
@@ -681,7 +692,7 @@ public class DeclarationWorkflowService
             await ValiderDomaineCodeActiviteAsync(codeActivite, domaineEffectif);
 
         if (ligneIds != null && ligneIds.Count > 0)
-            await _repository.UpdateCodeActiviteBulkByIdsAsync(ligneIds, codeActivite ?? "", utilisateur);
+            await _repository.UpdateCodeActiviteBulkByIdsAsync(declarationId, ligneIds, codeActivite ?? "", utilisateur);
         else
             await _repository.UpdateCodeActiviteBulkAsync(declarationId, domaineEffectif, filter, codeActivite ?? "", utilisateur);
     }
@@ -1069,13 +1080,13 @@ public class DeclarationWorkflowService
                     string message = c.Motif switch
                     {
                         MotifRejet.EcTypeHorsPerimetre => c.Affectation.EC_Type == 1
-                            ? $"Règlement impayé — non déclarable (à traiter phase 2) : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)"
-                            : $"Règlement hors périmètre ({ReglementRapprochementRow.LibelleEcType(c.Affectation.EC_Type)}) — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)",
-                        MotifRejet.Impaye => $"Règlement impayé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)",
-                        MotifRejet.Annule => $"Règlement annulé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)",
-                        MotifRejet.NonComptabilise => $"Règlement non comptabilisé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)",
-                        MotifRejet.NonAffecte => $"Règlement non affecté — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)",
-                        _ => $"Règlement exclu ({c.MotifLibelle}) — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {c.Affectation.MontantAffecte} MAD)"
+                            ? $"Règlement impayé — non déclarable (à traiter phase 2) : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)"
+                            : $"Règlement hors périmètre ({ReglementRapprochementRow.LibelleEcType(c.Affectation.EC_Type)}) — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
+                        MotifRejet.Impaye => $"Règlement impayé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
+                        MotifRejet.Annule => $"Règlement annulé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
+                        MotifRejet.NonComptabilise => $"Règlement non comptabilisé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
+                        MotifRejet.NonAffecte => $"Règlement non affecté — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
+                        _ => $"Règlement exclu ({c.MotifLibelle}) — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)"
                     };
 
                     model.Alertes.Add(new Alerte

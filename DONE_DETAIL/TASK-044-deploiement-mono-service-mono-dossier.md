@@ -1,5 +1,39 @@
 # TASK-044 — Déploiement mono-service / mono-dossier (API unique orchestrant tout)
 
+## ⚠️ Clôture exceptionnelle par décision PO (23/07/2026) — sans VERIFY complet
+
+**Le PO a explicitement demandé de clôturer cette TASK en assumant le risque**, après que
+l'architecte a signalé un dossier de preuve incomplet et refusé une approbation normale (aucun
+`VERIFY/TASK-044_verify.md` n'a jamais été produit). Décision tracée telle quelle, sans
+maquillage : ceci n'est **pas** une clôture avec preuve de fonctionnement réelle.
+
+**Vérifié réellement par l'architecte avant clôture (code source, lecture directe)** :
+- `Declaration.API/Program.cs:128-129,162` : `UseDefaultFiles()` + `UseStaticFiles()` (bon ordre)
+  + `MapFallbackToFile("index.html")` — le bug 404 sur `GET /` documenté ci-dessous est corrigé
+  (déjà livré sous TASK-116).
+- `Declaration.Application/Services/DeclarationWorkflowService.cs:739-743` : `WorkerExePath`
+  résolu en relatif (`Path.IsPathRooted` + `Path.Combine(AppContext.BaseDirectory, ...)`).
+- `Declaration.Application/Services/DeclarationWorkflowService.cs:132-136` : `logs/valorisation.log`
+  écrit relatif à `AppContext.BaseDirectory`.
+- `Deploy-All.ps1` (racine repo) existe et enchaîne build front + `dotnet publish` API (self-contained
+  win-x64) + workers Sage + `Publish-Setup.ps1` (WinSW/DeclaratifMaroc.exe) — couvre en pratique le
+  script de publication demandé par cette TASK, fusionné avec TASK-115 par décision PO du 18/07/2026
+  (cf. son propre docstring).
+
+**Non vérifié / non livré — assumé explicitement par le PO en clôturant quand même** :
+- `connections.json.exemple` (gabarit de déploiement sans secret) : **absent du dépôt**.
+- `DOCS/DEPLOIEMENT.md` : **non corrigé**, contient encore la mention obsolète *« TASK-044 n'a pas
+  livré de `publish.ps1` unique à ce jour »*, contredisant l'existence de `Deploy-All.ps1`.
+- **Aucune preuve runtime réelle** : pas de service installé et démarré hors arbo de build dans
+  cette session, pas de `GET /`/`GET /api/...` rejoués en même origine, pas de trace confirmée d'un
+  worker invoqué en relatif dans `logs/valorisation.log` sur une instance déployée.
+- La TASK n'est jamais passée par `IN_PROGRESS/`, aucun `VERIFY/TASK-044_verify.md` n'a existé.
+
+Voir `DONE.md` (entrée TASK-044, 23/07/2026) pour la trace de clôture et `DONE_DETAIL/TASK-044_verify.md`
+pour le constat détaillé de ce qui n'a pas été vérifié.
+
+---
+
 ## Contexte
 Décision PO (10/07/2026) : **un seul service Windows** — l'API `Declaration.API` — qui **appelle
 tout** (y compris le worker OM out-of-process) et **sert le front**, le tout dans **un seul dossier

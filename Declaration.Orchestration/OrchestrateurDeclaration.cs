@@ -56,10 +56,65 @@ namespace Declaration.Orchestration
         {
             var affectationsList = affectations.ToList();
 
+            // TASK-169 : pré-chargement BATCH — une requête par méthode (chunkée si besoin), quel
+            // que soit le nombre de factures — des 3 lectures auparavant faites une fois par EC_Id
+            // distinct par les boucles/lambdas ci-dessous (TryServireDepuisCache/TryGetToken/
+            // resoudreFacture). Élimine le N+1 SQL (jusqu'à ~3×N requêtes individuelles) : la
+            // logique de décision ci-après est IDENTIQUE, seule la source des données change
+            // (dictionnaire pré-chargé au lieu d'un aller-retour SQL par pièce).
+            //
+            // En cas d'échec du chargement batch lui-même (DB indisponible), chaque flag
+            // *BatchFailed force le même repli que l'ancien comportement unitaire : un
+            // GetEntries/GetCurrentPaiementToken individuel qui aurait levé une exception
+            // provoquait systématiquement un cache miss (retour null) — reproduit ici en forçant
+            // le même résultat pour TOUS les EC_Id plutôt que de risquer un dictionnaire vide
+            // interprété à tort comme « aucun token / aucune entrée », ce qui pourrait servir un
+            // cache jamais validé (ex. deux ecId à token stocké NULL matcheraient un dictionnaire
+            // vide alors que la validation aurait dû échouer).
+            var ecIdsAll = affectationsList.Where(a => a.EC_Id > 0).Select(a => a.EC_Id).Distinct().ToList();
+
+            var entriesBatch = (IReadOnlyDictionary<int, IReadOnlyList<VentilationSageCacheEntry>>)
+                new Dictionary<int, IReadOnlyList<VentilationSageCacheEntry>>();
+            var entriesBatchFailed = false;
+            var tokensBatch = (IReadOnlyDictionary<int, PaiementToken?>)new Dictionary<int, PaiementToken?>();
+            var tokensBatchFailed = false;
+            var echeanceBatch = (IReadOnlyDictionary<int, decimal?>)new Dictionary<int, decimal?>();
+
+            if (ecIdsAll.Count > 0)
+            {
+                if (!string.IsNullOrEmpty(_persistenceConnectionString))
+                {
+                    try { entriesBatch = _ventilationCache.GetEntriesBatch(_soId, ecIdsAll, _persistenceConnectionString); }
+                    catch (Exception ex)
+                    {
+                        entriesBatchFailed = true;
+                        _log?.Invoke($"[VALO] échec chargement batch du cache de ventilation ({ecIdsAll.Count} EC_Id) : {ex.Message}");
+                    }
+                }
+                if (!string.IsNullOrEmpty(_connectionString))
+                {
+                    try { tokensBatch = _ventilationCache.GetCurrentPaiementTokensBatch(ecIdsAll, _connectionString); }
+                    catch (Exception ex)
+                    {
+                        tokensBatchFailed = true;
+                        _log?.Invoke($"[VALO] échec chargement batch des tokens de paiement ({ecIdsAll.Count} EC_Id) : {ex.Message}");
+                    }
+
+                    try { echeanceBatch = _ventilationCache.GetEcheanceMontantsDeviseBatch(ecIdsAll, _connectionString); }
+                    catch (Exception ex)
+                    {
+                        // Même filet que l'ancien try/catch individuel dans resoudreFacture : un
+                        // échec laisse simplement le dictionnaire vide → mtDevise=null pour tout
+                        // EC_Id → contrôle croisé ignoré (jamais bloquant), comportement identique.
+                        _log?.Invoke($"[VALO] échec chargement batch RT_ECHEANCE.EC_MtDevise ({ecIdsAll.Count} EC_Id) — contrôle croisé ignoré : {ex.Message}");
+                    }
+                }
+            }
+
             // ── Batch OM : uniquement les EC_Type=0 non présents/valides en cache SQL ─────
             var sageAffectations = affectationsList.Where(a => a.EC_Type == 0).ToList();
 
-            // Pré-résolution depuis le cache SQL (1 requête par EC_Id distinct)
+            // Pré-résolution depuis le cache SQL (dictionnaires pré-chargés ci-dessus, TASK-169)
             var cachedDocs = new Dictionary<int, DocumentTaxesInfo?>();
             var ecIdsToFetch = new HashSet<int>();
 
@@ -68,7 +123,7 @@ namespace Declaration.Orchestration
                 if (a.EC_Id <= 0 || ecIdsToFetch.Contains(a.EC_Id) || cachedDocs.ContainsKey(a.EC_Id))
                     continue;
 
-                var doc = TryServireDepuisCache(a.EC_Id);
+                var doc = TryServireDepuisCache(a.EC_Id, entriesBatch, entriesBatchFailed, tokensBatch, tokensBatchFailed);
                 if (doc != null)
                     cachedDocs[a.EC_Id] = doc;
                 else
@@ -204,7 +259,7 @@ namespace Declaration.Orchestration
                     // Le token de paiement (peut être NULL) sert de garde d'invalidation :
                     // une ligne à token NULL est conservée mais jamais servie comme
                     // ventilation déclarable (voir TryServireDepuisCache).
-                    var token = TryGetToken(a.EC_Id);
+                    var token = TryGetToken(a.EC_Id, tokensBatch, tokensBatchFailed);
                     if (token == null)
                     {
                         _log?.Invoke($"[VALO] EC_Id={a.EC_Id} pièce {a.NumeroFacture} mise en cache brute — "
@@ -240,7 +295,7 @@ namespace Declaration.Orchestration
                     if (!ecIdsFgrTraites.Add(a.EC_Id)) continue;
 
                     // Déjà servi par le cache SQL (token valide) → rien à réécrire.
-                    if (TryServireDepuisCache(a.EC_Id) != null) continue;
+                    if (TryServireDepuisCache(a.EC_Id, entriesBatch, entriesBatchFailed, tokensBatch, tokensBatchFailed) != null) continue;
 
                     DocumentTaxesInfo doc;
                     try
@@ -259,7 +314,7 @@ namespace Declaration.Orchestration
                         continue;
                     }
 
-                    var token = TryGetToken(a.EC_Id);
+                    var token = TryGetToken(a.EC_Id, tokensBatch, tokensBatchFailed);
                     if (token == null)
                     {
                         _log?.Invoke($"[VALO] EC_Id={a.EC_Id} pièce {a.NumeroFacture} mise en cache brute — "
@@ -313,8 +368,11 @@ namespace Declaration.Orchestration
             // TASK-072 : contrôle croisé TTC Sage (OM/FGR/cache) vs TTC GRF (RT_ECHEANCE.EC_MtDevise).
             // Détecte une facture Sage dont le TTC ne correspond plus au montant d'échéance connu
             // côté GRF (cause racine identifiée : en-tête Sage incohérent, ex. FC2501717 — HT >> TTC).
-            // Une seule requête par EC_Id (mémoïsée), jamais bloquante si l'échéance est introuvable.
-            var echeanceMontantParEcId = new Dictionary<int, decimal?>();
+            // TASK-169 : pré-chargé en un seul aller-retour batch (echeanceBatch, plus haut) au lieu
+            // d'un SELECT par EC_Id mémoïsé — un EC_Id absent du batch (échéance introuvable, ou
+            // échec du chargement batch lui-même, déjà tracé une fois plus haut) donne mtDevise=null,
+            // jamais bloquant, comportement identique à avant.
+            var echeanceMontantParEcId = new Dictionary<int, decimal?>(echeanceBatch);
 
             Func<AffectationADeclarer, DocumentTaxesInfo?> resoudreFacture = (affectation) =>
             {
@@ -324,6 +382,9 @@ namespace Declaration.Orchestration
 
                 if (!echeanceMontantParEcId.TryGetValue(affectation.EC_Id, out var mtDevise))
                 {
+                    // Filet de sécurité : un EC_Id apparu après le pré-chargement batch initial
+                    // (ne devrait pas arriver, ecIdsAll couvre déjà toute affectationsList) retombe
+                    // sur l'ancien chemin unitaire plutôt que de perdre le contrôle croisé.
                     try
                     {
                         mtDevise = _ventilationCache.GetEcheanceMontantDevise(affectation.EC_Id, _connectionString);
@@ -381,23 +442,26 @@ namespace Declaration.Orchestration
         /// <summary>
         /// Tente de servir la ventilation depuis le cache SQL.
         /// Retourne null si le cache est absent ou si le token de paiement ne correspond plus.
+        /// TASK-169 : <paramref name="entriesBatch"/>/<paramref name="tokensBatch"/> proviennent du
+        /// pré-chargement batch fait une fois en tête de <see cref="Traiter"/> — plus d'aller-retour
+        /// SQL individuel ici. Les flags <paramref name="entriesBatchFailed"/>/
+        /// <paramref name="tokensBatchFailed"/> reproduisent exactement l'ancien comportement
+        /// « exception sur la lecture unitaire ⇒ cache miss » (voir commentaire dans Traiter).
         /// </summary>
-        private DocumentTaxesInfo? TryServireDepuisCache(int ecId)
+        private DocumentTaxesInfo? TryServireDepuisCache(
+            int ecId,
+            IReadOnlyDictionary<int, IReadOnlyList<VentilationSageCacheEntry>> entriesBatch,
+            bool entriesBatchFailed,
+            IReadOnlyDictionary<int, PaiementToken?> tokensBatch,
+            bool tokensBatchFailed)
         {
             if (string.IsNullOrEmpty(_persistenceConnectionString))
                 return null;
 
-            IReadOnlyList<VentilationSageCacheEntry> entries;
-            try
-            {
-                entries = _ventilationCache.GetEntries(_soId, ecId, _persistenceConnectionString);
-            }
-            catch (Exception)
-            {
+            if (entriesBatchFailed)
                 return null;
-            }
 
-            if (entries.Count == 0)
+            if (!entriesBatch.TryGetValue(ecId, out var entries) || entries.Count == 0)
                 return null;
 
             // TASK-076/077 : auto-guérison d'un état hérité d'AVANT le correctif d'écriture
@@ -464,15 +528,10 @@ namespace Declaration.Orchestration
             // permanent sur « toujours NULL » a été retiré, pas la détection de divergence.
             if (!string.IsNullOrEmpty(_connectionString))
             {
-                PaiementToken? currentToken;
-                try
-                {
-                    currentToken = _ventilationCache.GetCurrentPaiementToken(ecId, _connectionString);
-                }
-                catch (Exception)
-                {
-                    return null; // Impossible de valider → ne pas servir le cache
-                }
+                if (tokensBatchFailed)
+                    return null; // Impossible de valider → ne pas servir le cache (même filet qu'avant)
+
+                var currentToken = tokensBatch.TryGetValue(ecId, out var t) ? t : null;
 
                 var storedToken = entries[0]; // tous les buckets ont le même token
                 if (storedToken.Token_MV_Id != currentToken?.MV_Id
@@ -534,11 +593,16 @@ namespace Declaration.Orchestration
             };
         }
 
-        private PaiementToken? TryGetToken(int ecId)
+        /// <summary>
+        /// TASK-169 : lit le token de paiement pré-chargé en batch (<paramref name="tokensBatch"/>,
+        /// chargé une fois en tête de <see cref="Traiter"/>) au lieu d'un SELECT individuel.
+        /// </summary>
+        private PaiementToken? TryGetToken(
+            int ecId, IReadOnlyDictionary<int, PaiementToken?> tokensBatch, bool tokensBatchFailed)
         {
             if (string.IsNullOrEmpty(_connectionString)) return null;
-            try { return _ventilationCache.GetCurrentPaiementToken(ecId, _connectionString); }
-            catch (Exception) { return null; }
+            if (tokensBatchFailed) return null;
+            return tokensBatch.TryGetValue(ecId, out var t) ? t : null;
         }
 
         private static IEnumerable<VentilationSageCacheEntry> BuildEntries(

@@ -1,27 +1,70 @@
 # TODO — Module Déclaration TVA (GRF)
 
-## 🏷️ Code activité TVA — défaut tiers (lecture seule) + surcharge manuelle par ligne (analyse PO 23/07/2026, 5 points tranchés)
-Demande PO : dans l'ancien applicatif (GénéraFi), le code taxe (taux) est lié à un code activité —
-modèle jugé très difficile à maintenir. Cartographie architecte (`D:\_vibe\apbs-gr_winform\analayse\RAPPORT-CODE-ACTIVITE-TVA.md`) :
-3 tables déjà en base GRF (même `SO_Id` que `P_SOCIETE`) — `P_DECTVAACTIVITE` (référentiel codes
-activité), `P_SOCIETECODEACTIVITETIERS` (mapping tiers→activité, jamais branché sur la TVA jusqu'ici),
-`P_DECTVASOCTAXEACTIVITE` (mapping taxe→activité, mécanisme historique douloureux). **5 décisions PO
-actées en session** : (1) ajouter le numéro tiers sur `P_SOCIETECODEACTIVITETIERS` (ALTER additif,
-fiabilise le matching aujourd'hui en texte libre) ; (2) **pas de nouvel écran web GRF** — paramétrage
-laissé à l'écran Trésorerie WinForms existant, GRF web reste lecture seule sur ces tables ; (3) si
-aucune résolution (tiers non affecté) → **non bloquant**, `"(sans activité)"` (le code activité n'entre
-pas dans le XML DGI) ; (4) **`P_DECTVASOCTAXEACTIVITE` écartée du périmètre** — pas besoin, aucune
-réintroduction du mapping taxe→activité ; (5) le cas confirmé "même facture, deux activités
-différentes" est couvert par une **surcharge manuelle directe sur la ligne** (écran ② Vérifier &
-Intégrer, même pattern que la validation d'incohérence TASK-078), pas par une table de mapping ;
-(6) absence d'écran GRF pour peupler le référentiel = **dette tracée, non bloquante** (tous les clients
-actuels gardent WinForms installé). Seuls manques réels côté GRF : `LigneCandidate` ne porte pas
-`CodeActivite` jusqu'à l'export (gap déjà documenté `DeclarationWorkflowService.cs:1170-1182`,
-TASK-155) et `DM_LGTVA` n'a pas de colonne `CodeActivite` (persistance + édition manuelle au figeage).
+## 🐞 Régression sur TASK-161 (déjà APPROUVÉE) — le mapping « défaut par tiers » ne fonctionne jamais en réel (signalement PO 24/07/2026)
+Le PO a corrigé deux points sur TASK-161 : (1) `SCAT_NumeroTiers` n'existe pas en base (script jamais
+exécuté, comportement voulu) ; (2) `SCAT_ErpIntitule` **n'est pas l'intitulé du tiers** — investigation
+architecte (lecture directe et en lecture seule de `apbs-gr_winform`) confirme : c'est la valeur d'une
+colonne Sage *configurable par société* dédiée au **code activité** (`ErpColumnNameCodeActiviteMarroc`,
+documentée « Colonne Sage — code activité tiers (Maroc) »), pas le nom du tiers. Or GRF
+(`DeclarationWorkflowService.cs:816`) compare cette valeur au **vrai nom du tiers**
+(`c.Affectation.Tiers.Nom`) — deux domaines de valeurs disjoints qui ne peuvent structurellement jamais
+coïncider. **Conséquence : le niveau « défaut par tiers » de la cascade code activité (TASK-161) ne s'est
+jamais déclenché chez aucun client réel depuis sa livraison** — retombe silencieusement au niveau
+`CT_APE` ou à "". Non bloquant (le code activité n'entre pas dans le XML DGI) mais fonctionnalité
+« DONE » en réalité inerte.
 
 | # | Task | Objet | État |
 |---|---|---|---|
-| 1 | [TASK-161](TASKS/TASK-161-code-activite-defaut-tiers-surcharge-ligne.md) | Résolution en cascade : surcharge manuelle ligne > `P_SOCIETECODEACTIVITETIERS` (lecture seule) > colonne Sage > vide (non bloquant). Colonne `CodeActivite` ajoutée à `DM_LGTVA` (auto + éditable), comble le gap TASK-155/impacte le recap TASK-160. Aucune écriture Sage, aucun nouvel écran de paramétrage GRF. | 🎯 **prêt** — dépendance cross-applicatif à coordonner : l'ALTER numéro tiers n'a de valeur que si l'écran WinForms `UcSocieteCodeActiviteTiers` (`apbs-gr_winform`) est aussi mis à jour pour le capturer. |
+| 1 | [TASK-171](TASKS/TASK-171-cascade-code-activite-mapping-tiers-jamais-fonctionnel.md) | Trancher : (A) faire lire à GRF la même colonne Sage que `ErpColumnNameCodeActiviteMarroc` pour réparer ce niveau, ou (B) le retirer s'il fait doublon avec `CT_APE` déjà fonctionnel. Corriger aussi la doc `DONE_DETAIL/TASK-161*.md` qui affirme un fonctionnement non avéré. | ⏸️ **mise en attente (PO, 24/07/2026)** — ignorée pour le moment, à réévaluer selon les retours clients réels (non bloquant, aucun incident visible : le code activité n'entre pas dans le XML DGI). Ne pas inclure dans un prompt worker tant que ce point n'est pas rouvert explicitement. |
+
+## 🆕 Export Excel « factures à déclarer » : ajouter le n° de règlement (demande PO 23/07/2026)
+Demande PO : dans l'export Excel des factures à déclarer, ajouter le numéro de règlement. Analyse code
+(architecte) : la donnée existe déjà intégralement dans le modèle (`LigneDeclarationEnrichie.
+NumeroRapprochement`, = `RT_MOUVEMENT.MV_Numero`, déjà propagée sélection→figeage→persistance→DTO front)
+— **pur oubli d'affichage** dans `Declaration.Export.Excel.Exporter.cs`, qui ignore ce champ dans ses
+deux méthodes d'export (`CreerFeuilleDetail` de l'export de dépôt TASK-010/155, et
+`CreerFeuilleFacturesControle` de l'export de contrôle TASK-160, code dupliqué à l'identique). Aucune
+donnée manquante, aucun changement back requis.
+
+| # | Task | Objet | État |
+|---|---|---|---|
+| 1 | [TASK-162](TASKS/TASK-162-export-excel-ajout-numero-reglement.md) | Ajouter la colonne « N° Règlement » (`NumeroRapprochement`) dans les feuilles « Détail » (export de dépôt) et « Factures à déclarer » (export de contrôle) de `Exporter.cs`. | 🎯 **prêt** — risque quasi nul, donnée déjà validée end-to-end, écriture Excel seule modifiée. |
+
+## 🔎 Échec d'écriture cache de ventilation observé en prod — `Nom d'objet 'DM_VENTILATION_SAGE_CACHE' non valide` (signalement PO 23/07/2026, log 22:57:16)
+Log cité par le PO : `[VALO] EC_Id=24184 pièce FF260096 — échec écriture cache : Nom d'objet
+'DM_VENTILATION_SAGE_CACHE' non valide.` Diagnostic architecte (lecture code, pas d'accès à
+l'environnement source du log) :
+- **Non bloquant** : ce message vient d'un `catch` explicite autour du seul `UpsertEntries`
+  (`OrchestrateurDeclaration.cs:217-222`, pattern répété à 6 endroits pour isoler l'écriture cache du
+  reste du traitement) — la valorisation Sage/OM de la pièce **a réussi** (sinon le message serait
+  « échec écriture sentinelle d'erreur », pas « échec écriture cache »), seule l'écriture en cache a
+  échoué. Effet de bord : cette pièce sera **relue intégralement via OM/Sage à chaque cycle** tant que
+  le cache reste inutilisable (pas de perte de donnée déclarative, mais risque de contention/perf —
+  même famille de risque que celui déjà documenté ci-dessous pour TASK-156).
+- **Cause racine** — « Invalid object name » est l'erreur SQL Server levée quand la table n'existe pas
+  (ou pas sous ce nom) dans la base ciblée par `PersistenceConnection`. Le code C#
+  (`VentilationSageCacheRepository.cs`) référence `DM_VENTILATION_SAGE_CACHE` depuis TASK-118
+  (renommage `GRC_VENTILATION_SAGE_CACHE` → `DM_VENTILATION_SAGE_CACHE`), mais ce renommage n'est
+  appliqué que par une migration **idempotente mais manuelle** (`DeclarationTVA.sql`, section 1f,
+  `sp_rename` gardé par `IF OBJECT_ID(...)`) — exécutée via `sqlcmd` par un opérateur, **pas encore
+  automatique** (TASK-126, toujours à faire, dépend de TASK-115). Sur l'environnement qui a produit ce
+  log, soit ce script n'a jamais été rejoué depuis le déploiement du code TASK-118 (table encore nommée
+  `GRC_VENTILATION_SAGE_CACHE`, ou table de persistance jamais initialisée), soit la base pointée par
+  `PersistenceConnection` de cet environnement n'est simplement pas celle sur laquelle le script a été
+  exécuté. Impossible de trancher entre ces deux sans savoir de quel environnement provient ce log
+  (dev `DESKTOP-5BFKKEP`, où TASK-118 a bien rejoué la migration avec succès, ou un autre poste/client).
+- **Action immédiate recommandée (aucun code à changer)** : sur l'environnement d'où provient ce log,
+  rejouer `DeclarationTVA.sql` (section 1f) via `sqlcmd` contre la base `PersistenceConnection` réelle
+  de cet environnement — script idempotent, sans risque sur les données existantes (même principe que
+  TASK-065/118, déjà vérifié en conditions réelles). **Ceci est exactement le scénario que TASK-126
+  (exécution automatique du script par le setup) vise à éliminer** — cet incident réel en est une
+  preuve concrète, à prendre en compte si le PO réévalue la priorité de TASK-126 (actuellement bloquée
+  sur TASK-115).
+- Pas de nouvelle task de correction de code ouverte ici : aucun défaut applicatif identifié, uniquement
+  un script de migration non rejoué sur un environnement donné — action opérationnelle, pas
+  développement. Si le PO confirme que l'environnement concerné a bien la migration TASK-118 à jour et
+  que l'erreur persiste malgré tout, ce diagnostic serait à rouvrir (indiquerait alors une cause non
+  identifiée ici).
 
 ## 🐞 Popup « Colonnes » ouvert hors écran (signalement PO 23/07/2026, capture écran ① Sélection)
 Signalement PO : clic sur le bouton « Colonnes » (pied de grille, écran ① Sélection) → le popup de
@@ -741,7 +784,7 @@ contre `.\sql2022`/`GR_EMA_DISTRIBUTION`) — voir `DONE.md`.
 ### 📦 Déploiement
 | # | Task | Objet | État |
 |---|---|---|---|
-| 1 | [TASK-044](TASKS/TASK-044-deploiement-mono-service-mono-dossier.md) | **Déploiement mono-service / mono-dossier** : **un seul** service Windows (l'API) qui appelle tout (worker OM inclus) et sert le front, dans **un seul** dossier deploy. Socle déjà en place (front `wwwroot`, `WorkerExePath` relatif à l'exe, `logs/` à côté de l'exe). Reste : `publish.ps1` (build front + `dotnet publish` API + worker net48 → `deploy/`), `connections.json` de déploiement (chemins relatifs, secret hors dépôt), install service (compte Sage+SQL), `DOCS/DEPLOIEMENT.md`. | 🎯 **prêt** — indépendant de TASK-045. Aucune modif métier/worker. |
+| 1 | [TASK-044](DONE_DETAIL/TASK-044-deploiement-mono-service-mono-dossier.md) | **Déploiement mono-service / mono-dossier** : **un seul** service Windows (l'API) qui appelle tout (worker OM inclus) et sert le front, dans **un seul** dossier deploy. | ⚠️ **clôturée par décision PO (23/07/2026), risque assumé** — code source vérifié conforme (`WorkerExePath`/logs relatifs, front servi, `Deploy-All.ps1` existe) mais **sans VERIFY** : `connections.json.exemple` et mise à jour de `DOCS/DEPLOIEMENT.md` non livrés, aucune preuve runtime (service installé/démarré, endpoints testés). Voir `DONE.md` et `DONE_DETAIL/TASK-044_verify.md`. |
 | 2 | [TASK-116](DONE_DETAIL/TASK-116-fix-front-non-servi-racine-usedefaultfiles.md) | **Fix bloquant : front non servi sur `/` (404 en prod)** : `Program.cs:98` — `UseStaticFiles()` sans `UseDefaultFiles()` en amont, `GET /` renvoie 404 même `wwwroot` peuplé. Constaté en production 17/07/2026 pendant l'installation en cours. | ✅ **done** — 19/07/2026 (vérifié directement en code par l'architecte : `Program.cs:128-129` `UseDefaultFiles()`+`UseStaticFiles()` dans le bon ordre + `MapFallbackToFile`). Voir DONE.md. |
 | 3 | [TASK-115](DONE_DETAIL/TASK-115-setup-gui-winsw-port-parametrable.md) | **Setup GUI (WinForms) + service via WinSW-x64 + port paramétrable** : un seul exe (install **ou** mise à jour détectée automatiquement) qui saisit connexions SQL/JWT/SageOM/port via formulaire, écrit `connections.json`, installe/met à jour le service Windows via WinSW-x64. Port retiré de tout fichier de config à éditer à la main. | ✅ **done** — 23/07/2026 (approuvée PO après test réel d'installation sur 2 environnements : réserve n°1 (3 scénarios GUI) levée par la preuve terrain ; réserve n°3 (Sage OM) et login avec mot de passe réel confirmés/acceptés par le PO à la clôture ; gouvernance — absence de revue indépendante sur les 12 compléments auto-évalués — couverte par cette revue architecte de clôture). Voir `DONE.md` et `DONE_DETAIL/TASK-115_verify.md`. |
 

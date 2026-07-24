@@ -200,4 +200,9 @@ public sealed class FactureInterrogationDistincts
     // en LIKE (texte libre, cardinalité non bornée — décision documentée en VERIFY).
     public List<string> Numeros { get; set; } = new();
     public List<string> References { get; set; } = new();
+
+    // TASK-168 : signale que la liste ci-dessus (SANS terme de recherche) est tronquée par
+    // DistinctsTopBound — jamais une troncature silencieuse (le front doit inviter à affiner).
+    public bool NumerosTronque { get; set; }
+    public bool ReferencesTronque { get; set; }
 }

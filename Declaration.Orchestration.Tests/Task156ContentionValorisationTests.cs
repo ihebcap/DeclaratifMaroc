@@ -59,7 +59,7 @@ namespace Declaration.Orchestration.Tests
         public Task<ReglementRapprochementDistincts> GetReglementsRapprochementDistinctsAsync(int soId, DateTime dateDebut, DateTime dateFin) => throw NotUsed();
         public Task<IEnumerable<FactureInterrogationRow>> GetFacturesInterrogationAsync(int soId, DateTime dateDebut, DateTime dateFin, IReadOnlyList<string>? numero, string? fournisseur, IReadOnlyList<string>? reference, IReadOnlyList<string>? origines, IReadOnlyList<string>? statuts, int page, int size, string? sort) => throw NotUsed();
         public Task<int> GetFacturesInterrogationCountAsync(int soId, DateTime dateDebut, DateTime dateFin, IReadOnlyList<string>? numero, string? fournisseur, IReadOnlyList<string>? reference, IReadOnlyList<string>? origines, IReadOnlyList<string>? statuts) => throw NotUsed();
-        public Task<FactureInterrogationDistincts> GetFacturesInterrogationDistinctsAsync(int soId, DateTime dateDebut, DateTime dateFin) => throw NotUsed();
+        public Task<FactureInterrogationDistincts> GetFacturesInterrogationDistinctsAsync(int soId, DateTime dateDebut, DateTime dateFin, string? rechercheNumero = null, string? rechercheReference = null) => throw NotUsed();
         public Task TamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => throw NotUsed();
         public Task DetamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => throw NotUsed();
         public Task<HashSet<int>> GetEcIdsEnErreurAsync(int soId, IEnumerable<int> ecIds) => throw NotUsed();
@@ -87,8 +87,8 @@ namespace Declaration.Orchestration.Tests
         public Task<int?> GetDomaineCodeActiviteAsync(string codeActivite) => throw NotUsed();
         public Task<string?> GetDomaineLigneAsync(Guid ligneId) => throw NotUsed();
         public Task UpdateCodeActiviteLigneAsync(Guid ligneId, string codeActivite, string utilisateur) => throw NotUsed();
-        public Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(IEnumerable<Guid> ligneIds) => throw NotUsed();
-        public Task UpdateCodeActiviteBulkByIdsAsync(IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur) => throw NotUsed();
+        public Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(Guid declarationId, IEnumerable<Guid> ligneIds) => throw NotUsed();
+        public Task UpdateCodeActiviteBulkByIdsAsync(Guid declarationId, IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur) => throw NotUsed();
         public Task UpdateCodeActiviteBulkAsync(Guid declarationId, string domaine, string? filter, string codeActivite, string utilisateur) => throw NotUsed();
     }
 
@@ -217,7 +217,7 @@ namespace Declaration.Orchestration.Tests
         public Task<ReglementRapprochementDistincts> GetReglementsRapprochementDistinctsAsync(int soId, DateTime dateDebut, DateTime dateFin) => throw NotUsed();
         public Task<IEnumerable<FactureInterrogationRow>> GetFacturesInterrogationAsync(int soId, DateTime dateDebut, DateTime dateFin, IReadOnlyList<string>? numero, string? fournisseur, IReadOnlyList<string>? reference, IReadOnlyList<string>? origines, IReadOnlyList<string>? statuts, int page, int size, string? sort) => throw NotUsed();
         public Task<int> GetFacturesInterrogationCountAsync(int soId, DateTime dateDebut, DateTime dateFin, IReadOnlyList<string>? numero, string? fournisseur, IReadOnlyList<string>? reference, IReadOnlyList<string>? origines, IReadOnlyList<string>? statuts) => throw NotUsed();
-        public Task<FactureInterrogationDistincts> GetFacturesInterrogationDistinctsAsync(int soId, DateTime dateDebut, DateTime dateFin) => throw NotUsed();
+        public Task<FactureInterrogationDistincts> GetFacturesInterrogationDistinctsAsync(int soId, DateTime dateDebut, DateTime dateFin, string? rechercheNumero = null, string? rechercheReference = null) => throw NotUsed();
         public Task TamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => throw NotUsed();
         public Task DetamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => throw NotUsed();
         public Task<HashSet<int>> GetEcIdsEnErreurAsync(int soId, IEnumerable<int> ecIds) => throw NotUsed();
@@ -242,8 +242,8 @@ namespace Declaration.Orchestration.Tests
         public Task<int?> GetDomaineCodeActiviteAsync(string codeActivite) => throw NotUsed();
         public Task<string?> GetDomaineLigneAsync(Guid ligneId) => throw NotUsed();
         public Task UpdateCodeActiviteLigneAsync(Guid ligneId, string codeActivite, string utilisateur) => throw NotUsed();
-        public Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(IEnumerable<Guid> ligneIds) => throw NotUsed();
-        public Task UpdateCodeActiviteBulkByIdsAsync(IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur) => throw NotUsed();
+        public Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(Guid declarationId, IEnumerable<Guid> ligneIds) => throw NotUsed();
+        public Task UpdateCodeActiviteBulkByIdsAsync(Guid declarationId, IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur) => throw NotUsed();
         public Task UpdateCodeActiviteBulkAsync(Guid declarationId, string domaine, string? filter, string codeActivite, string utilisateur) => throw NotUsed();
     }
 

@@ -5,8 +5,9 @@ import { useColumnPrefs } from './useColumnPrefs';
 import { formatMoney } from './utils';
 import api from './api';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Loader2, CheckSquare, XSquare, Clock } from 'lucide-react';
+import { Loader2, CheckSquare, XSquare, Clock, RefreshCw } from 'lucide-react';
 import type { DomaineTVA } from './DeclarationStepper';
+import { relireDepuisSage } from './api';
 
 export function DomainGrid({ 
     declarationId, 
@@ -18,7 +19,8 @@ export function DomainGrid({
     onRowClick,
     columns,
     colsStorageKey,
-    codeActiviteOptions
+    codeActiviteOptions,
+    showResynchroniserAction
 }: {
     declarationId: string,
     domaine?: DomaineTVA,
@@ -35,7 +37,13 @@ export function DomainGrid({
     // TASK-161 : options de la liste déroulante pour toute colonne `editable` de clé 'codeActivite'
     // (référentiel P_DECTVAACTIVITE). Non fourni = colonne affichée en lecture seule même si
     // `editable` est posé (garde-fou : jamais un select vide silencieux).
-    codeActiviteOptions?: { value: string, label: string }[]
+    codeActiviteOptions?: { value: string, label: string }[],
+    // TASK-170 : colonne « Actions » optionnelle avec un bouton « Resynchroniser » (relecture Sage
+    // réelle, réutilise `ResynchroniserLigneAsync` déjà livré par TASK-167 via `relireDepuisSage`).
+    // Opt-in explicite par écran appelant — jamais affichée par défaut, pour ne pas la faire
+    // apparaître sur les 5 autres écrans partageant ce composant (① Sélection, Workstation,
+    // ProofModal, DeclarationFinalePanel, drill incohérence).
+    showResynchroniserAction?: boolean
 }) {
     const [data, setData] = useState<any[]>([]);
     const [total, setTotal] = useState(0);
@@ -245,6 +253,36 @@ export function DomainGrid({
         }
     };
 
+    // TASK-170 : relecture Sage réelle depuis la colonne « Actions », visible sur chaque ligne
+    // sans dépendre d'un statut d'anomalie (contrairement à DiagnosticModal.tsx/AffectationsDrill.tsx
+    // qui la conditionnent chacun à leur propre critère). Réutilisation stricte de `relireDepuisSage`
+    // (même appel que DiagnosticModal.tsx, TASK-167) — aucun second endpoint.
+    const [resynchronisant, setResynchronisant] = useState<Set<string>>(new Set());
+    const handleResynchroniser = async (row: any) => {
+        if (!row.ecId || row.ecId <= 0) return;
+        setResynchronisant(prev => new Set(prev).add(row.id));
+        try {
+            const { resolue } = await relireDepuisSage(declarationId, row.ecId);
+            if (resolue) {
+                showToast(`Ligne ${row.factureNumero || row.ecId} resynchronisée depuis Sage.`);
+                fetchPage();
+                onActionDone();
+            } else {
+                // TASK-167 §3 (garde-fou) : le motif réel reste affiché, bloquant — jamais de
+                // montant fabriqué. On informe simplement que la relecture n'a rien résolu.
+                showToast(`Relecture Sage effectuée pour ${row.factureNumero || row.ecId} — la ligne reste en anomalie (motif inchangé).`, 'warning');
+            }
+        } catch (e: any) {
+            // TASK-156 : un rejet 409 signifie qu'un verrou soId partagé est déjà pris par un
+            // autre traitement OM pour cette société — message serveur explicite.
+            const message = e?.response?.data?.Message || e?.response?.data?.message || 'Échec de la relecture Sage.';
+            showToast(message, 'error');
+        } finally {
+            setResynchronisant(prev => { const next = new Set(prev); next.delete(row.id); return next; });
+        }
+    };
+    const ACTIONS_COL_W = '140px';
+
     // Virtualization setup
     const rowVirtualizer = useVirtualizer({
         count: data.length,
@@ -286,6 +324,7 @@ export function DomainGrid({
     const gridMinWidth = Math.max(
         1000,
         (readonly ? 0 : parseInt(CHECKBOX_W, 10)) +
+            (showResynchroniserAction ? parseInt(ACTIONS_COL_W, 10) : 0) +
             visibleColumns.reduce((sum: number, col: ColumnDef) => sum + parseInt(colMaxWidth(col), 10), 0)
     );
 
@@ -410,6 +449,11 @@ export function DomainGrid({
                                 )}
                             </div>
                         ))}
+                        {showResynchroniserAction && (
+                            <div role="columnheader" style={{ flex: `0 0 ${ACTIONS_COL_W}`, width: ACTIONS_COL_W, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', fontWeight: 600 }}>
+                                Actions
+                            </div>
+                        )}
                     </div>
 
                     {/* Corps virtualisé */}
@@ -477,6 +521,27 @@ export function DomainGrid({
                                         </div>
                                         );
                                     })}
+                                    {showResynchroniserAction && (
+                                        <div role="cell" style={{ flex: `0 0 ${ACTIONS_COL_W}`, width: ACTIONS_COL_W, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                            {row.ecId > 0 && (
+                                                <button
+                                                    onClick={() => handleResynchroniser(row)}
+                                                    disabled={resynchronisant.has(row.id)}
+                                                    title="Relire cette ligne depuis Sage (ex. après correction d'un montant sur Sage)"
+                                                    style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                                        padding: '2px 9px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600,
+                                                        cursor: resynchronisant.has(row.id) ? 'default' : 'pointer',
+                                                        background: resynchronisant.has(row.id) ? 'var(--bg-secondary)' : 'white',
+                                                        border: '1px solid var(--border-color)', color: 'var(--text-primary)', whiteSpace: 'nowrap',
+                                                    }}
+                                                >
+                                                    <RefreshCw size={12} className={resynchronisant.has(row.id) ? 'animate-spin' : undefined} />
+                                                    Resynchroniser
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

@@ -106,9 +106,13 @@ public interface IDeclarationRepository
     /// Origines (EC_Type) distinctes, et depuis TASK-067B numéros de facture / références
     /// distincts, présents sur la période, pour le filtre liste. MÊME FromWhere que la liste
     /// principale (invariant TASK-040).
+    /// TASK-168 : <paramref name="rechercheNumero"/>/<paramref name="rechercheReference"/> optionnels
+    /// (préfixe, LIKE @x + '%') appliqués AVANT le TOP 500 — rend la recherche exhaustive au-delà
+    /// des 500 premières valeurs alphabétiques, sans retirer le plafond par défaut.
     /// </summary>
     Task<FactureInterrogationDistincts> GetFacturesInterrogationDistinctsAsync(
-        int soId, DateTime dateDebut, DateTime dateFin);
+        int soId, DateTime dateDebut, DateTime dateFin,
+        string? rechercheNumero = null, string? rechercheReference = null);
 
     // ─── Tampon DT_Id (verrou d'intégration déclaration, TASK-028) ─────────────
     /// <summary>
@@ -324,16 +328,22 @@ public interface IDeclarationRepository
     /// <summary>
     /// TASK-173 : domaines distincts portés par ces lignes (<c>DM_LGTVA.Domaine</c>) — sert à
     /// détecter une sélection mixte Encaissement/Décaissement avant une affectation en masse du
-    /// code activité (l'appelant bloque si le résultat contient plus d'une valeur).
+    /// code activité (l'appelant bloque si le résultat contient plus d'une valeur). Scopé par
+    /// <paramref name="declarationId"/> (correctif rejet architecte 24/07/2026) : un ligneId
+    /// n'appartenant pas à cette déclaration est ignoré, jamais pris en compte.
     /// </summary>
-    Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(IEnumerable<Guid> ligneIds);
+    Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(Guid declarationId, IEnumerable<Guid> ligneIds);
 
     /// <summary>
     /// TASK-173 : affectation en masse du code activité par liste explicite d'IDs — même
     /// traçabilité qui/quand que <see cref="UpdateCodeActiviteLigneAsync"/>, écriture SQL batch
-    /// (pas de boucle applicative), patron = <see cref="UpdateLignesEtatBulkByIdsAsync"/>.
+    /// (pas de boucle applicative), patron = <see cref="UpdateLignesEtatBulkByIdsAsync"/>. Scopé
+    /// par <paramref name="declarationId"/> (correctif rejet architecte 24/07/2026) : un ligneId
+    /// d'une autre déclaration n'est jamais écrit, même s'il figure dans la liste fournie —
+    /// empêche de contourner le garde-fou de clôture (vérifié uniquement sur la déclaration de
+    /// l'URL) via des IDs appartenant à une déclaration Clôturée.
     /// </summary>
-    Task UpdateCodeActiviteBulkByIdsAsync(IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur);
+    Task UpdateCodeActiviteBulkByIdsAsync(Guid declarationId, IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur);
 
     /// <summary>
     /// TASK-173 : affectation en masse du code activité par domaine + filtre texte (fournisseur/

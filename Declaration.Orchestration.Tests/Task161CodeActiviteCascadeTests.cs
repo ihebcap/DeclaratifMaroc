@@ -156,6 +156,92 @@ namespace Declaration.Orchestration.Tests
             Assert.False(ligne.CodeActiviteModifieManuellement);
         }
 
+        // ─── TASK-173 correctif (rejet architecte 24/07/2026) : le bulk par LigneIds ne doit
+        // jamais écrire sur une ligne n'appartenant pas à la déclaration de l'URL — sinon des
+        // IDs d'une autre déclaration (y compris Clôturée) contournent le garde-fou de clôture,
+        // qui ne vérifie que la déclaration de l'URL. ──────────────────────────────────────────
+
+        [Fact]
+        public async Task ModifierCodeActiviteLignesBulkAsync_LigneIdsDeclarationClotureeMalicieuse_AucuneEcritureNiErreur()
+        {
+            var declarationEnCoursId = Guid.NewGuid();
+            var declarationClotureeId = Guid.NewGuid();
+            var repo = new FakeDeclarationRepositoryTask161();
+            repo.Declarations[declarationEnCoursId] = new DeclarationEntete
+            {
+                Id = declarationEnCoursId, Statut = StatutDeclaration.EnCours, SocieteId = 1,
+                Exercice = 2026, Periode = 1, Numero = "TVA1-2026-01"
+            };
+            repo.Declarations[declarationClotureeId] = new DeclarationEntete
+            {
+                Id = declarationClotureeId, Statut = StatutDeclaration.Cloturee, SocieteId = 1,
+                Exercice = 2026, Periode = 1, Numero = "TVA1-2025-12"
+            };
+            // Ligne appartenant à la déclaration CLÔTURÉE — l'appelant fournit son Id dans
+            // LigneIds tout en visant l'URL de la déclaration EN COURS.
+            var ligneEtrangere = new LigneCandidate
+            {
+                Id = Guid.NewGuid(), DeclarationId = declarationClotureeId, Domaine = "Decaissement", CodeActivite = "80"
+            };
+            repo.Lignes.Add(ligneEtrangere);
+
+            var workflowService = new DeclarationWorkflowService(
+                repo, selectionService: null!, connectionFactory: null!, configuration: null!,
+                logger: NullLogger<DeclarationWorkflowService>.Instance);
+
+            // Aucune ligne ne correspond (pour cette déclaration) parmi les IDs fournis : le
+            // repli est le même que "aucune ligne trouvée", pas une écriture silencieuse.
+            await workflowService.ModifierCodeActiviteLignesBulkAsync(
+                declarationEnCoursId, new List<Guid> { ligneEtrangere.Id }, domaine: null, filter: null,
+                codeActivite: "93", utilisateur: "jdupont");
+
+            Assert.Equal("80", ligneEtrangere.CodeActivite);
+            Assert.False(ligneEtrangere.CodeActiviteModifieManuellement);
+            Assert.Null(ligneEtrangere.CodeActiviteModifiePar);
+        }
+
+        [Fact]
+        public async Task ModifierCodeActiviteLignesBulkAsync_SelectionMelangeeDeclarations_NeModifieQueLesLignesDeLUrl()
+        {
+            var declarationEnCoursId = Guid.NewGuid();
+            var declarationAutreId = Guid.NewGuid();
+            var repo = new FakeDeclarationRepositoryTask161();
+            repo.Declarations[declarationEnCoursId] = new DeclarationEntete
+            {
+                Id = declarationEnCoursId, Statut = StatutDeclaration.EnCours, SocieteId = 1,
+                Exercice = 2026, Periode = 1, Numero = "TVA1-2026-01"
+            };
+            repo.Declarations[declarationAutreId] = new DeclarationEntete
+            {
+                Id = declarationAutreId, Statut = StatutDeclaration.Cloturee, SocieteId = 1,
+                Exercice = 2025, Periode = 12, Numero = "TVA1-2025-12"
+            };
+            var ligneAppartenante = new LigneCandidate
+            {
+                Id = Guid.NewGuid(), DeclarationId = declarationEnCoursId, Domaine = "Decaissement", CodeActivite = "80"
+            };
+            var ligneEtrangere = new LigneCandidate
+            {
+                Id = Guid.NewGuid(), DeclarationId = declarationAutreId, Domaine = "Decaissement", CodeActivite = "80"
+            };
+            repo.Lignes.Add(ligneAppartenante);
+            repo.Lignes.Add(ligneEtrangere);
+
+            var workflowService = new DeclarationWorkflowService(
+                repo, selectionService: null!, connectionFactory: null!, configuration: null!,
+                logger: NullLogger<DeclarationWorkflowService>.Instance);
+
+            await workflowService.ModifierCodeActiviteLignesBulkAsync(
+                declarationEnCoursId, new List<Guid> { ligneAppartenante.Id, ligneEtrangere.Id }, domaine: null, filter: null,
+                codeActivite: "93", utilisateur: "jdupont");
+
+            Assert.Equal("93", ligneAppartenante.CodeActivite);
+            Assert.True(ligneAppartenante.CodeActiviteModifieManuellement);
+            // La ligne de l'autre déclaration reste intacte malgré sa présence dans LigneIds.
+            Assert.Equal("80", ligneEtrangere.CodeActivite);
+            Assert.False(ligneEtrangere.CodeActiviteModifieManuellement);
+        }
+
         // ─── Non-régression TASK-160 : le recap par activité doit refléter des valeurs réelles ──
 
         [Fact]
@@ -275,7 +361,7 @@ namespace Declaration.Orchestration.Tests
                 int soId, DateTime dateDebut, DateTime dateFin,
                 IReadOnlyList<string>? numero, string? fournisseur, IReadOnlyList<string>? reference,
                 IReadOnlyList<string>? origines, IReadOnlyList<string>? statuts) => throw new NotImplementedException();
-            public Task<FactureInterrogationDistincts> GetFacturesInterrogationDistinctsAsync(int soId, DateTime dateDebut, DateTime dateFin) => throw new NotImplementedException();
+            public Task<FactureInterrogationDistincts> GetFacturesInterrogationDistinctsAsync(int soId, DateTime dateDebut, DateTime dateFin, string? rechercheNumero = null, string? rechercheReference = null) => throw new NotImplementedException();
 
             public Task TamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => Task.CompletedTask;
             public Task DetamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => Task.CompletedTask;
@@ -325,17 +411,17 @@ namespace Declaration.Orchestration.Tests
                 return Task.CompletedTask;
             }
 
-            public Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(IEnumerable<Guid> ligneIds)
+            public Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(Guid declarationId, IEnumerable<Guid> ligneIds)
             {
                 var ids = ligneIds.ToHashSet();
-                IReadOnlyList<string> distincts = Lignes.Where(l => ids.Contains(l.Id)).Select(l => l.Domaine).Distinct().ToList();
+                IReadOnlyList<string> distincts = Lignes.Where(l => l.DeclarationId == declarationId && ids.Contains(l.Id)).Select(l => l.Domaine).Distinct().ToList();
                 return Task.FromResult(distincts);
             }
 
-            public Task UpdateCodeActiviteBulkByIdsAsync(IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur)
+            public Task UpdateCodeActiviteBulkByIdsAsync(Guid declarationId, IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur)
             {
                 var ids = ligneIds.ToHashSet();
-                foreach (var ligne in Lignes.Where(l => ids.Contains(l.Id)))
+                foreach (var ligne in Lignes.Where(l => l.DeclarationId == declarationId && ids.Contains(l.Id)))
                 {
                     ligne.CodeActivite = codeActivite;
                     ligne.CodeActiviteModifieManuellement = true;

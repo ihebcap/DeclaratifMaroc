@@ -1229,7 +1229,8 @@ public class DeclarationRepository : IDeclarationRepository
     }
 
     public async Task<FactureInterrogationDistincts> GetFacturesInterrogationDistinctsAsync(
-        int soId, DateTime dateDebut, DateTime dateFin)
+        int soId, DateTime dateDebut, DateTime dateFin,
+        string? rechercheNumero = null, string? rechercheReference = null)
     {
         using var connection = _connectionFactory.CreateGrfConnection();
         var p = new { so = soId, doDomaine = DoDomaineAchat, debut = dateDebut.Date, finExclude = dateFin.Date.AddDays(1) };
@@ -1245,21 +1246,38 @@ public class DeclarationRepository : IDeclarationRepository
         // dépendance à la sélection courante). Bornées (DistinctsTopBound) — mesure en VERIFY.
         var baseParams = FacturesParams(soId, dateDebut, dateFin, null, null, null, null, null);
 
-        var numeros = await connection.QueryAsync<string>(
+        // TASK-168 : recherche serveur appliquée AVANT le TOP {DistinctsTopBound} — rend la
+        // recherche exhaustive au-delà des 500 premières valeurs alphabétiques (le plafond reste
+        // un garde-fou anti-charge sur le picklist SANS recherche, jamais retiré).
+        var numeroSearch = string.IsNullOrWhiteSpace(rechercheNumero) ? null : rechercheNumero.Trim();
+        var referenceSearch = string.IsNullOrWhiteSpace(rechercheReference) ? null : rechercheReference.Trim();
+        var numerosParams = new DynamicParameters(baseParams);
+        numerosParams.Add("recherche", numeroSearch);
+        var referencesParams = new DynamicParameters(baseParams);
+        referencesParams.Add("recherche", referenceSearch);
+
+        var numeros = (await connection.QueryAsync<string>(
             $@"SELECT DISTINCT TOP {DistinctsTopBound} E.DO_Numero AS Value {FacturesFromWhere}
                AND E.DO_Numero IS NOT NULL AND E.DO_Numero <> ''
-               ORDER BY E.DO_Numero", baseParams);
+               AND (@recherche IS NULL OR E.DO_Numero LIKE @recherche + '%')
+               ORDER BY E.DO_Numero", numerosParams)).ToList();
 
-        var references = await connection.QueryAsync<string>(
+        var references = (await connection.QueryAsync<string>(
             $@"SELECT DISTINCT TOP {DistinctsTopBound} E.DO_Reference AS Value {FacturesFromWhere}
                AND E.DO_Reference IS NOT NULL AND E.DO_Reference <> ''
-               ORDER BY E.DO_Reference", baseParams);
+               AND (@recherche IS NULL OR E.DO_Reference LIKE @recherche + '%')
+               ORDER BY E.DO_Reference", referencesParams)).ToList();
 
         return new FactureInterrogationDistincts
         {
             Origines = origines.ToList(),
-            Numeros = numeros.ToList(),
-            References = references.ToList()
+            Numeros = numeros,
+            References = references,
+            // Troncature silencieuse interdite (Objectif §4) : uniquement pertinent pour la vue par
+            // défaut (sans recherche) — une recherche qui renvoie 500 résultats reste, elle, un vrai
+            // plafond anti-charge documenté (garde-fou), pas une troncature de la vue par défaut.
+            NumerosTronque = numeroSearch is null && numeros.Count == DistinctsTopBound,
+            ReferencesTronque = referenceSearch is null && references.Count == DistinctsTopBound
         };
     }
 
@@ -1599,19 +1617,31 @@ public class DeclarationRepository : IDeclarationRepository
             new { Id = ligneId.ToString(), CodeActivite = codeActivite, Utilisateur = utilisateur, Maintenant = DateTime.UtcNow });
     }
 
-    /// <summary>TASK-173 : domaines distincts portés par ces lignes — détecte une sélection mixte.</summary>
-    public async Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(IEnumerable<Guid> ligneIds)
+    /// <summary>
+    /// TASK-173 : domaines distincts portés par ces lignes — détecte une sélection mixte.
+    /// Scopé par <paramref name="declarationId"/> (correctif rejet architecte 24/07/2026) :
+    /// un ligneId n'appartenant pas à cette déclaration est ignoré (ne compte pas dans le
+    /// résultat), exactement comme s'il n'existait pas — jamais utilisé pour déterminer le
+    /// domaine effectif ni écrit par UpdateCodeActiviteBulkByIdsAsync ci-dessous.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(Guid declarationId, IEnumerable<Guid> ligneIds)
     {
         var ids = ligneIds.Select(g => g.ToString()).ToList();
         if (ids.Count == 0) return Array.Empty<string>();
         using var connection = _connectionFactory.CreatePersistenceConnection();
-        var sql = $"SELECT DISTINCT Domaine FROM DM_LGTVA WHERE Id IN ({string.Join(",", ids.Select(id => $"'{id}'"))})";
-        var rows = await connection.QueryAsync<string>(sql);
+        var sql = $"SELECT DISTINCT Domaine FROM DM_LGTVA WHERE DeclarationId = @DeclarationId AND Id IN ({string.Join(",", ids.Select(id => $"'{id}'"))})";
+        var rows = await connection.QueryAsync<string>(sql, new { DeclarationId = declarationId.ToString() });
         return rows.ToList();
     }
 
-    /// <summary>TASK-173 : affectation en masse du code activité par liste explicite d'IDs (SQL batch).</summary>
-    public async Task UpdateCodeActiviteBulkByIdsAsync(IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur)
+    /// <summary>
+    /// TASK-173 : affectation en masse du code activité par liste explicite d'IDs (SQL batch).
+    /// Scopé par <paramref name="declarationId"/> (correctif rejet architecte 24/07/2026) : sans
+    /// ce filtre, un ligneId appartenant à une autre déclaration (y compris Clôturée) aurait été
+    /// écrit malgré le garde-fou de clôture qui ne vérifie que la déclaration de l'URL — c'était
+    /// exactement le trou que ce nouvel endpoint dédié devait éviter.
+    /// </summary>
+    public async Task UpdateCodeActiviteBulkByIdsAsync(Guid declarationId, IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur)
     {
         var ids = ligneIds.Select(g => g.ToString()).ToList();
         if (ids.Count == 0) return;
@@ -1619,8 +1649,8 @@ public class DeclarationRepository : IDeclarationRepository
         var sql = $@"UPDATE DM_LGTVA
                      SET CodeActivite = @CodeActivite, CodeActiviteModifieManuellement = 1,
                          CodeActiviteModifiePar = @Utilisateur, CodeActiviteModifieLe = @Maintenant
-                     WHERE Id IN ({string.Join(",", ids.Select(id => $"'{id}'"))})";
-        await connection.ExecuteAsync(sql, new { CodeActivite = codeActivite, Utilisateur = utilisateur, Maintenant = DateTime.UtcNow });
+                     WHERE DeclarationId = @DeclarationId AND Id IN ({string.Join(",", ids.Select(id => $"'{id}'"))})";
+        await connection.ExecuteAsync(sql, new { DeclarationId = declarationId.ToString(), CodeActivite = codeActivite, Utilisateur = utilisateur, Maintenant = DateTime.UtcNow });
     }
 
     /// <summary>

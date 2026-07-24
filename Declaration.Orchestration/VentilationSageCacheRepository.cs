@@ -18,6 +18,17 @@ namespace Declaration.Orchestration
     /// </summary>
     public class VentilationSageCacheRepository : IVentilationSageCacheRepository
     {
+        // TASK-169 : borne les clauses IN(...) batch bien en dessous de la limite de 2100
+        // paramètres SQL Server, avec marge (une requête batch n'a qu'un seul autre paramètre).
+        private const int BatchChunkSize = 2000;
+
+        private static IEnumerable<List<int>> Chunks(IEnumerable<int> ids)
+        {
+            var list = ids.Where(id => id > 0).Distinct().ToList();
+            for (int i = 0; i < list.Count; i += BatchChunkSize)
+                yield return list.GetRange(i, Math.Min(BatchChunkSize, list.Count - i));
+        }
+
         // ──────────────────────────────────────────────────────────────────────
         // Lecture du cache
         // ──────────────────────────────────────────────────────────────────────
@@ -35,6 +46,36 @@ namespace Declaration.Orchestration
                 WHERE  SO_Id = @SoId AND EC_Id = @EcId";
             return conn.Query<VentilationSageCacheEntry>(sql, new { SoId = soId, EcId = ecId })
                        .ToList();
+        }
+
+        /// <summary>
+        /// TASK-169 : équivalent batch de <see cref="GetEntries"/> — un seul aller-retour SQL
+        /// (par chunk d'au plus <see cref="BatchChunkSize"/> EC_Id) au lieu d'un par EC_Id.
+        /// </summary>
+        public IReadOnlyDictionary<int, IReadOnlyList<VentilationSageCacheEntry>> GetEntriesBatch(
+            int soId, IEnumerable<int> ecIds, string persistenceConnectionString)
+        {
+            var result = new Dictionary<int, IReadOnlyList<VentilationSageCacheEntry>>();
+            var chunks = Chunks(ecIds).ToList();
+            if (chunks.Count == 0) return result;
+
+            using var conn = new SqlConnection(persistenceConnectionString);
+            conn.Open();
+            var sql = @"
+                SELECT SO_Id, EC_Id, Taux, BaseHT, MontantTva, TTC, CodeTaxe,
+                       TotalHT, TotalTva, TotalTtc,
+                       Token_MV_Id, Token_MV_Point, MotifErreur,
+                       BrutHT, BrutTva, BrutParafiscale, BrutTtc
+                FROM   DM_VENTILATION_SAGE_CACHE
+                WHERE  SO_Id = @SoId AND EC_Id IN @EcIds";
+
+            foreach (var chunk in chunks)
+            {
+                var rows = conn.Query<VentilationSageCacheEntry>(sql, new { SoId = soId, EcIds = chunk });
+                foreach (var group in rows.GroupBy(r => r.EC_Id))
+                    result[group.Key] = group.ToList();
+            }
+            return result;
         }
 
         // ──────────────────────────────────────────────────────────────────────
@@ -76,6 +117,52 @@ namespace Declaration.Orchestration
             return conn.QuerySingleOrDefault<PaiementToken>(sql, new { EcId = ecId });
         }
 
+        private class PaiementTokenParEcId
+        {
+            public int EC_Id { get; set; }
+            public int MV_Id { get; set; }
+            public int MV_Point { get; set; }
+        }
+
+        /// <summary>
+        /// TASK-169 : équivalent batch de <see cref="GetCurrentPaiementToken"/> — même critère
+        /// de sélection (TOP 1 par EC_Id, TASK-106 espèce comprise), reproduit ici par
+        /// <c>ROW_NUMBER() OVER (PARTITION BY EC_Id ORDER BY MV_Point DESC) = 1</c> au lieu d'un
+        /// <c>TOP 1</c> par EC_Id — un seul aller-retour SQL pour tous les EC_Id demandés.
+        /// </summary>
+        public virtual IReadOnlyDictionary<int, PaiementToken?> GetCurrentPaiementTokensBatch(
+            IEnumerable<int> ecIds, string grfConnectionString)
+        {
+            var result = new Dictionary<int, PaiementToken?>();
+            var chunks = Chunks(ecIds).ToList();
+            if (chunks.Count == 0) return result;
+
+            using var conn = new SqlConnection(grfConnectionString);
+            conn.Open();
+            var sql = @"
+                SELECT EC_Id, MV_Id, MV_Point FROM (
+                    SELECT
+                        A.EC_Id    AS EC_Id,
+                        M.MV_Id    AS MV_Id,
+                        M.MV_Point AS MV_Point,
+                        ROW_NUMBER() OVER (PARTITION BY A.EC_Id ORDER BY M.MV_Point DESC) AS Rang
+                    FROM RT_AFFECTATION A
+                    JOIN RT_MOUVEMENT   M ON M.MV_Id = A.MV_Id
+                    WHERE A.EC_Id IN @EcIds
+                      AND (M.MV_Point = 1
+                           OR (M.MV_Domaine = 1 AND M.MV_Type = 0))
+                ) x
+                WHERE Rang = 1";
+
+            foreach (var chunk in chunks)
+            {
+                var rows = conn.Query<PaiementTokenParEcId>(sql, new { EcIds = chunk });
+                foreach (var r in rows)
+                    result[r.EC_Id] = new PaiementToken { MV_Id = r.MV_Id, MV_Point = r.MV_Point };
+            }
+            return result;
+        }
+
         /// <summary>
         /// TASK-072 : montant en devise de l'échéance (RT_ECHEANCE.EC_MtDevise), source GRF
         /// indépendante du TTC lu côté Sage — sert de contrôle croisé.
@@ -87,6 +174,36 @@ namespace Declaration.Orchestration
 
             var sql = "SELECT EC_MtDevise FROM RT_ECHEANCE WHERE EC_Id = @EcId";
             return conn.QuerySingleOrDefault<decimal?>(sql, new { EcId = ecId });
+        }
+
+        private class EcheanceMontantRow
+        {
+            public int EC_Id { get; set; }
+            public decimal? EC_MtDevise { get; set; }
+        }
+
+        /// <summary>
+        /// TASK-169 : équivalent batch de <see cref="GetEcheanceMontantDevise"/> — un seul
+        /// <c>SELECT ... WHERE EC_Id IN (...)</c> au lieu d'un par EC_Id.
+        /// </summary>
+        public IReadOnlyDictionary<int, decimal?> GetEcheanceMontantsDeviseBatch(
+            IEnumerable<int> ecIds, string grfConnectionString)
+        {
+            var result = new Dictionary<int, decimal?>();
+            var chunks = Chunks(ecIds).ToList();
+            if (chunks.Count == 0) return result;
+
+            using var conn = new SqlConnection(grfConnectionString);
+            conn.Open();
+            var sql = "SELECT EC_Id, EC_MtDevise FROM RT_ECHEANCE WHERE EC_Id IN @EcIds";
+
+            foreach (var chunk in chunks)
+            {
+                var rows = conn.Query<EcheanceMontantRow>(sql, new { EcIds = chunk });
+                foreach (var r in rows)
+                    result[r.EC_Id] = r.EC_MtDevise;
+            }
+            return result;
         }
 
         /// <summary>

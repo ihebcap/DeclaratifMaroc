@@ -153,6 +153,12 @@ export function FactureInterrogation({ societeId, showToast }: { societeId: numb
   // WHERE/période que la liste principale — invariant TASK-040, aucune valeur infiltrable).
   const [numeroOptions, setNumeroOptions] = useState<string[]>([]);
   const [referenceOptions, setReferenceOptions] = useState<string[]>([]);
+  // TASK-168 : signale une troncature de la vue par défaut (sans recherche) côté back
+  // (DistinctsTopBound) — jamais silencieuse (cf. ExcelFilter, hint affiché).
+  const [numeroTronque, setNumeroTronque] = useState(false);
+  const [referenceTronque, setReferenceTronque] = useState(false);
+  const [numeroSearchLoading, setNumeroSearchLoading] = useState(false);
+  const [referenceSearchLoading, setReferenceSearchLoading] = useState(false);
 
   const [detailRow, setDetailRow] = useState<any | null>(null);
 
@@ -177,15 +183,42 @@ export function FactureInterrogation({ societeId, showToast }: { societeId: numb
         // TASK-067B : n° facture / référence — valeurs distinctes exactes de la période.
         setNumeroOptions(res.data.numero || []);
         setReferenceOptions(res.data.reference || []);
+        // TASK-168 : troncature de la vue par défaut, signalée explicitement au front.
+        setNumeroTronque(!!res.data.numeroTronque);
+        setReferenceTronque(!!res.data.referenceTronque);
       } catch {
         if (!cancelled) {
           setOrigineOptions([]);
           setNumeroOptions([]);
           setReferenceOptions([]);
+          setNumeroTronque(false);
+          setReferenceTronque(false);
         }
       }
     })();
     return () => { cancelled = true; };
+  }, [debouncedDebut, debouncedFin, societeId]);
+
+  // TASK-168 : recherche serveur (au-delà de la vue plafonnée par défaut) sur n° facture /
+  // référence — mêmes bornes debut/fin/soId, fusionnée (union) avec les options déjà chargées.
+  const handleRemoteSearchNumero = useCallback(async (term: string) => {
+    setNumeroSearchLoading(true);
+    try {
+      const res = await api.get('/factures/distincts', { params: { debut: debouncedDebut, fin: debouncedFin, soId: societeId, rechercheNumero: term } });
+      const found: string[] = res.data.numero || [];
+      setNumeroOptions(prev => Array.from(new Set([...prev, ...found])).sort());
+    } catch { /* échec de recherche : options déjà chargées inchangées, pas de régression */ }
+    finally { setNumeroSearchLoading(false); }
+  }, [debouncedDebut, debouncedFin, societeId]);
+
+  const handleRemoteSearchReference = useCallback(async (term: string) => {
+    setReferenceSearchLoading(true);
+    try {
+      const res = await api.get('/factures/distincts', { params: { debut: debouncedDebut, fin: debouncedFin, soId: societeId, rechercheReference: term } });
+      const found: string[] = res.data.reference || [];
+      setReferenceOptions(prev => Array.from(new Set([...prev, ...found])).sort());
+    } catch { /* échec de recherche : options déjà chargées inchangées, pas de régression */ }
+    finally { setReferenceSearchLoading(false); }
   }, [debouncedDebut, debouncedFin, societeId]);
 
   const fetchPage = useCallback(async () => {
@@ -417,6 +450,10 @@ export function FactureInterrogation({ societeId, showToast }: { societeId: numb
                       selectedValues={Array.isArray(filters[col.key]) ? filters[col.key] as string[] : []}
                       textValue={typeof filters[col.key] === 'string' ? filters[col.key] as string : ''}
                       onChange={(val) => handleFilterChange(col.key, val)}
+                      // TASK-168 : recherche serveur au-delà de la vue plafonnée (n° facture / référence).
+                      onRemoteSearch={col.key === 'factureNumero' ? handleRemoteSearchNumero : col.key === 'reference' ? handleRemoteSearchReference : undefined}
+                      remoteTruncated={col.key === 'factureNumero' ? numeroTronque : col.key === 'reference' ? referenceTronque : undefined}
+                      remoteLoading={col.key === 'factureNumero' ? numeroSearchLoading : col.key === 'reference' ? referenceSearchLoading : undefined}
                     />
                   </span>
                 )}

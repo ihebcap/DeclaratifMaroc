@@ -1,6 +1,133 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-07-24 (suite — TASK-172/173)
+
+### TASK-172 — Référentiel codes activité filtré par domaine + validation serveur (APPROUVÉE)
+- Suite de TASK-171 : `P_DECTVAACTIVITE.DTA_Domaine` (1=Encaissement/2=Décaissement) jamais lu par GRF, menu déroulant "Code activité" mélangeant les deux domaines quel que soit l'onglet actif.
+- Livré : filtre `domaine` optionnel sur `GetReferentielCodesActiviteAsync`/`GET /api/codes-activite` (mapping explicite, jamais silencieux) ; front rechargé par onglet ; garde-fou serveur au `PATCH .../code-activite` (décision PO §4) — `400` explicite si code inconnu du référentiel ou incompatible avec le domaine de la ligne, distinct du `409` clôture.
+- Vérifié indépendamment par l'architecte via lecture du diff réel (`c25e984`) — conforme point par point au VERIFY ; build/tests/DB/navigateur non rejoués (pas d'accès instance de test), confiance placée dans les preuves détaillées du VERIFY.
+- **Réserves non bloquantes** : `ApplicationException` générique réutilisée plutôt qu'un type dédié (point de goût) ; champ `Domaine` du DTO non consommé par le front à ce jour.
+
+### TASK-173 — Affectation en masse du code activité (REJETÉE)
+- Extension de `:bulk` (TASK-012) pour affecter un code activité à plusieurs lignes sélectionnées (par IDs ou domaine+filtre) — dépend de TASK-172.
+- **Rejet architecte** : le chemin par `LigneIds` (`GetDomainesDistinctsLignesAsync`/`UpdateCodeActiviteBulkByIdsAsync`) n'est pas scopé par `DeclarationId` — permet d'écrire sur des lignes d'une autre déclaration (y compris Clôturée) que celle désignée dans l'URL, contournant le garde-fou de clôture qui était la raison d'être explicite de ce nouvel endpoint. Non mentionné dans les 4 réserves du VERIFY. Correction requise avant re-soumission (voir `IN_PROGRESS/TASK-173-*`, VERIFY laissé en place).
+
+## 2026-07-24 (suite — correctif TASK-173)
+
+### TASK-173 — Correctif suite au rejet architecte (scope `DeclarationId` manquant)
+- Rejet confirmé fondé : le chemin `LigneIds` (`GetDomainesDistinctsLignesAsync`/`UpdateCodeActiviteBulkByIdsAsync`) permettait d'écrire sur des lignes d'une autre déclaration (y compris Clôturée) que celle de l'URL, contournant le garde-fou de clôture.
+- Correctif : les deux méthodes prennent `declarationId` en paramètre, requêtes SQL scopées par `AND DeclarationId = @DeclarationId` — une ligne d'une autre déclaration n'est désormais plus jamais comptée ni écrite, quel que soit son statut de clôture.
+- 2 tests unitaires ajoutés dans `Task161CodeActiviteCascadeTests.cs` reproduisant le cas adverse exact signalé (IDs d'une déclaration `Clôturée` + déclaration `EnCours` dans l'URL, et sélection mixte propriétaire/étrangère).
+- Build back/front OK, `dotnet test` : `Declaration.Orchestration.Tests` 179/179 (177 + 2 nouveaux), mêmes 2 échecs préexistants sans rapport ailleurs (inchangés). Détail complet dans `VERIFY/TASK-173_verify.md`.
+- Task et VERIFY laissés en place (`IN_PROGRESS/`, `VERIFY/`) — **en attente de revalidation par l'architecte**, non ré-approuvée par le développeur.
+
+## 2026-07-24 (suite — revalidation TASK-173)
+
+### TASK-173 — Revalidation architecte du correctif (APPROUVÉE)
+- Revue indépendante du correctif (l'agent développeur ayant appliqué le correctif a été interrompu par un quota avant la revalidation) : diff réel relu sur les 3 fichiers back concernés (`IDeclarationRepository.cs`, `DeclarationRepository.cs`, `DeclarationWorkflowService.cs`) — `declarationId` correctement propagé du service jusqu'au `WHERE` SQL des deux méthodes, aucune trace de l'ancienne signature non scopée.
+- `dotnet build DeclarationTVA.slnx` rejoué → 0 erreur. `dotnet test Declaration.Orchestration.Tests` rejoué → **179/179**, conforme à la revendication du VERIFY.
+- Corps des 2 nouveaux tests (`ModifierCodeActiviteLignesBulkAsync_LigneIdsDeclarationClotureeMalicieuse_AucuneEcritureNiErreur`, `ModifierCodeActiviteLignesBulkAsync_SelectionMelangeeDeclarations_NeModifieQueLesLignesDeLUrl`) lus intégralement — reproduisent fidèlement le cas adverse (ligne d'une déclaration `Clôturée` fournie dans `LigneIds` avec l'Id d'une déclaration `EnCours` dans l'URL), fake repository scopé de façon cohérente avec le repository réel.
+- Task/VERIFY déplacés vers `DONE_DETAIL/` (`TASK-173-affectation-masse-code-activite-par-filtre.md`, `TASK-173_verify.md`), entrée ajoutée à `DONE.md`.
+
+## 2026-07-24 (suite — TASK-174)
+
+### TASK-174 — Récap collecté/déductible par code activité, écran ③ Déclaration (APPROUVÉE)
+- Demande PO formulée simplement : l'export XML fonctionne (TASK-137/155), le code activité est affecté par ligne (TASK-161) — afficher un regroupement des totaux collecté (Encaissement) / déductible (Décaissement) par code activité.
+- Diagnostic préalable : `RecapParActivite` existait déjà (Excel uniquement, jamais exposé) ; patron d'exposition (`recapSource`/`recapTaux`) et composant `RecapSourceTable` directement réutilisables — confirmé indépendant de TASK-172/173.
+- Livré : `recapActivite` groupé `{CodeActivite, Domaine}` dans `GET {id}/checkup` (pure agrégation, aucun recalcul TVA) ; 2 tables Collecté/Déductible dans `DeclarationFinalePanel.tsx` réutilisant `RecapSourceTable` tel quel ; retrait de l'entrée de menu orpheline « Relevé de déductions » (`App.tsx`) et de son `Placeholder`, jamais relié à un écran réel.
+- Vérifié indépendamment : build back/front rejoués (0 erreur), tests rejoués (mêmes résultats exacts que le VERIFY, aucune régression), 2 requêtes SQL rejouées en base réelle `GR_EMA_DISTRIBUTION` (distinct `Domaine` = 2 valeurs seulement ; identité de somme sur `TVA1-2026-01` confirmée au centime près).
+- **Réserve non bloquante** : aucune ligne réelle ne porte de code activité non vide aujourd'hui (cf. TASK-171) — le regroupement multi-codes n'a pu être démontré que par construction, pas visuellement sur un cas réel ; à revérifier une fois des codes affectés.
+
+## 2026-07-24 (suite — TASK-170)
+
+### TASK-170 — Bouton « Resynchroniser » visible sur chaque ligne de l'écran ③ (APPROUVÉE)
+- Suite de TASK-167 : l'action de relecture Sage existait mais restait à 2-3 clics conditionnels à une anomalie déjà visible — aucune affordance directe pour une ligne saine dont la donnée Sage source a été corrigée après coup (cas rapporté par le PO).
+- Décision de périmètre (§2 : toutes les lignes vs anomalies seules) tranchée explicitement par le PO en session : toutes les lignes.
+- Livré : bouton « Toutes les lignes / Resynchroniser » + prop opt-in `showResynchroniserAction` sur `DomainGrid` (colonne Actions hors système de colonnes persisté), réutilisation stricte de `relireDepuisSage`/`ResynchroniserLigneAsync` (TASK-078/167) et du verrou `soId` (TASK-156) — aucun nouvel endpoint. `onActionDone` reconnecté à `setReloadToken` (corrige un no-op préexistant).
+- Vérifié en conditions réelles par le worker (Playwright, environnement réel `DESKTOP-5BFKKEP`/`GR_EMA_DISTRIBUTION`) : bouton sur 19/19 lignes de `TVA1-2026-01` y compris lignes saines, clic réel `FC2600035` → `200 {"resolue":true}`, 0 régression écran ①.
+- **Réserve non bloquante** : scénario exact « montant corrigé sur Sage au préalable → clic → montant à jour » non rejouable faute de facture pré-corrigée disponible en session — teste la logique déjà approuvée par TASK-167, pas le code de cette task ; à confirmer par le PO/comptable au premier cas réel.
+- **Anomalie annexe signalée, non corrigée, hors périmètre** : `.env.development` (`VITE_API_BASE=5018`) diverge du port Kestrel réel piloté par `connections.json` (5000) en dev local.
+
+## 2026-07-24 (suite — TASK-168 à 165 + campagne de test)
+
+### TASK-169 — Batch de valorisation : élimination du N+1 SQL par facture (APPROUVÉE)
+- Conclusion de la demande d'optimisation initiale de la session. `OrchestrateurDeclaration.Traiter` appelait jusqu'à 3 méthodes du cache de ventilation une fois par `EC_Id` distinct (chacune sa propre connexion SQL) — jusqu'à ~3×N requêtes pour N factures.
+- Livré : 3 méthodes batch additives sur `IVentilationSageCacheRepository`, chunkées, méthodes unitaires conservées (diagnostic par ligne inchangé). Logique de décision strictement identique (TASK-072/076/077/156).
+- Vérifié indépendamment : build 0 erreur, 177/177 tests dont 3 tests d'intégration SQL Server réels ; diff relu après élimination du bruit de fin de ligne — additif, 122 lignes réelles changées.
+
+### TASK-168 — Filtre « N° Facture »/« Référence » : recherche serveur au-delà de 500 valeurs (APPROUVÉE)
+- `DistinctsTopBound=500` plafonnait la liste sans recherche serveur — diagnostiqué pendant TASK-164 (`FC2600515`), jamais formalisé jusqu'ici.
+- Livré : recherche serveur par préfixe avant le `TOP 500` (plafond conservé), flags de troncature explicites, recherche front debouncée fusionnée avec la liste locale.
+- Vérifié : preuve réelle exacte sur le cas d'origine (`FC2600515`, introuvable avant, trouvé après).
+
+### TASK-167 — Bouton « Relire depuis Sage » sur l'écran ③ (APPROUVÉE)
+- Le mécanisme back existait déjà (TASK-078) mais restait inaccessible pour une ligne « Facture introuvable » — gap front + un 500 brut au lieu d'un 409 sur le verrou `soId`.
+- Livré : bloc « Relancer une lecture Sage réelle » (action manuelle explicite) + catch `InvalidOperationException` manquant côté contrôleur.
+- Vérifié visuellement au navigateur (réserve du VERIFY, comblée par l'architecte) : bouton fonctionnel, réponse honnête sur une incohérence Sage réelle.
+- **Découverte non corrigée** : `ResynchroniserLigneAsync` peut annoncer un succès trompeur (`resolue:true` sans rien écrire) quand l'OM renvoie 0 ligne de taxe sans erreur — trouvé pendant la campagne de test, documenté pour une future task.
+
+### TASK-166 — Montants à 6 décimales dans les avertissements de l'écran ④ (APPROUVÉE)
+- Correction de bug pure : `FormatMontantMessage` (2 décimales, `fr-FR`) appliqué aux 6 templates concernés.
+
+### TASK-165 — Simplification de l'écran ③ Vérifier & Intégrer, Option A (APPROUVÉE)
+- Verdict unique en tête, `RecapCard` seul porteur des chiffres de synthèse, sous-totaux/avertissements repliés par défaut, fusion visuelle « Lignes non valorisées »/`equilibre`.
+- Vérifié visuellement au navigateur (réserve du VERIFY, comblée par l'architecte) sur une déclaration propre et une déclaration bloquée — conforme, aucune régression.
+
+### CAMPAGNE — Test comptable réel `TVA1-2026-01→06` + génération/vérification XML de dépôt
+- `TVA1-2026-02/05/06` (0 anomalie) : clôture réelle → génération XML+Excel → vérification de conformité (CDC DGI) → réouverture immédiate. `TVA1-2026-01/03/04` : anomalies réelles confirmées (incohérences Sage authentiques + un bug de signalement), XML non généré, rien présenté comme résolu sans preuve.
+- Vérifié indépendamment : les 6 déclarations confirmées `EnCours` en base et au navigateur ; XML de `TVA1-2026-06` relu directement (conforme sur tous les points, total TVA vérifié au centime) ; sentinelles d'erreur de l'« incident auto-infligé » revérifiées intactes ; service `:5280` confirmé jamais touché.
+- Voir `DONE_DETAIL/CAMPAGNE-TEST-COMPTABLE-2026-01-06_verify.md`, `DONE_DETAIL/xml-genere/`, et l'entrée détaillée dans `DONE.md`.
+
+## 2026-07-24
+
+### TASK-164 — 197 lignes intégrées en anomalie « Facture introuvable » bloquant TVA1-2026-06 + Diagnostiquer étendu (APPROUVÉE)
+- **Contexte** : signalement PO parti de `FC2600515`/`FC2600517`, élargi par l'architecte en testant l'app réelle : 197/787 lignes de `TVA1-2026-06` bloquées avec le même motif, intégration impossible.
+- **Investigation exhaustive (197 lignes, pas un échantillon)** : 190 lignes = cache de ventilation périmé (Sage relu depuis avec succès) ; 7 lignes = jamais lues avec succès, documents Sage confirmés existants (`DO_Type=17`) mais cause exacte non élucidée au niveau COM/BSCIAL. Hypothèse TASK-159 (timeout batch) **réfutée** (dates incompatibles) ; artefact de contention plus probable, déjà résolu depuis par TASK-156.
+- **Correctif backend** : aucun (aucune cause de code prouvée) — 190 lignes réellement recalculées via l'endpoint existant `recalculer-depuis-cache` (190/190 succès, écriture réelle en base de production).
+- **Correctif front** : `declaration-tva-web/src/VerifierIntegrerPanel.tsx` — `estNonValorise(statutLigne, motif)` étend le tableau « lignes non valorisées »/bouton Diagnostiquer aux statuts 0/1 en présence d'un motif non vide (la cause réelle était plus large que l'hypothèse initiale `statutLigne=1` de la task — les 197 lignes sont en fait `statutLigne=0`). Garde back-end `RecalculerLigneDepuisCacheAsync` confirmée sûre pour une ligne `Integree` (refus 409 propre, jamais d'écriture).
+- **Implémenté en worker exceptionnel** (rôle inversé, même mode que TASK-101/075/114/117/118/122/160/161/163).
+- **Vérifié indépendamment par l'architecte** : build/tests rejoués (0 erreur, 175/175+54/54+3/3, `tsc` 0 erreur) ; requête SQL directe sur la vraie base confirmant l'état post-correctif exact (831 lignes/7 anomalies restantes, mêmes `EC_Id`) ; **vérification visuelle réelle au navigateur** (Playwright, instance de dev temporaire port 5299, même base réelle, service Windows `:5280` non touché) confirmant le bloc « 7 lignes non valorisées » et un clic réel sur « Diagnostiquer » ouvrant `DiagnosticModal` avec les données exactes, aucune erreur console — ce point était resté en réserve non couverte dans le VERIFY du worker, levé par cette revue.
+- **Réserves non bloquantes** : cause exacte des 7 lignes irrémédiables non élucidée (signalé au PO pour arbitrage/contact client, LAMI DISTRIBUTION/TOUCOMDIS) — déclaration reste bloquée pour ces 7 lignes, aucun contournement ; **correctif front pas encore déployé sur le service Windows réel `:5280`** (build antérieur au correctif) — nécessite `Deploy-All.ps1` complet + réinstallation du service, action distincte à planifier.
+- Voir `DONE_DETAIL/TASK-164-anomalies-facture-introuvable-lignes-integrees-diagnostiquer.md` et `DONE_DETAIL/TASK-164_verify.md`.
+
+### TASK-164 — ADDENDUM (24/07/2026) : les 7 lignes restantes résorbées, `TVA1-2026-06` à 0 anomalie
+- Suite à une question directe du PO sur `FC2502094`, investigation complémentaire de l'architecte : la cause « non élucidée COM/BSCIAL » du VERIFY original était incomplète — en réalité, aucun rafraîchissement Sage réel n'avait jamais été tenté sur la bonne fenêtre de dates (`DO_Date` facture, nov./déc. 2025, pas la date de règlement).
+- Une tentative de diagnostic direct par l'architecte a d'abord produit un faux signal (crash natif du worker) — identifié comme un artefact d'un build de test utilisant la mauvaise version d'interop Sage COM (v12 au lieu du v10 réellement utilisé en production) et corrigé avant toute conclusion.
+- Avec le binaire `v10` exact (celui du service réel), un rafraîchissement facture-first réel sur `2025-11-01→2025-12-31` a lu les 7 pièces avec succès. Après application de `recalculer-depuis-cache`, `TVA1-2026-06` passe de 7 à **0 anomalie bloquante** (vérifié base + navigateur, « Confirmer intégration » activé). Aucune clôture déclenchée par l'architecte.
+- Voir addendum complet dans `DONE.md`.
+
 ## 2026-07-23
+
+### TASK-163 — Export Excel : libellé métier du Mode Paiement au lieu du code Simpl-TVA brut (APPROUVÉE)
+- **Contexte** : signalement PO — la colonne « Mode Paiement » des exports Excel affiche un code brut (« 2 », « 3 »...) au lieu d'un intitulé métier.
+- **Cartographie architecte** : ce code est déjà le code Simpl-TVA (DGI) produit par `GrfEnums.MapperModePaiementSimplTVA` (à partir de `RT_MOUVEMENT.MV_Type`), le même envoyé tel quel dans le XML de dépôt légal. Risque signalé : cette table de mapping n'a jamais été vérifiée contre des données réelles (`TODO` d'origine), et un second mapping (`DeclarationXmlExporter.MapModePaiement`) documente une numérotation différente sans impact sur le XML actuel. **Décision PO actée (23/07/2026)** : afficher le libellé dès maintenant, risque assumé, vérification `MV_Type` laissée en réserve.
+- **Implémenté en worker exceptionnel** (rôle inversé, même mode que TASK-101/075/114/117/118/122/160/161).
+- **Livré** : `Declaration.Core/ModePaiementLibelle.cs` (fonction unique de libellé, fallback code brut si inconnu/vide/`null`), consommée par les deux méthodes de `Declaration.Export.Excel/Exporter.cs` pour la colonne « Mode Paiement » uniquement. Aucun changement de `GrfEnums.MapperModePaiementSimplTVA` ni de `DeclarationXmlExporter.MapModePaiement` — XML DGI strictement inchangé.
+- **Vérifié indépendamment par l'architecte** : diff de `GrfEnums.cs`/`DeclarationXmlExporter.cs` vide (confirmé intacts) ; aucune fuite de `ModePaiementLibelle` hors des 3 fichiers attendus ; `dotnet build DeclarationTVA.slnx` → 0 erreur ; `Declaration.Core.Tests` → 54/54 (11 nouveaux) ; `Declaration.Export.Excel.Tests` → 3/3.
+- **Réserve non bloquante** : `.xlsx` d'exemple demandé par la task non fourni dans le VERIFY — jugé non bloquant, les tests automatisés lisent déjà des cellules réelles d'un classeur généré (ClosedXML) pour les codes connus et le fallback ; disponible à la demande du PO.
+- **Réserve non bloquante déjà actée par la task** : mapping `MV_Type` → Simpl-TVA toujours non vérifié contre des données réelles (risque fiscal assumé par le PO) ; commentaire contradictoire de `DeclarationXmlExporter.MapModePaiement` non réconcilié (sans impact XML actuel).
+- Voir `DONE_DETAIL/TASK-163-export-excel-libelle-mode-paiement.md` et `DONE_DETAIL/TASK-163_verify.md`.
+
+### TASK-044 — Déploiement mono-service / mono-dossier (⚠️ CLÔTURÉE PAR DÉCISION PO, RISQUE ASSUMÉ, SANS VERIFY COMPLET)
+- **Contexte** : TASK ouverte de longue date, jamais soumise en `VERIFY/`. Le PO a demandé la clôture ("j'assume et je clôture") après que l'architecte a signalé un dossier de preuve incomplet et refusé une approbation normale.
+- **Vérifié réellement en code source par l'architecte** : `Declaration.API/Program.cs:128-129,162` (front servi sur `/` via `UseDefaultFiles()`+`UseStaticFiles()`+`MapFallbackToFile`, déjà corrigé sous TASK-116) ; `DeclarationWorkflowService.cs:739-743` (`WorkerExePath` résolu en relatif) ; `DeclarationWorkflowService.cs:132-136` (`logs/valorisation.log` relatif à l'exe) ; `Deploy-All.ps1` (racine) existe et couvre le script de publication demandé, fusionné avec TASK-115 (décision PO 18/07/2026).
+- **Non livré / non vérifié, assumé explicitement par le PO** : `connections.json.exemple` absent ; `DOCS/DEPLOIEMENT.md` non corrigé (affirme encore qu'aucun script de publication n'existe) ; **aucune preuve runtime** (pas de service installé/démarré hors arbo de build, pas de `GET /`/`GET /api/...` rejoués, pas de worker confirmé invoqué en déploiement réel).
+- **Décision tracée telle quelle** : clôture non présentée comme une vérification réussie. Risque résiduel explicite pour le prochain déploiement réel.
+- Voir `DONE_DETAIL/TASK-044-deploiement-mono-service-mono-dossier.md` et `DONE_DETAIL/TASK-044_verify.md`.
+
+### TASK-161 — Code activité TVA résolu en cascade : défaut par tiers (lecture seule) + surcharge manuelle par ligne (APPROUVÉE)
+- **Contexte** : demande PO — dans l'ancien applicatif (GénéraFi), le code taxe (taux) était lié à un code activité, modèle jugé très difficile à maintenir sur un paramétrage Sage déjà en place, en plus du fichier XML un tableau de correspondance manuel à remplir.
+- **Cartographie architecte** (`D:\_vibe\apbs-gr_winform\analayse\RAPPORT-CODE-ACTIVITE-TVA.md`) suivie de **5 décisions PO tranchées en session** : réutiliser `P_SOCIETECODEACTIVITETIERS`/`P_DECTVAACTIVITE` (déjà en base GRF, jamais branchés sur la TVA jusqu'ici) plutôt que recréer un paramétrage ; ajouter un numéro tiers stable sur `P_SOCIETECODEACTIVITETIERS` (ALTER additif, fiabilise le matching texte libre existant) ; **aucun nouvel écran web GRF** (paramétrage laissé à l'écran Trésorerie WinForms existant) ; **`P_DECTVASOCTAXEACTIVITE` explicitement écartée** (le mécanisme taxe→activité historique, source de la difficulté remontée par le PO) ; non bloquant si rien ne résout (le code activité n'entre pas dans le XML DGI) ; cas confirmé "même facture, deux activités différentes" couvert par une **surcharge manuelle par ligne** (écran ② Vérifier & Intégrer), pas par une table de mapping.
+- **Implémenté en worker exceptionnel** (rôle inversé, demande explicite PO/architecte 23/07/2026, cf. réserve `CLAUDE.md`, même mode que TASK-101/075/114/117/118/122/160).
+- **Backend livré** : `Declaration.Core.CodeActiviteResolver.Resoudre` — point unique de résolution en cascade (surcharge ligne > défaut tiers par numéro puis nom en repli > colonne Sage `CT_APE` déjà câblée > `""`), réutilisé par `SelectionExpliqueeEvaluator`/`SelectionnerAffectationsService` (niveaux 3/4) et `DeclarationWorkflowService.MapLignesCandidates` (niveaux 2/3/4 complets), évitant la divergence historique TASK-103/108/112. Repository : `GetMappingCodeActiviteTiersAsync`/`GetReferentielCodesActiviteAsync` (lecture seule stricte, `CreateGrfConnection()`) et `UpdateCodeActiviteLigneAsync` (seule écriture, cible `DM_LGTVA.Id`). 4 colonnes additives `DM_LGTVA` (`CodeActivite` + traçabilité de la surcharge manuelle, même pattern que TASK-078) comblant le gap déjà documenté TASK-155/TASK-160 (`LigneCandidate` sans `CodeActivite`, recap toujours à un bucket `""` unique).
+- **Endpoints** : `PATCH {id}/lignes/{ligneId}/code-activite` (cible la ligne précise, jamais l'`EC_Id` — une même facture peut porter deux activités sur deux lignes de taux différents ; 409 explicite si déclaration `Clôturée`, garde ajoutée volontairement au-delà de l'analogie TASK-078) ; `GET /api/codes-activite` (référentiel `P_DECTVAACTIVITE`).
+- **Front livré** : `DomainGrid.tsx` étendu de façon additive (`editable?`, `codeActiviteOptions`) — rendu conditionnel d'un `<select>` uniquement si la colonne le demande explicitement ; `VerifierIntegrerPanel.tsx` : nouveau bouton « Codes activité » ouvrant un drill dédié sur toutes les lignes du domaine actif, colonne éditable tant que la déclaration n'est pas intégrée/confirmée. Aucune des 4 autres grilles (① Sélection, Workstation, ProofModal, DeclarationFinalePanel) n'est affectée.
+- **Migration** : `DeclarationTVA.sql` (4 colonnes `DM_LGTVA`, idempotent, auto-exécuté par `Declaration.Setup`). Script séparé `P_SOCIETECODEACTIVITETIERS-numero-tiers.sql` (colonne `SCAT_NumeroTiers`, idempotent) **non fusionné, non auto-exécuté** — table possédée par `apbs-gr_winform`, à exécuter manuellement en coordination avec ce dépôt.
+- **Tests** : 9 `CodeActiviteResolverTests.cs` (cascade pure, 4 niveaux isolés) + 7 `Task161CodeActiviteCascadeTests.cs` (mapping tiers via `MapLignesCandidates`, cas confirmé PO — facture à 2 taux, une seule ligne modifiée manuellement — blocage après clôture, non-régression TASK-160 avec 2 `RecapParActivite` réels, persistance après figeage stable malgré un changement ultérieur du mapping tiers).
+- **Vérifié indépendamment par l'architecte** : `dotnet build`/`dotnet test` solution complète rejoués (0 erreur, 43/43+175/175+13/13+3/3, exactement les 2 échecs préexistants déjà documentés TASK-154/155/156/159/160, aucun nouveau) ; `npx tsc -b`/`npx vite build` front rejoués (0 erreur) ; lecture différentielle confirmant lecture seule stricte sur `P_DECTVAACTIVITE`/`P_SOCIETECODEACTIVITETIERS` (aucun INSERT/UPDATE/DELETE), aucune référence à `P_DECTVASOCTAXEACTIVITE`, aucune connexion Sage ouverte ; colonnes confirmées réellement présentes en base réelle (`sqlcmd`) ; script séparé confirmé non câblé à `Declaration.Setup` ; non-régression `apbs-gr_winform` confirmée (colonnes explicites dans `SocieteCodeActiviteTiersRepository1.cs`, aucun fichier de ce dépôt modifié).
+- **Réserve non bloquante identifiée en revue** : `PATCH .../code-activite` (comme `UpdateLigneEtat` préexistant) ne vérifie pas `EstSocieteAutorisee`, contrairement à `/generation`/`/fichiers/{type}`/`/export-controle` — gap hérité du pattern imité, pas une régression de cette task, à tracer séparément si le PO le souhaite.
+- **Réserves déjà documentées par le worker** : dépendance cross-applicatif sur `SCAT_NumeroTiers` (qui porte le correctif côté `apbs-gr_winform` reste ouvert) ; données réelles de paramétrage insuffisantes pour une démonstration de bout en bout sur facture réelle (mécanique vérifiée par ailleurs) ; aucune vérification HTTP live (service bloqué par la licence).
+- Voir `DONE_DETAIL/TASK-161-code-activite-defaut-tiers-surcharge-ligne.md` et `DONE_DETAIL/TASK-161_verify.md`.
 
 ### TASK-115 — Setup GUI (WinForms) + service Windows via WinSW-x64 + port paramétrable (APPROUVÉE)
 - **Contexte** : demande PO (17/07/2026) — installation/mise à jour client automatique via un exe unique avec formulaire (connexions SQL/JWT/SageOM/port), service Windows géré par WinSW (pas `sc.exe` brut), détection install vs mise à jour.

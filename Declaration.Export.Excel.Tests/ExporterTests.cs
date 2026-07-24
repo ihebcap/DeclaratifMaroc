@@ -26,7 +26,7 @@ namespace Declaration.Export.Excel.Tests
                         Tva = 200m,
                         Ttc = 1200m,
                         Prorata = 100m,
-                        ModePaiement = "Virement",
+                        ModePaiement = "3",
                         DatePaiement = new DateTime(2023, 1, 15),
                         DateFacture = new DateTime(2023, 1, 10),
                         Source = SourceAffectation.Decaissement
@@ -42,7 +42,7 @@ namespace Declaration.Export.Excel.Tests
                         Tva = 400m,
                         Ttc = 2400m,
                         Prorata = 100m,
-                        ModePaiement = "Chèque",
+                        ModePaiement = "2",
                         DatePaiement = new DateTime(2023, 1, 20),
                         DateFacture = new DateTime(2023, 1, 18),
                         Source = SourceAffectation.Decaissement
@@ -101,6 +101,10 @@ namespace Declaration.Export.Excel.Tests
                 Assert.Equal("Achat fournitures", wsDetail.Cell(2, 2).Value.ToString());
                 Assert.Equal("Fournisseur A", wsDetail.Cell(2, 3).Value.ToString());
                 Assert.Equal("F-002", wsDetail.Cell(3, 1).Value.ToString());
+
+                // TASK-163 : colonne "Mode Paiement" (12) affiche le libellé métier, jamais le code brut
+                Assert.Equal("Virement", wsDetail.Cell(2, 12).Value.ToString());
+                Assert.Equal("Chèque", wsDetail.Cell(3, 12).Value.ToString());
 
                 var wsRecap = workbook.Worksheet("Récap");
                 Assert.NotNull(wsRecap);
@@ -162,7 +166,7 @@ namespace Declaration.Export.Excel.Tests
                         Tva = 200m,
                         Ttc = 1200m,
                         Prorata = 100m,
-                        ModePaiement = "Virement",
+                        ModePaiement = "9",
                         DatePaiement = new DateTime(2026, 7, 15),
                         DateFacture = new DateTime(2026, 7, 10),
                         Source = SourceAffectation.Decaissement
@@ -208,6 +212,9 @@ namespace Declaration.Export.Excel.Tests
             Assert.Equal("N° Facture", wsFactures.Cell(1, 1).Value.ToString());
             Assert.Equal("F-001", wsFactures.Cell(2, 1).Value.ToString());
             Assert.Equal(1000m, (decimal)wsFactures.Cell(2, 7).Value.GetNumber());
+
+            // TASK-163 : code Simpl-TVA inconnu ("9") -> fallback code brut tel quel, jamais d'exception
+            Assert.Equal("9", wsFactures.Cell(2, 12).Value.ToString());
 
             var wsDetailTva = workbook.Worksheet("Détail TVA");
             Assert.Equal("Totaux par taux", wsDetailTva.Cell(1, 1).Value.ToString());

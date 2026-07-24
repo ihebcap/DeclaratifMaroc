@@ -3,18 +3,58 @@
 > Dépend de TASK-172 (livrée dans le même lot, cf. `VERIFY/TASK-172_verify.md`) — le sélecteur de code
 > activité de l'action de masse réutilise le même référentiel filtré par domaine.
 
+## Correctif suite au rejet architecte (24/07/2026)
+
+**Rejet reçu** : le chemin `LigneIds` (`GetDomainesDistinctsLignesAsync`/`UpdateCodeActiviteBulkByIdsAsync`)
+n'était pas scopé par `DeclarationId` — seul `WHERE Id IN (...)` filtrait. Un ligneId appartenant à une
+**autre** déclaration (y compris `Clôturée`) était donc pris en compte pour déterminer le domaine effectif
+et **écrit** par le bulk, sans jamais passer par le garde-fou de clôture (qui ne vérifie que
+`declaration.Statut` de la déclaration de l'URL). C'était exactement le trou que ce nouvel endpoint dédié
+devait éviter, et il n'était pas couvert par les 4 réserves déjà documentées ci-dessous.
+
+**Correction appliquée** :
+- `IDeclarationRepository.GetDomainesDistinctsLignesAsync` et `.UpdateCodeActiviteBulkByIdsAsync` prennent
+  désormais un premier paramètre `Guid declarationId` explicite.
+- `DeclarationRepository` : les deux requêtes SQL ajoutent `AND DeclarationId = @DeclarationId` — un
+  ligneId d'une autre déclaration ne compte plus dans le calcul du domaine effectif et n'est plus jamais
+  écrit par l'`UPDATE`, quel que soit son statut de clôture.
+- `DeclarationWorkflowService.ModifierCodeActiviteLignesBulkAsync` passe `declarationId` (celui de l'URL,
+  déjà validé non-`Cloturee` par la garde existante) aux deux appels.
+- Les 16 fakes `IDeclarationRepository` des tests ont été mis à jour ; `FakeDeclarationRepositoryTask161`
+  (le seul avec une implémentation réelle, pas un stub) filtre désormais lui aussi par
+  `l.DeclarationId == declarationId`, cohérent avec les autres méthodes du même fake déjà scopées ainsi
+  (`GetLignesAsync`/`CountLignesAsync`/`UpdateCodeActiviteBulkAsync`).
+- **2 nouveaux tests de non-régression** ajoutés dans `Task161CodeActiviteCascadeTests.cs` reproduisant
+  exactement le cas adverse signalé par l'architecte : `LigneIds` contenant l'Id d'une ligne d'une
+  déclaration `Clôturée` distincte, appelé avec l'Id de la déclaration `EnCours` dans l'URL —
+  `ModifierCodeActiviteLignesBulkAsync_LigneIdsDeclarationClotureeMalicieuse_AucuneEcritureNiErreur`
+  (aucune écriture, aucune exception — même repli que « aucune ligne trouvée ») et
+  `ModifierCodeActiviteLignesBulkAsync_SelectionMelangeeDeclarations_NeModifieQueLesLignesDeLUrl`
+  (sélection mixte propriétaire+étrangère : seule la ligne de la déclaration de l'URL est modifiée).
+  Ce test unitaire remplace la vérification en base réelle demandée (« rejouer le test de clôture sur le
+  chemin LigneIds ») — comme documenté en réserve #2 avant correctif, aucune déclaration `Clôturée`
+  n'existe sur la base de ce poste pour une vérification en conditions réelles ; le test unitaire
+  reproduit fidèlement le scénario (deux déclarations distinctes, l'une `Cloturee`, l'autre `EnCours`,
+  lignes réparties entre les deux).
+- `dotnet build` : 0 erreur. `dotnet test` : `Declaration.Orchestration.Tests` **179/179** (177 + 2
+  nouveaux), mêmes 2 échecs préexistants sans rapport (`Declaration.Selection.Tests`,
+  `Declaration.Controle.Tests`, cf. section Tests ci-dessous, inchangés).
+
 ## Périmètre livré
 
 1. **`IDeclarationRepository`** (`Declaration.Application/Interfaces/IDeclarationRepository.cs`) : 5
    nouvelles méthodes — `GetDomaineCodeActiviteAsync`/`GetDomaineLigneAsync` (partagées avec TASK-172,
    §4), `GetDomainesDistinctsLignesAsync`, `UpdateCodeActiviteBulkByIdsAsync`,
    `UpdateCodeActiviteBulkAsync`.
-2. **`DeclarationRepository`** : `UpdateCodeActiviteBulkByIdsAsync` (UPDATE batch `WHERE Id IN (...)`)
-   et `UpdateCodeActiviteBulkAsync` (UPDATE batch `WHERE DeclarationId=@... AND Domaine=@... [AND
+2. **`DeclarationRepository`** : `UpdateCodeActiviteBulkByIdsAsync` (UPDATE batch `WHERE DeclarationId=@...
+   AND Id IN (...)` — scope `DeclarationId` ajouté par le correctif ci-dessus) et
+   `UpdateCodeActiviteBulkAsync` (UPDATE batch `WHERE DeclarationId=@... AND Domaine=@... [AND
    filtre facture/tiers]`) — **écriture SQL batch unique dans les deux cas, aucune boucle
    applicative**, patron strictement calqué sur `UpdateLignesEtatBulkByIdsAsync`/
-   `UpdateLignesEtatBulkAsync` (TASK-012) déjà en place pour l'État. `GetDomainesDistinctsLignesAsync`
-   fait un `SELECT DISTINCT Domaine ... WHERE Id IN (...)` sur `DM_LGTVA`.
+   `UpdateLignesEtatBulkAsync` (TASK-012) déjà en place pour l'État (à la différence, après correctif,
+   que le chemin par IDs est désormais scopé par déclaration — contrairement à son homologue État, cf.
+   réserve). `GetDomainesDistinctsLignesAsync` fait un `SELECT DISTINCT Domaine ... WHERE
+   DeclarationId=@... AND Id IN (...)` sur `DM_LGTVA`.
 3. **`DeclarationWorkflowService.ModifierCodeActiviteLignesBulkAsync`** : même garde de clôture que le
    PATCH unitaire (`InvalidOperationException` → 409, reproduite explicitement, pas de raccourci par le
    contrôleur direct-vers-repository comme le fait l'`:bulk` État existant — cf. réserve ci-dessous) ;
@@ -65,20 +105,21 @@
 
 - `dotnet build DeclarationTVA.slnx` → **0 erreur** (mêmes 6 avertissements préexistants que TASK-172,
   sans rapport).
-- `dotnet test DeclarationTVA.slnx` : mêmes résultats que documentés dans `VERIFY/TASK-172_verify.md`
-  (`Declaration.Orchestration.Tests` 177/177, `Declaration.Core.Tests` 54/54, `Declaration.Export.Xml.
-  Tests` 13/13, `Declaration.Export.Excel.Tests` 3/3 ; `Declaration.Selection.Tests` 58/59 et
-  `Declaration.Controle.Tests` 1/2 — 2 échecs préexistants sans rapport, déjà documentés dans des VERIFY
-  antérieurs, cf. TASK-172). Les 15 fakes `IDeclarationRepository` du dossier de tests ont été complétés
-  avec les 5 nouvelles méthodes d'interface (13 stubs mécaniques `Task.CompletedTask`/liste vide + 2
+- `dotnet test DeclarationTVA.slnx` (état post-correctif) : `Declaration.Orchestration.Tests`
+  **179/179** (177 initiaux + 2 nouveaux tests de non-régression du correctif), `Declaration.Core.Tests`
+  54/54, `Declaration.Export.Xml.Tests` 13/13, `Declaration.Export.Excel.Tests` 3/3 ;
+  `Declaration.Selection.Tests` 58/59 et `Declaration.Controle.Tests` 1/2 — mêmes 2 échecs préexistants
+  sans rapport (login SQL Windows / déclaration GRFN de test absente), déjà documentés dans des VERIFY
+  antérieurs, cf. TASK-172. Les 16 fakes `IDeclarationRepository` du dossier de tests ont été complétés
+  avec les 5 nouvelles méthodes d'interface (14 stubs mécaniques `Task.CompletedTask`/liste vide + 2
   fakes enrichis avec un comportement réel : `Task156ContentionValorisationTests` en `throw NotUsed()`
   cohérent avec le reste du fichier, et `Task161CodeActiviteCascadeTests.FakeDeclarationRepositoryTask161`
   avec une implémentation réelle contre sa liste `Lignes` en mémoire, car ce fake est directement
   exercé par `ModifierCodeActiviteLigneAsync` dans des tests existants désormais soumis à la nouvelle
   validation de domaine TASK-172 §4 — sans cette mise à jour réaliste, ces tests auraient
   échoué). **Aucun test existant modifié dans son intention** — uniquement des fakes complétés pour
-  satisfaire l'interface.
-- Front : `npx tsc -b` → 0 erreur. `npx vite build` → 0 erreur.
+  satisfaire l'interface, plus les 2 nouveaux tests dédiés au correctif (cf. section correctif ci-dessus).
+- Front : `npx tsc -b` → 0 erreur. `npx vite build` → 0 erreur (aucun changement front dans le correctif).
 
 ## Vérifié indépendamment en conditions réelles
 
@@ -127,6 +168,10 @@ Même instance de test que TASK-172 (`connections.json` local du build, port 529
       `DM_ENTTVA` sont `Statut=0`/EnCours) ; couvert par les tests unitaires existants
       (`Task161CodeActiviteCascadeTests.ModifierCodeActiviteLigne_DeclarationCloturee_RefuseLaModification`,
       logique de garde identique réutilisée par le chemin bulk, non dupliquée).
+- [x] **Cas adverse** (ajouté au correctif du 24/07/2026) : des `LigneIds` désignant des lignes d'une
+      **autre** déclaration (y compris `Clôturée`) ne sont ni comptées ni écrites, quel que soit le statut
+      de cette autre déclaration — `GetDomainesDistinctsLignesAsync`/`UpdateCodeActiviteBulkByIdsAsync`
+      scopés par `DeclarationId` de l'URL, vérifié par 2 tests dédiés (cf. section correctif).
 - [x] Sélecteur de code activité de l'action de masse ne propose que les codes du domaine concerné —
       hérite directement de `codeActiviteOptions` (TASK-172, déjà vérifié au navigateur dans son
       propre VERIFY).
@@ -141,9 +186,11 @@ Même instance de test que TASK-172 (`connections.json` local du build, port 529
 1. **Incohérence pré-existante signalée, non corrigée** : l'endpoint État `POST {id}/lignes:bulk` n'a
    aucune garde de clôture (bypass du workflow service) — voir « Décisions actées » ci-dessus. TASK-173
    n'introduit pas ce défaut mais ne le corrige pas non plus (hors périmètre des fichiers listés).
-2. Garde de clôture du chemin bulk code activité **non rejouée en conditions réelles** faute de
-   déclaration `Clôturée` disponible sur ce poste — couverte uniquement par le test unitaire existant
-   (logique de garde partagée avec le PATCH unitaire, pas de code spécifique au bulk pour ce point).
+2. Garde de clôture du chemin bulk code activité (déclaration de l'URL elle-même `Clôturée`, ainsi que
+   le cas adverse cross-déclaration corrigé le 24/07/2026) **non rejouée en conditions réelles** faute de
+   déclaration `Clôturée` disponible sur ce poste — couverte par tests unitaires (garde partagée avec le
+   PATCH unitaire pour le premier cas ; 2 tests dédiés ajoutés au correctif pour le second, cf. section
+   correctif en tête de ce document).
 3. Le clic réel du bouton « Affecter » **n'a pas été rejoué au navigateur** (choix délibéré pour éviter
    une seconde mutation de données réelles à restaurer en plus des tests API directs déjà effectués et
    vérifiés bout-en-bout sur les mêmes lignes) — seule l'apparition du contrôle UI a été vérifiée à
@@ -156,6 +203,10 @@ Même instance de test que TASK-172 (`connections.json` local du build, port 529
 Conforme au périmètre et aux garde-fous de la TASK, dépendance TASK-172 respectée (livrée dans le même
 lot, sélecteur de code déjà filtré par domaine). Écriture SQL batch confirmée (pas de boucle
 applicative), traçabilité qui/quand identique à l'unitaire, blocage domaine mixte vérifié en conditions
-réelles. Deux réserves non bloquantes documentées ci-dessus (garde de clôture bulk non rejouée faute de
-donnée, incohérence pré-existante sur l'endpoint État frère) — aucune n'empêche la validation du
-périmètre livré par cette task.
+réelles. **Correctif du 24/07/2026 appliqué** suite au rejet architecte : le chemin `LigneIds` est
+désormais scopé par `DeclarationId`, empêchant toute écriture cross-déclaration (et donc tout
+contournement du garde-fou de clôture via des IDs étrangers) — vérifié par 2 nouveaux tests unitaires
+dédiés, build et suite de tests complète repassés (179/179 sur `Declaration.Orchestration.Tests`, mêmes 2
+échecs préexistants sans rapport ailleurs). Deux réserves non bloquantes restent documentées ci-dessus
+(garde de clôture bulk non rejouée en conditions réelles faute de donnée `Clôturée` sur ce poste,
+incohérence pré-existante sur l'endpoint État frère) — resoumis pour revue architecte.

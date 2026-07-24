@@ -107,12 +107,17 @@ public class FacturesController : ControllerBase
     /// Le statut est un domaine fixe à 3 valeurs (front). Depuis TASK-067B, expose également les
     /// numéros de facture et références distincts (colonnes passées en filterType 'list'), calculés
     /// sur le MÊME WHERE/période que la liste principale (invariant TASK-040). Lecture seule.
+    /// TASK-168 : <paramref name="rechercheNumero"/>/<paramref name="rechercheReference"/> optionnels
+    /// rendent la recherche exhaustive au-delà du plafond (`numeroTronque`/`referenceTronque` signale
+    /// une troncature de la vue par défaut, jamais silencieuse).
     /// </summary>
     [HttpGet("distincts")]
     public async Task<IActionResult> GetDistincts(
         [FromQuery] DateTime? debut,
         [FromQuery] DateTime? fin,
-        [FromQuery] int soId)
+        [FromQuery] int soId,
+        [FromQuery] string? rechercheNumero = null,
+        [FromQuery] string? rechercheReference = null)
     {
         if (soId <= 0)
             return BadRequest(new { Message = "'soId' est obligatoire." });
@@ -121,13 +126,16 @@ public class FacturesController : ControllerBase
         if (!PeriodeValide(debut.Value, fin.Value, out var erreurPeriode))
             return BadRequest(new { Message = erreurPeriode });
 
-        var d = await _repository.GetFacturesInterrogationDistinctsAsync(soId, debut.Value, fin.Value);
+        var d = await _repository.GetFacturesInterrogationDistinctsAsync(
+            soId, debut.Value, fin.Value, rechercheNumero, rechercheReference);
 
         return Ok(new
         {
             Origines = d.Origines.Select(t => new { code = t, libelle = ReglementRapprochementRow.LibelleEcType(t) }),
             Numero = d.Numeros,
-            Reference = d.References
+            Reference = d.References,
+            NumeroTronque = d.NumerosTronque,
+            ReferenceTronque = d.ReferencesTronque
         });
     }
 

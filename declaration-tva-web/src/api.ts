@@ -86,3 +86,12 @@ export async function recalculerLigneDepuisCache(declarationId: string, ecId: nu
   const res = await api.post(`/declarations/${declarationId}/lignes/recalculer-depuis-cache`, { ecId });
   return res.data;
 }
+
+// TASK-167 : relit VRAIMENT Sage (OM) pour cette seule pièce (EC_Id) — action manuelle explicite,
+// distincte du recalcul depuis cache ci-dessus (qui ne relit jamais Sage). Même endpoint que la
+// resynchronisation TASK-078 (déjà générique), sous le verrou soId partagé (TASK-156) : un appel
+// concurrent pour la même société est rejeté en 409 (message explicite renvoyé par le serveur).
+export async function relireDepuisSage(declarationId: string, ecId: number): Promise<{ resolue: boolean }> {
+  const res = await api.post(`/declarations/${declarationId}/lignes/resynchroniser`, { ecId });
+  return { resolue: !!res.data?.resolue };
+}

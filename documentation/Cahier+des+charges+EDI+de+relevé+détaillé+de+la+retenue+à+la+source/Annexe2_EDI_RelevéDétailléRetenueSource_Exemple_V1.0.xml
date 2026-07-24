@@ -1,0 +1,82 @@
+﻿<DeclarationReleveRetenueSource>
+	<identifiantFiscal>1844</identifiantFiscal>
+	<annee>2024</annee>
+	<periode>3</periode>
+	<regime>2</regime>
+	<releveRetenuSources>
+		<rrs>
+			<refTypClt>1</refTypClt>
+			<refNatOpt>4</refNatOpt>
+			<numFacture>1111</numFacture>
+			<dateOperation>2024-07-01</dateOperation>
+			<datePaiement>2024-07-12</datePaiement>
+			<montantHt>1000</montantHt>
+			<tauxTva>20</tauxTva>
+			<tauxRetenu>75</tauxRetenu>
+			<refF>
+				<nom>DGI</nom>
+			</refF>
+		</rrs>
+		<rrs>
+			<refTypClt>2</refTypClt>
+			<refNatOpt>5</refNatOpt>
+			<numFacture>2222</numFacture>
+			<dateOperation>2024-07-09</dateOperation>
+			<datePaiement>2024-07-09</datePaiement>
+			<montantHt>2000</montantHt>
+			<tauxTva>20</tauxTva>
+			<tauxRetenu>75</tauxRetenu>
+			<refF>
+			    <if></if>
+				<nom>Nom test</nom>
+				<ice></ice>
+			</refF>
+		</rrs>
+		
+		<rrs>
+			<refTypClt>3</refTypClt>
+			<refNatOpt>6</refNatOpt>
+			<numFacture>3333</numFacture>
+			<dateOperation>2024-07-09</dateOperation>
+			<datePaiement>2024-07-09</datePaiement>
+			<montantHt>3000</montantHt>
+			<tauxTva>20</tauxTva>
+			<tauxRetenu>75</tauxRetenu>
+			<refF>
+			    <if></if>
+				<nom>Nom test</nom>
+				<ice></ice>
+			</refF>
+		</rrs>
+		<rrs>
+			<refTypClt>4</refTypClt>
+			<refNatOpt>4</refNatOpt>
+			<numFacture>4444</numFacture>
+			<dateOperation>2024-07-09</dateOperation>
+			<datePaiement>2024-07-09</datePaiement>
+			<montantHt>4000</montantHt>
+			<tauxTva>20</tauxTva>
+			<tauxRetenu>75</tauxRetenu>
+			<refF>
+			    <if></if>
+				<nom>Nom test</nom>
+				<ice></ice>
+			</refF>
+		</rrs>
+		<rrs>
+			<refTypClt>5</refTypClt>
+			<refNatOpt>4</refNatOpt>
+			<numFacture>3333333</numFacture>
+			<dateOperation>2024-07-09</dateOperation>
+			<datePaiement>2024-07-09</datePaiement>
+			<montantHt>1000</montantHt>
+			<tauxTva>20</tauxTva>
+			<tauxRetenu>75</tauxRetenu>
+			<refF>
+				<if>1644</if>
+				<nom>societe de test c</nom>
+				<ice>000012345678912</ice>
+			</refF>
+		</rrs>
+	</releveRetenuSources>
+</DeclarationReleveRetenueSource>

@@ -2,7 +2,11 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Filter, Search, Loader2 } from 'lucide-react';
 
-export function ExcelFilter({ filterType, options, selectedValues, textValue, onChange }: { columnKey?: string, filterType: 'list' | 'text' | 'number' | 'date', options?: {label: string, value: string}[], selectedValues?: string[], textValue?: string, onChange: (val: any) => void }) {
+export function ExcelFilter({ filterType, options, selectedValues, textValue, onChange, onRemoteSearch, remoteTruncated, remoteLoading }: { columnKey?: string, filterType: 'list' | 'text' | 'number' | 'date', options?: {label: string, value: string}[], selectedValues?: string[], textValue?: string, onChange: (val: any) => void,
+  // TASK-168 : recherche serveur en complément du filtrage local, pour les colonnes dont les
+  // `options` sont plafonnées côté back (ex. n° facture/référence, DistinctsTopBound). Optionnel :
+  // absent pour les colonnes à domaine borné (statut, origine) qui n'en ont pas besoin.
+  onRemoteSearch?: (term: string) => void, remoteTruncated?: boolean, remoteLoading?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [localText, setLocalText] = useState(textValue || '');
@@ -69,6 +73,18 @@ export function ExcelFilter({ filterType, options, selectedValues, textValue, on
     return (options || []).filter(o => (o.label || '').toLowerCase().includes(searchTerm.toLowerCase()));
   }, [options, searchTerm, isOpen]);
 
+  // TASK-168 : la liste `options` reçue est plafonnée côté back (DistinctsTopBound) — au-delà de
+  // 2 caractères tapés, on relance une recherche serveur (debouncée) en complément du filtrage
+  // local ci-dessus, pour retrouver une valeur qui existe réellement mais est absente des options
+  // déjà chargées (ex. hors des 500 premières valeurs alphabétiques).
+  useEffect(() => {
+    if (!isOpen || !onRemoteSearch || filterType !== 'list') return;
+    const term = searchTerm.trim();
+    if (term.length < 2) return;
+    const timer = setTimeout(() => onRemoteSearch(term), 300);
+    return () => clearTimeout(timer);
+  }, [isOpen, searchTerm, onRemoteSearch, filterType]);
+
   const handleToggleAll = () => {
     if (!options || !selectedValues) return;
     if (selectedValues.length === options.length) onChange([]);
@@ -113,7 +129,15 @@ export function ExcelFilter({ filterType, options, selectedValues, textValue, on
           <div style={{display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.5rem'}}>
             <Search size={14} style={{color: 'var(--text-secondary)', marginRight: '0.5rem', flexShrink: 0}} />
             <input type="text" placeholder="Rechercher..." autoFocus value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{border: 'none', outline: 'none', width: '100%', fontSize: '0.75rem', direction: 'ltr', textAlign: 'left'}} />
+            {remoteLoading && <Loader2 className="animate-spin" size={12} style={{color: 'var(--accent-primary)', flexShrink: 0}} />}
           </div>
+          {/* TASK-168 : jamais de troncature silencieuse — signal explicite quand la vue par défaut
+              (sans recherche) est plafonnée côté serveur. */}
+          {remoteTruncated && !searchTerm.trim() && (
+            <div style={{fontSize: '0.65rem', color: 'var(--text-tertiary)', fontStyle: 'italic', marginBottom: '0.4rem'}}>
+              500+ valeurs sur cette période — tapez au moins 2 caractères pour affiner la recherche.
+            </div>
+          )}
           <div style={{maxHeight: '220px', overflowY: 'auto', overflowX: 'hidden', display: 'block', textAlign: 'left'}}>
             <label style={{display: 'block', textAlign: 'left', fontSize: '0.75rem', cursor: 'pointer', paddingBottom: '8px', borderBottom: '1px solid var(--bg-secondary)', marginBottom: '4px'}}>
               <input type="checkbox" style={{marginRight: '8px', verticalAlign: 'middle'}} checked={selectedValues?.length === options?.length} onChange={handleToggleAll} />

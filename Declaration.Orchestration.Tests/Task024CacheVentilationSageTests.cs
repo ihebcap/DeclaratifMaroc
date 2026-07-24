@@ -109,13 +109,25 @@ namespace Declaration.Orchestration.Tests
         public bool PaymentPresent { get; set; } = true;
         public bool PaymentPointMatches { get; set; } = true;
 
+        // TASK-169 : compteurs d'appels — prouvent qu'OrchestrateurDeclaration.Traiter appelle
+        // désormais les méthodes BATCH (au plus une fois par lot, quel que soit le nombre de
+        // factures) et non plus les méthodes unitaires ci-dessous (N fois, une par EC_Id).
+        public int GetEntriesCalls { get; private set; }
+        public int GetEntriesBatchCalls { get; private set; }
+        public int GetCurrentPaiementTokenCalls { get; private set; }
+        public int GetCurrentPaiementTokensBatchCalls { get; private set; }
+
         public IReadOnlyList<VentilationSageCacheEntry> GetEntries(int soId, int ecId, string _)
-            => _store.TryGetValue(ecId, out var list)
+        {
+            GetEntriesCalls++;
+            return _store.TryGetValue(ecId, out var list)
                 ? list.Where(e => e.SO_Id == soId).ToList()
                 : new List<VentilationSageCacheEntry>();
+        }
 
         public PaiementToken? GetCurrentPaiementToken(int ecId, string _)
         {
+            GetCurrentPaiementTokenCalls++;
             if (!PaymentPresent) return null;
             return PaymentPointMatches
                 ? new PaiementToken { MV_Id = 42, MV_Point = 1 }
@@ -160,6 +172,52 @@ namespace Declaration.Orchestration.Tests
 
         // TASK-078 : purge sans réécrire (utilisé par ResynchroniserLigneAsync).
         public void SupprimerEntrees(int soId, int ecId, string _) => _store.Remove(ecId);
+
+        // TASK-169 : équivalents batch — délèguent aux méthodes unitaires ci-dessus (même store,
+        // mêmes flags PaymentPresent/PaymentPointMatches/EcheanceMontantDeviseParEcId) pour que les
+        // tests existants (T1-T9, TASK-072/076/077/156) exercent EXACTEMENT la même logique via
+        // OrchestrateurDeclaration.Traiter, qu'il appelle les méthodes unitaires ou batch.
+        public IReadOnlyDictionary<int, IReadOnlyList<VentilationSageCacheEntry>> GetEntriesBatch(
+            int soId, IEnumerable<int> ecIds, string persistenceConnectionString)
+        {
+            GetEntriesBatchCalls++;
+            var result = new Dictionary<int, IReadOnlyList<VentilationSageCacheEntry>>();
+            foreach (var ecId in ecIds.Distinct())
+            {
+                // Appel direct au store (pas GetEntries — éviterait de fausser GetEntriesCalls,
+                // qui doit rester à 0 quand seul le chemin batch est exercé).
+                var entries = _store.TryGetValue(ecId, out var list)
+                    ? list.Where(e => e.SO_Id == soId).ToList()
+                    : new List<VentilationSageCacheEntry>();
+                if (entries.Count > 0) result[ecId] = entries;
+            }
+            return result;
+        }
+
+        public IReadOnlyDictionary<int, PaiementToken?> GetCurrentPaiementTokensBatch(
+            IEnumerable<int> ecIds, string grfConnectionString)
+        {
+            GetCurrentPaiementTokensBatchCalls++;
+            var result = new Dictionary<int, PaiementToken?>();
+            foreach (var ecId in ecIds.Distinct())
+            {
+                PaiementToken? token = !PaymentPresent ? null
+                    : PaymentPointMatches
+                        ? new PaiementToken { MV_Id = 42, MV_Point = 1 }
+                        : new PaiementToken { MV_Id = 99, MV_Point = 0 };
+                result[ecId] = token;
+            }
+            return result;
+        }
+
+        public IReadOnlyDictionary<int, decimal?> GetEcheanceMontantsDeviseBatch(
+            IEnumerable<int> ecIds, string grfConnectionString)
+        {
+            var result = new Dictionary<int, decimal?>();
+            foreach (var ecId in ecIds.Distinct())
+                result[ecId] = GetEcheanceMontantDevise(ecId, grfConnectionString);
+            return result;
+        }
     }
 
     internal static class T
@@ -453,6 +511,51 @@ namespace Declaration.Orchestration.Tests
             Assert.Equal(0, inv.TotalCalls);
             Assert.False(repo.HasEntry(99));
         }
+
+        // ── TASK-169 — élimination du N+1 : 1 seul appel batch, quel que soit N ────────────
+        //
+        // Avant TASK-169 : jusqu'à ~3×N requêtes SQL individuelles (GetEntries + éventuellement
+        // GetCurrentPaiementToken par EC_Id, une fois par facture distincte). Après : au plus un
+        // appel à chaque méthode BATCH par passage de Traiter, quel que soit le nombre de factures.
+        [Fact]
+        public void T169_NFacturesDejaEnCache_UnSeulAppelBatch_ZeroAppelUnitaire()
+        {
+            var inv = new CountingWorkerInvoker();
+            var repo = new InMemoryCacheRepository();
+            var orchEcriture = new OrchestrateurDeclaration(inv, T.Cfg, new StubLecteurFgr(),
+                "fake-grf", "fake-sage", repo, "fake-pers");
+
+            // Matérialise 25 factures distinctes en cache (1er passage : lecture OM + écriture).
+            const int n = 25;
+            var affectations = Enumerable.Range(1, n)
+                .Select(i => T.Aff($"T169-FAC{i:000}", ecId: 1000 + i))
+                .ToList();
+            orchEcriture.Traiter(affectations, n);
+            Assert.Equal(n, inv.TotalCalls);
+
+            // Remet les compteurs à zéro pour isoler le 2e passage (régime « déjà tout en cache »
+            // — le cas le plus fréquent en pratique, cf. task).
+            var repo2 = new InMemoryCacheRepository();
+            // Recharge le même store que orchEcriture (nouvelle instance de comptage, même données).
+            foreach (var a in affectations)
+                repo2.UpsertEntries(repo.GetEntries(0, a.EC_Id, "fake-pers"), "fake-pers");
+
+            var inv2 = new CountingWorkerInvoker();
+            var orchLecture = new OrchestrateurDeclaration(inv2, T.Cfg, new StubLecteurFgr(),
+                "fake-grf", "fake-sage", repo2, "fake-pers");
+
+            var modele = orchLecture.Traiter(affectations, n);
+
+            // 0 lecture OM (tout servi depuis le cache) — même résultat métier qu'avant TASK-169.
+            Assert.Equal(0, inv2.TotalCalls);
+            Assert.Equal(n, modele.Lignes.Count);
+
+            // Le cœur de la preuve TASK-169 : 1 SEUL appel batch, 0 appel unitaire — peu importe N.
+            Assert.Equal(1, repo2.GetEntriesBatchCalls);
+            Assert.Equal(1, repo2.GetCurrentPaiementTokensBatchCalls);
+            Assert.Equal(0, repo2.GetEntriesCalls);
+            Assert.Equal(0, repo2.GetCurrentPaiementTokenCalls);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -476,6 +579,16 @@ namespace Declaration.Orchestration.Tests
 
         public override PaiementToken? GetCurrentPaiementToken(int ecId, string grfConnectionString)
             => ForcedToken;
+
+        // TASK-169 : réplique la même sourdine que le stub unitaire ci-dessus pour la version
+        // batch — sans cet override, OrchestrateurDeclaration.Traiter tenterait un vrai aller-retour
+        // GRF (RT_AFFECTATION/RT_MOUVEMENT) sur "fake-grf" (chaîne factice de ces tests), échouerait,
+        // et déclencherait le repli « tokensBatchFailed » (cache jamais servi) — cassant les
+        // assertions de comptage d'appels OM (IT4/IT5/IT6/IT8) qui reposent sur le cache SQL Server
+        // réel étant effectivement servi.
+        public override IReadOnlyDictionary<int, PaiementToken?> GetCurrentPaiementTokensBatch(
+            IEnumerable<int> ecIds, string grfConnectionString)
+            => ecIds.Distinct().ToDictionary(id => id, _ => ForcedToken);
     }
 
     public class Task024SqlServerIntegrationTests : IDisposable

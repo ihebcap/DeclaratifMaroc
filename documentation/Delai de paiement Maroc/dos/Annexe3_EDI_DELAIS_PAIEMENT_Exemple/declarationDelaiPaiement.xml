@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<DeclarationDelaiPaiement>
+	<identifiantFiscal>84016950</identifiantFiscal>
+	<annee>2023</annee>
+	<periode>3</periode>
+	<activite>1</activite>
+	<chiffreAffaire>80000000</chiffreAffaire>
+	<listeFacturesHorsDelai>
+		<FactureHorsDelai>
+			<identifiantFiscal>84016950</identifiantFiscal>
+			<adresseSiegeSocial>aaa</adresseSiegeSocial>
+			<numFacture>253225</numFacture>
+			<dateEmission>2023-07-08</dateEmission>
+			<natureMarchandise>YYY</natureMarchandise>
+			<dateLivraisonMarchandise>2023-07-08</dateLivraisonMarchandise>
+			<datePrevuePaiement>2023-07-12</datePrevuePaiement>
+			<montantFactureTtc>100000</montantFactureTtc>
+			<montantNonEncorePaye>50000</montantNonEncorePaye>
+			<montantPayeHorsDelai>50000</montantPayeHorsDelai>
+			<datePaiementHorsDelai>2023-09-17</datePaiementHorsDelai>
+			<modePaiement>2</modePaiement>
+			<referencePaiement>R23356111123</referencePaiement>
+		</FactureHorsDelai>
+                 <FactureHorsDelai>
+			<identifiantFiscal>84016950</identifiantFiscal>
+			<adresseSiegeSocial>aaa</adresseSiegeSocial>
+			<numFacture>253226</numFacture>
+			<dateEmission>2023-08-08</dateEmission>
+			<natureMarchandise>YYY</natureMarchandise>
+			<dateLivraisonMarchandise>2023-08-08</dateLivraisonMarchandise>
+			<datePrevuePaiement>2023-08-12</datePrevuePaiement>
+			<montantFactureTtc>50000</montantFactureTtc>
+			<montantNonEncorePaye>0</montantNonEncorePaye>
+			<montantPayeHorsDelai>50000</montantPayeHorsDelai>
+			<datePaiementHorsDelai>2023-09-17</datePaiementHorsDelai>
+			<modePaiement>1</modePaiement>
+			<referencePaiement>R275</referencePaiement>
+		</FactureHorsDelai>
+
+	
+	</listeFacturesHorsDelai>
+</DeclarationDelaiPaiement>

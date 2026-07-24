@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -83,7 +84,11 @@ namespace Declaration.Orchestration.Tests
             Assert.Equal(NiveauAlerte.Warning, alerte.Niveau);
             Assert.Contains("Règlement impayé — non déclarable (à traiter phase 2) : RC26040045", alerte.Message);
             Assert.Contains("BH CATERING", alerte.Message);
-            Assert.Contains("13053,66", alerte.Message.Replace('.', ',')); // handle potential culture differences
+            // TASK-166 : le montant est désormais formaté à 2 décimales (fr-FR, cohérent avec
+            // formatMoney() côté front) au lieu de l'échelle brute decimal — comparaison construite
+            // avec la MÊME culture plutôt qu'un littéral figé, insensible au séparateur de milliers
+            // exact utilisé par l'ICU de la machine (espace normale/insécable/fine selon la version).
+            Assert.Contains(13053.66m.ToString("N2", CultureInfo.GetCultureInfo("fr-FR")), alerte.Message);
         }
 
         [Fact]
@@ -244,7 +249,7 @@ namespace Declaration.Orchestration.Tests
                 IReadOnlyList<string>? numero, string? fournisseur, IReadOnlyList<string>? reference,
                 IReadOnlyList<string>? origines, IReadOnlyList<string>? statuts) => throw new NotImplementedException();
 
-            public Task<FactureInterrogationDistincts> GetFacturesInterrogationDistinctsAsync(int soId, DateTime dateDebut, DateTime dateFin) => throw new NotImplementedException();
+            public Task<FactureInterrogationDistincts> GetFacturesInterrogationDistinctsAsync(int soId, DateTime dateDebut, DateTime dateFin, string? rechercheNumero = null, string? rechercheReference = null) => throw new NotImplementedException();
 
             public Task TamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => Task.CompletedTask;
             public Task DetamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => Task.CompletedTask;
@@ -300,8 +305,8 @@ namespace Declaration.Orchestration.Tests
             public Task<IReadOnlyList<CodeActiviteReferentielRow>> GetReferentielCodesActiviteAsync(string? domaine = null) => Task.FromResult<IReadOnlyList<CodeActiviteReferentielRow>>(new List<CodeActiviteReferentielRow>());
             public Task<int?> GetDomaineCodeActiviteAsync(string codeActivite) => Task.FromResult<int?>(null);
             public Task<string?> GetDomaineLigneAsync(Guid ligneId) => Task.FromResult<string?>(null);
-            public Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(IEnumerable<Guid> ligneIds) => Task.FromResult<IReadOnlyList<string>>(new List<string>());
-            public Task UpdateCodeActiviteBulkByIdsAsync(IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur) => Task.CompletedTask;
+            public Task<IReadOnlyList<string>> GetDomainesDistinctsLignesAsync(Guid declarationId, IEnumerable<Guid> ligneIds) => Task.FromResult<IReadOnlyList<string>>(new List<string>());
+            public Task UpdateCodeActiviteBulkByIdsAsync(Guid declarationId, IEnumerable<Guid> ligneIds, string codeActivite, string utilisateur) => Task.CompletedTask;
             public Task UpdateCodeActiviteBulkAsync(Guid declarationId, string domaine, string? filter, string codeActivite, string utilisateur) => Task.CompletedTask;
             public Task UpdateCodeActiviteLigneAsync(Guid ligneId, string codeActivite, string utilisateur) => Task.CompletedTask;
         }

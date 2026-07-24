@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using ClosedXML.Excel;
+using Declaration.Core;
 using Declaration.Core.Model;
 
 namespace Declaration.Export.Excel
@@ -53,7 +54,7 @@ namespace Declaration.Export.Excel
                 ws.Cell(row, 9).Value = ligne.Tva;
                 ws.Cell(row, 10).Value = ligne.Ttc;
                 ws.Cell(row, 11).Value = ligne.Prorata;
-                ws.Cell(row, 12).Value = ligne.ModePaiement;
+                ws.Cell(row, 12).Value = ModePaiementLibelle.LibelleModePaiementSimplTVA(ligne.ModePaiement);
                 if (ligne.DatePaiement.HasValue) ws.Cell(row, 13).Value = ligne.DatePaiement.Value;
                 if (ligne.DateFacture.HasValue) ws.Cell(row, 14).Value = ligne.DateFacture.Value;
                 ws.Cell(row, 15).Value = ligne.Source.ToString();
@@ -248,7 +249,7 @@ namespace Declaration.Export.Excel
                 ws.Cell(row, 9).Value = ligne.Tva;
                 ws.Cell(row, 10).Value = ligne.Ttc;
                 ws.Cell(row, 11).Value = ligne.Prorata;
-                ws.Cell(row, 12).Value = ligne.ModePaiement;
+                ws.Cell(row, 12).Value = ModePaiementLibelle.LibelleModePaiementSimplTVA(ligne.ModePaiement);
                 if (ligne.DatePaiement.HasValue) ws.Cell(row, 13).Value = ligne.DatePaiement.Value;
                 if (ligne.DateFacture.HasValue) ws.Cell(row, 14).Value = ligne.DateFacture.Value;
                 ws.Cell(row, 15).Value = ligne.Source.ToString();

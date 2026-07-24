@@ -29,5 +29,8 @@ deploy/
 # ---- Legacy GRFN black box (222 MB of vendored binaries, not versioned) ----
 GRFWinform/
 
+# ---- Données fiscales réelles générées pendant les campagnes de test (pas versionnées : IF/ICE/montants clients réels) ----
+DONE_DETAIL/xml-genere/
+
 # Claude Code local config
 .claude/

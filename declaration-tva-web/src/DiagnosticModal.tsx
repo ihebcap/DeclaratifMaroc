@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, AlertTriangle, Search, CheckCircle2, XCircle, Info, RefreshCw } from 'lucide-react';
-import { getDiagnosticLigne, recalculerLigneDepuisCache, type DiagnosticLigneDto } from './api';
+import { getDiagnosticLigne, recalculerLigneDepuisCache, relireDepuisSage, type DiagnosticLigneDto } from './api';
 
 // TASK-144 — Panneau « Diagnostiquer » d'une ligne en anomalie.
 //
@@ -60,6 +60,13 @@ export function DiagnosticModal({
   const [error, setError] = useState<string | null>(null);
   const [recalculating, setRecalculating] = useState(false);
   const [recalculError, setRecalculError] = useState<string | null>(null);
+  // TASK-167 : relecture Sage RÉELLE (distincte du recalcul depuis cache ci-dessus) — action
+  // manuelle explicite, jamais automatique (cf. recommandation architecte de la task : une
+  // relecture Sage ouvre une session OM à chaque appel, un retry automatique en masse
+  // réintroduirait la contention déjà corrigée par TASK-156).
+  const [relisant, setRelisant] = useState(false);
+  const [relireError, setRelireError] = useState<string | null>(null);
+  const [relireResultat, setRelireResultat] = useState<string | null>(null);
 
   async function handleRecalculer() {
     setRecalculating(true);
@@ -71,6 +78,29 @@ export function DiagnosticModal({
       setRecalculError(e?.response?.data?.message || 'Recalcul impossible pour cette ligne.');
     } finally {
       setRecalculating(false);
+    }
+  }
+
+  async function handleRelireSage() {
+    setRelisant(true);
+    setRelireError(null);
+    setRelireResultat(null);
+    try {
+      const { resolue } = await relireDepuisSage(declarationId, ecId);
+      if (resolue) {
+        onRecalculated?.();
+      } else {
+        // TASK-167 §3 (garde-fou) : le motif réel reste affiché, bloquant — jamais de montant
+        // fabriqué. On informe simplement que la relecture a eu lieu mais n'a rien résolu.
+        setRelireResultat('Relecture Sage effectuée — la pièce est toujours en anomalie (motif réel inchangé, voir ci-dessus).');
+      }
+    } catch (e: any) {
+      // TASK-156 : un rejet 409 signifie qu'un autre traitement OM est déjà en cours pour cette
+      // société (verrou soId partagé) — message serveur explicite, jamais une file d'attente
+      // silencieuse.
+      setRelireError(e?.response?.data?.Message || e?.response?.data?.message || 'Échec de la relecture Sage.');
+    } finally {
+      setRelisant(false);
     }
   }
 
@@ -161,6 +191,45 @@ export function DiagnosticModal({
                   </details>
                 </div>
               </div>
+
+              {/* Bloc (TASK-167) — relecture Sage RÉELLE, action manuelle explicite. Distinct du
+                  bloc cache périmé ci-dessous (TASK-147, qui ne relit jamais Sage) : ici, quand le
+                  cache n'est pas simplement périmé mais absent/en erreur (le cas le plus fréquent,
+                  ex. FC2502094 « Facture introuvable »), aucune autre action n'existait jusqu'ici
+                  dans cet écran pour relancer une vraie lecture Sage sur cette seule pièce. */}
+              {!data.cachePerime && (
+                <div style={{ ...card, borderColor: 'var(--border-color)' }}>
+                  <div style={cardHeader}><RefreshCw size={15} /> Relancer une lecture Sage réelle</div>
+                  <div style={cardBody}>
+                    <p style={{ margin: '0 0 0.6rem 0', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                      Si la facture existe bien sur Sage (ex. après correction côté ERP, ou pour
+                      écarter un aléa de lecture ponctuel), cette action relit directement l'objet
+                      métier Sage pour cette seule pièce et réécrit le cache de valorisation. Action
+                      manuelle explicite — aucune relecture automatique n'est déclenchée ailleurs.
+                    </p>
+                    <button
+                      onClick={handleRelireSage}
+                      disabled={relisant}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                        padding: '0.45rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)',
+                        background: relisant ? 'var(--bg-secondary)' : 'white',
+                        color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.82rem',
+                        cursor: relisant ? 'default' : 'pointer',
+                      }}
+                    >
+                      <RefreshCw size={14} className={relisant ? 'animate-spin' : undefined} />
+                      {relisant ? 'Relecture Sage en cours…' : 'Relire depuis Sage'}
+                    </button>
+                    {relireResultat && (
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--status-warning-text-alt)' }}>{relireResultat}</div>
+                    )}
+                    {relireError && (
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--status-blocking-text, #b91c1c)' }}>{relireError}</div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Bloc 4 (TASK-147) — cache PÉRIMÉ : Sage a relu la pièce avec succès APRÈS la
                   création de cette déclaration. INDÉPENDANT du bloc 2 (motif figé à la création). */}

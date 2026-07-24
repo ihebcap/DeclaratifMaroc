@@ -128,5 +128,16 @@ namespace Declaration.Orchestration.Tests
             Assert.Empty(d.Numeros);
             Assert.Empty(d.References);
         }
+
+        [Fact]
+        public void FactureInterrogationDistincts_Task168_TronqueFauxParDefaut()
+        {
+            // Jamais de troncature annoncée à tort avant tout calcul réel (le repository est seul
+            // responsable de positionner ces booléens à true, cf. DeclarationRepository).
+            var d = new FactureInterrogationDistincts();
+
+            Assert.False(d.NumerosTronque);
+            Assert.False(d.ReferencesTronque);
+        }
     }
 }

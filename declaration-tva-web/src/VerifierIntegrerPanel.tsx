@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-    Calculator, AlertTriangle, Loader2, Info, Lock, CheckCircle2, XCircle, ShieldCheck, FileStack, ExternalLink, Search, FileSpreadsheet
+    Calculator, AlertTriangle, Loader2, Info, Lock, CheckCircle2, XCircle, ShieldCheck, FileStack, ExternalLink, Search, FileSpreadsheet, RefreshCw
 } from 'lucide-react';
 import { formatMoney } from './utils';
 import api from './api';
@@ -78,6 +78,16 @@ type LigneValorisation = {
 // Statuts non valorisés (cohérent avec AffectationsDrill.tsx TASK-055)
 const NON_VALORISE = new Set([2, 3, 4]);
 
+// TASK-164 : une ligne Proposée (0) ou Intégrée (1) peut aussi porter un motif d'anomalie de
+// recalcul (ex. "Facture introuvable (DTO non fourni)" — cf. DeclarationWorkflowService.cs,
+// MapLignesCandidates TASK-097) sans jamais transiter par les statuts 2/3/4. Sans ce test, ces
+// lignes restent valorisées à 0/0/0 en apparence saine et le bouton Diagnostiquer n'apparaît
+// jamais pour elles. Ne s'applique qu'en présence d'un motif non vide — une ligne 0/1 sans motif
+// reste un cas sain, jamais touché par ce test.
+function estNonValorise(statutLigne: number, motif: string): boolean {
+    return NON_VALORISE.has(statutLigne) || ((statutLigne === 0 || statutLigne === 1) && !!motif);
+}
+
 const STATUT_LIGNE_LABELS: Record<number, string> = {
   0: 'Proposée',
   1: 'Intégrée',
@@ -115,7 +125,7 @@ function agregParFactureTaux(lignes: LigneValorisation[]): RowAggr[] {
         existing.montantTVA += l.montantTVA;
       }
     } else {
-      const nonValorise = NON_VALORISE.has(l.statutLigne);
+      const nonValorise = estNonValorise(l.statutLigne, l.motif);
       map.set(key, {
         ecId: l.ecId,
         factureNumero: l.factureNumero,
@@ -282,7 +292,7 @@ export function VerifierIntegrerPanel({
         domaine: DomaineTVA;
         filtre: Record<string, any>;
         label: string;
-        kind?: 'anomalie' | 'incoherence' | 'codeActivite';
+        kind?: 'anomalie' | 'incoherence' | 'codeActivite' | 'toutes';
     } | null>(null);
 
     // TASK-161/172 : référentiel des codes activité (P_DECTVAACTIVITE), rechargé/refiltré par
@@ -306,6 +316,9 @@ export function VerifierIntegrerPanel({
         })();
         return () => { cancelled = true; };
     }, [drillFiltre?.kind, drillFiltre?.domaine]);
+
+    // TASK-165 : tableau « Sous-totaux par taux TVA » replié par défaut (Option A, repli progressif).
+    const [sousTotauxOuvert, setSousTotauxOuvert] = useState(false);
 
     // TASK-144 : panneau de diagnostic explicatif d'une ligne en anomalie (à la demande).
     const [diagnostic, setDiagnostic] = useState<{ ecId: number; factureNumero: string } | null>(null);
@@ -504,7 +517,7 @@ export function VerifierIntegrerPanel({
 
     const canConfirm = !integree && !confirmed && !hasAnyBloquant && !loadingCheckup && !submitting;
 
-    const controls = buildControls(checkup, displayNbLignes, displayNbReglements, integree, bloquants.length, localReconciliation);
+    const controls = buildControls(checkup, bloquants.length, localReconciliation);
     console.log("CONTROLS:", JSON.stringify(controls.map(c => ({ id: c.id, label: c.label, status: c.status }))));
 
     const handleConfirm = async () => {
@@ -606,7 +619,7 @@ export function VerifierIntegrerPanel({
                         ← Retour au contrôle
                     </button>
                     <span style={{ color: 'var(--text-secondary)' }}>
-                        {drillFiltre.kind === 'incoherence' ? 'Drill écart :' : drillFiltre.kind === 'codeActivite' ? 'Codes activité :' : 'Drill anomalie :'}
+                        {drillFiltre.kind === 'incoherence' ? 'Drill écart :' : drillFiltre.kind === 'codeActivite' ? 'Codes activité :' : drillFiltre.kind === 'toutes' ? 'Toutes les lignes :' : 'Drill anomalie :'}
                     </span>
                     <span style={{ fontWeight: 600 }}>{drillFiltre.label}</span>
                 </div>
@@ -616,7 +629,7 @@ export function VerifierIntegrerPanel({
                     <DomainGrid
                         declarationId={declarationId}
                         domaine={drillFiltre.domaine}
-                        onActionDone={() => {}}
+                        onActionDone={() => setReloadToken(t => t + 1)}
                         showToast={showToast}
                         initialFilters={drillFiltre.filtre}
                         readonly={drillFiltre.kind === 'codeActivite' ? isReadOnly : true}
@@ -628,6 +641,14 @@ export function VerifierIntegrerPanel({
                             columns: codeActiviteColumns,
                             colsStorageKey: 'grf.cols.domain.codeActivite',
                             codeActiviteOptions,
+                        } : {})}
+                        {...(drillFiltre.kind === 'toutes' ? {
+                            // TASK-170 : vue « Toutes les lignes » — colonnes par défaut, bouton
+                            // « Resynchroniser » visible sur chaque ligne sans condition d'anomalie
+                            // (recommandation architecte de la task : c'est précisément l'absence de
+                            // ce cas — ligne saine mais donnée Sage source corrigée après coup — qui
+                            // motive TASK-170).
+                            showResynchroniserAction: true,
                         } : {})}
                     />
                 </div>
@@ -736,13 +757,47 @@ export function VerifierIntegrerPanel({
 
             {/* Corps scrollable */}
             <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {/* 1. Sous-totaux par taux TVA */}
+                {/* TASK-165 — 0. Verdict unique en tête d'écran (Option A, repli progressif) :
+                    même logique que le pied de grille (hasBloquant/bloquants.length), remontée en
+                    tête pour que le comptable n'ait pas à parcourir la check-list pour le déduire. */}
+                {!isReadOnly && (
+                    <div style={{
+                        flexShrink: 0,
+                        borderRadius: '8px',
+                        padding: '0.75rem 1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        background: loadingCheckup ? 'var(--bg-secondary)' : hasBloquant ? '#fff5f5' : '#f0fdf4',
+                        border: `1px solid ${loadingCheckup ? 'var(--border-color)' : hasBloquant ? 'var(--status-blocking-border, #fecaca)' : '#bbf7d0'}`,
+                        color: loadingCheckup ? 'var(--text-secondary)' : hasBloquant ? 'var(--status-blocking-text)' : 'var(--status-ok-text)',
+                    }}>
+                        {loadingCheckup ? (
+                            <><Loader2 size={16} className="animate-spin" /> Vérification en cours…</>
+                        ) : hasBloquant ? (
+                            <><XCircle size={16} /> ❌ Bloqué — {bloquants.length} anomalie{bloquants.length > 1 ? 's' : ''} bloquante{bloquants.length > 1 ? 's' : ''}, voir ci-dessous</>
+                        ) : (
+                            <><CheckCircle2 size={16} /> ✅ Prêt à intégrer</>
+                        )}
+                    </div>
+                )}
+
+                {/* 1. Sous-totaux par taux TVA — TASK-165 : replié par défaut (détail par taux
+                    utile en recoupement personnel, pas à chaque intégration), compteur visible
+                    sur l'en-tête repliée. */}
                 {sousTotaux.length > 0 && (
                     <div style={{ flexShrink: 0, background: 'white', border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
-                        <div style={{ padding: '0.5rem 0.9rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <button
+                            onClick={() => setSousTotauxOuvert(o => !o)}
+                            style={{ width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none', padding: '0.5rem 0.9rem', background: 'var(--bg-secondary)', borderBottom: sousTotauxOuvert ? '1px solid var(--border-color)' : 'none', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                        >
                             <Info size={13} />
-                            Sous-totaux par taux TVA
-                        </div>
+                            Sous-totaux par taux TVA ({sousTotaux.length} taux)
+                            <span style={{ marginLeft: 'auto', fontSize: '0.7rem' }}>{sousTotauxOuvert ? '▲ Replier' : '▼ Déplier'}</span>
+                        </button>
+                        {sousTotauxOuvert && (
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
                             <thead>
                                 <tr style={{ background: 'var(--bg-secondary)' }}>
@@ -765,7 +820,11 @@ export function VerifierIntegrerPanel({
                                         <td style={{ ...tdStyle('right'), fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(st.totalHT + st.totalTVA)}</td>
                                     </tr>
                                 ))}
-                                {/* Ligne totaux */}
+                                {/* Ligne totaux — TASK-165 : ce total est le même chiffre que la
+                                    cellule « Total TVA à intégrer » du RecapCard ci-dessous
+                                    (doublon volontairement conservé ICI car ce bloc est replié par
+                                    défaut — le RecapCard reste l'unique chiffre visible en premier
+                                    niveau de lecture). */}
                                 <tr style={{ borderTop: '2px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
                                     <td style={{ ...tdStyle('left'), fontWeight: 700 }} colSpan={2}>Σ Total</td>
                                     <td style={{ ...tdStyle('right'), fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(localTotalHT)}</td>
@@ -774,58 +833,12 @@ export function VerifierIntegrerPanel({
                                 </tr>
                             </tbody>
                         </table>
+                        )}
                     </div>
                 )}
 
-                {/* 2. Lignes non valorisées — détail motif */}
-                {nbNonValorise > 0 && (
-                    <div style={{ flexShrink: 0, background: 'white', border: '1px solid var(--status-warning-border)', borderRadius: '8px', overflow: 'hidden' }}>
-                        <div style={{ padding: '0.5rem 0.9rem', background: 'var(--status-warning-bg)', borderBottom: '1px solid var(--status-warning-border)', fontSize: '0.78rem', fontWeight: 600, color: 'var(--status-warning-text)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <AlertTriangle size={13} />
-                            {nbNonValorise} ligne{nbNonValorise > 1 ? 's' : ''} non valorisée{nbNonValorise > 1 ? 's' : ''} — transparence de traçabilité
-                        </div>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                            <thead>
-                                <tr style={{ background: 'var(--status-warning-bg)' }}>
-                                    <th style={thStyle('left')}>Facture</th>
-                                    <th style={thStyle('left')}>Tiers</th>
-                                    <th style={thStyle('left')}>Statut ligne</th>
-                                    <th style={thStyle('left')}>Motif</th>
-                                    <th style={thStyle('left')}></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredRows.filter(r => r.nonValorise).map((r, i) => (
-                                    <tr key={`nv-${i}`} style={{ borderTop: '1px solid var(--status-warning-border)' }}>
-                                        <td style={{ ...tdStyle('left'), fontFamily: 'monospace', fontSize: '0.77rem', fontWeight: 500 }}>{r.factureNumero}</td>
-                                        <td style={{ ...tdStyle('left'), fontSize: '0.77rem' }}>{r.tiers}</td>
-                                        <td style={{ ...tdStyle('left') }}>
-                                            <span style={{ display: 'inline-block', padding: '1px 7px', borderRadius: '99px', fontSize: '0.72rem', fontWeight: 600, background: 'var(--status-blocking-bg)', color: 'var(--status-blocking-text)' }}>
-                                                {STATUT_LIGNE_LABELS[r.statutLigne] ?? r.statutLigne}
-                                            </span>
-                                        </td>
-                                        <td style={{ ...tdStyle('left'), color: 'var(--status-warning-text)', fontSize: '0.77rem' }}>
-                                            {r.motif || '—'}
-                                        </td>
-                                        <td style={{ ...tdStyle('left') }}>
-                                            {r.ecId > 0 && (
-                                                <button
-                                                    onClick={() => setDiagnostic({ ecId: r.ecId, factureNumero: r.factureNumero })}
-                                                    title="Comprendre pourquoi cette ligne est en anomalie"
-                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '2px 9px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}
-                                                >
-                                                    <Search size={12} /> Diagnostiquer
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-
-                {/* 3. Récapitulatif de l'intégration */}
+                {/* 2. Récapitulatif de l'intégration — TASK-165 : unique porteur des chiffres de
+                    synthèse (règlements/lignes/total TVA), inchangé (recommandation architecte). */}
                 <RecapCard
                     nbLignes={displayNbLignes}
                     totalTVA={displayTotalTVA}
@@ -834,7 +847,11 @@ export function VerifierIntegrerPanel({
                     isReadOnly={isReadOnly}
                 />
 
-                {/* 4. Check-list de contrôles */}
+                {/* 3. Check-list de contrôles + anomalies — TASK-165 : les items « Règlements »/
+                    « Lignes valorisées » retirés (déjà dans RecapCard) ; le tableau « Lignes non
+                    valorisées » est désormais fusionné visuellement dans ce même bloc (juste après
+                    l'item equilibre), au lieu d'un bloc séparé — le code reliait déjà les deux
+                    (statut non valorisé / écart), seul l'affichage les séparait. */}
                 <ChecklistCard
                     controls={controls}
                     loading={loadingCheckup}
@@ -844,6 +861,8 @@ export function VerifierIntegrerPanel({
                     ligneIncoherenteAutreOnglet={ligneIncoherenteAutreOnglet}
                     ecartExplique={checkup?.equilibre?.ecartExplique}
                     reconciliation={localReconciliation}
+                    lignesNonValorisees={filteredRows.filter(r => r.nonValorise)}
+                    onDiagnostiquer={(ecId, factureNumero) => setDiagnostic({ ecId, factureNumero })}
                     onDrill={(domaine, filtre, label) => setDrillFiltre({ domaine, filtre, label, kind: 'anomalie' })}
                     onDrillIncoherence={handleDrillIncoherence}
                 />
@@ -927,6 +946,23 @@ export function VerifierIntegrerPanel({
                         }}
                     >
                         Codes activité
+                    </button>
+
+                    {/* TASK-170 : bouton direct vers la liste complète des lignes du domaine, avec
+                        une action « Resynchroniser » par ligne (relecture Sage réelle, TASK-167),
+                        visible sur toute ligne — y compris une ligne d'apparence saine dont le
+                        montant a été corrigé sur Sage après coup (cas rapporté par le PO). */}
+                    <button
+                        onClick={() => setDrillFiltre({ domaine: selectedTab as DomaineTVA, filtre: {}, label: selectedTab === 'Encaissement' ? 'TVA Collectée (Ventes)' : 'TVA Déductible (Achats)', kind: 'toutes' })}
+                        title="Voir toutes les lignes de cet onglet et relancer une lecture Sage sur une ligne précise (ex. après correction d'un montant sur Sage)"
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                            background: 'white', border: '1px solid var(--border-color)',
+                            borderRadius: 'var(--radius-md)', padding: '0.45rem 0.85rem',
+                            cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)',
+                        }}
+                    >
+                        <RefreshCw size={14} /> Toutes les lignes / Resynchroniser
                     </button>
 
                     {!isReadOnly && (
@@ -1112,18 +1148,17 @@ interface Control {
     badgeLabel?: string;
 }
 
+// TASK-165 : les contrôles « Règlements sélectionnés »/« Lignes valorisées » ont été retirés de
+// cette check-list — ils ne portaient aucune information au-delà de ce que le RecapCard affiche
+// déjà en premier niveau de lecture (recommandation ferme de l'architecte, Option A). Ne restent
+// que les contrôles qui ne sont PAS déjà des chiffres de synthèse.
 function buildControls(
     checkup: CheckupResult | null,
-    nbLignes: number,
-    nbReglements: number,
-    integree: boolean,
     bloquantsCount: number,
     reconciliation: { integrees: number; proposees: number }
 ): Control[] {
     if (!checkup) {
         return [
-            { id: 'reglements', label: 'Règlements sélectionnés', description: 'Vérification de la sélection', status: 'pending' },
-            { id: 'lignes', label: 'Lignes valorisées', description: 'Valorisation par le back', status: 'pending' },
             { id: 'equilibre', label: 'Cohérence des totaux déclarés', description: 'Contrôle d\'équilibre des montants', status: 'pending' },
             { id: 'bloquants', label: 'Absence d\'anomalies bloquantes', description: 'Aucune alerte bloquante', status: 'pending' },
         ];
@@ -1133,22 +1168,6 @@ function buildControls(
     const hasAffectations = reconciliation.integrees > 0 || reconciliation.proposees > 0;
 
     return [
-        {
-            id: 'reglements',
-            label: 'Règlements sélectionnés',
-            description: integree
-                ? 'Règlements déjà intégrés en base'
-                : `${nbReglements} règlement${nbReglements > 1 ? 's' : ''} en entrée`,
-            status: (nbReglements > 0 || integree) ? 'ok' : 'error',
-        },
-        {
-            id: 'lignes',
-            label: 'Lignes valorisées présentes',
-            description: nbLignes > 0
-                ? `${nbLignes} ligne${nbLignes > 1 ? 's' : ''} valorisée${nbLignes > 1 ? 's' : ''} prêtes à intégrer`
-                : (integree ? 'Lignes valorisées déjà intégrées' : 'Aucune ligne valorisée — retournez à l\'étape ①'),
-            status: (nbLignes > 0 || integree) ? 'ok' : 'error',
-        },
         {
             id: 'affectations',
             label: 'Affectations valides',
@@ -1178,7 +1197,8 @@ function buildControls(
 }
 
 function ChecklistCard({
-    controls, loading, bloquants, avertissements, ligneIncoherente, ligneIncoherenteAutreOnglet, ecartExplique, reconciliation, onDrill, onDrillIncoherence,
+    controls, loading, bloquants, avertissements, ligneIncoherente, ligneIncoherenteAutreOnglet, ecartExplique, reconciliation,
+    lignesNonValorisees, onDiagnostiquer, onDrill, onDrillIncoherence,
 }: {
     controls: Control[];
     loading: boolean;
@@ -1191,10 +1211,17 @@ function ChecklistCard({
     /** TASK-112 : l'écart annoncé est-il intégralement expliqué par ligneIncoherente (calcul back) */
     ecartExplique?: boolean;
     reconciliation?: Reconciliation;
+    /** TASK-165 : lignes non valorisées (détail motif) — fusionnées visuellement ici, juste après
+     * l'item « equilibre », au lieu d'un bloc séparé de l'écran (le code reliait déjà les deux). */
+    lignesNonValorisees: RowAggr[];
+    onDiagnostiquer: (ecId: number, factureNumero: string) => void;
     onDrill: (domaine: DomaineTVA, filtre: Record<string, any>, label: string) => void;
     /** TASK-112 : drill vers les lignes qui composent l'écart (TTC ≠ HT+TVA) */
     onDrillIncoherence?: () => void;
 }) {
+    // TASK-165 : avertissements non bloquants repliés par défaut (n'empêchent pas l'intégration —
+    // seul le compteur est visible sur l'en-tête, le détail est un second niveau de lecture).
+    const [avertissementsOuverts, setAvertissementsOuverts] = useState(false);
     return (
         <div style={{
             flexShrink: 0,
@@ -1286,6 +1313,61 @@ function ChecklistCard({
                 ))}
             </div>
 
+            {/* TASK-165 — Lignes non valorisées (détail motif), fusionné visuellement dans ce
+                même bloc « Anomalies » au lieu d'un bloc séparé de l'écran : c'est le détail
+                ligne-par-ligne de ce que l'item « equilibre »/« Absence d'anomalies bloquantes »
+                ci-dessus résume déjà (statut non valorisé ↔ écart). */}
+            {lignesNonValorisees.length > 0 && (
+                <div style={{
+                    borderTop: '2px solid var(--status-warning-border)',
+                    background: 'var(--status-warning-bg)',
+                    padding: '0.55rem 1rem',
+                }}>
+                    <div style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--status-warning-text)', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <AlertTriangle size={12} />
+                        {lignesNonValorisees.length} ligne{lignesNonValorisees.length > 1 ? 's' : ''} non valorisée{lignesNonValorisees.length > 1 ? 's' : ''} — détail
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', background: 'white', borderRadius: '6px', overflow: 'hidden' }}>
+                        <thead>
+                            <tr style={{ background: 'var(--status-warning-bg)' }}>
+                                <th style={thStyle('left')}>Facture</th>
+                                <th style={thStyle('left')}>Tiers</th>
+                                <th style={thStyle('left')}>Statut ligne</th>
+                                <th style={thStyle('left')}>Motif</th>
+                                <th style={thStyle('left')}></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {lignesNonValorisees.map((r, i) => (
+                                <tr key={`nv-${i}`} style={{ borderTop: '1px solid var(--status-warning-border)' }}>
+                                    <td style={{ ...tdStyle('left'), fontFamily: 'monospace', fontSize: '0.77rem', fontWeight: 500 }}>{r.factureNumero}</td>
+                                    <td style={{ ...tdStyle('left'), fontSize: '0.77rem' }}>{r.tiers}</td>
+                                    <td style={{ ...tdStyle('left') }}>
+                                        <span style={{ display: 'inline-block', padding: '1px 7px', borderRadius: '99px', fontSize: '0.72rem', fontWeight: 600, background: 'var(--status-blocking-bg)', color: 'var(--status-blocking-text)' }}>
+                                            {STATUT_LIGNE_LABELS[r.statutLigne] ?? r.statutLigne}
+                                        </span>
+                                    </td>
+                                    <td style={{ ...tdStyle('left'), color: 'var(--status-warning-text)', fontSize: '0.77rem' }}>
+                                        {r.motif || '—'}
+                                    </td>
+                                    <td style={{ ...tdStyle('left') }}>
+                                        {r.ecId > 0 && (
+                                            <button
+                                                onClick={() => onDiagnostiquer(r.ecId, r.factureNumero)}
+                                                title="Comprendre pourquoi cette ligne est en anomalie"
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '2px 9px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}
+                                            >
+                                                <Search size={12} /> Diagnostiquer
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
             {/* Détail des alertes bloquantes */}
             {bloquants.length > 0 && (
                 <div style={{
@@ -1348,17 +1430,22 @@ function ChecklistCard({
                 </div>
             )}
 
-            {/* Avertissements non bloquants */}
+            {/* TASK-165 : avertissements non bloquants repliés par défaut — n'empêchent pas
+                l'intégration, seul le compteur est visible tant que l'utilisateur ne déplie pas. */}
             {avertissements.length > 0 && (
                 <div style={{
                     borderTop: '1px solid var(--status-warning-border)',
                     background: 'var(--status-warning-bg)',
                     padding: '0.55rem 1rem',
                 }}>
-                    <div style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--status-warning-text)', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <AlertTriangle size={12} /> Avertissements (non bloquants)
-                    </div>
-                    {avertissements.map((a, i) => {
+                    <button
+                        onClick={() => setAvertissementsOuverts(o => !o)}
+                        style={{ width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none', background: 'none', padding: 0, fontSize: '0.74rem', fontWeight: 700, color: 'var(--status-warning-text)', marginBottom: avertissementsOuverts ? '0.3rem' : 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                    >
+                        <AlertTriangle size={12} /> {avertissements.length} avertissement{avertissements.length > 1 ? 's' : ''} (non bloquant{avertissements.length > 1 ? 's' : ''})
+                        <span style={{ marginLeft: 'auto', fontSize: '0.68rem', fontWeight: 600 }}>{avertissementsOuverts ? '▲ Replier' : '▼ Déplier'}</span>
+                    </button>
+                    {avertissementsOuverts && avertissements.map((a, i) => {
                         const hasDrill = !!(a.filtre && Object.keys(a.filtre).length > 0);
                         const domaine = (a.domaine as DomaineTVA) || 'Décaissement';
                         let displayMessage = a.message;

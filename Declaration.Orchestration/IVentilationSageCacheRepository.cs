@@ -140,5 +140,42 @@ namespace Declaration.Orchestration
         /// TASK-118 : <paramref name="soId"/> scope la suppression à la bonne base Sage.
         /// </summary>
         void SupprimerEntrees(int soId, int ecId, string persistenceConnectionString);
+
+        // ──────────────────────────────────────────────────────────────────────
+        // TASK-169 — méthodes BATCH : additives, en complément des méthodes unitaires
+        // ci-dessus (jamais supprimées — toujours utilisées par le diagnostic par ligne,
+        // ex. DiagnostiquerLigneAsync/RecalculerLigneDepuisCacheAsync, sur UNE seule ligne).
+        // Éliminent le N+1 (jusqu'à 3×N requêtes SQL individuelles par déclaration, une par
+        // EC_Id distinct) d'OrchestrateurDeclaration.Traiter, sans changer la logique métier :
+        // même critère de fraîcheur de token (TASK-156), même contrôle croisé TTC (TASK-072).
+        // ──────────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Équivalent batch de <see cref="GetEntries"/> : une seule requête SQL pour tous les
+        /// <paramref name="ecIds"/> (scopés à <paramref name="soId"/>, TASK-118), regroupée par
+        /// EC_Id côté C#. Un EC_Id absent du dictionnaire retourné signifie « aucune entrée de
+        /// cache » (même contrat que <see cref="GetEntries"/> renvoyant une liste vide).
+        /// </summary>
+        IReadOnlyDictionary<int, IReadOnlyList<VentilationSageCacheEntry>> GetEntriesBatch(
+            int soId, IEnumerable<int> ecIds, string persistenceConnectionString);
+
+        /// <summary>
+        /// Équivalent batch de <see cref="GetCurrentPaiementToken"/> : un seul aller-retour SQL
+        /// pour tous les <paramref name="ecIds"/>, même critère de sélection (TOP 1 par EC_Id,
+        /// TASK-106 espèce comprise). Un EC_Id absent du dictionnaire retourné signifie « aucun
+        /// token courant » (même contrat que <see cref="GetCurrentPaiementToken"/> renvoyant null).
+        /// </summary>
+        IReadOnlyDictionary<int, PaiementToken?> GetCurrentPaiementTokensBatch(
+            IEnumerable<int> ecIds, string grfConnectionString);
+
+        /// <summary>
+        /// Équivalent batch de <see cref="GetEcheanceMontantDevise"/> : un seul
+        /// <c>SELECT EC_Id, EC_MtDevise FROM RT_ECHEANCE WHERE EC_Id IN (...)</c>. Un EC_Id absent
+        /// du dictionnaire retourné signifie « échéance introuvable » (même contrat que
+        /// <see cref="GetEcheanceMontantDevise"/> renvoyant null — contrôle croisé ignoré,
+        /// jamais bloquant).
+        /// </summary>
+        IReadOnlyDictionary<int, decimal?> GetEcheanceMontantsDeviseBatch(
+            IEnumerable<int> ecIds, string grfConnectionString);
     }
 }

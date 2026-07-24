@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="DeclarationDelaiPaiement">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="identifiantFiscal" type="xs:integer" minOccurs="1"/>
+        <xs:element name="annee" minOccurs="1">
+					<xs:simpleType>
+						<xs:restriction base="xs:integer">
+							<xs:totalDigits value="4"></xs:totalDigits>
+							<xs:pattern value=".*"></xs:pattern>
+						</xs:restriction>
+					</xs:simpleType>
+		</xs:element>
+        <xs:element name="periode">
+					<xs:simpleType>
+						<xs:restriction base="xs:integer" >
+						<xs:enumeration value="5"></xs:enumeration>
+						<xs:enumeration value="1"></xs:enumeration>
+						<xs:enumeration value="2"></xs:enumeration>
+						<xs:enumeration value="3"></xs:enumeration>
+						<xs:enumeration value="4"></xs:enumeration>
+						<xs:pattern value=".*"></xs:pattern>
+						</xs:restriction>
+					</xs:simpleType>
+		</xs:element>
+        <xs:element name="activiteNormale">
+					<xs:simpleType>
+						<xs:restriction base="xs:integer">
+							<xs:enumeration value="1" />
+							<xs:enumeration value="2" />
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:element>
+        <xs:element name="procSauvRedressLiquid" type="xs:integer" />
+        <xs:element name="dateJugementOuvrProc" type="xs:date" minOccurs="1"/>
+        <xs:element name="chiffreAffaire" type="xs:integer" minOccurs="1"/>
+        <xs:element name="listeFacturesHorsDelai">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="FactureHorsDelai">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="identifiantFiscal" minOccurs="1">
+						<xs:simpleType>
+							<xs:restriction base="xs:string">
+								<xs:pattern value="([0-9])*"></xs:pattern>
+							</xs:restriction>
+						</xs:simpleType>
+				   </xs:element>
+                   <xs:element name="ice" minOccurs="1">
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:maxLength value="15"></xs:maxLength>
+									<xs:minLength value="15"></xs:minLength>
+									<xs:pattern value=".*"></xs:pattern>
+								</xs:restriction>
+							</xs:simpleType>
+				    </xs:element>
+                    <xs:element name="numRC" type="xs:string" minOccurs="1"/>
+                    <xs:element name="nom" type="xs:string" />
+                    <xs:element name="prenom" type="xs:string" />
+                    <xs:element name="raisonSociale" type="xs:string" />
+                    <xs:element name="adresseSiegeSocial" type="xs:string" />
+                    <xs:element name="numFacture" type="xs:string" minOccurs="1"/>
+                    <xs:element name="dateEmission" type="xs:date" />
+                    <xs:element name="natureMarchandise" type="xs:string" />
+                    <xs:element name="dateLivraisonMarchandise" type="xs:date" />
+                    <xs:element name="moisTransaction" type="xs:integer" />
+                    <xs:element name="anneeTransaction" type="xs:integer" />
+                    <xs:element name="dateConstatation" type="xs:date" />
+                    <xs:element name="datePrevuePaiement" type="xs:date" />
+                    <xs:element name="dateConvenuePaiementFacture" type="xs:date" />
+                    <xs:element name="delaiPaiementSecteurActivite" type="xs:string" />
+                    <xs:element name="datePrevueSelonDelaiFixeSecteur" type="xs:date" />
+                    <xs:element name="montantFactureTtc" type="xs:decimal" />
+                    <xs:element name="montantNonEncorePaye" type="xs:decimal" />
+                    <xs:element name="nombreMoisRetardNonPaye" type="xs:integer" />
+                    <xs:element name="montantPayeHorsDelai" type="xs:decimal" />
+                    <xs:element name="datePaiementHorsDelai" type="xs:date" />
+                    <xs:element name="nombreRetardHorsDelai" type="xs:integer" />
+                    <xs:element name="montantObjetDeLitige" type="xs:decimal" />
+                    <xs:element name="dateRecoursJudiciaire" type="xs:date" />
+                    <xs:element name="montantApresJugement" type="xs:decimal" />
+                    <xs:element name="dateJugementDefinitif" type="xs:date" />
+                    <xs:element name="nombreMoisSuspension" type="xs:integer" />
+                    <xs:element name="modePaiement" type="xs:string" />
+                    <xs:element name="referencePaiement" type="xs:string" />
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

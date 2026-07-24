@@ -261,16 +261,31 @@ public class DeclarationsController : ControllerBase
     /// explicitement l'OM (effet de bord : réécrit le cache de ventilation, même pipeline que
     /// TASK-072/076/077) et réinitialise une éventuelle validation antérieure. Retourne l'état
     /// résultant (toujours incohérent ou résolu) pour affichage immédiat.
+    ///
+    /// TASK-167 : ce même chemin est désormais aussi le bouton « Relire depuis Sage » de l'écran
+    /// ③ Vérifier & Intégrer (DiagnosticModal) pour toute ligne non valorisée (cache absent/en
+    /// erreur), pas seulement les incohérences TASK-078 — <c>ResynchroniserLigneAsync</c> est déjà
+    /// générique (aucune règle propre à l'incohérence, purge + relecture Sage pour n'importe quel
+    /// EC_Id). Passe par le verrou <c>soId</c> partagé (TASK-156, <c>ExecuterAvecVerrouOMAsync</c>)
+    /// — un second appel concurrent pour la même société est rejeté ici en 409, comme les 3 autres
+    /// appelants de l'orchestrateur (jusqu'ici seul ce endpoint laissait fuiter l'exception en 500).
     /// </summary>
     [HttpPost("{id}/lignes/resynchroniser")]
     public async Task<IActionResult> Resynchroniser(Guid id, [FromBody] ValiderIncoherenceRequest request)
     {
         if (request.EcId <= 0)
             return BadRequest(new { Message = "'ecId' est obligatoire." });
-        var (trouvee, resolue) = await _workflowService.ResynchroniserLigneAsync(id, request.EcId);
-        if (!trouvee)
-            return NotFound(new { Message = $"Aucune ligne trouvée pour EC_Id={request.EcId} sur cette déclaration." });
-        return Ok(new { Resolue = resolue });
+        try
+        {
+            var (trouvee, resolue) = await _workflowService.ResynchroniserLigneAsync(id, request.EcId);
+            if (!trouvee)
+                return NotFound(new { Message = $"Aucune ligne trouvée pour EC_Id={request.EcId} sur cette déclaration." });
+            return Ok(new { Resolue = resolue });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { Message = ex.Message });
+        }
     }
 
     [HttpPost("{id}/lignes:bulk")]
