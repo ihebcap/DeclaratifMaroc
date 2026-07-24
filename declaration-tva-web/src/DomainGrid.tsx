@@ -7,7 +7,7 @@ import api from './api';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Loader2, CheckSquare, XSquare, Clock, RefreshCw } from 'lucide-react';
 import type { DomaineTVA } from './DeclarationStepper';
-import { relireDepuisSage } from './api';
+import { relireDepuisSage, resynchroniserLignesBulk } from './api';
 
 export function DomainGrid({ 
     declarationId, 
@@ -238,6 +238,57 @@ export function DomainGrid({
         }
     };
 
+    // TASK-176 : resynchronisation EN MASSE de la sélection — même mécanique de sélection (IDs ou
+    // domaine+filtre) que doBulkAction/doBulkCodeActivite, mais côté back chaque pièce est relue
+    // SÉQUENTIELLEMENT sous le verrou soId (TASK-156). Réutilise l'appel API factorisé (api.ts),
+    // pas de duplication du pipeline unitaire relireDepuisSage. Confirmation au-delà d'un seuil (le
+    // volume d'appels OM/Sage successifs peut prendre du temps) et indicateur d'activité pendant
+    // l'exécution (le back reste synchrone : un seul retour agrégé à la fin).
+    const SEUIL_CONFIRMATION_RESYNC = 20;
+    const [resynchroMasseEnCours, setResynchroMasseEnCours] = useState(false);
+    const doBulkResynchroniser = async () => {
+        if (selectedIds.size === 0 && !selectAllFilters) return;
+        const nb = selectAllFilters ? total : selectedIds.size;
+        if (nb >= SEUIL_CONFIRMATION_RESYNC) {
+            const ok = window.confirm(
+                `Resynchroniser ${nb} ligne(s) depuis Sage ?\n\n` +
+                `Chaque pièce est relue une par une (séquentiel) — cette opération peut prendre ` +
+                `plusieurs dizaines de secondes sur un volume important.`
+            );
+            if (!ok) return;
+        }
+        setResynchroMasseEnCours(true);
+        try {
+            const r = await resynchroniserLignesBulk(declarationId, {
+                ligneIds: selectAllFilters ? undefined : Array.from(selectedIds),
+                filter: selectAllFilters ? JSON.stringify(filters) : undefined,
+                domaine: selectAllFilters ? (domaine || 'Decaissement') : undefined,
+            });
+            let msg = `${r.traitees} pièce(s) resynchronisée(s) : ${r.resolues} résolue(s), ` +
+                `${r.toujoursEnAnomalie.length} toujours en anomalie.`;
+            if (r.nonTrouvees > 0) msg += ` ${r.nonTrouvees} ignorée(s) (introuvable).`;
+            const niveau = r.interrompu
+                ? 'warning'
+                : (r.toujoursEnAnomalie.length > 0 ? 'warning' : 'success');
+            if (r.interrompu) {
+                msg += ` Interrompu : ${r.messageInterruption || 'un autre traitement OM a pris le verrou.'} ` +
+                    `Les lignes déjà traitées sont conservées — relancez pour le reste.`;
+            }
+            showToast(msg, niveau);
+            setSelectedIds(new Set());
+            setSelectAllFilters(false);
+            fetchPage();
+            onActionDone();
+        } catch (e: any) {
+            // 409 : un autre traitement OM tenait déjà le verrou soId avant la première pièce
+            // (rien fait) — message serveur explicite (TASK-156). Autres cas : message générique.
+            const message = e?.response?.data?.Message || e?.response?.data?.message || 'Échec de la resynchronisation en masse.';
+            showToast(message, 'error');
+        } finally {
+            setResynchroMasseEnCours(false);
+        }
+    };
+
     // TASK-161 : surcharge manuelle du code activité d'une ligne (colonne `editable`, jamais en
     // lecture seule) — PATCH ciblé par ligne (Id = DM_LGTVA.Id), jamais par EC_Id (une même
     // facture peut porter deux lignes de taux différents avec deux activités différentes, cas
@@ -345,6 +396,12 @@ export function DomainGrid({
                                     <button onClick={() => doBulkAction('Exclue')} className="btn" style={{ background: 'var(--status-blocking-bg)', color: 'var(--status-blocking-text)', border: '1px solid #fecaca', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><XSquare size={14}/> Exclure</button>
                                     <button onClick={() => doBulkAction('Reportée')} className="btn" style={{ background: '#fef3c7', color: 'var(--status-warning-text-alt)', border: '1px solid var(--status-warning-border)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><Clock size={14}/> Reporter</button>
                                     <button onClick={() => doBulkAction('Proposée')} className="btn" style={{ background: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>Réinitialiser</button>
+                                    {/* TASK-176 : resynchronisation en masse — visible uniquement sur l'écran
+                                        Vérifier & Intégrer (même flag que le bouton par ligne TASK-170), jamais
+                                        sur les autres écrans partageant DomainGrid. */}
+                                    {showResynchroniserAction && (
+                                        <button onClick={doBulkResynchroniser} disabled={resynchroMasseEnCours} className="btn" style={{ background: 'white', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><RefreshCw size={14} className={resynchroMasseEnCours ? 'animate-spin' : ''}/> {resynchroMasseEnCours ? 'Resynchronisation…' : 'Resynchroniser la sélection'}</button>
+                                    )}
                                 </div>
                             )}
                             {/* TASK-173 : affectation en masse du code activité — visible uniquement quand

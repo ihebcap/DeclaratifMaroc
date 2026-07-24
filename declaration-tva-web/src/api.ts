@@ -95,3 +95,33 @@ export async function relireDepuisSage(declarationId: string, ecId: number): Pro
   const res = await api.post(`/declarations/${declarationId}/lignes/resynchroniser`, { ecId });
   return { resolue: !!res.data?.resolue };
 }
+
+// TASK-176 : resynchronisation EN MASSE — même contrat de sélection que les autres bulks
+// (ligneIds OU domaine+filter). Réutilise strictement le pipeline unitaire côté back, traité
+// SÉQUENTIELLEMENT (verrou soId TASK-156, pas de parallélisme). Retour agrégé synthétique, pas
+// N réponses individuelles. Un 409 signifie qu'un autre traitement OM tenait déjà le verrou avant
+// la première pièce (rien fait) ; `interrompu=true` signale une interruption en cours de route
+// (lignes déjà passées préservées).
+export interface ResynchroLigneAnomalie {
+  ecId: number;
+  numeroFacture: string;
+  motif: string;
+}
+
+export interface ResynchroBulkResultat {
+  totalSelection: number;
+  traitees: number;
+  resolues: number;
+  nonTrouvees: number;
+  toujoursEnAnomalie: ResynchroLigneAnomalie[];
+  interrompu: boolean;
+  messageInterruption?: string | null;
+}
+
+export async function resynchroniserLignesBulk(
+  declarationId: string,
+  selection: { ligneIds?: string[]; domaine?: string; filter?: string }
+): Promise<ResynchroBulkResultat> {
+  const res = await api.post(`/declarations/${declarationId}/lignes/resynchroniser:bulk`, selection);
+  return res.data as ResynchroBulkResultat;
+}

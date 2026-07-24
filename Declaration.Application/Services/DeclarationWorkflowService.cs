@@ -755,6 +755,101 @@ public class DeclarationWorkflowService
     }
 
     /// <summary>
+    /// TASK-176 : resynchronisation EN MASSE — réutilise STRICTEMENT <see cref="ResynchroniserLigneAsync"/>
+    /// pour chaque EC_Id résolu par la sélection (LigneIds explicites OU Domaine[+Filter], même contrat
+    /// de sélection que UpdateLignesBulk/UpdateCodeActiviteBulk, TASK-012/173). Aucune nouvelle règle de
+    /// lecture Sage, aucun nouveau verrou : la seule addition est la boucle d'orchestration.
+    ///
+    /// Traitement STRICTEMENT SÉQUENTIEL — jamais de Parallel.ForEach / Task.WhenAll : chaque appel
+    /// ResynchroniserLigneAsync prend puis relâche le verrou soId (TASK-156, ExecuterAvecVerrouOMAsync) ;
+    /// un parallélisme interne s'auto-contentionnerait sur ce même verrou (et sur le même soId en plus).
+    ///
+    /// Retour AGRÉGÉ (traitées / résolues / toujours en anomalie avec motif) pour un affichage synthétique
+    /// côté front, pas N réponses individuelles à corréler. Si le verrou soId est capté par un AUTRE
+    /// traitement concurrent (bouton Rafraîchir, chargement d'un autre onglet…) ENTRE deux itérations,
+    /// la boucle s'arrête proprement (Interrompu=true, message TASK-156) sans perdre les lignes déjà
+    /// resynchronisées ni lever en 500.
+    /// </summary>
+    public async Task<ResynchroBulkResultat> ResynchroniserLignesBulkAsync(
+        Guid declarationId, List<Guid>? ligneIds, string? domaine, string? filter)
+    {
+        var declaration = await _repository.GetByIdAsync(declarationId);
+        if (declaration == null) throw new ArgumentException("Déclaration introuvable");
+
+        // Résolution de la sélection en lignes candidates — lecture seule des lignes déjà persistées,
+        // même mécanique de sélection que les autres bulks : soit une liste explicite de LigneIds,
+        // soit un Domaine (+ Filter éventuel). Aucune écriture ici.
+        List<LigneCandidate> selection;
+        if (ligneIds != null && ligneIds.Count > 0)
+        {
+            var idSet = ligneIds.ToHashSet();
+            var lignesDec = await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null);
+            var lignesEnc = await _repository.GetLignesAsync(declarationId, "Encaissement", 1, int.MaxValue, null, null);
+            selection = lignesDec.Concat(lignesEnc).Where(l => idSet.Contains(l.Id)).ToList();
+        }
+        else if (!string.IsNullOrEmpty(domaine))
+        {
+            selection = (await _repository.GetLignesAsync(declarationId, domaine, 1, int.MaxValue, null, filter)).ToList();
+        }
+        else
+        {
+            throw new ApplicationException("Soit LigneIds soit Domaine doit être renseigné.");
+        }
+
+        // Une pièce Sage (EC_Id) peut porter plusieurs lignes candidates (plusieurs taux) — on ne
+        // resynchronise chaque pièce qu'UNE fois. NumeroFacture conservé pour un retour lisible.
+        var pieces = selection
+            .Where(l => l.EC_Id > 0)
+            .GroupBy(l => l.EC_Id)
+            .Select(g => new { EcId = g.Key, NumeroFacture = g.First().NumeroFacture })
+            .ToList();
+
+        var resultat = new ResynchroBulkResultat { TotalSelection = pieces.Count };
+
+        foreach (var piece in pieces)
+        {
+            try
+            {
+                var (trouvee, resolue) = await ResynchroniserLigneAsync(declarationId, piece.EcId);
+                if (!trouvee)
+                {
+                    resultat.NonTrouvees++;
+                    continue;
+                }
+                resultat.Traitees++;
+                if (resolue)
+                {
+                    resultat.Resolues++;
+                }
+                else
+                {
+                    // Motif relu depuis le cache déjà réécrit par la relecture (lecture seule, aucune
+                    // nouvelle lecture OM), même source que le diagnostic ligne (TASK-144).
+                    var motif = await _repository.GetMotifErreurCacheAsync(declaration.SocieteId, piece.EcId);
+                    resultat.ToujoursEnAnomalie.Add(new ResynchroLigneAnomalie
+                    {
+                        EcId = piece.EcId,
+                        NumeroFacture = piece.NumeroFacture ?? "",
+                        Motif = string.IsNullOrWhiteSpace(motif)
+                            ? "Toujours en anomalie après relecture Sage (cache en erreur)."
+                            : motif
+                    });
+                }
+            }
+            catch (InvalidOperationException ex)
+            {
+                // TASK-156 : le verrou soId a été capté par un AUTRE traitement entre deux itérations.
+                // Rejet propre — on interrompt sans perdre les lignes déjà passées, jamais un 500.
+                resultat.Interrompu = true;
+                resultat.MessageInterruption = ex.Message;
+                break;
+            }
+        }
+
+        return resultat;
+    }
+
+    /// <summary>
     /// Rafraîchit la valorisation TVA (famille B) pour une période bornée, sans déclaration.
     /// Sélectionne les factures éligibles de la période, lit les OM Sage et remplit
     /// DM_VENTILATION_SAGE_CACHE (effet de bord de l'orchestrateur). Aucune ligne de déclaration
@@ -1876,3 +1971,33 @@ public record RapportValorisation(int FacturesTraitees, IReadOnlyList<MotifValor
 
 /// <summary>Motif d'échec de valorisation d'une facture (code technique, message lisible, réf. ligne).</summary>
 public record MotifValorisation(string Code, string Message, string RefLigne);
+
+/// <summary>
+/// TASK-176 : retour agrégé d'une resynchronisation en masse (une pièce EC_Id resynchronisée par
+/// itération, séquentiellement). Permet un affichage synthétique côté front sans corréler N réponses.
+/// </summary>
+public class ResynchroBulkResultat
+{
+    /// <summary>Nombre de pièces (EC_Id distincts) résolues par la sélection.</summary>
+    public int TotalSelection { get; set; }
+    /// <summary>Pièces effectivement relues depuis Sage (verrou acquis, relecture faite).</summary>
+    public int Traitees { get; set; }
+    /// <summary>Pièces désormais résolues (plus en erreur après relecture).</summary>
+    public int Resolues { get; set; }
+    /// <summary>Pièces sélectionnées mais introuvables sur la déclaration (ignorées, non bloquant).</summary>
+    public int NonTrouvees { get; set; }
+    /// <summary>Pièces toujours en anomalie après relecture, avec leur motif (relu du cache).</summary>
+    public List<ResynchroLigneAnomalie> ToujoursEnAnomalie { get; set; } = new();
+    /// <summary>true si un verrou soId concurrent a interrompu la boucle avant la fin (TASK-156).</summary>
+    public bool Interrompu { get; set; }
+    /// <summary>Message d'interruption (verrou concurrent) le cas échéant.</summary>
+    public string? MessageInterruption { get; set; }
+}
+
+/// <summary>TASK-176 : une pièce encore en anomalie après resynchronisation en masse.</summary>
+public class ResynchroLigneAnomalie
+{
+    public int EcId { get; set; }
+    public string NumeroFacture { get; set; } = "";
+    public string Motif { get; set; } = "";
+}

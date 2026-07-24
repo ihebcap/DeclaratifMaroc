@@ -301,6 +301,44 @@ public class DeclarationsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// TASK-176 : resynchronise EN MASSE toutes les pièces Sage d'une sélection — même contrat de
+    /// sélection que <see cref="UpdateLignesBulk"/>/<see cref="UpdateCodeActiviteBulk"/> (liste de
+    /// LigneIds OU Domaine[+Filter]). Réutilise strictement le pipeline unitaire
+    /// <c>ResynchroniserLigneAsync</c> pour chaque EC_Id, SÉQUENTIELLEMENT (jamais en parallèle : chaque
+    /// relecture prend le verrou soId TASK-156). Retour synthétique agrégé (traitées / résolues /
+    /// toujours en anomalie avec motif). Un verrou soId capté par un autre traitement AVANT la première
+    /// pièce → 409 propre (rien fait) ; capté ENTRE deux pièces → 200 avec Interrompu=true et les lignes
+    /// déjà passées préservées (jamais un 500).
+    /// </summary>
+    [HttpPost("{id}/lignes/resynchroniser:bulk")]
+    public async Task<IActionResult> ResynchroniserBulk(Guid id, [FromBody] BulkResynchroniserRequest request)
+    {
+        if ((request.LigneIds == null || request.LigneIds.Count == 0) && string.IsNullOrEmpty(request.Domaine))
+            return BadRequest(new { Message = "Soit LigneIds soit Domaine doit être renseigné." });
+
+        try
+        {
+            var resultat = await _workflowService.ResynchroniserLignesBulkAsync(
+                id, request.LigneIds, request.Domaine, request.Filter);
+
+            // Verrou concurrent AVANT toute pièce traitée : rien fait → rejet propre 409 (TASK-156),
+            // cohérent avec le endpoint unitaire Resynchroniser.
+            if (resultat.Interrompu && resultat.Traitees == 0)
+                return Conflict(new { Message = resultat.MessageInterruption ?? "Un autre traitement est déjà en cours pour cette société." });
+
+            return Ok(resultat);
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+        catch (ApplicationException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
     [HttpPost("{id}/lignes:bulk")]
     public async Task<IActionResult> UpdateLignesBulk(Guid id, [FromBody] BulkUpdateEtatRequest request)
     {
@@ -791,6 +829,14 @@ public class BulkUpdateEtatRequest
 public class BulkUpdateCodeActiviteRequest
 {
     public string? CodeActivite { get; set; }
+    public List<Guid>? LigneIds { get; set; }
+    public string? Domaine { get; set; }
+    public string? Filter { get; set; }
+}
+
+/// <summary>TASK-176 — même sélection que BulkUpdateEtatRequest, appliquée à la resynchronisation en masse.</summary>
+public class BulkResynchroniserRequest
+{
     public List<Guid>? LigneIds { get; set; }
     public string? Domaine { get; set; }
     public string? Filter { get; set; }
