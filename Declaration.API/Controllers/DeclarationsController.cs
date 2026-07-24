@@ -113,33 +113,46 @@ public class DeclarationsController : ControllerBase
     [HttpGet("{id}/lignes")]
     public async Task<IActionResult> GetLignes(Guid id, [FromQuery] string domaine, [FromQuery] int page = 1, [FromQuery] int size = 50, [FromQuery] string? sort = null, [FromQuery] string? filter = null)
     {
-        // TASK-077 : ChargerCandidatesSiNecessaireAsync revalide désormais AUSSI les lignes déjà
-        // figées à chaque appel (sauf déclaration clôturée) et remonte d'éventuelles alertes
-        // LIGNE_FIGEE_A_REVERIFIER — signalement seul, aucune ligne/total modifié. Même contrat
-        // d'alerte (Niveau/Code/Message/RefLigne) que GetCheckup (TASK-060), pour rester cohérent
-        // avec l'existant plutôt qu'un nouveau format.
-        var alertesRevalidation = await _workflowService.ChargerCandidatesSiNecessaireAsync(id, domaine);
-        var lignes = await _repository.GetLignesAsync(id, domaine, page, size, sort, filter);
-        var total = await _repository.GetLignesCountAsync(id, domaine, filter);
-        var distincts = await _repository.GetLignesDistinctsAsync(id, domaine);
-
-        // TASK-034 : projection pure vers un DTO au contrat JSON explicite (clés alignées
-        // sur le front). Lecture seule, aucun effet de bord ni recalcul.
-        return Ok(new
+        try
         {
-            Items = lignes.Select(l => new LigneCandidateDto(l)),
-            TotalCount = total,
-            Page = page,
-            PageSize = size,
-            Distincts = distincts,
-            Alertes = alertesRevalidation.Select(a => new
+            // TASK-077 : ChargerCandidatesSiNecessaireAsync revalide désormais AUSSI les lignes déjà
+            // figées à chaque appel (sauf déclaration clôturée) et remonte d'éventuelles alertes
+            // LIGNE_FIGEE_A_REVERIFIER — signalement seul, aucune ligne/total modifié. Même contrat
+            // d'alerte (Niveau/Code/Message/RefLigne) que GetCheckup (TASK-060), pour rester cohérent
+            // avec l'existant plutôt qu'un nouveau format.
+            var alertesRevalidation = await _workflowService.ChargerCandidatesSiNecessaireAsync(id, domaine);
+            var lignes = await _repository.GetLignesAsync(id, domaine, page, size, sort, filter);
+            var total = await _repository.GetLignesCountAsync(id, domaine, filter);
+            var distincts = await _repository.GetLignesDistinctsAsync(id, domaine);
+
+            // TASK-034 : projection pure vers un DTO au contrat JSON explicite (clés alignées
+            // sur le front). Lecture seule, aucun effet de bord ni recalcul.
+            return Ok(new
             {
-                type = a.Niveau == Declaration.Core.Model.NiveauAlerte.Error ? "bloquant" : "avertissement",
-                message = a.Message,
-                code = a.Code,
-                refLigne = a.RefLigne
-            })
-        });
+                Items = lignes.Select(l => new LigneCandidateDto(l)),
+                TotalCount = total,
+                Page = page,
+                PageSize = size,
+                Distincts = distincts,
+                Alertes = alertesRevalidation.Select(a => new
+                {
+                    type = a.Niveau == Declaration.Core.Model.NiveauAlerte.Error ? "bloquant" : "avertissement",
+                    message = a.Message,
+                    code = a.Code,
+                    refLigne = a.RefLigne
+                })
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            // TASK-175 : le front charge volontairement les deux domaines (Decaissement/Encaissement)
+            // en parallèle pour le même soId — celui qui perd la course au verrou anti-chevauchement
+            // (TASK-156, ExecuterAvecVerrouOMAsync) doit recevoir un 409 explicite (retry possible côté
+            // front), jamais un 500 générique. Même pattern que Resynchroniser (ligne ~285) — seul ce
+            // chemin (le plus fréquemment sollicité, premier chargement d'une déclaration) laissait
+            // fuiter l'exception faute de try/catch.
+            return Conflict(new { Message = ex.Message });
+        }
     }
 
     [HttpPatch("{id}/lignes/{ligneId}")]
@@ -507,6 +520,17 @@ public class DeclarationsController : ControllerBase
         catch (ArgumentException ex)
         {
             return NotFound(new { Message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            // TASK-175 §2/§6 : même lacune structurelle que GetLignes ci-dessus — GetCheckupAsync
+            // revalide aussi les deux domaines (RevaliderLignesFigeesAsync, lignes ~1138-1139) et peut
+            // donc invoquer ReintegrerReglementsLiberesAsync → ExecuterAvecVerrouOMAsync (verrou soId,
+            // TASK-156) et lever la même InvalidOperationException en cas de contention. Sans ce
+            // catch, ce chemin renvoyait lui aussi un 500 générique au lieu du 409 prévu par la
+            // conception TASK-156 (« propagée en 409 par les contrôleurs », uniforme sur tous les
+            // appelants de l'orchestrateur).
+            return Conflict(new { Message = ex.Message });
         }
     }
 

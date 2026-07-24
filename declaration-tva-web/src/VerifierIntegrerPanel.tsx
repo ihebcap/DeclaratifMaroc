@@ -175,6 +175,29 @@ function sousTotauxParTaux(rows: RowAggr[]): SousTotalTaux[] {
   return [...map.values()].sort((a, b) => b.taux - a.taux);
 }
 
+// TASK-175 : rejet du verrou anti-chevauchement soId (TASK-156, ExecuterAvecVerrouOMAsync) —
+// le backend le renvoie désormais en 409 explicite (au lieu du 500 générique observé en
+// production) quand un autre traitement pour la même société est déjà en cours (typiquement
+// l'autre domaine chargé au même moment). Cas ATTENDU, pas une panne : un seul retry
+// automatique après un court délai, cohérent avec la décision PO (rejet immédiat, jamais de
+// file d'attente silencieuse côté back — le retry reste une décision cliente, pas un contournement).
+export function est409VerrouSocieteEnCours(e: any): boolean {
+  return e?.response?.status === 409;
+}
+
+const DELAI_RETRY_VERROU_MS = 1500;
+
+/** Un seul retry automatique en cas de 409 (verrou soId TASK-156 pris par un traitement concurrent). */
+async function getAvecRetrySiVerrouPris<T>(requete: () => Promise<T>): Promise<T> {
+  try {
+    return await requete();
+  } catch (e) {
+    if (!est409VerrouSocieteEnCours(e)) throw e;
+    await new Promise(resolve => setTimeout(resolve, DELAI_RETRY_VERROU_MS));
+    return await requete();
+  }
+}
+
 async function fetchAllLignes(
   declarationId: string
 ): Promise<LigneValorisation[]> {
@@ -184,13 +207,13 @@ async function fetchAllLignes(
   for (const d of domaines) {
     let page = 1;
     for (;;) {
-      const res = await api.get(`/declarations/${declarationId}/lignes`, {
+      const res = await getAvecRetrySiVerrouPris(() => api.get(`/declarations/${declarationId}/lignes`, {
         params: {
           domaine: d,
           page,
           size,
         },
-      });
+      }));
       const chunk: LigneValorisation[] = res.data.items || [];
       const chunkWithDomaine = chunk.map(l => ({ ...l, domaine: d as any }));
       items = items.concat(chunkWithDomaine);
@@ -360,7 +383,16 @@ export function VerifierIntegrerPanel({
                 setDataByReglement(mappedData);
             } catch (e) {
                 console.error("VerifierIntegrerPanel error loading lines:", e);
-                showToast('Erreur lors du chargement de la valorisation', 'error');
+                if (!cancelled) {
+                    // TASK-175 : le retry automatique (getAvecRetrySiVerrouPris) a déjà été tenté une
+                    // fois — si on arrive quand même ici avec un 409, le traitement concurrent est
+                    // encore en cours après le délai ; message explicite plutôt que l'erreur générique.
+                    if (est409VerrouSocieteEnCours(e)) {
+                        showToast('Un autre traitement est en cours pour cette société, réessayez dans quelques secondes.', 'warning');
+                    } else {
+                        showToast('Erreur lors du chargement de la valorisation', 'error');
+                    }
+                }
             } finally {
                 if (!cancelled) setLoadingLignes(false);
             }
@@ -374,13 +406,22 @@ export function VerifierIntegrerPanel({
         (async () => {
             setLoadingCheckup(true);
             try {
-                const res = await api.get(`/declarations/${declarationId}/checkup`);
+                // TASK-175 §2/§6 : GetCheckup expose la même faille que GetLignes (verrou soId
+                // TASK-156 via RevaliderLignesFigeesAsync/ReintegrerReglementsLiberesAsync) — même
+                // retry côté front, désormais que le backend renvoie 409 sur ce chemin aussi.
+                const res = await getAvecRetrySiVerrouPris(() => api.get(`/declarations/${declarationId}/checkup`));
                 if (!cancelled) {
                     setCheckup(res.data as CheckupResult);
                 }
             } catch (e) {
                 console.error(e);
-                if (!cancelled) showToast('Erreur lors du chargement du checkup', 'error');
+                if (!cancelled) {
+                    if (est409VerrouSocieteEnCours(e)) {
+                        showToast('Un autre traitement est en cours pour cette société, réessayez dans quelques secondes.', 'warning');
+                    } else {
+                        showToast('Erreur lors du chargement du checkup', 'error');
+                    }
+                }
             } finally {
                 if (!cancelled) setLoadingCheckup(false);
             }
