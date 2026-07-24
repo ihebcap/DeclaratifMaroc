@@ -289,18 +289,21 @@
   "RecapsParTaux": [
     {
       "Taux": 14,
+      "Collecte": false,
       "TotalHT": 227.42,
       "TotalTva": 31.84,
       "TotalTtc": 259.26
     },
     {
       "Taux": 20,
+      "Collecte": false,
       "TotalHT": 12473.14,
       "TotalTva": 2494.64,
       "TotalTtc": 14967.78
     },
     {
       "Taux": 10,
+      "Collecte": false,
       "TotalHT": 6.33,
       "TotalTva": 0.64,
       "TotalTtc": 6.97
@@ -309,12 +312,14 @@
   "RecapsParActivite": [
     {
       "CodeActivite": "ACT1",
+      "Collecte": false,
       "TotalHT": 12507.03,
       "TotalTva": 2487.94,
       "TotalTtc": 14994.97
     },
     {
       "CodeActivite": "(sans activit\u00E9)",
+      "Collecte": false,
       "TotalHT": 199.86,
       "TotalTva": 39.18,
       "TotalTtc": 239.04

@@ -18,6 +18,8 @@ namespace Declaration.Export.Excel.Tests
                     new LigneDeclarationEnrichie
                     {
                         NumeroFacture = "F-001",
+                        // TASK-162 : numéro de règlement, désormais exporté en 2ᵉ colonne.
+                        NumeroRapprochement = "REG-100",
                         Designation = "Achat fournitures",
                         Tiers = new TiersInfo { Nom = "Fournisseur A", IdentifiantFiscal = "IF-A", Ice = "ICE-A", CodeActivite = "ACT-1" },
                         CodeActivite = "ACT-1",
@@ -34,6 +36,8 @@ namespace Declaration.Export.Excel.Tests
                     new LigneDeclarationEnrichie
                     {
                         NumeroFacture = "F-002",
+                        // TASK-162 : règlement absent (cas "jamais d'exception" du modèle) — chaîne vide.
+                        NumeroRapprochement = "",
                         Designation = "Achat matériel",
                         Tiers = new TiersInfo { Nom = "Fournisseur B", IdentifiantFiscal = "IF-B", Ice = "ICE-B", CodeActivite = "ACT-2" },
                         CodeActivite = "ACT-2",
@@ -95,16 +99,22 @@ namespace Declaration.Export.Excel.Tests
 
                 // En-têtes
                 Assert.Equal("N° Facture", wsDetail.Cell(1, 1).Value.ToString());
+                // TASK-162 : "N° Règlement" juste après "N° Facture".
+                Assert.Equal("N° Règlement", wsDetail.Cell(1, 2).Value.ToString());
 
                 // Lignes de données
                 Assert.Equal("F-001", wsDetail.Cell(2, 1).Value.ToString());
-                Assert.Equal("Achat fournitures", wsDetail.Cell(2, 2).Value.ToString());
-                Assert.Equal("Fournisseur A", wsDetail.Cell(2, 3).Value.ToString());
+                Assert.Equal("REG-100", wsDetail.Cell(2, 2).Value.ToString());
+                Assert.Equal("Achat fournitures", wsDetail.Cell(2, 3).Value.ToString());
+                Assert.Equal("Fournisseur A", wsDetail.Cell(2, 4).Value.ToString());
                 Assert.Equal("F-002", wsDetail.Cell(3, 1).Value.ToString());
+                // Règlement absent : cellule vide, aucune exception.
+                Assert.Equal("", wsDetail.Cell(3, 2).Value.ToString());
 
-                // TASK-163 : colonne "Mode Paiement" (12) affiche le libellé métier, jamais le code brut
-                Assert.Equal("Virement", wsDetail.Cell(2, 12).Value.ToString());
-                Assert.Equal("Chèque", wsDetail.Cell(3, 12).Value.ToString());
+                // TASK-163 : colonne "Mode Paiement" (13, décalée par TASK-162) affiche le libellé
+                // métier, jamais le code brut.
+                Assert.Equal("Virement", wsDetail.Cell(2, 13).Value.ToString());
+                Assert.Equal("Chèque", wsDetail.Cell(3, 13).Value.ToString());
 
                 var wsRecap = workbook.Worksheet("Récap");
                 Assert.NotNull(wsRecap);
@@ -170,6 +180,8 @@ namespace Declaration.Export.Excel.Tests
                     new LigneDeclarationEnrichie
                     {
                         NumeroFacture = "F-001",
+                        // TASK-162 : numéro de règlement, désormais exporté en 2ᵉ colonne.
+                        NumeroRapprochement = "REG-001",
                         Designation = "",
                         Tiers = new TiersInfo { Nom = "Fournisseur A", IdentifiantFiscal = "IF-A", Ice = "ICE-A" },
                         HT = 1000m,
@@ -234,13 +246,17 @@ namespace Declaration.Export.Excel.Tests
 
             var wsFactures = workbook.Worksheet("Factures à déclarer");
             Assert.Equal("N° Facture", wsFactures.Cell(1, 1).Value.ToString());
+            // TASK-162 : "N° Règlement" juste après "N° Facture".
+            Assert.Equal("N° Règlement", wsFactures.Cell(1, 2).Value.ToString());
             Assert.Equal("F-001", wsFactures.Cell(2, 1).Value.ToString());
-            Assert.Equal(1000m, (decimal)wsFactures.Cell(2, 7).Value.GetNumber());
-            Assert.Equal("dd/mm/yyyy", wsFactures.Cell(2, 13).Style.DateFormat.Format);
+            Assert.Equal("REG-001", wsFactures.Cell(2, 2).Value.ToString());
+            Assert.Equal(1000m, (decimal)wsFactures.Cell(2, 8).Value.GetNumber());
             Assert.Equal("dd/mm/yyyy", wsFactures.Cell(2, 14).Style.DateFormat.Format);
+            Assert.Equal("dd/mm/yyyy", wsFactures.Cell(2, 15).Style.DateFormat.Format);
 
             // TASK-163 : code Simpl-TVA inconnu ("9") -> fallback code brut tel quel, jamais d'exception
-            Assert.Equal("9", wsFactures.Cell(2, 12).Value.ToString());
+            // (colonne 13, décalée par TASK-162).
+            Assert.Equal("9", wsFactures.Cell(2, 13).Value.ToString());
 
             // TASK-180 : détail TVA scindé Collecté/Déductible — 4 blocs (taux x2, activité x2).
             var wsDetailTva = workbook.Worksheet("Détail TVA");
