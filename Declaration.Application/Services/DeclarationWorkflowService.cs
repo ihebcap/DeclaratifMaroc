@@ -1341,9 +1341,9 @@ public class DeclarationWorkflowService
                     Montant = r.MvMontant,
                     Tiers = r.Tiers ?? "",
                     Mode = r.Mode,
-                    EtatPointage = r.EstRapprocheBanque
-                        ? $"Rapproché{(r.DateRapprochement.HasValue ? $" ({r.DateRapprochement.Value:dd/MM/yyyy})" : "")}"
-                        : "Non rapproché"
+                    // TASK-180 : plus de date concaténée dans le texte — colonne dédiée ci-dessous.
+                    EtatPointage = r.EstRapprocheBanque ? "Rapproché" : "Non rapproché",
+                    DateRapprochement = r.DateRapprochement
                 })
                 .ToList();
         }
@@ -1387,11 +1387,14 @@ public class DeclarationWorkflowService
 
         // Détail TVA : totaux par taux + contrôle d'équilibre, mêmes agrégats que GetCheckupAsync
         // (recapTaux/controleEquilibre côté DeclarationsController.GetCheckup, TASK-108).
+        // TASK-180 : clivage Collecté (Source == Encaissement) / Déductible (autre source) — même
+        // critère que ConstructeurDeclaration.cs (Source string ici, snapshoté sur LigneCandidate).
         modele.RecapsParTaux = lignesRecap
-            .GroupBy(l => l.Taux)
+            .GroupBy(l => new { l.Taux, Collecte = l.Source == nameof(SourceAffectation.Encaissement) })
             .Select(g => new RecapParTaux
             {
-                Taux = g.Key,
+                Taux = g.Key.Taux,
+                Collecte = g.Key.Collecte,
                 TotalHT = g.Sum(x => x.HT),
                 TotalTva = g.Sum(x => x.TVA),
                 TotalTtc = g.Sum(x => x.TTC)
@@ -1404,10 +1407,11 @@ public class DeclarationWorkflowService
         // TASK-161 point 3) pour toute ligne dont la cascade n'a rien résolu — jamais masqué,
         // simplement un groupe parmi d'autres désormais.
         modele.RecapsParActivite = lignesRecap
-            .GroupBy(l => l.CodeActivite ?? "")
+            .GroupBy(l => new { CodeActivite = l.CodeActivite ?? "", Collecte = l.Source == nameof(SourceAffectation.Encaissement) })
             .Select(g => new RecapParActivite
             {
-                CodeActivite = g.Key,
+                CodeActivite = g.Key.CodeActivite,
+                Collecte = g.Key.Collecte,
                 TotalHT = g.Sum(x => x.HT),
                 TotalTva = g.Sum(x => x.TVA),
                 TotalTtc = g.Sum(x => x.TTC)

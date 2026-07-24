@@ -151,7 +151,18 @@ namespace Declaration.Export.Excel.Tests
                         Montant = 1200m,
                         Tiers = "Fournisseur A",
                         Mode = "Virement",
-                        EtatPointage = "Rapproché (05/07/2026)"
+                        // TASK-180 : statut court + date en champ séparé (colonne dédiée).
+                        EtatPointage = "Rapproché",
+                        DateRapprochement = new DateTime(2026, 7, 8)
+                    },
+                    new ReglementSelectionneInfo
+                    {
+                        Numero = "REG-002",
+                        Date = new DateTime(2026, 7, 6),
+                        Montant = 500m,
+                        Tiers = "Fournisseur B",
+                        Mode = "Chèque",
+                        EtatPointage = "Non rapproché"
                     }
                 },
                 Lignes = new List<LigneDeclarationEnrichie>
@@ -172,13 +183,16 @@ namespace Declaration.Export.Excel.Tests
                         Source = SourceAffectation.Decaissement
                     }
                 },
+                // TASK-180 : un couple Collecté/Déductible sur le même taux (20) pour couvrir les 2
+                // blocs écrits par CreerFeuilleDetailTva.
                 RecapsParTaux = new List<RecapParTaux>
                 {
-                    new RecapParTaux { Taux = 20m, TotalHT = 1000m, TotalTva = 200m, TotalTtc = 1200m }
+                    new RecapParTaux { Taux = 20m, Collecte = true, TotalHT = 500m, TotalTva = 100m, TotalTtc = 600m },
+                    new RecapParTaux { Taux = 20m, Collecte = false, TotalHT = 1000m, TotalTva = 200m, TotalTtc = 1200m }
                 },
                 RecapsParActivite = new List<RecapParActivite>
                 {
-                    new RecapParActivite { CodeActivite = "", TotalHT = 1000m, TotalTva = 200m, TotalTtc = 1200m }
+                    new RecapParActivite { CodeActivite = "", Collecte = false, TotalHT = 1000m, TotalTva = 200m, TotalTtc = 1200m }
                 },
                 ControleEquilibre = new ControleEquilibre
                 {
@@ -203,23 +217,44 @@ namespace Declaration.Export.Excel.Tests
 
             var wsReglements = workbook.Worksheet("Règlements sélectionnés");
             Assert.Equal("Numéro", wsReglements.Cell(1, 1).Value.ToString());
+            // TASK-180 : nouvelle colonne "Date rapprochement" (7), État pointage (6) reste un statut court.
+            Assert.Equal("Date rapprochement", wsReglements.Cell(1, 7).Value.ToString());
             Assert.Equal("REG-001", wsReglements.Cell(2, 1).Value.ToString());
             Assert.Equal(1200m, (decimal)wsReglements.Cell(2, 3).Value.GetNumber());
             Assert.Equal("Fournisseur A", wsReglements.Cell(2, 4).Value.ToString());
-            Assert.Equal("Rapproché (05/07/2026)", wsReglements.Cell(2, 6).Value.ToString());
+            Assert.Equal("Rapproché", wsReglements.Cell(2, 6).Value.ToString());
+            Assert.Equal(new DateTime(2026, 7, 8), wsReglements.Cell(2, 7).GetDateTime());
+            Assert.Equal("dd/mm/yyyy", wsReglements.Cell(2, 7).Style.DateFormat.Format);
+            // Règlement non rapproché (REG-002) : colonne Date rapprochement vide, pas d'exception.
+            Assert.Equal("Non rapproché", wsReglements.Cell(3, 6).Value.ToString());
+            Assert.True(wsReglements.Cell(3, 7).IsEmpty());
+
+            // TASK-180 : Date Paiement (13) / Date Facture (14) — format explicite date-seule.
+            Assert.Equal("dd/mm/yyyy", wsReglements.Cell(2, 2).Style.DateFormat.Format);
 
             var wsFactures = workbook.Worksheet("Factures à déclarer");
             Assert.Equal("N° Facture", wsFactures.Cell(1, 1).Value.ToString());
             Assert.Equal("F-001", wsFactures.Cell(2, 1).Value.ToString());
             Assert.Equal(1000m, (decimal)wsFactures.Cell(2, 7).Value.GetNumber());
+            Assert.Equal("dd/mm/yyyy", wsFactures.Cell(2, 13).Style.DateFormat.Format);
+            Assert.Equal("dd/mm/yyyy", wsFactures.Cell(2, 14).Style.DateFormat.Format);
 
             // TASK-163 : code Simpl-TVA inconnu ("9") -> fallback code brut tel quel, jamais d'exception
             Assert.Equal("9", wsFactures.Cell(2, 12).Value.ToString());
 
+            // TASK-180 : détail TVA scindé Collecté/Déductible — 4 blocs (taux x2, activité x2).
             var wsDetailTva = workbook.Worksheet("Détail TVA");
-            Assert.Equal("Totaux par taux", wsDetailTva.Cell(1, 1).Value.ToString());
+            Assert.Equal("Totaux par taux — Collecté", wsDetailTva.Cell(1, 1).Value.ToString());
             Assert.Equal(20m, (decimal)wsDetailTva.Cell(3, 1).Value.GetNumber());
-            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(3, 4).Value.GetNumber());
+            Assert.Equal(600m, (decimal)wsDetailTva.Cell(3, 4).Value.GetNumber());
+
+            Assert.Equal("Totaux par taux — Déductible", wsDetailTva.Cell(5, 1).Value.ToString());
+            Assert.Equal(20m, (decimal)wsDetailTva.Cell(7, 1).Value.GetNumber());
+            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(7, 4).Value.GetNumber());
+
+            Assert.Equal("Totaux par code activité — Collecté", wsDetailTva.Cell(9, 1).Value.ToString());
+            Assert.Equal("Totaux par code activité — Déductible", wsDetailTva.Cell(12, 1).Value.ToString());
+            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(14, 4).Value.GetNumber());
         }
 
         [Fact]

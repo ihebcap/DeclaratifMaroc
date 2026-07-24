@@ -76,6 +76,9 @@ namespace Declaration.Core.Model
     public class RecapParTaux
     {
         public decimal Taux { get; set; }
+        // TASK-180 : clivage fiscal Collecté (Source == Encaissement) / Déductible (autre source),
+        // même critère que RecapParSource — permet de scinder l'affichage Excel sans recalcul TVA.
+        public bool Collecte { get; set; }
         public decimal TotalHT { get; set; }
         public decimal TotalTva { get; set; }
         public decimal TotalTtc { get; set; }
@@ -84,6 +87,8 @@ namespace Declaration.Core.Model
     public class RecapParActivite
     {
         public string CodeActivite { get; set; } = "";
+        // TASK-180 : voir RecapParTaux.Collecte.
+        public bool Collecte { get; set; }
         public decimal TotalHT { get; set; }
         public decimal TotalTva { get; set; }
         public decimal TotalTtc { get; set; }
@@ -140,6 +145,9 @@ namespace Declaration.Core.Model
         public string Tiers { get; set; } = "";
         public string Mode { get; set; } = "";
         public string EtatPointage { get; set; } = "";
+        // TASK-180 : date de rapprochement sortie du texte de EtatPointage vers un champ dédié
+        // (colonne Excel séparée, exploitable), null si non rapproché.
+        public DateTime? DateRapprochement { get; set; }
     }
 
     /// <summary>

@@ -153,6 +153,43 @@ namespace Declaration.Core.Tests
         }
 
         [Fact]
+        public void ConstruireDeclaration_Recaps_CollecteDeductible_SommeEgaleAncienTotalNonScinde()
+        {
+            // TASK-180 : même taux (20) et même code activité (ACT1) porté par les deux sens fiscaux
+            // (Encaissement = Collecté, Decaissement = Déductible) — vérifie que le clivage n'ajoute
+            // ni ne perd de montant par rapport à l'ancien total non scindé.
+            var f1 = CreateFixture25FA01371(); // TVA 20 et 14, Sens Vente -> Encaissement ici (peu importe le Sens du doc, seul affectation.Source compte)
+            var f2 = CreateFixtureG0110();      // TVA 20 et 10
+
+            var affs = new List<AffectationADeclarer>
+            {
+                new AffectationADeclarer { NumeroFacture = f1.NumeroPiece, MontantAffecte = (decimal)f1.TotalTtc, Source = SourceAffectation.Encaissement, Tiers = new TiersInfo { Ice = "123456789012345", CodeActivite = "ACT1" } },
+                new AffectationADeclarer { NumeroFacture = f2.NumeroPiece, MontantAffecte = (decimal)f2.TotalTtc, Source = SourceAffectation.Decaissement, Tiers = new TiersInfo { Ice = "123456789012345", CodeActivite = "ACT1" } }
+            };
+
+            var dec = ConstructeurDeclaration.ConstruireDeclaration(affs, a => a.NumeroFacture == f1.NumeroPiece ? f1 : f2, 2);
+
+            // Ancien total non scindé par taux (référence) : même GroupBy sans le clivage Collecte.
+            var ancienTotalParTaux = dec.Lignes
+                .GroupBy(l => l.Taux)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Ttc));
+
+            foreach (var taux in ancienTotalParTaux.Keys)
+            {
+                var sommeScindee = dec.RecapsParTaux.Where(r => r.Taux == taux).Sum(r => r.TotalTtc);
+                Assert.Equal(ancienTotalParTaux[taux], sommeScindee);
+            }
+
+            // ACT1 porté à la fois par Collecté (Encaissement, f1) et Déductible (Decaissement, f2).
+            Assert.Contains(dec.RecapsParActivite, r => r.CodeActivite == "ACT1" && r.Collecte);
+            Assert.Contains(dec.RecapsParActivite, r => r.CodeActivite == "ACT1" && !r.Collecte);
+
+            var ancienTotalActivite = dec.Lignes.Where(l => l.CodeActivite == "ACT1").Sum(l => l.Ttc);
+            var sommeScindeeActivite = dec.RecapsParActivite.Where(r => r.CodeActivite == "ACT1").Sum(r => r.TotalTtc);
+            Assert.Equal(ancienTotalActivite, sommeScindeeActivite);
+        }
+
+        [Fact]
         public void DumpJSON_Verify()
         {
             var f1 = CreateFixture25FA01371(); 

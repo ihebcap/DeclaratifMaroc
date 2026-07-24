@@ -175,21 +175,25 @@ namespace Declaration.Core
                     TotalTtc = g.Sum(x => x.Ttc)
                 }).ToList();
 
+            // TASK-180 : clivage Collecté (Source == Encaissement) / Déductible (autre source),
+            // même critère que RecapParSource (GroupBy(l => l.Source) ci-dessus).
             modele.RecapsParTaux = lignesPourRecap
-                .GroupBy(l => l.Taux)
+                .GroupBy(l => new { l.Taux, Collecte = l.Source == SourceAffectation.Encaissement })
                 .Select(g => new RecapParTaux
                 {
-                    Taux = g.Key,
+                    Taux = g.Key.Taux,
+                    Collecte = g.Key.Collecte,
                     TotalHT = g.Sum(x => x.HT),
                     TotalTva = g.Sum(x => x.Tva),
                     TotalTtc = g.Sum(x => x.Ttc)
                 }).ToList();
 
             modele.RecapsParActivite = lignesPourRecap
-                .GroupBy(l => l.CodeActivite)
+                .GroupBy(l => new { l.CodeActivite, Collecte = l.Source == SourceAffectation.Encaissement })
                 .Select(g => new RecapParActivite
                 {
-                    CodeActivite = g.Key,
+                    CodeActivite = g.Key.CodeActivite,
+                    Collecte = g.Key.Collecte,
                     TotalHT = g.Sum(x => x.HT),
                     TotalTva = g.Sum(x => x.Tva),
                     TotalTtc = g.Sum(x => x.Ttc)

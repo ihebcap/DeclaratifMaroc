@@ -32,7 +32,7 @@ namespace Declaration.Orchestration.Tests
             Statut = StatutDeclaration.EnCours
         };
 
-        private static LigneCandidate Ligne(Guid declarationId, EtatLigne etat, string numeroFacture) => new()
+        private static LigneCandidate Ligne(Guid declarationId, EtatLigne etat, string numeroFacture, string source = "Decaissement") => new()
         {
             DeclarationId = declarationId,
             Etat = etat,
@@ -50,7 +50,7 @@ namespace Declaration.Orchestration.Tests
             ModePaiement = "Virement",
             DatePaiement = new DateTime(2026, 7, 15),
             DateFacture = new DateTime(2026, 7, 10),
-            Source = "Decaissement"
+            Source = source
         };
 
         private static ReglementRapprochementRow Reglement(string numero, decimal montant, int mvType = 3, int mvPoint = 1) => new()
@@ -167,7 +167,10 @@ namespace Declaration.Orchestration.Tests
             Assert.Equal(1200m, r.Montant);
             Assert.Equal("Fournisseur Test", r.Tiers);
             Assert.Equal("Virement", r.Mode);
-            Assert.StartsWith("Rapproché", r.EtatPointage);
+            // TASK-180 : EtatPointage reste un statut court (jamais de date concaténée) — la date
+            // vit désormais dans son propre champ DateRapprochement.
+            Assert.Equal("Rapproché", r.EtatPointage);
+            Assert.Equal(new DateTime(2026, 7, 8), r.DateRapprochement);
         }
 
         [Fact]
@@ -187,6 +190,39 @@ namespace Declaration.Orchestration.Tests
 
             var r = Assert.Single(modele.ReglementsSelectionnes);
             Assert.Equal("Non rapproché", r.EtatPointage);
+            // TASK-180 : colonne dédiée vide (pas de date) pour un règlement non rapproché.
+            Assert.Null(r.DateRapprochement);
+        }
+
+        [Fact]
+        public async Task ConstruireModeleControleAsync_RecapsParTauxEtActivite_ClivageCollecteDeductible()
+        {
+            // TASK-180 : Encaissement -> Collecté, Decaissement -> Déductible, même Taux/CodeActivite
+            // des deux côtés (Ligne() fixe Taux=20/HT=1000/TVA=200/TTC=1200 par défaut) — vérifie le
+            // clivage ET que la somme Collecté+Déductible reconstitue l'ancien total non scindé.
+            var declarationId = Guid.NewGuid();
+            var declaration = NouvelleDeclarationEnCours("TVA1-2026-07");
+            declaration.Id = declarationId;
+
+            var repo = new FakeRepository();
+            repo.Declarations[declarationId] = declaration;
+            repo.Lignes.Add(Ligne(declarationId, EtatLigne.Integree, "FC-COLLECTE", source: "Encaissement"));
+            repo.Lignes.Add(Ligne(declarationId, EtatLigne.Integree, "FC-DEDUCTIBLE", source: "Decaissement"));
+
+            var service = CreerService(repo);
+            var modele = await service.ConstruireModeleControleAsync(declarationId);
+
+            Assert.Equal(2, modele.RecapsParTaux.Count);
+            var collecte = Assert.Single(modele.RecapsParTaux, r => r.Collecte);
+            var deductible = Assert.Single(modele.RecapsParTaux, r => !r.Collecte);
+            Assert.Equal(20m, collecte.Taux);
+            Assert.Equal(20m, deductible.Taux);
+            // Ancien total non scindé (une seule ligne par facture, TTC=1200 chacune) : 2400.
+            Assert.Equal(2400m, collecte.TotalTtc + deductible.TotalTtc);
+
+            Assert.Equal(2, modele.RecapsParActivite.Count);
+            Assert.Single(modele.RecapsParActivite, r => r.Collecte);
+            Assert.Single(modele.RecapsParActivite, r => !r.Collecte);
         }
 
         // ─── GenererExcelControleAsync ──────────────────────────────────────────

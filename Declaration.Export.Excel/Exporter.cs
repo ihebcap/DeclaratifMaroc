@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ClosedXML.Excel;
@@ -55,15 +56,19 @@ namespace Declaration.Export.Excel
                 ws.Cell(row, 10).Value = ligne.Ttc;
                 ws.Cell(row, 11).Value = ligne.Prorata;
                 ws.Cell(row, 12).Value = ModePaiementLibelle.LibelleModePaiementSimplTVA(ligne.ModePaiement);
-                if (ligne.DatePaiement.HasValue) ws.Cell(row, 13).Value = ligne.DatePaiement.Value;
-                if (ligne.DateFacture.HasValue) ws.Cell(row, 14).Value = ligne.DateFacture.Value;
+                if (ligne.DatePaiement.HasValue) { ws.Cell(row, 13).Value = ligne.DatePaiement.Value; ws.Cell(row, 13).Style.DateFormat.Format = FormatDateSeule; }
+                if (ligne.DateFacture.HasValue) { ws.Cell(row, 14).Value = ligne.DateFacture.Value; ws.Cell(row, 14).Style.DateFormat.Format = FormatDateSeule; }
                 ws.Cell(row, 15).Value = ligne.Source.ToString();
-                
+
                 row++;
             }
 
             ws.Columns().AdjustToContents();
         }
+
+        // TASK-180 : format explicite date-seule, appliqué à toutes les cellules date de l'export
+        // (masque l'heure quelle que soit la valeur réellement portée par AF_Date/DO_Date en base).
+        private const string FormatDateSeule = "dd/mm/yyyy";
 
         private void CreerFeuilleRecap(IXLWorksheet ws, DeclarationModele modele)
         {
@@ -90,46 +95,16 @@ namespace Declaration.Export.Excel
 
             row++;
 
-            // Totaux par taux
-            ws.Cell(row, 1).Value = "Totaux par taux";
-            ws.Cell(row, 1).Style.Font.Bold = true;
+            // TASK-180 : détail Collecté/Déductible — deux tableaux séparés par sens fiscal,
+            // cohérence avec le rendu déjà validé PO côté front pour TASK-174.
+            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Collecté", modele.RecapsParTaux.Where(r => r.Collecte));
             row++;
-            ws.Cell(row, 1).Value = "Taux";
-            ws.Cell(row, 2).Value = "Total HT";
-            ws.Cell(row, 3).Value = "Total TVA";
-            ws.Cell(row, 4).Value = "Total TTC";
-            ws.Range(row, 1, row, 4).Style.Font.Bold = true;
-            row++;
-            foreach (var recap in modele.RecapsParTaux)
-            {
-                ws.Cell(row, 1).Value = recap.Taux;
-                ws.Cell(row, 2).Value = recap.TotalHT;
-                ws.Cell(row, 3).Value = recap.TotalTva;
-                ws.Cell(row, 4).Value = recap.TotalTtc;
-                row++;
-            }
-
+            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Déductible", modele.RecapsParTaux.Where(r => !r.Collecte));
             row++;
 
-            // Totaux par code activité
-            ws.Cell(row, 1).Value = "Totaux par code activité";
-            ws.Cell(row, 1).Style.Font.Bold = true;
+            row = EcrireBlocRecapParActivite(ws, row, "Totaux par code activité — Collecté", modele.RecapsParActivite.Where(r => r.Collecte));
             row++;
-            ws.Cell(row, 1).Value = "Code Activité";
-            ws.Cell(row, 2).Value = "Total HT";
-            ws.Cell(row, 3).Value = "Total TVA";
-            ws.Cell(row, 4).Value = "Total TTC";
-            ws.Range(row, 1, row, 4).Style.Font.Bold = true;
-            row++;
-            foreach (var recap in modele.RecapsParActivite)
-            {
-                ws.Cell(row, 1).Value = recap.CodeActivite;
-                ws.Cell(row, 2).Value = recap.TotalHT;
-                ws.Cell(row, 3).Value = recap.TotalTva;
-                ws.Cell(row, 4).Value = recap.TotalTtc;
-                row++;
-            }
-
+            row = EcrireBlocRecapParActivite(ws, row, "Totaux par code activité — Déductible", modele.RecapsParActivite.Where(r => !r.Collecte));
             row++;
 
             // Contrôle d'équilibre
@@ -176,6 +151,52 @@ namespace Declaration.Export.Excel
             ws.Columns().AdjustToContents();
         }
 
+        // TASK-180 : blocs réutilisés par CreerFeuilleRecap (export dépôt) et CreerFeuilleDetailTva
+        // (export contrôle) — un bloc = un titre + un tableau Taux/Activité déjà filtré par sens.
+        private int EcrireBlocRecapParTaux(IXLWorksheet ws, int row, string titre, IEnumerable<RecapParTaux> recaps)
+        {
+            ws.Cell(row, 1).Value = titre;
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            row++;
+            ws.Cell(row, 1).Value = "Taux";
+            ws.Cell(row, 2).Value = "Total HT";
+            ws.Cell(row, 3).Value = "Total TVA";
+            ws.Cell(row, 4).Value = "Total TTC";
+            ws.Range(row, 1, row, 4).Style.Font.Bold = true;
+            row++;
+            foreach (var recap in recaps)
+            {
+                ws.Cell(row, 1).Value = recap.Taux;
+                ws.Cell(row, 2).Value = recap.TotalHT;
+                ws.Cell(row, 3).Value = recap.TotalTva;
+                ws.Cell(row, 4).Value = recap.TotalTtc;
+                row++;
+            }
+            return row;
+        }
+
+        private int EcrireBlocRecapParActivite(IXLWorksheet ws, int row, string titre, IEnumerable<RecapParActivite> recaps)
+        {
+            ws.Cell(row, 1).Value = titre;
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            row++;
+            ws.Cell(row, 1).Value = "Code Activité";
+            ws.Cell(row, 2).Value = "Total HT";
+            ws.Cell(row, 3).Value = "Total TVA";
+            ws.Cell(row, 4).Value = "Total TTC";
+            ws.Range(row, 1, row, 4).Style.Font.Bold = true;
+            row++;
+            foreach (var recap in recaps)
+            {
+                ws.Cell(row, 1).Value = recap.CodeActivite;
+                ws.Cell(row, 2).Value = recap.TotalHT;
+                ws.Cell(row, 3).Value = recap.TotalTva;
+                ws.Cell(row, 4).Value = recap.TotalTtc;
+                row++;
+            }
+            return row;
+        }
+
         /// <summary>
         /// TASK-160 : export de contrôle ad-hoc, généré à la volée dans un <see cref="Stream"/>
         /// (aucun fichier disque, à la différence de <see cref="ExporterExcel"/>) — 3 feuilles :
@@ -199,7 +220,9 @@ namespace Declaration.Export.Excel
 
         private void CreerFeuilleReglementsSelectionnes(IXLWorksheet ws, ModeleControle modele)
         {
-            string[] headers = { "Numéro", "Date", "Montant", "Tiers", "Mode", "État pointage" };
+            // TASK-180 : "Date rapprochement" en colonne dédiée (7) — plus jamais concaténée dans
+            // "État pointage" (6), qui reste un statut court exploitable.
+            string[] headers = { "Numéro", "Date", "Montant", "Tiers", "Mode", "État pointage", "Date rapprochement" };
             for (int i = 0; i < headers.Length; i++)
             {
                 ws.Cell(1, i + 1).Value = headers[i];
@@ -210,11 +233,12 @@ namespace Declaration.Export.Excel
             foreach (var r in modele.ReglementsSelectionnes)
             {
                 ws.Cell(row, 1).Value = r.Numero;
-                if (r.Date.HasValue) ws.Cell(row, 2).Value = r.Date.Value;
+                if (r.Date.HasValue) { ws.Cell(row, 2).Value = r.Date.Value; ws.Cell(row, 2).Style.DateFormat.Format = FormatDateSeule; }
                 ws.Cell(row, 3).Value = r.Montant;
                 ws.Cell(row, 4).Value = r.Tiers;
                 ws.Cell(row, 5).Value = r.Mode;
                 ws.Cell(row, 6).Value = r.EtatPointage;
+                if (r.DateRapprochement.HasValue) { ws.Cell(row, 7).Value = r.DateRapprochement.Value; ws.Cell(row, 7).Style.DateFormat.Format = FormatDateSeule; }
                 row++;
             }
 
@@ -250,8 +274,8 @@ namespace Declaration.Export.Excel
                 ws.Cell(row, 10).Value = ligne.Ttc;
                 ws.Cell(row, 11).Value = ligne.Prorata;
                 ws.Cell(row, 12).Value = ModePaiementLibelle.LibelleModePaiementSimplTVA(ligne.ModePaiement);
-                if (ligne.DatePaiement.HasValue) ws.Cell(row, 13).Value = ligne.DatePaiement.Value;
-                if (ligne.DateFacture.HasValue) ws.Cell(row, 14).Value = ligne.DateFacture.Value;
+                if (ligne.DatePaiement.HasValue) { ws.Cell(row, 13).Value = ligne.DatePaiement.Value; ws.Cell(row, 13).Style.DateFormat.Format = FormatDateSeule; }
+                if (ligne.DateFacture.HasValue) { ws.Cell(row, 14).Value = ligne.DateFacture.Value; ws.Cell(row, 14).Style.DateFormat.Format = FormatDateSeule; }
                 ws.Cell(row, 15).Value = ligne.Source.ToString();
 
                 row++;
@@ -264,44 +288,15 @@ namespace Declaration.Export.Excel
         {
             int row = 1;
 
-            ws.Cell(row, 1).Value = "Totaux par taux";
-            ws.Cell(row, 1).Style.Font.Bold = true;
+            // TASK-180 : détail Collecté/Déductible, même principe que CreerFeuilleRecap.
+            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Collecté", modele.RecapsParTaux.Where(r => r.Collecte));
             row++;
-            ws.Cell(row, 1).Value = "Taux";
-            ws.Cell(row, 2).Value = "Total HT";
-            ws.Cell(row, 3).Value = "Total TVA";
-            ws.Cell(row, 4).Value = "Total TTC";
-            ws.Range(row, 1, row, 4).Style.Font.Bold = true;
-            row++;
-            foreach (var recap in modele.RecapsParTaux)
-            {
-                ws.Cell(row, 1).Value = recap.Taux;
-                ws.Cell(row, 2).Value = recap.TotalHT;
-                ws.Cell(row, 3).Value = recap.TotalTva;
-                ws.Cell(row, 4).Value = recap.TotalTtc;
-                row++;
-            }
-
+            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Déductible", modele.RecapsParTaux.Where(r => !r.Collecte));
             row++;
 
-            ws.Cell(row, 1).Value = "Totaux par code activité";
-            ws.Cell(row, 1).Style.Font.Bold = true;
+            row = EcrireBlocRecapParActivite(ws, row, "Totaux par code activité — Collecté", modele.RecapsParActivite.Where(r => r.Collecte));
             row++;
-            ws.Cell(row, 1).Value = "Code Activité";
-            ws.Cell(row, 2).Value = "Total HT";
-            ws.Cell(row, 3).Value = "Total TVA";
-            ws.Cell(row, 4).Value = "Total TTC";
-            ws.Range(row, 1, row, 4).Style.Font.Bold = true;
-            row++;
-            foreach (var recap in modele.RecapsParActivite)
-            {
-                ws.Cell(row, 1).Value = recap.CodeActivite;
-                ws.Cell(row, 2).Value = recap.TotalHT;
-                ws.Cell(row, 3).Value = recap.TotalTva;
-                ws.Cell(row, 4).Value = recap.TotalTtc;
-                row++;
-            }
-
+            row = EcrireBlocRecapParActivite(ws, row, "Totaux par code activité — Déductible", modele.RecapsParActivite.Where(r => !r.Collecte));
             row++;
 
             ws.Cell(row, 1).Value = "Contrôle d'équilibre";
