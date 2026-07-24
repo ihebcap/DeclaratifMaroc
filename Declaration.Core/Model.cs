@@ -79,9 +79,6 @@ namespace Declaration.Core.Model
         // TASK-180 : clivage fiscal Collecté (Source == Encaissement) / Déductible (autre source),
         // même critère que RecapParSource — permet de scinder l'affichage Excel sans recalcul TVA.
         public bool Collecte { get; set; }
-        // TASK-184 : domaine du code activité résolu via P_DECTVAACTIVITE — "Achats", "Ventes" ou
-        // "Non résolu" (code absent/non affecté), jamais masqué (même principe que RecapParActivite).
-        public string Domaine { get; set; } = "";
         public decimal TotalHT { get; set; }
         public decimal TotalTva { get; set; }
         public decimal TotalTtc { get; set; }

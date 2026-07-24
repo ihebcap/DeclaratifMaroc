@@ -1385,11 +1385,6 @@ public class DeclarationWorkflowService
             });
         }
 
-        // TASK-184 : référentiel des codes activité chargé une seule fois (Code → DTA_Domaine),
-        // pour résoudre le domaine Achats/Ventes de "Totaux par taux" sans nouvelle requête SQL.
-        var referentielCodesActivite = await _repository.GetReferentielCodesActiviteAsync();
-        var domaineParCodeActivite = referentielCodesActivite.ToDictionary(r => r.Code, r => r.Domaine);
-
         // Détail TVA : totaux par taux + contrôle d'équilibre, mêmes agrégats que GetCheckupAsync
         // (recapTaux/controleEquilibre côté DeclarationsController.GetCheckup, TASK-108).
         // TASK-180 : clivage Collecté (Source == Encaissement) / Déductible (autre source) — même
@@ -1397,20 +1392,17 @@ public class DeclarationWorkflowService
         modele.RecapsParTaux = lignesRecap
             .GroupBy(l => new {
                 l.Taux,
-                Collecte = l.Source == nameof(SourceAffectation.Encaissement),
-                Domaine = ResoudreDomaineActiviteRecap(l.CodeActivite, domaineParCodeActivite)
+                Collecte = l.Source == nameof(SourceAffectation.Encaissement)
             })
             .Select(g => new RecapParTaux
             {
                 Taux = g.Key.Taux,
                 Collecte = g.Key.Collecte,
-                Domaine = g.Key.Domaine,
                 TotalHT = g.Sum(x => x.HT),
                 TotalTva = g.Sum(x => x.TVA),
                 TotalTtc = g.Sum(x => x.TTC)
             })
             .OrderByDescending(r => r.Taux)
-            .ThenBy(r => r.Domaine)
             .ToList();
 
         // TASK-161 : gap comblé — regroupement RÉEL par CodeActivite résolu (au lieu de l'ancien
@@ -1438,26 +1430,6 @@ public class DeclarationWorkflowService
         };
 
         return modele;
-    }
-
-    /// <summary>
-    /// TASK-184 : domaine du code activité ("Achats"/"Ventes") pour l'affichage "Totaux par taux"
-    /// de l'export de contrôle — résolu via le référentiel P_DECTVAACTIVITE (DTA_Domaine : 1 =
-    /// Encaissement/Ventes, 2 = Decaissement/Achats, cf. DomaineVersDtaDomaine/
-    /// GetDomaineCodeActiviteAsync dans DeclarationRepository.cs). "Non résolu" si le code activité
-    /// est absent de la ligne ou introuvable dans le référentiel — jamais masqué (même principe que
-    /// RecapParActivite, décision PO TASK-161).
-    /// </summary>
-    private static string ResoudreDomaineActiviteRecap(string? codeActivite, IReadOnlyDictionary<string, int> domaineParCodeActivite)
-    {
-        if (string.IsNullOrEmpty(codeActivite)) return "Non résolu";
-        if (!domaineParCodeActivite.TryGetValue(codeActivite, out var domaine)) return "Non résolu";
-        return domaine switch
-        {
-            1 => "Ventes",
-            2 => "Achats",
-            _ => "Non résolu"
-        };
     }
 
     /// <summary>

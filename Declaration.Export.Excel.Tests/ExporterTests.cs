@@ -197,12 +197,10 @@ namespace Declaration.Export.Excel.Tests
                 },
                 // TASK-180 : un couple Collecté/Déductible sur le même taux (20) pour couvrir les 2
                 // blocs écrits par CreerFeuilleDetailTva.
-                // TASK-184 : Domaine renseigné ("Ventes"/"Achats") sur une ligne, "Non résolu" sur
-                // l'autre — couvre l'affichage de la colonne "Domaine Activité" et le cas non masqué.
                 RecapsParTaux = new List<RecapParTaux>
                 {
-                    new RecapParTaux { Taux = 20m, Collecte = true, Domaine = "Ventes", TotalHT = 500m, TotalTva = 100m, TotalTtc = 600m },
-                    new RecapParTaux { Taux = 20m, Collecte = false, Domaine = "Non résolu", TotalHT = 1000m, TotalTva = 200m, TotalTtc = 1200m }
+                    new RecapParTaux { Taux = 20m, Collecte = true, TotalHT = 500m, TotalTva = 100m, TotalTtc = 600m },
+                    new RecapParTaux { Taux = 20m, Collecte = false, TotalHT = 1000m, TotalTva = 200m, TotalTtc = 1200m }
                 },
                 RecapsParActivite = new List<RecapParActivite>
                 {
@@ -261,23 +259,31 @@ namespace Declaration.Export.Excel.Tests
             Assert.Equal("9", wsFactures.Cell(2, 13).Value.ToString());
 
             // TASK-180 : détail TVA scindé Collecté/Déductible — 4 blocs (taux x2, activité x2).
-            // TASK-184 : bloc "Contrôle d'équilibre" retiré ; colonne "Domaine Activité" (2) insérée
-            // dans les blocs "Totaux par taux" uniquement — Total HT/TVA/TTC décalés en 3/4/5.
+            // TASK-184 : bloc "Contrôle d'équilibre" retiré.
+            // TASK-185 : 4 colonnes (plus de "Domaine Activité") + ligne "Total Collecté"/
+            // "Total Deductible" en pied des blocs "Totaux par taux" uniquement.
             var wsDetailTva = workbook.Worksheet("Détail TVA");
             Assert.Equal("Totaux par taux — Collecté", wsDetailTva.Cell(1, 1).Value.ToString());
-            Assert.Equal("Domaine Activité", wsDetailTva.Cell(2, 2).Value.ToString());
+            Assert.Equal("Total HT", wsDetailTva.Cell(2, 2).Value.ToString());
             Assert.Equal(20m, (decimal)wsDetailTva.Cell(3, 1).Value.GetNumber());
-            Assert.Equal("Ventes", wsDetailTva.Cell(3, 2).Value.ToString());
-            Assert.Equal(600m, (decimal)wsDetailTva.Cell(3, 5).Value.GetNumber());
+            Assert.Equal(500m, (decimal)wsDetailTva.Cell(3, 2).Value.GetNumber());
+            Assert.Equal(600m, (decimal)wsDetailTva.Cell(3, 4).Value.GetNumber());
+            Assert.Equal("Total Collecté", wsDetailTva.Cell(4, 1).Value.ToString());
+            Assert.Equal(500m, (decimal)wsDetailTva.Cell(4, 2).Value.GetNumber());
+            Assert.Equal(100m, (decimal)wsDetailTva.Cell(4, 3).Value.GetNumber());
+            Assert.Equal(600m, (decimal)wsDetailTva.Cell(4, 4).Value.GetNumber());
 
-            Assert.Equal("Totaux par taux — Déductible", wsDetailTva.Cell(5, 1).Value.ToString());
-            Assert.Equal(20m, (decimal)wsDetailTva.Cell(7, 1).Value.GetNumber());
-            Assert.Equal("Non résolu", wsDetailTva.Cell(7, 2).Value.ToString());
-            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(7, 5).Value.GetNumber());
+            Assert.Equal("Totaux par taux — Déductible", wsDetailTva.Cell(6, 1).Value.ToString());
+            Assert.Equal(20m, (decimal)wsDetailTva.Cell(8, 1).Value.GetNumber());
+            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(8, 4).Value.GetNumber());
+            Assert.Equal("Total Deductible", wsDetailTva.Cell(9, 1).Value.ToString());
+            Assert.Equal(1000m, (decimal)wsDetailTva.Cell(9, 2).Value.GetNumber());
+            Assert.Equal(200m, (decimal)wsDetailTva.Cell(9, 3).Value.GetNumber());
+            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(9, 4).Value.GetNumber());
 
-            Assert.Equal("Totaux par code activité — Collecté", wsDetailTva.Cell(9, 1).Value.ToString());
-            Assert.Equal("Totaux par code activité — Déductible", wsDetailTva.Cell(12, 1).Value.ToString());
-            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(14, 4).Value.GetNumber());
+            Assert.Equal("Totaux par code activité — Collecté", wsDetailTva.Cell(11, 1).Value.ToString());
+            Assert.Equal("Totaux par code activité — Déductible", wsDetailTva.Cell(14, 1).Value.ToString());
+            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(16, 4).Value.GetNumber());
 
             // TASK-184 : bloc "Contrôle d'équilibre" supprimé — plus aucune occurrence dans la feuille.
             bool controleEquilibrePresent = false;

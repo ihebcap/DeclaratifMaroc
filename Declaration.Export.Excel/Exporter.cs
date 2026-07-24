@@ -156,32 +156,39 @@ namespace Declaration.Export.Excel
 
         // TASK-180 : blocs réutilisés par CreerFeuilleRecap (export dépôt) et CreerFeuilleDetailTva
         // (export contrôle) — un bloc = un titre + un tableau Taux/Activité déjà filtré par sens.
-        // TASK-184 : afficherDomaineActivite ajoute une colonne "Domaine Activité" (Achats/Ventes/
-        // Non résolu) — par défaut false pour ne rien changer à CreerFeuilleRecap (feuille "Récap",
-        // export dépôt, hors périmètre TASK-184), activé uniquement par CreerFeuilleDetailTva.
-        private int EcrireBlocRecapParTaux(IXLWorksheet ws, int row, string titre, IEnumerable<RecapParTaux> recaps, bool afficherDomaineActivite = false)
+        // TASK-185 : libelleTotal ajoute une ligne de total (somme HT/TVA/TTC du bloc) en pied de
+        // tableau — null par défaut pour ne rien changer à CreerFeuilleRecap (feuille "Récap", export
+        // dépôt), renseigné uniquement par CreerFeuilleDetailTva ("Total Collecté"/"Total Deductible").
+        private int EcrireBlocRecapParTaux(IXLWorksheet ws, int row, string titre, IEnumerable<RecapParTaux> recaps, string? libelleTotal = null)
         {
             ws.Cell(row, 1).Value = titre;
             ws.Cell(row, 1).Style.Font.Bold = true;
             row++;
-            int col = 1;
-            ws.Cell(row, col++).Value = "Taux";
-            if (afficherDomaineActivite)
-                ws.Cell(row, col++).Value = "Domaine Activité";
-            ws.Cell(row, col++).Value = "Total HT";
-            ws.Cell(row, col++).Value = "Total TVA";
-            ws.Cell(row, col++).Value = "Total TTC";
-            ws.Range(row, 1, row, col - 1).Style.Font.Bold = true;
+            ws.Cell(row, 1).Value = "Taux";
+            ws.Cell(row, 2).Value = "Total HT";
+            ws.Cell(row, 3).Value = "Total TVA";
+            ws.Cell(row, 4).Value = "Total TTC";
+            ws.Range(row, 1, row, 4).Style.Font.Bold = true;
             row++;
+            decimal sommeHT = 0, sommeTva = 0, sommeTtc = 0;
             foreach (var recap in recaps)
             {
-                col = 1;
-                ws.Cell(row, col++).Value = recap.Taux;
-                if (afficherDomaineActivite)
-                    ws.Cell(row, col++).Value = recap.Domaine;
-                ws.Cell(row, col++).Value = recap.TotalHT;
-                ws.Cell(row, col++).Value = recap.TotalTva;
-                ws.Cell(row, col++).Value = recap.TotalTtc;
+                ws.Cell(row, 1).Value = recap.Taux;
+                ws.Cell(row, 2).Value = recap.TotalHT;
+                ws.Cell(row, 3).Value = recap.TotalTva;
+                ws.Cell(row, 4).Value = recap.TotalTtc;
+                sommeHT += recap.TotalHT;
+                sommeTva += recap.TotalTva;
+                sommeTtc += recap.TotalTtc;
+                row++;
+            }
+            if (libelleTotal != null)
+            {
+                ws.Cell(row, 1).Value = libelleTotal;
+                ws.Cell(row, 2).Value = sommeHT;
+                ws.Cell(row, 3).Value = sommeTva;
+                ws.Cell(row, 4).Value = sommeTtc;
+                ws.Range(row, 1, row, 4).Style.Font.Bold = true;
                 row++;
             }
             return row;
@@ -304,12 +311,12 @@ namespace Declaration.Export.Excel
             int row = 1;
 
             // TASK-180 : détail Collecté/Déductible, même principe que CreerFeuilleRecap.
-            // TASK-184 : colonne Domaine Activité affichée ici uniquement (export de contrôle) —
-            // afficherDomaineActivite=true réservé à ce chemin, CreerFeuilleRecap (export dépôt,
-            // feuille "Récap") reste inchangé via la valeur par défaut du paramètre.
-            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Collecté", modele.RecapsParTaux.Where(r => r.Collecte), afficherDomaineActivite: true);
+            // TASK-185 : ligne de total ("Total Collecté"/"Total Deductible") affichée ici
+            // uniquement (export de contrôle) — CreerFeuilleRecap (export dépôt, feuille "Récap")
+            // reste inchangé via la valeur par défaut du paramètre.
+            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Collecté", modele.RecapsParTaux.Where(r => r.Collecte), libelleTotal: "Total Collecté");
             row++;
-            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Déductible", modele.RecapsParTaux.Where(r => !r.Collecte), afficherDomaineActivite: true);
+            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Déductible", modele.RecapsParTaux.Where(r => !r.Collecte), libelleTotal: "Total Deductible");
             row++;
 
             row = EcrireBlocRecapParActivite(ws, row, "Totaux par code activité — Collecté", modele.RecapsParActivite.Where(r => r.Collecte));
