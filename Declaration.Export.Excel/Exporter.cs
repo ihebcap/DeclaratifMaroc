@@ -308,13 +308,17 @@ namespace Declaration.Export.Excel
             ws.Cell(row, 1).Value = "Contrôle d'équilibre";
             ws.Cell(row, 1).Style.Font.Bold = true;
             row++;
-            ws.Cell(row, 1).Value = "Total Montant Affecté";
+            ws.Cell(row, 1).Value = "Total HT";
             ws.Cell(row, 2).Value = modele.ControleEquilibre.TotalMontantAffecte;
             row++;
             ws.Cell(row, 1).Value = "Total Déclaré TTC";
             ws.Cell(row, 2).Value = modele.ControleEquilibre.TotalDeclareTtc;
             row++;
-            ws.Cell(row, 1).Value = "Résidu Non TVA";
+            // TASK-182 : libellé corrigé (chemin contrôle uniquement) — ici ResiduNonTva vaut
+            // toujours ΣHT - ΣTTC = -ΣTVA (ResiduExplique codé en dur à 0 dans ce chemin, cf.
+            // ConstruireModeleControleAsync), donc ce n'est pas un "Résidu Non TVA" au sens du
+            // chemin de dépôt (CreerFeuilleRecap, non touché) mais un simple écart HT-TTC.
+            ws.Cell(row, 1).Value = "Écart HT − TTC (= −Total TVA)";
             ws.Cell(row, 2).Value = modele.ControleEquilibre.ResiduNonTva;
             row++;
 
