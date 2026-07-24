@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   LogOut, LayoutDashboard, Landmark, FileText, FileCheck,
-  Receipt, Scissors, Send, BarChart3, Lock, Construction, ShieldAlert, AlertTriangle,
+  Scissors, Send, BarChart3, Lock, ShieldAlert, AlertTriangle,
 } from 'lucide-react';
 import './index.css';
 import './App.css';
@@ -23,7 +23,7 @@ export interface User {
 }
 
 // Sections navigables (le shell ne fait que router — aucun calcul/API ici).
-type SectionKey = 'rapprochement' | 'factures' | 'declaration' | 'releve';
+type SectionKey = 'rapprochement' | 'factures' | 'declaration';
 
 type MenuStatus = 'live' | 'soon' | 'todo';
 
@@ -51,7 +51,6 @@ const MENU_GROUPS: MenuGroup[] = [
     title: 'DÉCLARATION',
     entries: [
       { key: 'declaration', label: 'Déclaration TVA', icon: FileCheck, status: 'live' },
-      { key: 'releve', label: 'Relevé de déductions', icon: Receipt, status: 'soon' },
     ],
   },
   {
@@ -308,13 +307,7 @@ function Dashboard({ user, onLogout, showToast }: { user: User; onLogout: () => 
           <RapprochementInterrogation societeId={user.societeId} showToast={showToast} />
         ) : activeSection === 'factures' ? (
           <FactureInterrogation societeId={user.societeId} showToast={showToast} />
-        ) : (
-          <Placeholder
-            icon={Receipt}
-            title="Relevé de déductions"
-            description="Sortie / annexe officielle du relevé de déductions. Écran en cours de cadrage — aucune donnée factice affichée."
-          />
-        )}
+        ) : null}
       </main>
 
       {isCreateModalOpen && (
@@ -329,23 +322,6 @@ function Dashboard({ user, onLogout, showToast }: { user: User; onLogout: () => 
           }}
         />
       )}
-    </div>
-  );
-}
-
-// Placeholder honnête : aucune donnée factice, indique clairement l'état "en cours".
-function Placeholder({ icon: Icon, title, description }: { icon: typeof LayoutDashboard; title: string; description: string }) {
-  return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-      <div style={{ position: 'relative', marginBottom: '1rem' }}>
-        <Icon size={56} style={{ opacity: 0.25 }} />
-        <Construction size={22} style={{ position: 'absolute', bottom: -4, right: -8, color: 'var(--warning)' }} />
-      </div>
-      <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)' }}>{title}</h2>
-      <p style={{ margin: 0, maxWidth: 460, fontSize: '0.875rem', lineHeight: 1.5 }}>{description}</p>
-      <span style={{ marginTop: '1.25rem', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', fontSize: '0.7rem', fontWeight: 600, background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        Écran en cours
-      </span>
     </div>
   );
 }

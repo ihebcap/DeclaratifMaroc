@@ -41,9 +41,18 @@ interface RecapLigne {
     domaine?: string;
 }
 
+interface RecapActiviteLigne {
+    codeActivite: string;
+    domaine: string;
+    ht: number;
+    tva: number;
+    ttc: number;
+}
+
 interface CheckupData {
     recapSource: (RecapLigne & { source: string })[];
     recapTaux: (RecapLigne & { taux: number })[];
+    recapActivite: RecapActiviteLigne[];
     alertes: CheckupAlerte[];
     reconciliation: {
         candidates: number;
@@ -97,6 +106,7 @@ export function DeclarationFinalePanel({
     // Sections repliables
     const [sourceOpen, setSourceOpen] = useState(true);
     const [tauxOpen, setTauxOpen] = useState(true);
+    const [activiteOpen, setActiviteOpen] = useState(true);
     const [bloquantsOpen, setBloquantsOpen] = useState(true);
     const [avertissementsOpen, setAvertissementsOpen] = useState(true);
     const [selectedTab, setSelectedTab] = useState<'Decaissement' | 'Encaissement'>('Decaissement');
@@ -144,6 +154,20 @@ export function DeclarationFinalePanel({
     const filteredRecapTaux = useMemo(() => {
         return (data?.recapTaux ?? []).filter(r => !r.domaine || r.domaine === selectedTab);
     }, [data?.recapTaux, selectedTab]);
+
+    // TASK-174 : récap collecté/déductible par code activité, indépendant de l'onglet
+    // (les deux domaines affichés côte à côte, cf. demande PO).
+    const recapActiviteEncaissement = useMemo(() => {
+        return (data?.recapActivite ?? [])
+            .filter(r => r.domaine === 'Encaissement')
+            .map(r => ({ source: r.codeActivite, ht: r.ht, tva: r.tva, ttc: r.ttc }));
+    }, [data?.recapActivite]);
+
+    const recapActiviteDecaissement = useMemo(() => {
+        return (data?.recapActivite ?? [])
+            .filter(r => r.domaine === 'Decaissement')
+            .map(r => ({ source: r.codeActivite, ht: r.ht, tva: r.tva, ttc: r.ttc }));
+    }, [data?.recapActivite]);
 
     const displayNbLignes = useMemo(() => {
         return filteredRecapSource.reduce((s: number, r: RecapLigne) => s + (r.nbLignes ?? 0), 0);
@@ -468,7 +492,37 @@ export function DeclarationFinalePanel({
                     </table>
                 </Section>
 
-                {/* ③ Anomalies 🔴 Bloquantes */}
+                {/* ③ Récap collecté/déductible par code activité */}
+                <Section
+                    icon={<BarChart2 size={14} />}
+                    title="Récap par code activité"
+                    open={activiteOpen}
+                    onToggle={() => setActiviteOpen(!activiteOpen)}
+                    badge={recapActiviteEncaissement.length + recapActiviteDecaissement.length}
+                >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div>
+                            <div style={{
+                                padding: '0.4rem 0.65rem', fontSize: '0.75rem', fontWeight: 700,
+                                color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em',
+                            }}>
+                                Collecté (Encaissement)
+                            </div>
+                            <RecapSourceTable recapSource={recapActiviteEncaissement} columnLabel="Code activité" />
+                        </div>
+                        <div>
+                            <div style={{
+                                padding: '0.4rem 0.65rem', fontSize: '0.75rem', fontWeight: 700,
+                                color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em',
+                            }}>
+                                Déductible (Décaissement)
+                            </div>
+                            <RecapSourceTable recapSource={recapActiviteDecaissement} columnLabel="Code activité" />
+                        </div>
+                    </div>
+                </Section>
+
+                {/* ④ Anomalies 🔴 Bloquantes */}
                 <Section
                     icon={<XCircle size={14} style={{ color: 'var(--status-blocking-text)' }} />}
                     title="Anomalies bloquantes 🔴"
@@ -495,7 +549,7 @@ export function DeclarationFinalePanel({
                     )}
                 </Section>
 
-                {/* ④ Anomalies 🟠 Avertissements */}
+                {/* ⑤ Anomalies 🟠 Avertissements */}
                 <Section
                     icon={<AlertTriangle size={14} style={{ color: '#c2410c' }} />}
                     title="Avertissements 🟠"
@@ -522,7 +576,7 @@ export function DeclarationFinalePanel({
                     )}
                 </Section>
 
-                {/* ⑤ Récap rapprochement (densité) */}
+                {/* ⑥ Récap rapprochement (densité) */}
                 <Section
                     icon={<ShieldCheck size={14} />}
                     title="Récap lignes"

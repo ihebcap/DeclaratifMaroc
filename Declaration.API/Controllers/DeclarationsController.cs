@@ -382,6 +382,22 @@ public class DeclarationsController : ControllerBase
             var residuIncoherentes = recapIncoherence.Where(g => g.incoherente).Sum(g => g.residu);
             var ecartExplique = Math.Abs(ecart - residuIncoherentes) < toleranceResidu;
 
+            // TASK-174 : recapActivite groupé par {CodeActivite, Domaine} sur le même ensemble
+            // que recapSource/recapTaux (lignesRecap) — pure agrégation, code activité déjà
+            // affecté par TASK-161. Vide → "—" (jamais masquer une ligne sans code, cf. garde-fou).
+            var recapActivite = lignesRecap
+                .GroupBy(l => new { CodeActivite = string.IsNullOrWhiteSpace(l.CodeActivite) ? "—" : l.CodeActivite, l.Domaine })
+                .Select(g => new
+                {
+                    codeActivite = g.Key.CodeActivite,
+                    domaine = g.Key.Domaine,
+                    ht = g.Sum(x => x.HT),
+                    tva = g.Sum(x => x.TVA),
+                    ttc = g.Sum(x => x.TTC)
+                })
+                .OrderBy(x => x.codeActivite)
+                .ToList();
+
             var equilibre = new { isValid = Math.Abs(ecart) < toleranceResidu, ecart, ecartExplique };
 
             // Alertes typées : Niveau back → type front (Error → bloquant, Warning/Info →
@@ -411,6 +427,7 @@ public class DeclarationsController : ControllerBase
                 equilibre,
                 recapSource,
                 recapTaux,
+                recapActivite,
                 recapIncoherence,
                 alertes,
                 controleEquilibre = result.ControleEquilibre,
