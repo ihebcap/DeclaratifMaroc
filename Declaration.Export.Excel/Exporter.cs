@@ -156,23 +156,32 @@ namespace Declaration.Export.Excel
 
         // TASK-180 : blocs réutilisés par CreerFeuilleRecap (export dépôt) et CreerFeuilleDetailTva
         // (export contrôle) — un bloc = un titre + un tableau Taux/Activité déjà filtré par sens.
-        private int EcrireBlocRecapParTaux(IXLWorksheet ws, int row, string titre, IEnumerable<RecapParTaux> recaps)
+        // TASK-184 : afficherDomaineActivite ajoute une colonne "Domaine Activité" (Achats/Ventes/
+        // Non résolu) — par défaut false pour ne rien changer à CreerFeuilleRecap (feuille "Récap",
+        // export dépôt, hors périmètre TASK-184), activé uniquement par CreerFeuilleDetailTva.
+        private int EcrireBlocRecapParTaux(IXLWorksheet ws, int row, string titre, IEnumerable<RecapParTaux> recaps, bool afficherDomaineActivite = false)
         {
             ws.Cell(row, 1).Value = titre;
             ws.Cell(row, 1).Style.Font.Bold = true;
             row++;
-            ws.Cell(row, 1).Value = "Taux";
-            ws.Cell(row, 2).Value = "Total HT";
-            ws.Cell(row, 3).Value = "Total TVA";
-            ws.Cell(row, 4).Value = "Total TTC";
-            ws.Range(row, 1, row, 4).Style.Font.Bold = true;
+            int col = 1;
+            ws.Cell(row, col++).Value = "Taux";
+            if (afficherDomaineActivite)
+                ws.Cell(row, col++).Value = "Domaine Activité";
+            ws.Cell(row, col++).Value = "Total HT";
+            ws.Cell(row, col++).Value = "Total TVA";
+            ws.Cell(row, col++).Value = "Total TTC";
+            ws.Range(row, 1, row, col - 1).Style.Font.Bold = true;
             row++;
             foreach (var recap in recaps)
             {
-                ws.Cell(row, 1).Value = recap.Taux;
-                ws.Cell(row, 2).Value = recap.TotalHT;
-                ws.Cell(row, 3).Value = recap.TotalTva;
-                ws.Cell(row, 4).Value = recap.TotalTtc;
+                col = 1;
+                ws.Cell(row, col++).Value = recap.Taux;
+                if (afficherDomaineActivite)
+                    ws.Cell(row, col++).Value = recap.Domaine;
+                ws.Cell(row, col++).Value = recap.TotalHT;
+                ws.Cell(row, col++).Value = recap.TotalTva;
+                ws.Cell(row, col++).Value = recap.TotalTtc;
                 row++;
             }
             return row;
@@ -295,31 +304,17 @@ namespace Declaration.Export.Excel
             int row = 1;
 
             // TASK-180 : détail Collecté/Déductible, même principe que CreerFeuilleRecap.
-            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Collecté", modele.RecapsParTaux.Where(r => r.Collecte));
+            // TASK-184 : colonne Domaine Activité affichée ici uniquement (export de contrôle) —
+            // afficherDomaineActivite=true réservé à ce chemin, CreerFeuilleRecap (export dépôt,
+            // feuille "Récap") reste inchangé via la valeur par défaut du paramètre.
+            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Collecté", modele.RecapsParTaux.Where(r => r.Collecte), afficherDomaineActivite: true);
             row++;
-            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Déductible", modele.RecapsParTaux.Where(r => !r.Collecte));
+            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Déductible", modele.RecapsParTaux.Where(r => !r.Collecte), afficherDomaineActivite: true);
             row++;
 
             row = EcrireBlocRecapParActivite(ws, row, "Totaux par code activité — Collecté", modele.RecapsParActivite.Where(r => r.Collecte));
             row++;
             row = EcrireBlocRecapParActivite(ws, row, "Totaux par code activité — Déductible", modele.RecapsParActivite.Where(r => !r.Collecte));
-            row++;
-
-            ws.Cell(row, 1).Value = "Contrôle d'équilibre";
-            ws.Cell(row, 1).Style.Font.Bold = true;
-            row++;
-            ws.Cell(row, 1).Value = "Total HT";
-            ws.Cell(row, 2).Value = modele.ControleEquilibre.TotalMontantAffecte;
-            row++;
-            ws.Cell(row, 1).Value = "Total Déclaré TTC";
-            ws.Cell(row, 2).Value = modele.ControleEquilibre.TotalDeclareTtc;
-            row++;
-            // TASK-182 : libellé corrigé (chemin contrôle uniquement) — ici ResiduNonTva vaut
-            // toujours ΣHT - ΣTTC = -ΣTVA (ResiduExplique codé en dur à 0 dans ce chemin, cf.
-            // ConstruireModeleControleAsync), donc ce n'est pas un "Résidu Non TVA" au sens du
-            // chemin de dépôt (CreerFeuilleRecap, non touché) mais un simple écart HT-TTC.
-            ws.Cell(row, 1).Value = "Écart HT − TTC (= −Total TVA)";
-            ws.Cell(row, 2).Value = modele.ControleEquilibre.ResiduNonTva;
             row++;
 
             ws.Columns().AdjustToContents();
