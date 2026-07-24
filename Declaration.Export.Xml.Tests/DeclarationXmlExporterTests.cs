@@ -99,7 +99,7 @@ namespace Declaration.Export.Xml.Tests
             
             // Ordre et structure (partiel)
             Assert.Contains("<ord>1</ord>", xmlContent);
-            Assert.Contains("<des>Achat matériel</des>", xmlContent);
+            Assert.Contains("<des>Achat marchandise</des>", xmlContent);
             Assert.Contains("<refF><if>12345678</if><nom>Fournisseur A</nom><ice>123456789012345</ice></refF>", xmlContent);
             
             // IsReport = true a été exclu
@@ -338,7 +338,7 @@ namespace Declaration.Export.Xml.Tests
             ligne.Designation = " Marchandises ";
             var xml = LireXml(ModeleAvecLigne(ligne, "TRIM-1"), "TRIM-1");
             Assert.Contains("<num>FACZ001</num>", xml);
-            Assert.Contains("<des>Marchandises</des>", xml);
+            Assert.Contains("<des>Achat marchandise</des>", xml);
         }
     }
 }

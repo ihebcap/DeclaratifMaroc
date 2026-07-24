@@ -62,7 +62,10 @@ namespace Declaration.Export.Xml
                 sb.Append("<rd>\r\n");
                 sb.Append($"<ord>{ord}</ord>\r\n");
                 sb.Append($"<num>{EscapeXml(ligne.NumeroFacture?.Trim())}</num>\r\n");
-                sb.Append($"<des>{EscapeXml(ligne.Designation?.Trim())}</des>\r\n");
+                // Placeholder fixe assumé (PO 24/07/2026, TASK-181) : Designation reste vide en amont
+                // (DM_LGTVA/LigneCandidate non exposée, cf. TODO.md). Remplacement total, pas un
+                // fallback conditionnel — tant que ce point n'est pas explicitement révisé.
+                sb.Append($"<des>{EscapeXml("Achat marchandise")}</des>\r\n");
                 sb.Append($"<mht>{FormatDecimal(ligne.HT)}</mht>\r\n");
                 sb.Append($"<tva>{FormatDecimal(ligne.Tva)}</tva>\r\n");
                 sb.Append($"<ttc>{FormatDecimal(ligne.Ttc)}</ttc>\r\n");
