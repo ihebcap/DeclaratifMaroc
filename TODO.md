@@ -1,34 +1,139 @@
 # TODO — Module Déclaration TVA (GRF)
 
-## 🐞 Régression sur TASK-161 (déjà APPROUVÉE) — le mapping « défaut par tiers » ne fonctionne jamais en réel (signalement PO 24/07/2026)
-Le PO a corrigé deux points sur TASK-161 : (1) `SCAT_NumeroTiers` n'existe pas en base (script jamais
-exécuté, comportement voulu) ; (2) `SCAT_ErpIntitule` **n'est pas l'intitulé du tiers** — investigation
-architecte (lecture directe et en lecture seule de `apbs-gr_winform`) confirme : c'est la valeur d'une
-colonne Sage *configurable par société* dédiée au **code activité** (`ErpColumnNameCodeActiviteMarroc`,
-documentée « Colonne Sage — code activité tiers (Maroc) »), pas le nom du tiers. Or GRF
-(`DeclarationWorkflowService.cs:816`) compare cette valeur au **vrai nom du tiers**
-(`c.Affectation.Tiers.Nom`) — deux domaines de valeurs disjoints qui ne peuvent structurellement jamais
-coïncider. **Conséquence : le niveau « défaut par tiers » de la cascade code activité (TASK-161) ne s'est
-jamais déclenché chez aucun client réel depuis sa livraison** — retombe silencieusement au niveau
-`CT_APE` ou à "". Non bloquant (le code activité n'entre pas dans le XML DGI) mais fonctionnalité
-« DONE » en réalité inerte.
+## 🐞 Drill « Codes activité » (écran ③) : impossible de basculer Achats/Ventes sans sortir (signalement PO 24/07/2026, capture d'écran)
+Signalement PO : dans le drill « Codes activité » ouvert depuis l'onglet Déductible (Achats), seule la
+grille Achats est accessible — aucun moyen de voir/affecter les codes activité côté Encaissement
+(Ventes) sans quitter le drill. Diagnostic architecte (code + base réelle `GR_EMA_DISTRIBUTION`) :
+**pas un bug de mapping ni de sauvegarde** — référentiel, endpoint et persistance sont déjà symétriques
+entre les deux domaines (57 codes Encaissement / 39 Decaissement en base, 3893 lignes Encaissement déjà
+dans `DM_LGTVA`). La cause réelle est un pur trou d'ergonomie : le bandeau du drill
+(`VerifierIntegrerPanel.tsx:636-666`) n'offre qu'un bouton « ← Retour au contrôle », les deux onglets
+Achats/Ventes qui pilotent le domaine étant rendus uniquement dans la vue principale, masqués dès qu'un
+drill est ouvert — obligeant à sortir puis rentrer par l'autre onglet pour changer de domaine.
 
+> ✅ **TASK-183 approuvée** (24/07/2026, revue architecte complète : diff `0f9084f` relu intégralement
+> — seul le bloc conditionnel `kind === 'codeActivite'` ajouté, aucun fichier `.cs` touché —, `tsc -b`
+> et `vite build` rejoués indépendamment → 0 erreur). Voir `DONE.md`.
+> ⚠️ **Point hors périmètre découvert pendant les tests, à tracer séparément** : les filtres
+> texte/nombre (`factureNumero`, `tiers`, `montantHT`, `montantTTC`) envoyés par `DomainGrid.tsx` au
+> `GET .../lignes` sont silencieusement ignorés côté back (`BuildLigneFilterWhere`) — seuls
+> `numeroRapprochement`/`source`/`tauxTVA`/`origine` fonctionnent réellement (TASK-067B). Affecte les
+> 4 kinds de drill + l'écran principal. Aucune TASK ouverte à ce stade, à arbitrer par le PO.
+
+> ✅ **TASK-184 approuvée** (24/07/2026, revue architecte complète : diff intégral du commit
+> `1b2b896` relu, build solution + 3 suites de tests rejouées indépendamment — 3/3, 52/52, 182/182 —,
+> `.xlsx` de preuve réinspecté programmatiquement, bloc « Contrôle d'équilibre » absent confirmé,
+> colonne « Domaine Activité » confirmée). Voir `DONE.md`.
+> ✅ **TASK-185 approuvée** (24/07/2026, correction de TASK-184 : colonne « Domaine Activité »
+> retirée — hors sujet —, lignes « Total Collecté »/« Total Deductible » ajoutées en pied de
+> tableau. Revue architecte complète : diff intégral du commit `d288fce` relu, build + 3 suites de
+> tests rejouées indépendamment — 3/3, 52/52, 182/182 —, `.xlsx` de preuve réinspecté
+> programmatiquement, valeurs cohérentes avec TASK-184/TASK-182). Voir `DONE.md`.
+
+## 🗺️ ROADMAP — V2 : source du détail TVA = grand livre comptable, indépendance vis-à-vis de Sage (décision PO 24/07/2026, pas une TASK prête)
+Décision PO : dans une **deuxième version** du module, le détail TVA (assiette/taux/TTC par facture)
+sera lu depuis un **grand livre comptable**, à la place des Objets Métier Sage (`SageTaxReader.Core`)
+utilisés en V1. Objectif : ne plus dépendre de Sage.
+
+État actuel (V1) : seule la **sélection/éligibilité** est déjà indépendante de Sage (rapprochement
+local `RT_MOUVEMENT.MV_Point`, §1quinquies `MODULE_DECLARATION_TVA.md`) ; le détail TVA reste couplé
+à Sage BO **par choix explicite du PO**, pour obtenir les montants exacts calculés par Sage sans
+réintroduire d'arrondi. L'isolation existe déjà côté code (`SageTaxReader.Contracts` = DTO frontière,
+worker out-of-process) — un nouvel adaptateur V2 pourrait s'y brancher sans retoucher le domaine.
+
+**Point de vigilance avant de lancer la V2** : le grand livre comptable ciblé doit exposer la
+ventilation TVA **par facture et par taux**, pas seulement des totaux de compte agrégés — sinon la
+reconstruction rejoue le risque de dérive de centimes déjà identifié comme bug dans l'ancien GRFN
+(§2 `MODULE_DECLARATION_TVA.md`).
+
+Précision PO (24/07/2026) : le principe envisagé = **un compte général affecté à chaque taux de TVA**
+(mapping compte↔taux, ex. sous-comptes 345x par taux) + un **contrôle de cohérence** (probablement
+Σ TVA recalculée vs Σ mouvements du compte, sur le même principe que le contrôle d'équilibre déjà
+existant en V1). Question ouverte non tranchée : l'**assiette HT** par taux vient-elle de la même
+écriture que le compte de TVA, ou d'un compte contrepartie distinct à apparier (pièce/journal) ? Et
+ce mapping compte↔taux est-il **configurable par société** (cohérent avec le principe multi-client
+« tout configurable, rien en dur » du CDC) ou fixe ?
+
+Pas de TASK ouverte : contexte insuffisant (schéma exact du grand livre cible, client concerné,
+échéance, réponses aux deux questions ci-dessus). À transformer en TASK complète (tous champs
+obligatoires) dès que ces éléments seront précisés par le PO.
+
+## 🗺️ ROADMAP — écran ③ Vérifier & Intégrer (+ écran ② Affectations) : trop de boutons d'action distincts (ressenti PO 24/07/2026, à évaluer, pas une TASK prête)
+Ressenti PO : l'écran est devenu compliqué à l'usage. Vérification architecte : **confirmé** — rien
+que pour « resynchroniser une pièce Sage », il existe déjà 4 chemins distincts, livrés task par
+task sans jamais être reconsolidés : (1) « Diagnostiquer » (écran ③, par ligne en anomalie) → ouvre
+`DiagnosticModal` → bouton « Relire depuis Sage » ; (2) « Resynchroniser » direct par ligne (écran
+③, `VerifierIntegrerPanel.tsx`/`DomainGrid.tsx`, TASK-170) ; (3) « Corriger / Resynchroniser »
+(écran ② Affectations, `AffectationsDrill.tsx`) ; (4) bientôt un bulk (TASK-176). S'y ajoutent, à
+côté : « Valider l'incohérence » (écran ②), 2 actions en masse existantes (état, code activité
+TASK-173), « Recalculer depuis cache ». Chaque ajout est individuellement justifié par sa TASK
+d'origine, mais l'accumulation rend l'écran dense — symptôme classique de fonctionnalités greffées
+une par une sans repasse de consolidation.
 | # | Task | Objet | État |
 |---|---|---|---|
-| 1 | [TASK-171](TASKS/TASK-171-cascade-code-activite-mapping-tiers-jamais-fonctionnel.md) | Trancher : (A) faire lire à GRF la même colonne Sage que `ErpColumnNameCodeActiviteMarroc` pour réparer ce niveau, ou (B) le retirer s'il fait doublon avec `CT_APE` déjà fonctionnel. Corriger aussi la doc `DONE_DETAIL/TASK-161*.md` qui affirme un fonctionnement non avéré. | ⏸️ **mise en attente (PO, 24/07/2026)** — ignorée pour le moment, à réévaluer selon les retours clients réels (non bloquant, aucun incident visible : le code activité n'entre pas dans le XML DGI). Ne pas inclure dans un prompt worker tant que ce point n'est pas rouvert explicitement. |
+| 1 | [TASK-178](TASKS/TASK-178-consolidation-boutons-action-ligne-verifier-integrer.md) | Consolider les 4 chemins vers « Resynchroniser » + rapprocher « Valider l'incohérence » de l'écran ③ — 3 arbitrages de conception documentés, à trancher par le PO avant tout code. | ⏸️ **en attente d'arbitrage PO** — ne pas coder avant, ne pas prioriser devant TASK-175/176/177. |
 
-## 🆕 Export Excel « factures à déclarer » : ajouter le n° de règlement (demande PO 23/07/2026)
-Demande PO : dans l'export Excel des factures à déclarer, ajouter le numéro de règlement. Analyse code
-(architecte) : la donnée existe déjà intégralement dans le modèle (`LigneDeclarationEnrichie.
-NumeroRapprochement`, = `RT_MOUVEMENT.MV_Numero`, déjà propagée sélection→figeage→persistance→DTO front)
-— **pur oubli d'affichage** dans `Declaration.Export.Excel.Exporter.cs`, qui ignore ce champ dans ses
-deux méthodes d'export (`CreerFeuilleDetail` de l'export de dépôt TASK-010/155, et
-`CreerFeuilleFacturesControle` de l'export de contrôle TASK-160, code dupliqué à l'identique). Aucune
-donnée manquante, aucun changement back requis.
+## 🔴 CRITIQUE — 500 au chargement des lignes en production, incohérence validée reste bloquante, resync ligne par ligne (signalement PO 24/07/2026, base client)
+Trois signalements simultanés du PO sur la base de **production** (pas dev), écran ③ Vérifier &
+Intégrer. Diagnostic architecte (lecture code) pour les trois :
+1. **500 sur `GET {id}/lignes`** (Encaissement, puis après suppression+réintégration de la
+   déclaration par le PO, Decaissement aussi) : le chargement en parallèle des deux domaines
+   (`Promise.all` front) fait entrer en contention le verrou `soId` de TASK-156
+   (`ExecuterAvecVerrouOMAsync`) — exception prévue pour devenir un 409 (commentaire de conception
+   explicite), mais `DeclarationsController.GetLignes` est le seul des 4 appelants à ne PAS catcher
+   `InvalidOperationException` → 500 générique au lieu de 409. C'est exactement la réserve non
+   bloquante déjà tracée sous TASK-156 (« non vérifié empiriquement »), désormais confirmée en
+   conditions réelles.
+2. **Incohérence validée par le PO (TASK-078) reste signalée comme anomalie bloquante** : deux
+   pièces citées (`FC2501717`/`RF26040040`, `FC2501667`/`RF26030075`, cas déjà connus TASK-082/
+   audit TASK-143) validées via l'écran ② Affectations (`IncoherenceValidee=1` bien posé en base),
+   mais `GetCheckupAsync` (contrôle « Absence d'anomalies bloquantes » de l'écran ③) ignore ce flag
+   — seul `RevaliderLignesFigeesAsync` (écran ②) le respecte. La validation ne débloque donc que la
+   moitié du parcours.
+3. **Resynchronisation ligne par ligne** : le PO signale devoir resynchroniser des dizaines de
+   lignes une par une (151 lignes sélectionnées dans son cas) — aucun endpoint bulk n'existe vers
+   `ResynchroniserLigneAsync`, contrairement aux deux autres actions en masse déjà livrées
+   (`:bulk` état, `code-activite:bulk` TASK-173).
 
-| # | Task | Objet | État |
-|---|---|---|---|
-| 1 | [TASK-162](TASKS/TASK-162-export-excel-ajout-numero-reglement.md) | Ajouter la colonne « N° Règlement » (`NumeroRapprochement`) dans les feuilles « Détail » (export de dépôt) et « Factures à déclarer » (export de contrôle) de `Exporter.cs`. | 🎯 **prêt** — risque quasi nul, donnée déjà validée end-to-end, écriture Excel seule modifiée. |
+TASK-175, TASK-176, TASK-177, TASK-179 : APPROUVÉES par l'architecte (24/07/2026) — voir
+`DONE.md`/`CHANGELOG.md`. TASK-171 (arbitrage préalable à TASK-179) close par la même occasion — voir
+`DONE_DETAIL/TASK-171-cascade-code-activite-mapping-tiers-jamais-fonctionnel.md`.
+
+> ⚠️ **Suivi opérationnel restant (non-code)** : confirmer que le build déployé chez le client à
+> l'origine du signalement 500 inclut bien les commits TASK-175/176/177/179 (24/07/2026, 11h50-12h42) —
+> sans quoi le 409 explicite de TASK-175 n'est pas non plus actif chez ce client.
+
+> ✅ **TASK-180 approuvée** (24/07/2026, revue architecte complète : diffs réels des 4 fichiers relus
+> intégralement contre le VERIFY, build solution complète rejoué indépendamment — 0 erreur (verrou
+> `Declaration.API.exe` confirmé de façon identique, contournement par sortie redirigée reproduit),
+> `Declaration.Core.Tests`/`Declaration.Export.Excel.Tests`/`Declaration.Orchestration.Tests` rejoués
+> indépendamment → 52/3/182 verts, `.xlsx` de preuve réel inspecté au format OOXML brut (pas seulement
+> lu par confiance) : 8 entrées `RecapsParTaux` (4 Collecté/4 Déductible) sur `TVA1-2026-05`, somme
+> Collecté+Déductible = 2 094 301,93 = Total Déclaré TTC confirmée par calcul indépendant, format
+> `numFmtId=164 → "dd/mm/yyyy"` bien appliqué aux 2 colonnes date de la feuille « Règlements
+> sélectionnés », valeur brute `DateFacture` confirmée porteuse d'une partie horaire non nulle
+> (46197.583...) — la correction n'est pas un no-op. Voir `DONE.md`.
+> ✅ **TASK-162 approuvée** (24/07/2026, même revue) — colonne « N° Règlement » confirmée en 2ᵉ
+> position dans les deux feuilles concernées par lecture directe du `.xlsx` réel (`FF260057 |
+> RF26060115`), diff conforme au VERIFY, aucune régression du format date TASK-180 après le décalage
+> de colonnes. Voir `DONE.md`.
+
+## 🐞 Export Excel « Détail TVA » : libellés trompeurs du bloc « Contrôle d'équilibre » (question PO 24/07/2026)
+Le PO a demandé ce que signifiait le bloc « Contrôle d'équilibre » de la feuille « Détail TVA » (export
+de contrôle). Diagnostic architecte : les valeurs sont justes, mais les libellés (hérités tels quels du
+chemin de dépôt légal, où ils sont corrects) sont trompeurs dans ce chemin précis — `ConstruireModeleControleAsync`
+calcule `TotalMontantAffecte` comme un simple **Total HT** (pas un vrai montant de règlement affecté) et
+code `ResiduExplique` en dur à 0, ce qui fait que « Résidu Non TVA » n'est en réalité rien d'autre que
+**−Total TVA**. Décision PO : ne pas recalculer, **juste corriger les libellés** dans ce chemin
+(l'export de dépôt, dont les libellés sont déjà exacts, n'est pas concerné).
+
+> ✅ **TASK-182 approuvée** (24/07/2026, revue architecte complète : diff `3fd4ab9` relu intégralement,
+> `CreerFeuilleRecap` confirmée intacte, build solution complète + `Declaration.Export.Excel.Tests`/
+> `Declaration.Orchestration.Tests` rejoués indépendamment — 3/3 et 182/182 —, `.xlsx` de preuve réel
+> inspecté au format OOXML brut par l'architecte : « Total HT »/« Écart HT − TTC (= −Total TVA) »
+> confirmés en place, valeurs inchangées = −ΣTVA sur `TVA1-2026-05`). Voir `DONE.md`.
+> ⚠️ Réserve non bloquante : formulation exacte du 2ᵉ libellé retenue sans retour PO préalable (la
+> TASK autorisait un équivalent) — à confirmer, ajustement resterait un simple changement de texte.
 
 ## 🔎 Échec d'écriture cache de ventilation observé en prod — `Nom d'objet 'DM_VENTILATION_SAGE_CACHE' non valide` (signalement PO 23/07/2026, log 22:57:16)
 Log cité par le PO : `[VALO] EC_Id=24184 pièce FF260096 — échec écriture cache : Nom d'objet
@@ -253,6 +358,14 @@ TASK-155) avant de pouvoir livrer un cycle complet.
 > ⚠️ Réserves non bloquantes à trancher par le PO/fiscaliste avant tout dépôt réel : format exact
 > final IF/ICE (CDC §5.2) et arrondi/précision définitifs des montants (CDC §5.1, `Ventilateur.cs`
 > en amont non touché). Voir `DONE.md`.
+
+> ✅ **TASK-181 approuvée** (24/07/2026, revue architecte complète : VERIFY relu, diff `8d364ca` relu
+> intégralement, `Declaration.Export.Xml.Tests` rejoué indépendamment 13/13) — tag `<des>` de l'export
+> XML porte désormais toujours le littéral fixe « Achat marchandise » (remplacement total, pas un
+> fallback conditionnel), export Excel et `ConstruireModeleExportAsync` non touchés. Voir `DONE.md`.
+> ⚠️ **Point ouvert non refermé** : la vraie source de désignation (`DM_LGTVA`/`LigneCandidate`,
+> `Designation` toujours `""` en amont) reste à trancher — ce placeholder n'est qu'un pis-aller assumé
+> par le PO en attendant cet arbitrage.
 
 ## 🔐 Simplification `DeclarationTVA.sql` + exécution automatique par le setup (PO 19/07/2026)
 Décisions PO actées (session 19/07/2026) : (1) **retrait du login SQL dédié à moindre privilège**

@@ -1,5 +1,127 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-07-24 (suite — TASK-185, correction TASK-184 : ligne Total au lieu de colonne Domaine)
+
+### TASK-185 — Correction TASK-184 : ligne « Total Collecté »/« Total Deductible » (APPROUVÉE)
+- **Module :** Declaration.Export.Excel / Declaration.Application / Declaration.Core
+- **Impact :** colonne « Domaine Activité » (TASK-184, hors sujet) retirée des tableaux « Totaux
+  par taux » ; ligne de total (« Total Collecté »/« Total Deductible ») ajoutée en pied de chaque
+  tableau, feuille « Détail TVA » uniquement. Code mort associé supprimé (`RecapParTaux.Domaine`,
+  `ResoudreDomaineActiviteRecap`).
+- **Sécurité :** aucun impact.
+- **Notes :** vérifié indépendamment par l'architecte (diff intégral du commit `d288fce`, build +
+  3 suites de tests rejouées — 3/3, 52/52, 182/182 —, `.xlsx` de preuve réinspecté
+  programmatiquement, valeurs cohérentes avec TASK-180/182/184).
+
+## 2026-07-24 (suite — TASK-184, export contrôle : retrait Contrôle d'équilibre + domaine sur Totaux par taux)
+
+### TASK-184 — Export contrôle « Détail TVA » : retrait du bloc « Contrôle d'équilibre » + colonne Domaine Activité (APPROUVÉE)
+- **Module :** Declaration.Export.Excel / Declaration.Application / Declaration.Core
+- **Impact :** bloc « Contrôle d'équilibre » (tautologique, `−ΣTVA` systématique) retiré de
+  `CreerFeuilleDetailTva` (export de contrôle uniquement) ; colonne « Domaine Activité »
+  (Achats/Ventes/Non résolu) ajoutée aux tableaux « Totaux par taux », résolue via le référentiel
+  `P_DECTVAACTIVITE` déjà chargé (aucune nouvelle requête SQL). `CreerFeuilleRecap` (export de
+  dépôt) non touchée (paramètre optionnel sur la méthode partagée).
+- **Sécurité :** aucun impact.
+- **Notes :** vérifié indépendamment par l'architecte (diff intégral du commit `1b2b896`, build +
+  3 suites de tests rejoués — 3/3, 52/52, 182/182 —, `.xlsx` de preuve réinspecté
+  programmatiquement). Constat sur données réelles : quasi-totalité des lignes de `TVA1-2026-05`
+  en « Non résolu », cohérent avec le problème de cascade code activité déjà connu (TASK-171/179).
+
+## 2026-07-24 (suite — TASK-183, drill Codes activité : toggle Achats/Ventes)
+
+### TASK-183 — Drill « Codes activité » (écran ③) : toggle Achats/Ventes sans sortir du drill (APPROUVÉE)
+- **Module :** declaration-tva-web (front seul)
+- **Impact :** dans le bandeau du drill « Codes activité », ajout d'un toggle 2 boutons (Achats/Ventes)
+  conditionné à `drillFiltre.kind === 'codeActivite'`, qui réutilise le `setDrillFiltre` déjà câblé par
+  les onglets de la vue principale — aucune nouvelle logique de fetch, le rechargement du référentiel et
+  de la grille était déjà réactif au changement de domaine. Les 3 autres kinds de drill non affectés.
+- **Sécurité :** aucun impact. Aucun fichier back touché, mécanisme d'affectation déjà symétrique entre
+  domaines côté API.
+- **Notes :** vérifié indépendamment par l'architecte (diff intégral du commit `0f9084f`, `tsc -b` +
+  `vite build` rejoués — 0 erreur). Point hors périmètre découvert pendant les tests et tracé dans
+  `TODO.md` : les filtres texte/nombre de `DomainGrid` sont silencieusement ignorés côté back.
+
+## 2026-07-24 (suite — TASK-182, export Excel : libellés « Contrôle d'équilibre »)
+
+### TASK-182 — Export Excel « Détail TVA » (contrôle) : libellés corrigés du bloc « Contrôle d'équilibre » (APPROUVÉE)
+- **Module :** Declaration.Export.Excel
+- **Impact :** dans `CreerFeuilleDetailTva` (export de **contrôle**) uniquement, 2 libellés renommés
+  pour refléter ce qu'ils représentent réellement dans ce chemin : « Total Montant Affecté » →
+  « Total HT », « Résidu Non TVA » → « Écart HT − TTC (= −Total TVA) ». Aucune valeur ni aucun calcul
+  modifié ; `CreerFeuilleRecap` (export de dépôt, libellés déjà corrects dans ce chemin) non touchée.
+- **Sécurité :** aucun impact. Changement de texte pur, aucune requête ni couche service touchée.
+- **Notes :** vérifié indépendamment par l'architecte (diff intégral du commit `3fd4ab9`, build
+  solution complète + 2 suites de tests rejouées — 3/3 et 182/182 —, `.xlsx` de preuve réel inspecté
+  au format OOXML brut : nouveaux libellés confirmés présents, valeurs strictement inchangées
+  confirmées égales à −ΣTVA sur `TVA1-2026-05`). Réserve non bloquante : formulation exacte du 2ᵉ
+  libellé sans retour PO préalable (la TASK autorisait un équivalent).
+
+## 2026-07-24 (suite — TASK-180/TASK-162, export Excel : Collecté/Déductible, dates, N° règlement)
+
+### TASK-180 — Export Excel : détail Collecté/Déductible, dates sans heure, date de rapprochement en colonne (APPROUVÉE)
+- **Module :** Declaration.Core / Declaration.Application / Declaration.Export.Excel
+- **Impact :** retour PO sur la feuille « Détail TVA » de l'export de contrôle — les totaux « par
+  taux »/« par code activité » scindent désormais Collecté (Encaissement) et Déductible (autre
+  source) en 2 blocs de tableau séparés (export dépôt **et** contrôle) ; toutes les cellules date de
+  l'export affichent un format `dd/mm/yyyy` explicite (les colonnes `AF_Date`/`DO_Date` portent
+  réellement une heure non nulle en base de production, confirmé empiriquement) ; la date de
+  rapprochement d'un règlement sort de la chaîne composite `"Rapproché (JJ/MM/AAAA)"` vers une
+  colonne Excel dédiée, `EtatPointage` redevenant un statut court exploitable.
+- **Sécurité :** aucun impact. Aucun recalcul de TVA, aucune nouvelle lecture base — pure
+  ré-agrégation (`Source == Encaissement`) et formatage d'affichage sur des données déjà valorisées.
+- **Notes :** vérifié indépendamment par l'architecte (diff intégral du commit `a3b093d`, build
+  solution complète + 3 suites de tests rejoués — 52/3/182 verts —, `.xlsx` de preuve réel inspecté
+  au format OOXML brut : somme Collecté+Déductible = Total Déclaré TTC confirmée par calcul
+  indépendant, `numFmtId=164` confirmé sur les colonnes date). Réserves non bloquantes : pas de cas
+  réel de code activité multiple ni de règlement non rapproché sur la déclaration de preuve
+  (`TVA1-2026-05`), pas d'ouverture visuelle Excel, process `Declaration.API.exe` verrouillant
+  toujours en fin de session (opérationnel, sans impact code).
+
+### TASK-162 — Export Excel : colonne « N° Règlement » (feuilles Détail + Factures à déclarer) (APPROUVÉE)
+- **Module :** Declaration.Export.Excel
+- **Impact :** ajout de `NumeroRapprochement` (`RT_MOUVEMENT.MV_Numero`) en 2ᵉ colonne, juste après
+  « N° Facture », dans les deux feuilles qui partagent le même jeu de colonnes (export de dépôt et
+  export de contrôle) — pur oubli d'affichage comblé, donnée déjà valorisée end-to-end depuis
+  TASK-020/155/160.
+- **Sécurité :** aucun impact. Aucun changement de modèle ni de requête.
+- **Notes :** vérifié indépendamment par l'architecte (diff intégral du commit `5e03110`, `.xlsx` de
+  preuve réel inspecté au format OOXML brut : en-tête et ligne réelle `FF260057 | RF26060115`
+  confirmés, format date TASK-180 non régressé par le décalage de colonnes). Réserve non bloquante :
+  feuille « Détail » (export de dépôt) non exercée en conditions réelles faute de déclaration
+  `Clôturée` en base — couverte par test unitaire seul.
+
+## 2026-07-24 (suite — TASK-179/TASK-171, crash 500 production sur mapping code activité)
+
+### TASK-179 — Retrait du niveau « défaut par tiers » de la cascade code activité (APPROUVÉE)
+- **Module :** Declaration.Core / Declaration.Application / Declaration.Infrastructure / Declaration.Selection
+- **Impact :** l'écran ③ Vérifier & Intégrer, entièrement inutilisable chez un client en production (500 systématique sur `GetLignes`), refonctionne. Cause réelle (log serveur fourni par le PO) : `SqlException` non catchée sur une colonne absente (`SCAT_NumeroTiers`) — distincte du bug de contention `soId` déjà corrigé le même jour par TASK-175. Le niveau de cascade fautif (« défaut par tiers », TASK-161) n'ayant jamais fonctionné chez aucun client réel et faisant doublon avec `CT_APE` (déjà fonctionnel), il est retiré plutôt que réparé — cascade code activité réduite à 3 niveaux : surcharge manuelle par ligne → `F_COMPTET.CT_APE` → "".
+- **Sécurité :** aucun impact. Aucune modification de `apbs-gr_winform` ni de la table `P_SOCIETECODEACTIVITETIERS` (refusée par le PO) — uniquement la lecture GRF de cette table, retirée.
+- **Notes :** clôt aussi TASK-171 (arbitrage A/B sur ce niveau de cascade, tranché en faveur du retrait ; documentation `DONE_DETAIL/TASK-161*.md` corrigée pour ne plus décrire un niveau qui n'existe plus). Vérifié indépendamment par l'architecte (diff intégral du commit `99ef0fc`, tests `Declaration.Core.Tests` rejoués 51/51, grep de contrôle 0 référence restante). Réserve non bloquante : test réel sur une société sans la colonne non reproduit en dev (compensé par la preuve structurelle — la requête fautive n'existe plus).
+
+## 2026-07-24 (suite — TASK-176, resynchronisation en masse)
+
+### TASK-176 — Resynchronisation en masse des lignes (APPROUVÉE)
+- Signalement PO : sur une déclaration à 151 lignes en anomalie, la resynchronisation Sage devait se faire une ligne à la fois — aucun endpoint bulk n'existait vers `ResynchroniserLigneAsync`, contrairement aux deux bulks déjà livrés (état TASK-012, code activité TASK-173).
+- Livré : `POST {id}/lignes/resynchroniser:bulk` (même contrat de sélection que les bulks existants), boucle séquentielle réutilisant strictement `ResynchroniserLigneAsync`, dédup par `EC_Id`, retour agrégé synthétique, 409 propre si verrou `soId` pris avant la 1ère pièce, interruption propre (lignes déjà traitées préservées) si capté en cours. Front : bouton « Resynchroniser la sélection » dans `DomainGrid.tsx`, gaté par `showResynchroniserAction`, seuil de confirmation 20 lignes, spinner, toast.
+- Vérifié indépendamment par l'architecte via lecture du diff réel (`e1b5ff2`) + **builds back/front rejoués** (`dotnet build` 0 erreur, `tsc -b` 0 erreur) + non-régression confirmée par `git diff` vide sur `DiagnosticModal.tsx`/`AffectationsDrill.tsx` + gating vérifié sur les 5 autres écrans partageant `DomainGrid`.
+- **Réserves non bloquantes** : échelle réelle 151 lignes non reproduite (extrapolée), branche `Interrompu=true` avec pièces déjà traitées validée par lecture de code seulement (non déclenchée en live).
+
+## 2026-07-24 (suite — TASK-175/177, correctifs critiques signalés en production)
+
+### TASK-175 — 409 explicite (verrou soId) sur GetLignes/GetCheckup au lieu d'un 500 générique (APPROUVÉE)
+- Signalement PO reproduit deux fois en production : le chargement volontairement parallèle des deux domaines Decaissement/Encaissement fait entrer en contention le verrou anti-chevauchement `soId` (TASK-156) — `GetLignes` était le seul appelant à ne pas catcher `InvalidOperationException`, d'où un 500 générique au lieu du 409 prévu par la conception.
+- Correctif : même `try/catch(InvalidOperationException) → Conflict()` que `Resynchroniser`, appliqué à `GetLignes` **et** `GetCheckup` (même lacune découverte en cours de route). Front : retry automatique unique après 1500 ms sur un 409 de chargement, message explicite.
+- Reproduction réelle de la course par test d'intégration (dispositif TASK-156 réutilisé, contre-preuve exécutée). Vérifié indépendamment par l'architecte via lecture du diff réel (`7a85f4a`) — build/tests non rejoués (agent TASK-176 en cours en parallèle sur les mêmes fichiers).
+- **Réserve non bloquante** : validation manuelle en conditions réelles (deux onglets / écran réel) non faite faute d'accès réseau au serveur applicatif dans l'environnement du worker.
+
+### TASK-177 — GetCheckupAsync respecte enfin IncoherenceValidee pour FACTURE_NON_VENTILEE (APPROUVÉE)
+- Signalement PO : deux factures validées via l'écran ② (`FC2501717`/`RF26040040`, `FC2501667`/`RF26030075`) restaient signalées comme anomalie bloquante à l'écran ③/④ — `GetCheckupAsync` ignorait `IncoherenceValidee`, contrairement à `RevaliderLignesFigeesAsync` qui la respecte déjà.
+- Correctif : même garde (`!l.IncoherenceValidee`) ajoutée à la boucle `FACTURE_NON_VENTILEE`, aucune autre valeur touchée. Recherche exhaustive des 3 autres emplacements `MotifRejet` du fichier — tous analysés, non corrigés avec justification documentée (Info/Warning non bloquants, ou mécanisme distinct).
+- Vérifié indépendamment par l'architecte via lecture du diff réel (`89db91b`) — 1 ligne de condition + commentaire, conforme au VERIFY. Coordination multi-agents propre (commit isolé du travail non commité de TASK-176 sur le même fichier).
+- **Constat à transmettre au PO** : sur la base de dev, les deux pièces citées ont `IncoherenceValidee=0` (jamais validées sur cet environnement) — le clic du PO a eu lieu sur la base de production, distincte.
+- **Réserves non bloquantes** : vérification live via l'écran ② remplacée par un test unitaire équivalent (base dev partagée avec agents en cours) ; visibilité de traçabilité à l'écran ③/④ explicitement non implémentée (décision de conception à trancher par le PO).
+
 ## 2026-07-24 (suite — TASK-172/173)
 
 ### TASK-172 — Référentiel codes activité filtré par domaine + validation serveur (APPROUVÉE)

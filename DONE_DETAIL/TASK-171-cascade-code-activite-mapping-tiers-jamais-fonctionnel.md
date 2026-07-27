@@ -106,6 +106,21 @@ hypothèse invalidée par la lecture du code winform réel.
 - Risque principal si non traité : la cascade TASK-161 continue de laisser croire (documentation, code
   commenté) qu'un mapping par tiers existe et fonctionne, alors qu'il ne s'est jamais déclenché chez
   aucun client réel depuis sa livraison — dette silencieuse sur une fonctionnalité déjà "DONE".
-- Aucune perte de donnée ni blocage : le code activité n'étant jamais bloquant (cascade niveau 4 = ""),
-  ce défaut n'a provoqué aucun incident visible — c'est une fonctionnalité inerte, pas un bug qui casse
-  quelque chose.
+
+> ⚠️ **CORRECTIF ARCHITECTE (24/07/2026, 12h30) — l'affirmation ci-dessous était fausse, confirmée par
+> un incident réel en production.** Log serveur fourni par le PO
+> (`DeclaratifMaroc.out.log`) : l'absence de `SCAT_NumeroTiers` en base ne dégrade PAS silencieusement —
+> elle lève une `SqlException` non catchée (`Nom de colonne non valide`) qui **crashe entièrement**
+> `GetLignes`/le figeage (500 générique), rendant l'écran ③ Vérifier & Intégrer inutilisable pour ce
+> client. Correctif ouvert séparément : [TASK-179](TASK-179-crash-sql-colonne-scat-numerotiers-manquante.md).
+>
+> ✅ **ARBITRAGE PO TRANCHÉ (24/07/2026, 12h35) : option (B) retenue** — le niveau 2 « défaut par
+> tiers » est **retiré** de la cascade, pas réparé. Justification (analyse architecte, cf. §1
+> ci-dessus, confirmée par le PO) : ce niveau n'a jamais fonctionné chez aucun client réel depuis
+> sa livraison, dépend d'une table possédée par `apbs-gr_winform` que le PO refuse de faire modifier,
+> et fait doublon avec le niveau 3 (`F_COMPTET.CT_APE`), déjà fonctionnel et sans dépendance externe.
+> TASK-179 reformulée en conséquence : suppression du code plutôt que sécurisation défensive.
+>
+> ~~Aucune perte de donnée ni blocage : le code activité n'étant jamais bloquant (cascade niveau 4 = ""),
+> ce défaut n'a provoqué aucun incident visible — c'est une fonctionnalité inerte, pas un bug qui casse
+> quelque chose.~~ *(affirmation invalidée, voir ci-dessus)*
