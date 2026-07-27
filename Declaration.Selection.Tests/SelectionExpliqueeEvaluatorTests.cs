@@ -483,5 +483,21 @@ namespace Declaration.Selection.Tests
             Assert.False(result.EstEligible);
             Assert.Equal(MotifRejet.Impaye, result.Motif);
         }
+
+        // TASK-187 : Reference (RT_ECHEANCE.DO_Reference) propagée telle quelle sur
+        // AffectationADeclarer, y compris NULL (cas réel FC2501193, DO_Reference vide en base).
+        [Fact]
+        public async Task Evaluer_Reference_PropageeRenseigneeEtNull()
+        {
+            var rowAvecReference = CreateValidRow();
+            rowAvecReference.Reference = "REF-001";
+            var resultAvecReference = await SelectionExpliqueeEvaluator.EvaluerAsync(rowAvecReference, _debut, _fin, SensAffectation.Achat, null);
+            Assert.Equal("REF-001", resultAvecReference.Affectation.Reference);
+
+            var rowSansReference = CreateValidRow();
+            rowSansReference.Reference = null;
+            var resultSansReference = await SelectionExpliqueeEvaluator.EvaluerAsync(rowSansReference, _debut, _fin, SensAffectation.Achat, null);
+            Assert.Null(resultSansReference.Affectation.Reference);
+        }
     }
 }

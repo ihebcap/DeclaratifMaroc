@@ -33,6 +33,7 @@ namespace Declaration.Core.Model
         public decimal MontantAffecte { get; set; }
         public DateTime? DatePaiement { get; set; }
         public DateTime? DateFacture { get; set; }
+        public string? Reference { get; set; }
         public string ModePaiement { get; set; } = "";
         public TiersInfo Tiers { get; set; } = new TiersInfo();
         public bool EstRapprocheNonAffecte { get; set; } = false;
@@ -61,6 +62,7 @@ namespace Declaration.Core.Model
         public string ModePaiement { get; set; } = "";
         public DateTime? DatePaiement { get; set; }
         public DateTime? DateFacture { get; set; }
+        public string? Reference { get; set; }
         public SourceAffectation Source { get; set; }
         public bool IsReport { get; set; } = false;
     }

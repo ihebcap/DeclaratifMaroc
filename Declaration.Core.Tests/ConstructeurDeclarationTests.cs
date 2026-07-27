@@ -362,5 +362,33 @@ namespace Declaration.Core.Tests
             Assert.Empty(dec.Lignes);
             Assert.False(appelleResoudre, "resoudreFacture ne doit pas être appelée pour EC_Type=4");
         }
+
+        // TASK-187 : Reference (RT_ECHEANCE.DO_Reference) doit traverser ConstruireDeclaration à
+        // l'identique de NumeroFacture/DateFacture, y compris quand elle est NULL (cas réel FC2501193).
+        [Fact]
+        public void ConstruireDeclaration_Reference_PropageeRenseigneeEtNull()
+        {
+            var f1 = CreateFixture25FA01371();
+
+            var affs = new List<AffectationADeclarer>
+            {
+                new AffectationADeclarer { NumeroFacture = f1.NumeroPiece, MontantAffecte = 15000, Source = SourceAffectation.Decaissement, Reference = "REF-001", Tiers = new TiersInfo { Ice = "123456789012345" } }
+            };
+
+            var dec = ConstructeurDeclaration.ConstruireDeclaration(affs, a => f1, 2);
+
+            Assert.NotEmpty(dec.Lignes);
+            Assert.All(dec.Lignes, l => Assert.Equal("REF-001", l.Reference));
+
+            var affsSansReference = new List<AffectationADeclarer>
+            {
+                new AffectationADeclarer { NumeroFacture = f1.NumeroPiece, MontantAffecte = 15000, Source = SourceAffectation.Decaissement, Reference = null, Tiers = new TiersInfo { Ice = "123456789012345" } }
+            };
+
+            var decSansReference = ConstructeurDeclaration.ConstruireDeclaration(affsSansReference, a => f1, 2);
+
+            Assert.NotEmpty(decSansReference.Lignes);
+            Assert.All(decSansReference.Lignes, l => Assert.Null(l.Reference));
+        }
     }
 }

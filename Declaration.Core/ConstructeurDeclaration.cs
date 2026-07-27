@@ -157,6 +157,7 @@ namespace Declaration.Core
                         ModePaiement = affectation.ModePaiement,
                         DatePaiement = affectation.DatePaiement,
                         DateFacture = affectation.DateFacture,
+                        Reference = affectation.Reference,
                         Source = affectation.Source
                     };
 

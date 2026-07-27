@@ -268,8 +268,10 @@ namespace Declaration.Export.Excel
         {
             // TASK-162 : "N° Règlement" ajouté juste après "N° Facture", même insertion que
             // CreerFeuilleDetail (code auparavant dupliqué à l'identique, cf. TASK-160).
+            // TASK-187 : "Référence" (RT_ECHEANCE.DO_Reference) ajoutée juste après "N° Facture",
+            // même traitement que "N° Règlement" — décale tous les index suivants de +1.
             string[] headers = {
-                "N° Facture", "N° Règlement", "Désignation", "Tiers Nom", "Tiers IF", "Tiers ICE",
+                "N° Facture", "Référence", "N° Règlement", "Désignation", "Tiers Nom", "Tiers IF", "Tiers ICE",
                 "Code Activité", "HT", "Taux", "TVA", "TTC", "Prorata", "Mode Paiement",
                 "Date Paiement", "Date Facture", "Source"
             };
@@ -284,21 +286,22 @@ namespace Declaration.Export.Excel
             foreach (var ligne in modele.Lignes)
             {
                 ws.Cell(row, 1).Value = ligne.NumeroFacture;
-                ws.Cell(row, 2).Value = ligne.NumeroRapprochement;
-                ws.Cell(row, 3).Value = ligne.Designation;
-                ws.Cell(row, 4).Value = ligne.Tiers?.Nom;
-                ws.Cell(row, 5).Value = ligne.Tiers?.IdentifiantFiscal;
-                ws.Cell(row, 6).Value = ligne.Tiers?.Ice;
-                ws.Cell(row, 7).Value = ligne.CodeActivite;
-                ws.Cell(row, 8).Value = ligne.HT;
-                ws.Cell(row, 9).Value = ligne.Taux;
-                ws.Cell(row, 10).Value = ligne.Tva;
-                ws.Cell(row, 11).Value = ligne.Ttc;
-                ws.Cell(row, 12).Value = ligne.Prorata;
-                ws.Cell(row, 13).Value = ModePaiementLibelle.LibelleModePaiementSimplTVA(ligne.ModePaiement);
-                if (ligne.DatePaiement.HasValue) { ws.Cell(row, 14).Value = ligne.DatePaiement.Value; ws.Cell(row, 14).Style.DateFormat.Format = FormatDateSeule; }
-                if (ligne.DateFacture.HasValue) { ws.Cell(row, 15).Value = ligne.DateFacture.Value; ws.Cell(row, 15).Style.DateFormat.Format = FormatDateSeule; }
-                ws.Cell(row, 16).Value = ligne.Source.ToString();
+                ws.Cell(row, 2).Value = ligne.Reference;
+                ws.Cell(row, 3).Value = ligne.NumeroRapprochement;
+                ws.Cell(row, 4).Value = ligne.Designation;
+                ws.Cell(row, 5).Value = ligne.Tiers?.Nom;
+                ws.Cell(row, 6).Value = ligne.Tiers?.IdentifiantFiscal;
+                ws.Cell(row, 7).Value = ligne.Tiers?.Ice;
+                ws.Cell(row, 8).Value = ligne.CodeActivite;
+                ws.Cell(row, 9).Value = ligne.HT;
+                ws.Cell(row, 10).Value = ligne.Taux;
+                ws.Cell(row, 11).Value = ligne.Tva;
+                ws.Cell(row, 12).Value = ligne.Ttc;
+                ws.Cell(row, 13).Value = ligne.Prorata;
+                ws.Cell(row, 14).Value = ModePaiementLibelle.LibelleModePaiementSimplTVA(ligne.ModePaiement);
+                if (ligne.DatePaiement.HasValue) { ws.Cell(row, 15).Value = ligne.DatePaiement.Value; ws.Cell(row, 15).Style.DateFormat.Format = FormatDateSeule; }
+                if (ligne.DateFacture.HasValue) { ws.Cell(row, 16).Value = ligne.DateFacture.Value; ws.Cell(row, 16).Style.DateFormat.Format = FormatDateSeule; }
+                ws.Cell(row, 17).Value = ligne.Source.ToString();
 
                 row++;
             }

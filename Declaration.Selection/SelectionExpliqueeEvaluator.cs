@@ -20,6 +20,7 @@ namespace Declaration.Selection
         public string? NumeroFacture { get; set; }
         public decimal? MontantAffecte { get; set; }
         public DateTime? DateFacture { get; set; }
+        public string? Reference { get; set; }
         public int? DT_Id { get; set; }
         public int? EC_Type { get; set; }
         public int? EC_Id { get; set; }
@@ -120,6 +121,7 @@ namespace Declaration.Selection
                     MontantAffecte = r.MontantAffecte ?? 0m,
                     DatePaiement = r.DatePaiement,
                     DateFacture = r.DateFacture,
+                    Reference = r.Reference,
                     ModePaiement = source == SourceAffectation.Espece 
                         ? "1" 
                         : GrfEnums.MapperModePaiementSimplTVA(r.ModePaiementId),

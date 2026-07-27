@@ -180,8 +180,11 @@ namespace Declaration.Export.Excel.Tests
                     new LigneDeclarationEnrichie
                     {
                         NumeroFacture = "F-001",
-                        // TASK-162 : numéro de règlement, désormais exporté en 2ᵉ colonne.
+                        // TASK-162 : numéro de règlement, désormais exporté en 3ᵉ colonne (TASK-187 :
+                        // "Référence" insérée en 2ᵉ colonne, juste après "N° Facture").
                         NumeroRapprochement = "REG-001",
+                        // TASK-187 : DO_Reference renseignée — cas nominal.
+                        Reference = "REF-001",
                         Designation = "",
                         Tiers = new TiersInfo { Nom = "Fournisseur A", IdentifiantFiscal = "IF-A", Ice = "ICE-A" },
                         HT = 1000m,
@@ -192,6 +195,24 @@ namespace Declaration.Export.Excel.Tests
                         ModePaiement = "9",
                         DatePaiement = new DateTime(2026, 7, 15),
                         DateFacture = new DateTime(2026, 7, 10),
+                        Source = SourceAffectation.Decaissement
+                    },
+                    new LigneDeclarationEnrichie
+                    {
+                        NumeroFacture = "F-002",
+                        NumeroRapprochement = "REG-002",
+                        // TASK-187 : DO_Reference NULL (cas réel FC2501193) — aucune exception attendue.
+                        Reference = null,
+                        Designation = "",
+                        Tiers = new TiersInfo { Nom = "Fournisseur B", IdentifiantFiscal = "IF-B", Ice = "ICE-B" },
+                        HT = 500m,
+                        Taux = 20m,
+                        Tva = 100m,
+                        Ttc = 600m,
+                        Prorata = 100m,
+                        ModePaiement = "3",
+                        DatePaiement = new DateTime(2026, 7, 16),
+                        DateFacture = new DateTime(2026, 7, 11),
                         Source = SourceAffectation.Decaissement
                     }
                 },
@@ -246,17 +267,24 @@ namespace Declaration.Export.Excel.Tests
 
             var wsFactures = workbook.Worksheet("Factures à déclarer");
             Assert.Equal("N° Facture", wsFactures.Cell(1, 1).Value.ToString());
-            // TASK-162 : "N° Règlement" juste après "N° Facture".
-            Assert.Equal("N° Règlement", wsFactures.Cell(1, 2).Value.ToString());
+            // TASK-187 : "Référence" juste après "N° Facture" — décale "N° Règlement" (TASK-162) en 3ᵉ colonne.
+            Assert.Equal("Référence", wsFactures.Cell(1, 2).Value.ToString());
+            Assert.Equal("N° Règlement", wsFactures.Cell(1, 3).Value.ToString());
             Assert.Equal("F-001", wsFactures.Cell(2, 1).Value.ToString());
-            Assert.Equal("REG-001", wsFactures.Cell(2, 2).Value.ToString());
-            Assert.Equal(1000m, (decimal)wsFactures.Cell(2, 8).Value.GetNumber());
-            Assert.Equal("dd/mm/yyyy", wsFactures.Cell(2, 14).Style.DateFormat.Format);
+            Assert.Equal("REF-001", wsFactures.Cell(2, 2).Value.ToString());
+            Assert.Equal("REG-001", wsFactures.Cell(2, 3).Value.ToString());
+            Assert.Equal(1000m, (decimal)wsFactures.Cell(2, 9).Value.GetNumber());
             Assert.Equal("dd/mm/yyyy", wsFactures.Cell(2, 15).Style.DateFormat.Format);
+            Assert.Equal("dd/mm/yyyy", wsFactures.Cell(2, 16).Style.DateFormat.Format);
+
+            // TASK-187 : Reference NULL (F-002, cas réel FC2501193) — cellule vide, aucune exception.
+            Assert.Equal("F-002", wsFactures.Cell(3, 1).Value.ToString());
+            Assert.Equal("", wsFactures.Cell(3, 2).Value.ToString());
+            Assert.Equal("REG-002", wsFactures.Cell(3, 3).Value.ToString());
 
             // TASK-163 : code Simpl-TVA inconnu ("9") -> fallback code brut tel quel, jamais d'exception
-            // (colonne 13, décalée par TASK-162).
-            Assert.Equal("9", wsFactures.Cell(2, 13).Value.ToString());
+            // (colonne 14, décalée par TASK-187).
+            Assert.Equal("9", wsFactures.Cell(2, 14).Value.ToString());
 
             // TASK-180 : détail TVA scindé Collecté/Déductible — 4 blocs (taux x2, activité x2).
             // TASK-184 : bloc "Contrôle d'équilibre" retiré.
