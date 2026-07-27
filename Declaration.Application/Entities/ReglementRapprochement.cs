@@ -27,6 +27,7 @@ public sealed class ReglementRapprochementRow
     public DateTime? MvPointDate { get; set; } // RT_MOUVEMENT.MV_PointDate = date de pointage sur extrait (nul si non rapproché)
     public string? MvExtraitNum { get; set; }  // RT_MOUVEMENT.MV_ExtraitNum = n° de l'extrait bancaire de pointage (nul/vide si non pointé)
     public DateTime? MvEcheance { get; set; }  // RT_MOUVEMENT.MV_Echeance = date d'échéance de la pièce
+    public string? MvPiece { get; set; }       // RT_MOUVEMENT.MV_Piece = n° de pièce (nvarchar NOT NULL, ~7,5% de valeurs vides en base réelle — aucun sentinel à neutraliser)
     public decimal MvMontant { get; set; } // RT_MOUVEMENT.MV_Montant = montant du règlement
     public string? Tiers { get; set; }     // RT_MOUVEMENT.CT_Intitule
     public string? TiersCode { get; set; } // RT_MOUVEMENT.CT_Code

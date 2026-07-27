@@ -62,7 +62,10 @@ namespace Declaration.Orchestration.Tests
             MvDate = new DateTime(2026, 7, 5),
             MvPointDate = mvPoint == 1 ? new DateTime(2026, 7, 8) : null,
             MvMontant = montant,
-            Tiers = "Fournisseur Test"
+            Tiers = "Fournisseur Test",
+            // TASK-188 : RT_MOUVEMENT.MV_Piece / MV_Echeance.
+            MvPiece = "CB AUTO",
+            MvEcheance = new DateTime(2026, 8, 1)
         };
 
         // ─── ConstruireModeleControleAsync ─────────────────────────────────────
@@ -171,6 +174,9 @@ namespace Declaration.Orchestration.Tests
             // vit désormais dans son propre champ DateRapprochement.
             Assert.Equal("Rapproché", r.EtatPointage);
             Assert.Equal(new DateTime(2026, 7, 8), r.DateRapprochement);
+            // TASK-188 : MvPiece/MvEcheance propagés jusqu'à ReglementSelectionneInfo.
+            Assert.Equal("CB AUTO", r.Piece);
+            Assert.Equal(new DateTime(2026, 8, 1), r.Echeance);
         }
 
         [Fact]
@@ -192,6 +198,31 @@ namespace Declaration.Orchestration.Tests
             Assert.Equal("Non rapproché", r.EtatPointage);
             // TASK-180 : colonne dédiée vide (pas de date) pour un règlement non rapproché.
             Assert.Null(r.DateRapprochement);
+        }
+
+        // TASK-188 : MV_Piece vide (~7,5% des lignes réelles, cf. VERIFY) et MV_Echeance NULL —
+        // aucune exception, colonnes vides plutôt qu'une valeur inventée.
+        [Fact]
+        public async Task ConstruireModeleControleAsync_PieceVideEtEcheanceNull_AucuneException()
+        {
+            var declarationId = Guid.NewGuid();
+            var declaration = NouvelleDeclarationEnCours("TVA1-2026-07");
+            declaration.Id = declarationId;
+
+            var repo = new FakeRepository();
+            repo.Declarations[declarationId] = declaration;
+            repo.Selection[declarationId] = new List<string> { "REG-004" };
+            var reglementSansPieceNiEcheance = Reglement("REG-004", 300m);
+            reglementSansPieceNiEcheance.MvPiece = "";
+            reglementSansPieceNiEcheance.MvEcheance = null;
+            repo.Reglements.Add(reglementSansPieceNiEcheance);
+
+            var service = CreerService(repo);
+            var modele = await service.ConstruireModeleControleAsync(declarationId);
+
+            var r = Assert.Single(modele.ReglementsSelectionnes);
+            Assert.Equal("", r.Piece);
+            Assert.Null(r.Echeance);
         }
 
         [Fact]

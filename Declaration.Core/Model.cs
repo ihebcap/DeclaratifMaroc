@@ -150,6 +150,9 @@ namespace Declaration.Core.Model
         // TASK-180 : date de rapprochement sortie du texte de EtatPointage vers un champ dédié
         // (colonne Excel séparée, exploitable), null si non rapproché.
         public DateTime? DateRapprochement { get; set; }
+        // TASK-188 : RT_MOUVEMENT.MV_Piece / MV_Echeance.
+        public string Piece { get; set; } = "";
+        public DateTime? Echeance { get; set; }
     }
 
     /// <summary>

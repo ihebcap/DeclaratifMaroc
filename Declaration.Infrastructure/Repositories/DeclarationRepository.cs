@@ -866,6 +866,7 @@ public class DeclarationRepository : IDeclarationRepository
                 NULLIF(M.MV_PointDate, '17530101') AS MvPointDate,
                 M.MV_ExtraitNum                    AS MvExtraitNum,
                 NULLIF(M.MV_Echeance, '17530101')  AS MvEcheance,
+                M.MV_Piece                         AS MvPiece,
                 M.MV_Montant                       AS MvMontant,
                 M.CT_Intitule                      AS Tiers,
                 M.CT_Code                          AS TiersCode,

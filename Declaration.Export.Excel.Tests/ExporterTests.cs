@@ -163,7 +163,10 @@ namespace Declaration.Export.Excel.Tests
                         Mode = "Virement",
                         // TASK-180 : statut court + date en champ séparé (colonne dédiée).
                         EtatPointage = "Rapproché",
-                        DateRapprochement = new DateTime(2026, 7, 8)
+                        DateRapprochement = new DateTime(2026, 7, 8),
+                        // TASK-188 : MV_Piece/MV_Echeance renseignés — cas nominal.
+                        Piece = "CB AUTO",
+                        Echeance = new DateTime(2026, 8, 1)
                     },
                     new ReglementSelectionneInfo
                     {
@@ -173,6 +176,8 @@ namespace Declaration.Export.Excel.Tests
                         Tiers = "Fournisseur B",
                         Mode = "Chèque",
                         EtatPointage = "Non rapproché"
+                        // TASK-188 : Piece = "" (défaut) et Echeance = null (défaut) — cas réel
+                        // ~7,5% des lignes RT_MOUVEMENT, aucune exception attendue.
                     }
                 },
                 Lignes = new List<LigneDeclarationEnrichie>
@@ -261,6 +266,16 @@ namespace Declaration.Export.Excel.Tests
             // Règlement non rapproché (REG-002) : colonne Date rapprochement vide, pas d'exception.
             Assert.Equal("Non rapproché", wsReglements.Cell(3, 6).Value.ToString());
             Assert.True(wsReglements.Cell(3, 7).IsEmpty());
+
+            // TASK-188 : "N° Pièce" (8) / "Échéance" (9) à la suite des colonnes existantes.
+            Assert.Equal("N° Pièce", wsReglements.Cell(1, 8).Value.ToString());
+            Assert.Equal("Échéance", wsReglements.Cell(1, 9).Value.ToString());
+            Assert.Equal("CB AUTO", wsReglements.Cell(2, 8).Value.ToString());
+            Assert.Equal(new DateTime(2026, 8, 1), wsReglements.Cell(2, 9).GetDateTime());
+            Assert.Equal("dd/mm/yyyy", wsReglements.Cell(2, 9).Style.DateFormat.Format);
+            // REG-002 : Piece = "" et Echeance = null (cas réel ~7,5% des lignes) — pas d'exception.
+            Assert.Equal("", wsReglements.Cell(3, 8).Value.ToString());
+            Assert.True(wsReglements.Cell(3, 9).IsEmpty());
 
             // TASK-180 : Date Paiement (13) / Date Facture (14) — format explicite date-seule.
             Assert.Equal("dd/mm/yyyy", wsReglements.Cell(2, 2).Style.DateFormat.Format);

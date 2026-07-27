@@ -1343,7 +1343,10 @@ public class DeclarationWorkflowService
                     Mode = r.Mode,
                     // TASK-180 : plus de date concaténée dans le texte — colonne dédiée ci-dessous.
                     EtatPointage = r.EstRapprocheBanque ? "Rapproché" : "Non rapproché",
-                    DateRapprochement = r.DateRapprochement
+                    DateRapprochement = r.DateRapprochement,
+                    // TASK-188 : RT_MOUVEMENT.MV_Piece / MV_Echeance.
+                    Piece = r.MvPiece ?? "",
+                    Echeance = r.MvEcheance
                 })
                 .ToList();
         }

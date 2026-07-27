@@ -241,7 +241,9 @@ namespace Declaration.Export.Excel
         {
             // TASK-180 : "Date rapprochement" en colonne dédiée (7) — plus jamais concaténée dans
             // "État pointage" (6), qui reste un statut court exploitable.
-            string[] headers = { "Numéro", "Date", "Montant", "Tiers", "Mode", "État pointage", "Date rapprochement" };
+            // TASK-188 : "N° Pièce"/"Échéance" (RT_MOUVEMENT.MV_Piece/MV_Echeance) ajoutées à la
+            // suite des colonnes existantes (8/9) — aucune position PO imposée, choix par défaut.
+            string[] headers = { "Numéro", "Date", "Montant", "Tiers", "Mode", "État pointage", "Date rapprochement", "N° Pièce", "Échéance" };
             for (int i = 0; i < headers.Length; i++)
             {
                 ws.Cell(1, i + 1).Value = headers[i];
@@ -258,6 +260,8 @@ namespace Declaration.Export.Excel
                 ws.Cell(row, 5).Value = r.Mode;
                 ws.Cell(row, 6).Value = r.EtatPointage;
                 if (r.DateRapprochement.HasValue) { ws.Cell(row, 7).Value = r.DateRapprochement.Value; ws.Cell(row, 7).Style.DateFormat.Format = FormatDateSeule; }
+                ws.Cell(row, 8).Value = r.Piece;
+                if (r.Echeance.HasValue) { ws.Cell(row, 9).Value = r.Echeance.Value; ws.Cell(row, 9).Style.DateFormat.Format = FormatDateSeule; }
                 row++;
             }
 
