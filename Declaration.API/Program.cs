@@ -53,6 +53,19 @@ builder.Services.AddScoped<IParametrageDelaiPaiementSocieteRepository, DelaiPaie
 builder.Services.AddScoped<IRepriseDelaiPaiementRepository, DelaiPaiementBootstrapRepository>();
 builder.Services.AddScoped<IDelaiPaiementBootstrapService, DelaiPaiementBootstrapService>();
 
+// TASK-129 : cablage DI complet du socle TASK-127 (volontairement laisse ouvert par TASK-127, cf.
+// son VERIFY §Reste a valider) + service/repository CRUD des conventions par tiers (RT_CONVENTIONTIERS).
+// DelaiPaiementReferentielRepository (lecture seule P_JOURSREPOS/P_SOCIETE) implemente les 2
+// interfaces referentiel ; ConventionDelaiPaiementRepository implemente a la fois le contrat de
+// lecture TASK-127 (IConventionDelaiPaiementRepository, consomme par DelaiPaiementService) et le
+// contrat CRUD TASK-129 (IConventionDelaiPaiementTiersRepository).
+builder.Services.AddScoped<IJoursReposRepository, DelaiPaiementReferentielRepository>();
+builder.Services.AddScoped<IDelaiPaiementParametrageRepository, DelaiPaiementReferentielRepository>();
+builder.Services.AddScoped<IConventionDelaiPaiementRepository, ConventionDelaiPaiementRepository>();
+builder.Services.AddScoped<IConventionDelaiPaiementTiersRepository, ConventionDelaiPaiementRepository>();
+builder.Services.AddScoped<IDelaiPaiementService, DelaiPaiementService>();
+builder.Services.AddScoped<IConventionDelaiPaiementService, ConventionDelaiPaiementService>();
+
 // TASK-117 : verification de licence ApLicence (GRLicence, protocole REQUEST en lecture seule --
 // jamais SUBREQ, aucun siege consomme). Le subject est fige en dur (LicenceConstants), jamais lu
 // depuis connections.json (anti-contournement : un fichier de config sur le poste client serait
