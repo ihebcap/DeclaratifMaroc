@@ -63,6 +63,9 @@ public class LigneCandidate
 
     // Champs déclaratifs snapshotés
     public string NumeroFacture { get; set; } = "";
+    // TASK-189 : RT_ECHEANCE.DO_Reference, propagee depuis TASK-187 jusqu'a AffectationADeclarer
+    // mais jamais persistee jusqu'ici -- nullable comme sur AffectationADeclarer/LigneDeclarationEnrichie.
+    public string? Reference { get; set; }
     public string NumeroRapprochement { get; set; } = "";
     public string TiersNom { get; set; } = "";
     public string TiersIdentifiantFiscal { get; set; } = "";

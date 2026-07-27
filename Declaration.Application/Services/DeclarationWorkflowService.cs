@@ -978,6 +978,8 @@ public class DeclarationWorkflowService
                         Domaine = domaine,
                         MotifRejet = motif,
                         NumeroFacture = c.Affectation.NumeroFacture,
+                        // TASK-189 : comble le trou TASK-187 (Reference jamais persistee jusqu'ici).
+                        Reference = c.Affectation.Reference,
                         NumeroRapprochement = c.Affectation.NumeroRapprochement,
                         TiersNom = c.Affectation.Tiers.Nom,
                         TiersIdentifiantFiscal = c.Affectation.Tiers.IdentifiantFiscal,
@@ -1010,6 +1012,8 @@ public class DeclarationWorkflowService
                             Domaine = domaine,
                             MotifRejet = "",
                             NumeroFacture = c.Affectation.NumeroFacture,
+                            // TASK-189 : comble le trou TASK-187 (Reference jamais persistee jusqu'ici).
+                            Reference = c.Affectation.Reference,
                             NumeroRapprochement = c.Affectation.NumeroRapprochement,
                             TiersNom = c.Affectation.Tiers.Nom,
                             TiersIdentifiantFiscal = c.Affectation.Tiers.IdentifiantFiscal,
@@ -1260,6 +1264,8 @@ public class DeclarationWorkflowService
             modele.Lignes.Add(new LigneDeclarationEnrichie
             {
                 NumeroFacture = l.NumeroFacture,
+                // TASK-189 : comble le trou TASK-187 — Reference désormais persistée sur DM_LGTVA.
+                Reference = l.Reference,
                 NumeroRapprochement = l.NumeroRapprochement,
                 Designation = "",
                 Tiers = new TiersInfo
@@ -1364,6 +1370,8 @@ public class DeclarationWorkflowService
             modele.Lignes.Add(new LigneDeclarationEnrichie
             {
                 NumeroFacture = l.NumeroFacture,
+                // TASK-189 : comble le trou TASK-187 — Reference désormais persistée sur DM_LGTVA.
+                Reference = l.Reference,
                 NumeroRapprochement = l.NumeroRapprochement,
                 Designation = "",
                 Tiers = new TiersInfo
@@ -1675,6 +1683,10 @@ public class DeclarationWorkflowService
             Domaine = reference.Domaine,
             MotifRejet = "",
             NumeroFacture = reference.NumeroFacture,
+            // TASK-189 : Reference est une colonne non-financière comme CodeActivite ci-dessous —
+            // conservée à l'identique de la ligne existante, même principe. Sans cette ligne, un
+            // recalcul TASK-147 effacerait silencieusement une Reference déjà persistée.
+            Reference = reference.Reference,
             NumeroRapprochement = reference.NumeroRapprochement,
             TiersNom = reference.TiersNom,
             TiersIdentifiantFiscal = reference.TiersIdentifiantFiscal,

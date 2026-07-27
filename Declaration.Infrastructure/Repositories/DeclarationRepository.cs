@@ -171,10 +171,10 @@ public class DeclarationRepository : IDeclarationRepository
         if (!lignes.Any()) return;
         using var connection = _connectionFactory.CreatePersistenceConnection();
         var sql = @"INSERT INTO DM_LGTVA
-                    (Id, DeclarationId, Etat, Domaine, MotifRejet, NumeroFacture, NumeroRapprochement, TiersNom,
+                    (Id, DeclarationId, Etat, Domaine, MotifRejet, NumeroFacture, Reference, NumeroRapprochement, TiersNom,
                      TiersIdentifiantFiscal, TiersICE, HT, Taux, TVA, TTC, Prorata, MontantAffecte, ModePaiement, DatePaiement, DateFacture, Source, EcType, EC_Id, MV_Id,
                      CodeActivite, CodeActiviteModifieManuellement, CodeActiviteModifiePar, CodeActiviteModifieLe)
-                    VALUES (@Id, @DeclarationId, @Etat, @Domaine, @MotifRejet, @NumeroFacture, @NumeroRapprochement, @TiersNom,
+                    VALUES (@Id, @DeclarationId, @Etat, @Domaine, @MotifRejet, @NumeroFacture, @Reference, @NumeroRapprochement, @TiersNom,
                      @TiersIdentifiantFiscal, @TiersICE, @HT, @Taux, @TVA, @TTC, @Prorata, @MontantAffecte, @ModePaiement, @DatePaiement, @DateFacture, @Source, @EcType, @EC_Id, @MV_Id,
                      @CodeActivite, @CodeActiviteModifieManuellement, @CodeActiviteModifiePar, @CodeActiviteModifieLe)";
         foreach (var l in lignes)
@@ -186,6 +186,7 @@ public class DeclarationRepository : IDeclarationRepository
                 l.Domaine,
                 l.MotifRejet,
                 l.NumeroFacture,
+                l.Reference,
                 l.NumeroRapprochement,
                 l.TiersNom,
                 l.TiersIdentifiantFiscal,

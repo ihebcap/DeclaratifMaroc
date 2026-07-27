@@ -243,6 +243,17 @@ IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DM_LGT
     ALTER TABLE dbo.DM_LGTVA ADD CodeActiviteModifieLe DATETIME NULL;
 GO
 
+-- TASK-189 — comble le trou laisse par TASK-187 : Reference (RT_ECHEANCE.DO_Reference) etait
+-- propagee jusqu'a ConstructeurDeclaration/Exporter.cs mais jamais persistee sur DM_LGTVA, donc jamais
+-- lue par les deux methodes reellement cablees cote API (ConstruireModeleExportAsync/
+-- ConstruireModeleControleAsync, qui lisent LigneCandidate/DM_LGTVA, jamais ConstructeurDeclaration).
+-- NVARCHAR(200) : source NVARCHAR(MAX), mais longueur max observee reelle = 25 caracteres (verifie sur
+-- GR_EMA_DISTRIBUTION) -- marge large sans reprendre MAX. NULL (pas NOT NULL DEFAULT '') : meme
+-- convention que NumeroFacture/TiersNom ci-dessus.
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DM_LGTVA') AND name = 'Reference')
+    ALTER TABLE dbo.DM_LGTVA ADD Reference NVARCHAR(200) NULL;
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_DM_LGTVA_DeclarationId_Domaine')
     CREATE INDEX IX_DM_LGTVA_DeclarationId_Domaine
         ON dbo.DM_LGTVA (DeclarationId, Domaine);
