@@ -1328,6 +1328,76 @@ public class DeclarationRepository : IDeclarationRepository
         public DateTime? DerniereDateRapprochement { get; set; }
     }
 
+    // ─── Backfill rétroactif DateFacture/Reference (TASK-190) ──────────────────
+
+    /// <summary>
+    /// TASK-190 : <c>DO_Date</c>/<c>DO_Reference</c> réels pour les <paramref name="ecIds"/> fournis
+    /// (LECTURE SEULE, base GRF), scopés à <paramref name="soId"/> (TASK-118 : un EC_Id peut
+    /// collisionner entre deux sociétés). Un EC_Id absent du dictionnaire retourné n'existe plus
+    /// dans RT_ECHEANCE pour cette société — l'appelant doit le signaler explicitement.
+    /// Batché par 1 000 EC_Id (limite SQL Server 2 100 paramètres, même garde que
+    /// <see cref="TamponnerAffectationsAsync"/>) — un parc réel (~5148 lignes EnCours, TASK-190)
+    /// dépasse largement la limite en un seul <c>IN (...)</c>.
+    /// </summary>
+    public async Task<Dictionary<int, (DateTime? DoDate, string? DoReference)>> GetDatesFacturesEtReferencesAsync(int soId, IEnumerable<int> ecIds)
+    {
+        var ids = ecIds.Distinct().ToList();
+        var result = new Dictionary<int, (DateTime? DoDate, string? DoReference)>();
+        if (ids.Count == 0) return result;
+
+        using var connection = _connectionFactory.CreateGrfConnection();
+
+        const int batchSize = 1_000;
+        for (int i = 0; i < ids.Count; i += batchSize)
+        {
+            var batch = ids.Skip(i).Take(batchSize).ToList();
+            var rows = await connection.QueryAsync<DateFactureReferenceRow>(@"
+                SELECT EC_Id AS EcId, DO_Date AS DoDate, DO_Reference AS DoReference
+                FROM RT_ECHEANCE
+                WHERE SO_Id = @soId AND EC_Id IN @ecIds", new { soId, ecIds = batch });
+
+            foreach (var r in rows) result[r.EcId] = (r.DoDate, r.DoReference);
+        }
+
+        return result;
+    }
+
+    private sealed class DateFactureReferenceRow
+    {
+        public int EcId { get; set; }
+        public DateTime? DoDate { get; set; }
+        public string? DoReference { get; set; }
+    }
+
+    /// <summary>
+    /// TASK-190 : écriture ciblée UNIQUEMENT sur DateFacture/Reference (base de persistance).
+    /// Jamais aucune autre colonne dans le SET. <c>DbType.DateTime2</c> posé EXPLICITEMENT sur le
+    /// paramètre <c>DateFacture</c> — sans cela, Dapper type par défaut un CLR <c>DateTime</c> en
+    /// <c>DbType.DateTime</c> (constaté en rejeu réel), ce qui fait transiter la valeur par le
+    /// domaine SQL <c>datetime</c> hérité (résolution 1/300 s) AVANT son écriture dans la colonne
+    /// <c>datetime2(7)</c> — arrondi parasite constaté sur ~0,8% des lignes lors du premier rejeu
+    /// (dérive sous la milliseconde, invisible à l'affichage mais cassant l'idempotence bit-à-bit
+    /// exigée par la TASK). Boucle explicite (pas un seul <c>ExecuteAsync</c> batché sur une liste
+    /// d'objets anonymes) car Dapper ne permet pas de typer un paramètre par élément dans ce mode.
+    /// </summary>
+    public async Task MettreAJourDateFactureEtReferenceAsync(IEnumerable<(Guid LigneId, DateTime? DateFacture, string? Reference)> lignesAMettreAJour)
+    {
+        var items = lignesAMettreAJour.ToList();
+        if (items.Count == 0) return;
+
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        const string sql = "UPDATE DM_LGTVA SET DateFacture = @DateFacture, Reference = @Reference WHERE Id = @LigneId";
+
+        foreach (var item in items)
+        {
+            var parametres = new Dapper.DynamicParameters();
+            parametres.Add("LigneId", item.LigneId);
+            parametres.Add("DateFacture", item.DateFacture, System.Data.DbType.DateTime2);
+            parametres.Add("Reference", item.Reference);
+            await connection.ExecuteAsync(sql, parametres);
+        }
+    }
+
     // ─── Tampon DT_Id (TASK-028) ───────────────────────────────────────────────────
 
     /// <summary>

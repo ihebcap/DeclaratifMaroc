@@ -59,6 +59,10 @@ namespace Declaration.Orchestration.Tests
             Task.FromResult(Enumerable.Empty<LigneCandidate>());
         public Task<Dictionary<string, List<string>>> GetLignesDistinctsAsync(Guid declarationId, string domaine) =>
             Task.FromResult(new Dictionary<string, List<string>>());
+        public Task<Dictionary<int, (DateTime? DoDate, string? DoReference)>> GetDatesFacturesEtReferencesAsync(int soId, IEnumerable<int> ecIds) =>
+            Task.FromResult(new Dictionary<int, (DateTime? DoDate, string? DoReference)>());
+        public Task MettreAJourDateFactureEtReferenceAsync(IEnumerable<(Guid LigneId, DateTime? DateFacture, string? Reference)> lignesAMettreAJour) =>
+            Task.CompletedTask;
         public Task<DeclarationEntete?> GetByNumeroAsync(string numero) => throw NotUsed();
         public Task<IEnumerable<DeclarationEntete>> GetAllAsync(int societeId, int? exercice, StatutDeclaration? statut) => throw NotUsed();
         public Task CreateAsync(DeclarationEntete declaration) => throw NotUsed();

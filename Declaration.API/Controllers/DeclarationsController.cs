@@ -802,6 +802,23 @@ public class DeclarationsController : ControllerBase
         var resultats = await _workflowService.DiagnostiquerDtIdAsync(cibles);
         return Ok(resultats);
     }
+
+    /// <summary>
+    /// TASK-190 : backfill rétroactif DateFacture/Reference sur les lignes DM_LGTVA déjà figées des
+    /// déclarations EnCours (jamais Clôturée/Déposée). Écriture de masse ciblée (2 colonnes
+    /// uniquement) — déclenchement manuel exclusivement, réservé UT_Admin=1 (même garde que
+    /// réouverture/suppression/diagnostic DT_Id, TASK-073/079/094). Jamais appelé automatiquement au
+    /// chargement d'une déclaration.
+    /// </summary>
+    [HttpPost("/api/admin/backfill-datefacture-reference")]
+    public async Task<IActionResult> BackfillDateFactureEtReference()
+    {
+        if (!User.HasClaim("UT_Admin", "1"))
+            return Forbid();
+
+        var rapport = await _workflowService.BackfillDateFactureEtReferenceAsync();
+        return Ok(rapport);
+    }
 }
 
 public class CreateDeclarationRequest

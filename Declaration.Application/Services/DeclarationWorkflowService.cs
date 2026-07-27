@@ -1932,6 +1932,86 @@ public class DeclarationWorkflowService
         }).ToList();
     }
 
+    // ─── Backfill rétroactif DateFacture/Reference (TASK-190) ──────────────────
+
+    /// <summary>
+    /// TASK-190 : recale rétroactivement <c>DateFacture</c>/<c>Reference</c> sur les lignes
+    /// <c>DM_LGTVA</c> déjà figées des déclarations <c>EnCours</c> UNIQUEMENT (jamais
+    /// Clôturée/Déposée — décision PO 27/07/2026, doctrine TASK-094) depuis les valeurs réelles de
+    /// <c>RT_ECHEANCE</c> (base GRF). Aucun recalcul financier (HT/Taux/TVA/TTC/Etat/CodeActivite
+    /// hors sujet, non touchés). Batché par société (un seul aller-retour GRF par lot d'EC_Id
+    /// distincts, TASK-118 : EC_Id peut collisionner entre deux sociétés). Garde-fou d'idempotence :
+    /// seules les lignes dont DateFacture OU Reference diffère réellement de la valeur actuellement
+    /// persistée sont réécrites — une ré-exécution immédiate ne doit plus rien modifier. Un EC_Id
+    /// introuvable dans RT_ECHEANCE (facture supprimée entre-temps côté Sage) n'écrase rien et est
+    /// signalé explicitement dans le rapport, jamais un silence.
+    /// </summary>
+    public async Task<BackfillDateFactureReferenceRapport> BackfillDateFactureEtReferenceAsync()
+    {
+        var toutesDeclarations = await _repository.GetToutesDeclarationsAsync();
+        var declarationsEnCours = toutesDeclarations
+            .Where(d => d.Statut == StatutDeclaration.EnCours)
+            .ToList();
+
+        int lignesScannees = 0;
+        int lignesEcIdInvalide = 0;
+        int lignesDejaCorrectes = 0;
+        var ecIdsIntrouvables = new SortedSet<int>();
+        var aMettreAJour = new List<(Guid LigneId, DateTime? DateFacture, string? Reference)>();
+
+        foreach (var groupeSociete in declarationsEnCours.GroupBy(d => d.SocieteId))
+        {
+            var soId = groupeSociete.Key;
+
+            var toutesLignesSociete = new List<LigneCandidate>();
+            foreach (var declaration in groupeSociete)
+            {
+                var lignesDec = await _repository.GetLignesAsync(declaration.Id, "Decaissement", 1, int.MaxValue, null, null);
+                var lignesEnc = await _repository.GetLignesAsync(declaration.Id, "Encaissement", 1, int.MaxValue, null, null);
+                toutesLignesSociete.AddRange(lignesDec);
+                toutesLignesSociete.AddRange(lignesEnc);
+            }
+
+            lignesScannees += toutesLignesSociete.Count;
+
+            var ecIdsValides = toutesLignesSociete.Where(l => l.EC_Id > 0).Select(l => l.EC_Id).Distinct().ToList();
+            var valeursReelles = await _repository.GetDatesFacturesEtReferencesAsync(soId, ecIdsValides);
+
+            foreach (var ligne in toutesLignesSociete)
+            {
+                if (ligne.EC_Id <= 0)
+                {
+                    lignesEcIdInvalide++;
+                    continue;
+                }
+
+                if (!valeursReelles.TryGetValue(ligne.EC_Id, out var reel))
+                {
+                    ecIdsIntrouvables.Add(ligne.EC_Id);
+                    continue;
+                }
+
+                if (ligne.DateFacture == reel.DoDate && ligne.Reference == reel.DoReference)
+                {
+                    lignesDejaCorrectes++;
+                    continue;
+                }
+
+                aMettreAJour.Add((ligne.Id, reel.DoDate, reel.DoReference));
+            }
+        }
+
+        if (aMettreAJour.Count > 0)
+            await _repository.MettreAJourDateFactureEtReferenceAsync(aMettreAJour);
+
+        return new BackfillDateFactureReferenceRapport(
+            LignesScannees: lignesScannees,
+            LignesMisesAJour: aMettreAJour.Count,
+            LignesDejaCorrectes: lignesDejaCorrectes,
+            LignesEcIdInvalide: lignesEcIdInvalide,
+            EcIdsIntrouvables: ecIdsIntrouvables.ToList());
+    }
+
     /// <summary>
     /// Numéros de rapprochement distincts des lignes intégrées de la déclaration
     /// (socle du tamponnage/dé-tamponnage RT_AFFECTATION).
@@ -1981,6 +2061,20 @@ public class ResynchroBulkResultat
     /// <summary>Message d'interruption (verrou concurrent) le cas échéant.</summary>
     public string? MessageInterruption { get; set; }
 }
+
+/// <summary>
+/// TASK-190 : rapport d'un backfill rétroactif DateFacture/Reference (déclarations EnCours
+/// uniquement). Transparence complète — <see cref="LignesEcIdInvalide"/> (EC_Id &lt;= 0, hors
+/// périmètre du backfill par construction) et <see cref="EcIdsIntrouvables"/> (facture disparue de
+/// RT_ECHEANCE entre le figeage et ce backfill) sont toujours signalés, jamais absorbés
+/// silencieusement dans <see cref="LignesDejaCorrectes"/>.
+/// </summary>
+public record BackfillDateFactureReferenceRapport(
+    int LignesScannees,
+    int LignesMisesAJour,
+    int LignesDejaCorrectes,
+    int LignesEcIdInvalide,
+    IReadOnlyList<int> EcIdsIntrouvables);
 
 /// <summary>TASK-176 : une pièce encore en anomalie après resynchronisation en masse.</summary>
 public class ResynchroLigneAnomalie

@@ -50,6 +50,29 @@ public interface IDeclarationRepository
     /// </summary>
     Task<Dictionary<string, List<string>>> GetLignesDistinctsAsync(Guid declarationId, string domaine);
 
+    // ─── Backfill rétroactif DateFacture/Reference (TASK-190) ──────────────────
+    /// <summary>
+    /// TASK-190 : <c>DO_Date</c>/<c>DO_Reference</c> réels (base GRF, lecture seule) pour les
+    /// <paramref name="ecIds"/> fournis, scopés à <paramref name="soId"/> — même précaution que
+    /// <see cref="GetDernieresDatesRapprochementAsync"/>/TASK-118 : un <c>EC_Id</c> peut collisionner
+    /// entre deux sociétés/bases Sage distinctes, jamais un batch global inter-sociétés. Un
+    /// <c>EC_Id</c> absent du dictionnaire retourné signifie qu'il n'existe plus dans
+    /// <c>RT_ECHEANCE</c> pour cette société (facture supprimée entre-temps côté Sage) — l'appelant
+    /// doit le signaler explicitement, jamais un silence.
+    /// </summary>
+    Task<Dictionary<int, (DateTime? DoDate, string? DoReference)>> GetDatesFacturesEtReferencesAsync(int soId, IEnumerable<int> ecIds);
+
+    /// <summary>
+    /// TASK-190 : écriture ciblée UNIQUEMENT sur <c>DateFacture</c>/<c>Reference</c> (base de
+    /// persistance) — jamais une autre colonne. <c>DateFacture</c> est typée explicitement
+    /// <c>DbType.DateTime2</c> (précision de la colonne cible) pour éviter un arrondi parasite via
+    /// le domaine SQL <c>datetime</c> hérité (résolution 1/300 s) que Dapper utiliserait par défaut
+    /// pour un CLR <c>DateTime</c> — constaté en rejeu réel sur ~0,8% des lignes, cassant
+    /// l'idempotence bit-à-bit. L'appelant garantit déjà que seules les lignes réellement
+    /// différentes de leur valeur actuelle sont incluses (idempotence).
+    /// </summary>
+    Task MettreAJourDateFactureEtReferenceAsync(IEnumerable<(Guid LigneId, DateTime? DateFacture, string? Reference)> lignesAMettreAJour);
+
     Task UpdateLigneEtatAsync(Guid ligneId, EtatLigne nouvelEtat);
     Task UpdateLignesEtatBulkAsync(Guid declarationId, string domaine, string? filter, EtatLigne nouvelEtat);
     Task UpdateLignesEtatBulkByIdsAsync(IEnumerable<Guid> ligneIds, EtatLigne nouvelEtat);

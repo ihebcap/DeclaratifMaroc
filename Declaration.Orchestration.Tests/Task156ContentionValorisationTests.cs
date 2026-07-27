@@ -51,6 +51,8 @@ namespace Declaration.Orchestration.Tests
         public Task<IEnumerable<LigneCandidate>> GetLignesAsync(Guid declarationId, string domaine, int page, int pageSize, string? sort, string? filter) => throw NotUsed();
         public Task<int> GetLignesCountAsync(Guid declarationId, string domaine, string? filter) => throw NotUsed();
         public Task<Dictionary<string, List<string>>> GetLignesDistinctsAsync(Guid declarationId, string domaine) => throw NotUsed();
+        public Task<Dictionary<int, (DateTime? DoDate, string? DoReference)>> GetDatesFacturesEtReferencesAsync(int soId, IEnumerable<int> ecIds) => throw NotUsed();
+        public Task MettreAJourDateFactureEtReferenceAsync(IEnumerable<(Guid LigneId, DateTime? DateFacture, string? Reference)> lignesAMettreAJour) => throw NotUsed();
         public Task UpdateLigneEtatAsync(Guid ligneId, EtatLigne nouvelEtat) => throw NotUsed();
         public Task UpdateLignesEtatBulkAsync(Guid declarationId, string domaine, string? filter, EtatLigne nouvelEtat) => throw NotUsed();
         public Task UpdateLignesEtatBulkByIdsAsync(IEnumerable<Guid> ligneIds, EtatLigne nouvelEtat) => throw NotUsed();
@@ -203,6 +205,8 @@ namespace Declaration.Orchestration.Tests
         public Task<Dictionary<Guid, (int NbLignes, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds) => throw NotUsed();
         public Task<int> CountAffectationsTamponneesAsync(IEnumerable<string> numerosRapprochement) => throw NotUsed();
         public Task<Dictionary<string, List<string>>> GetLignesDistinctsAsync(Guid declarationId, string domaine) => throw NotUsed();
+        public Task<Dictionary<int, (DateTime? DoDate, string? DoReference)>> GetDatesFacturesEtReferencesAsync(int soId, IEnumerable<int> ecIds) => throw NotUsed();
+        public Task MettreAJourDateFactureEtReferenceAsync(IEnumerable<(Guid LigneId, DateTime? DateFacture, string? Reference)> lignesAMettreAJour) => throw NotUsed();
         public Task UpdateLigneEtatAsync(Guid ligneId, EtatLigne nouvelEtat) => throw NotUsed();
         public Task UpdateLignesEtatBulkAsync(Guid declarationId, string domaine, string? filter, EtatLigne nouvelEtat) => throw NotUsed();
         public Task UpdateLignesEtatBulkByIdsAsync(IEnumerable<Guid> ligneIds, EtatLigne nouvelEtat) => throw NotUsed();
