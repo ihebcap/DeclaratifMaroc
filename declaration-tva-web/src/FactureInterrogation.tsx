@@ -19,6 +19,13 @@ import api from './api';
 //       rendues « non valorisé » + motif quand absentes du cache, JAMAIS un 0 inventé.
 //   C — statut déclaration (agrégat DT_Id) : Réglé, Déclaré, Reste à déclarer,
 //       statut à 3 valeurs (NonDéclarable | Partiel | Total).
+//   D — TASK-135 (CDC §3.3) : mesure du délai de paiement fournisseur — Échéance légale
+//       (socle TASK-127) et Écart (jours). Indicateur de pilotage interne (retard fournisseur),
+//       affiché mais JAMAIS lié au workflow DDP (calcul incrémental propre, TASK-131) ni source
+//       de vérité réglementaire. Écart = définitif (vs dernière date de rapprochement bancaire
+//       pertinente) si la facture est soldée, sinon provisoire (vs date du jour) tant que non
+//       soldée. NULL si la facture est soldée mais qu'aucune date de rapprochement n'est encore
+//       connue (jamais un écart inventé — cf. CelluleD).
 
 type ListFilterValue = string | string[];
 
@@ -29,7 +36,7 @@ type Col = {
   sortKey?: 'date' | 'ttc' | 'solde' | 'numero';
   filterType?: 'list' | 'text';
   width?: string;
-  famille?: 'A' | 'B' | 'C';
+  famille?: 'A' | 'B' | 'C' | 'D';
 };
 
 // TASK-067B : n° facture / référence passent en 'list' (colonnes identifiantes, décision PO
@@ -52,6 +59,13 @@ const COLUMNS: Col[] = [
   { key: 'soldeFacture', label: 'Solde facture', align: 'right', sortKey: 'solde', width: '120px', famille: 'A' },
   { key: 'statut', label: 'Statut décl.', align: 'center', filterType: 'list', width: '130px', famille: 'C' },
   { key: 'origine', label: 'Origine', filterType: 'list', width: '120px', famille: 'B' },
+  // TASK-135 (CDC §3.3) : mesure du délai de paiement fournisseur — indicateur de pilotage
+  // interne (retard fournisseur), jamais lié au workflow DDP. Pas de sortKey/filterType : les
+  // deux valeurs sont calculées APRÈS la pagination SQL (socle TASK-127, hors SQL), le tri/filtre
+  // serveur natif (OFFSET/FETCH + ExcelFilter list/text) ne les couvre pas sans réingénierie de
+  // la pagination — hors périmètre TASK-135 (documenté en VERIFY).
+  { key: 'echeanceLegale', label: 'Échéance légale', width: '120px', famille: 'D' },
+  { key: 'ecartJours', label: 'Écart délai (j)', align: 'right', width: '130px', famille: 'D' },
 ];
 
 const isNonNul = (v: number) => Math.abs(v ?? 0) > 0.005;
@@ -116,6 +130,32 @@ function CelluleB({ value, valorisee, motif, brutValue }: { value: number | null
     return <span style={{ color: 'var(--text-secondary)' }}>—</span>;
   }
   return <span>{formatMoney(value)}</span>;
+}
+
+// TASK-135 (CDC §3.3) — cellule « Écart délai (j) » : jamais un 0 silencieux (même règle que
+// CelluleB). NULL = facture soldée sans date de rapprochement bancaire connue (aucune valeur
+// inventée). Retard positif (échéance dépassée) mis en évidence en rouge, comme les autres
+// indicateurs de statut déjà en place (soldeFacture/resteADeclarer). Provisoire (facture non
+// soldée) signalé explicitement, jamais confondu avec un écart définitif.
+function CelluleD({ ecartJours, soldeFacture }: { ecartJours: number | null | undefined, soldeFacture: number }) {
+  if (ecartJours === null || ecartJours === undefined) {
+    return (
+      <span title="Facture soldée, mais aucune date de rapprochement bancaire connue pour l'instant — aucun écart calculable." style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.78rem' }}>
+        —
+      </span>
+    );
+  }
+  const provisoire = isNonNul(soldeFacture); // solde restant > 0 ⇒ mesure « à ce jour », pas définitive.
+  const enRetard = ecartJours > 0;
+  const style: React.CSSProperties = enRetard
+    ? { color: 'var(--status-warning-text-alt)', fontWeight: 700 }
+    : { color: 'var(--status-ok-text)' };
+  return (
+    <span title={provisoire ? 'Provisoire : facture non soldée, écart mesuré contre la date du jour.' : 'Écart définitif : facture soldée, mesuré contre la dernière date de rapprochement bancaire.'} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+      <span style={style}>{ecartJours > 0 ? `+${ecartJours}` : ecartJours} j</span>
+      {provisoire && <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>(prov.)</span>}
+    </span>
+  );
 }
 
 export function FactureInterrogation({ societeId, showToast }: { societeId: number, showToast: (m: string, t?: 'success' | 'error' | 'warning') => void }) {
@@ -370,6 +410,8 @@ export function FactureInterrogation({ societeId, showToast }: { societeId: numb
           : <span style={{ color: 'var(--status-ok-text)' }}>{formatMoney(v)}</span>;
       case 'statut': return <StatutBadge statut={v} />;
       case 'origine': return <OrigineChip origine={v} />;
+      case 'echeanceLegale': return v ? formatDate(v) : <span style={{ color: 'var(--text-secondary)' }}>—</span>;
+      case 'ecartJours': return <CelluleD ecartJours={v} soldeFacture={row.soldeFacture ?? 0} />;
       default: return v;
     }
   };

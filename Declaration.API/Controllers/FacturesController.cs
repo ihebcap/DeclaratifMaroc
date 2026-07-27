@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Declaration.API.Dtos;
 using Declaration.Application.Entities;
 using Declaration.Application.Interfaces;
+using Declaration.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,12 +30,70 @@ public class FacturesController : ControllerBase
     private readonly IDeclarationRepository _repository;
     private readonly Declaration.Application.Services.DeclarationWorkflowService _workflowService;
 
+    // TASK-135 (CDC §3.3) : socle TASK-127 consommé DIRECTEMENT (calculateur pur
+    // EcheanceLegaleCalculator + repositories), plutôt que via IDelaiPaiementService — pour
+    // charger conventions/jours de repos/délai par défaut UNE SEULE FOIS par page au lieu d'une
+    // fois par facture (IDelaiPaiementService est pensé pour une résolution facture par facture,
+    // adapté à TASK-131/134, pas à une grille paginée). Aucune logique métier dupliquée : le
+    // calcul reste délégué au même calculateur statique.
+    //
+    // ATTENTION CÂBLAGE DI (cf. VERIFY/TASK-127_verify.md « Reste à valider ») :
+    // IConventionDelaiPaiementRepository est un contrat SEUL (implémentation = TASK-129, non
+    // livrée à ce jour) — tant que Program.cs n'enregistre pas ces trois interfaces (TASK-129),
+    // CE CONTRÔLEUR ENTIER échouera à la résolution DI (toutes ses actions, pas seulement
+    // GetFactures). Régression temporaire assumée et documentée (VERIFY/TASK-135_verify.md) —
+    // décision explicite du donneur d'ordre (ne pas bloquer TASK-135 sur TASK-129, ne pas
+    // implémenter TASK-129 depuis cette session).
+    private readonly IConventionDelaiPaiementRepository _conventionsDelaiPaiement;
+    private readonly IJoursReposRepository _joursRepos;
+    private readonly IDelaiPaiementParametrageRepository _delaiPaiementParametrage;
+
     public FacturesController(
         IDeclarationRepository repository,
-        Declaration.Application.Services.DeclarationWorkflowService workflowService)
+        Declaration.Application.Services.DeclarationWorkflowService workflowService,
+        IConventionDelaiPaiementRepository conventionsDelaiPaiement,
+        IJoursReposRepository joursRepos,
+        IDelaiPaiementParametrageRepository delaiPaiementParametrage)
     {
         _repository = repository;
         _workflowService = workflowService;
+        _conventionsDelaiPaiement = conventionsDelaiPaiement;
+        _joursRepos = joursRepos;
+        _delaiPaiementParametrage = delaiPaiementParametrage;
+    }
+
+    /// <summary>
+    /// TASK-135 (CDC §3.3) : renseigne Échéance légale + Écart (jours) sur chaque ligne de la
+    /// page — conventions (Achat/Fournisseur), jours de repos et délai par défaut société chargés
+    /// UNE SEULE FOIS pour toute la page, puis <see cref="EcheanceLegaleCalculator.Calculer"/>
+    /// (Declaration.Core, hors DB) appliqué ligne par ligne en mémoire. La dernière date de
+    /// rapprochement bancaire pertinente (nécessaire uniquement pour les factures soldées) est
+    /// lue en un seul aller-retour batché. Indicateur de pilotage interne, jamais lié au workflow
+    /// DDP (TASK-131) ni source de vérité réglementaire.
+    /// </summary>
+    private async Task AppliquerDelaiPaiementAsync(int soId, List<FactureInterrogationRow> rows)
+    {
+        if (rows.Count == 0) return;
+
+        var conventions = await _conventionsDelaiPaiement.GetConventionsActivesAsync(soId, DomaineDelaiPaiement.Achat);
+        var joursRepos = await _joursRepos.GetJoursReposAsync(soId);
+        var nombreJoursDefaut = await _delaiPaiementParametrage.GetNombreJoursDelaiDefautAsync(soId);
+
+        // Dernière date de rapprochement bancaire pertinente : uniquement nécessaire pour les
+        // factures soldées (solde restant ≤ 0) — seul cas où l'écart se mesure contre un fait déjà
+        // survenu (cf. FactureInterrogationRow.AppliquerDelaiPaiement).
+        var ecIdsSoldees = rows.Where(r => r.SoldeFacture <= 0m).Select(r => r.EcId).ToList();
+        var rapprochements = ecIdsSoldees.Count > 0
+            ? await _repository.GetDernieresDatesRapprochementAsync(soId, ecIdsSoldees)
+            : new Dictionary<int, DateTime?>();
+
+        foreach (var r in rows)
+        {
+            var resultat = EcheanceLegaleCalculator.Calculer(
+                r.DoDate, r.TiersNo, r.DoNumero, conventions, nombreJoursDefaut, joursRepos);
+            rapprochements.TryGetValue(r.EcId, out var derniereDateRapprochement);
+            r.AppliquerDelaiPaiement(resultat.EcheanceLegale, derniereDateRapprochement);
+        }
     }
 
     /// <summary>
@@ -88,10 +148,13 @@ public class FacturesController : ControllerBase
         if (!PeriodeValide(debut.Value, fin.Value, out var erreurPeriode))
             return BadRequest(new { Message = erreurPeriode });
 
-        var rows = await _repository.GetFacturesInterrogationAsync(
-            soId, debut.Value, fin.Value, numero, fournisseur, reference, origine, statut, page, size, sort);
+        var rows = (await _repository.GetFacturesInterrogationAsync(
+            soId, debut.Value, fin.Value, numero, fournisseur, reference, origine, statut, page, size, sort)).ToList();
         var total = await _repository.GetFacturesInterrogationCountAsync(
             soId, debut.Value, fin.Value, numero, fournisseur, reference, origine, statut);
+
+        // TASK-135 (CDC §3.3) : extension de la projection — échéance légale + écart (jours).
+        await AppliquerDelaiPaiementAsync(soId, rows);
 
         return Ok(new
         {

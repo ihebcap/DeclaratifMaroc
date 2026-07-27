@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Declaration.Application.Entities;
@@ -43,6 +44,7 @@ public sealed class FactureInterrogationRow
     public string? DoReference { get; set; }      // DO_Reference — référence pièce
     public decimal EcMontant { get; set; }        // EC_Montant — TTC (fait foi pour la facture)
     public int EcType { get; set; }               // EC_Type : 0=Sage, 111=FGR, 4=solde initial
+    public int TiersNo { get; set; }              // CT_No — tiers (TASK-135 : appariement conventions délai de paiement)
 
     // ─── Famille C — affectations agrégées (RT_AFFECTATION) ────────────────────
     public int NbAffectations { get; set; }       // COUNT(RT_AFFECTATION)
@@ -70,6 +72,13 @@ public sealed class FactureInterrogationRow
     public decimal? TvaBrut { get; set; }
     public decimal? ParafiscaleBrut { get; set; }
     public decimal? TtcBrut { get; set; }
+
+    // ─── TASK-135 — Mesure du délai de paiement fournisseur (indicateur de pilotage) ───
+    // Renseignés APRÈS coup par AppliquerDelaiPaiement (socle TASK-127 : EcheanceLegaleCalculator).
+    // Indicateur de pilotage interne (retard fournisseur, CDC §3.3) — jamais lié au workflow DDP
+    // (qui a son propre calcul incrémental, TASK-131), jamais une source de vérité réglementaire.
+    public DateTime? EcheanceLegale { get; set; }
+    public int? EcartJours { get; set; }
 
     // ─── Indicateurs dérivés famille C (rendus VISIBLES, jamais absorbés) ───────
 
@@ -145,6 +154,32 @@ public sealed class FactureInterrogationRow
             TvaBrut = tvaBrut;
             ParafiscaleBrut = parafiscaleBrut;
             TtcBrut = ttcBrut;
+        }
+    }
+
+    /// <summary>
+    /// TASK-135 (CDC §3.3) : renseigne l'échéance légale (résolue via le socle TASK-127) et calcule
+    /// l'écart en jours :
+    ///   - facture soldée (<see cref="SoldeFacture"/> ≤ 0, payée à 100 %) : écart = dernière date de
+    ///     rapprochement bancaire pertinente (mécanisme MV_Point/MV_PointDate, module TVA) − échéance
+    ///     légale. Si aucune date de rapprochement n'est connue (<paramref name="derniereDateRapprochement"/>
+    ///     null — ex. affectation non pointée), l'écart reste NULL : jamais un écart inventé contre une
+    ///     référence absente (règle n°1 du projet, aucune ligne silencieuse).
+    ///   - solde restant &gt; 0 (non payée ou partielle) : écart = date du jour − échéance légale, TOUJOURS
+    ///     calculable (retard « à ce jour », explicitement provisoire tant que la facture n'est pas soldée).
+    /// </summary>
+    public void AppliquerDelaiPaiement(DateTime echeanceLegale, DateTime? derniereDateRapprochement)
+    {
+        EcheanceLegale = echeanceLegale;
+        if (SoldeFacture <= 0m)
+        {
+            EcartJours = derniereDateRapprochement.HasValue
+                ? (int)(derniereDateRapprochement.Value.Date - echeanceLegale.Date).TotalDays
+                : (int?)null;
+        }
+        else
+        {
+            EcartJours = (int)(DateTime.Today - echeanceLegale.Date).TotalDays;
         }
     }
 

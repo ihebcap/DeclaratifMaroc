@@ -47,6 +47,10 @@ public sealed record FactureInterrogationDto
         Statut = FactureInterrogationRow.LibelleStatut(r.Statut);
         // Origine EC_Type : source UNIQUE partagée avec Rapprochement/Déclaration (TASK-036/038).
         Origine = r.Origine;
+        // TASK-135 (CDC §3.3) : indicateur de pilotage interne (retard fournisseur), jamais lié au
+        // workflow DDP. Null tant que non renseigné par FacturesController (socle TASK-127).
+        EcheanceLegale = r.EcheanceLegale;
+        EcartJours = r.EcartJours;
     }
 
     [JsonPropertyName("factureNumero")]
@@ -123,4 +127,13 @@ public sealed record FactureInterrogationDto
 
     [JsonPropertyName("origine")]
     public string Origine { get; }
+
+    // TASK-135 (CDC §3.3) — extension écran Factures : indicateur de pilotage interne (retard
+    // fournisseur), affiché mais JAMAIS lié au workflow DDP (qui a son propre calcul incrémental,
+    // TASK-131) ni source de vérité réglementaire.
+    [JsonPropertyName("echeanceLegale")]
+    public DateTime? EcheanceLegale { get; }
+
+    [JsonPropertyName("ecartJours")]
+    public int? EcartJours { get; }
 }

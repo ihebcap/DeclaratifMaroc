@@ -114,6 +114,17 @@ public interface IDeclarationRepository
         int soId, DateTime dateDebut, DateTime dateFin,
         string? rechercheNumero = null, string? rechercheReference = null);
 
+    // ─── Mesure du délai de paiement fournisseur (TASK-135, lecture seule) ─────
+    /// <summary>
+    /// TASK-135 (CDC §3.3) : dernière date de rapprochement bancaire pertinente par
+    /// <c>EC_Id</c> — même principe que le module TVA (<c>RT_MOUVEMENT.MV_Point</c>/
+    /// <c>MV_PointDate</c>, source locale GRF, jamais le mécanisme Sage). Une facture soldée par
+    /// plusieurs règlements retient le MAX (date à laquelle elle a réellement été soldée en
+    /// intégralité). Un <c>EC_Id</c> absent ou porteur d'une valeur NULL signifie qu'aucune
+    /// affectation rattachée n'est encore rapprochée — jamais de date inventée.
+    /// </summary>
+    Task<Dictionary<int, DateTime?>> GetDernieresDatesRapprochementAsync(int soId, IEnumerable<int> ecIds);
+
     // ─── Tampon DT_Id (verrou d'intégration déclaration, TASK-028) ─────────────
     /// <summary>
     /// Pose le tampon DT_Id sur toutes les affectations RT_AFFECTATION correspondant aux

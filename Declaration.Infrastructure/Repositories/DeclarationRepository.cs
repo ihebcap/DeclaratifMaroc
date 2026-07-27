@@ -1130,6 +1130,7 @@ public class DeclarationRepository : IDeclarationRepository
                 E.DO_Reference                     AS DoReference,
                 E.EC_Montant                       AS EcMontant,
                 E.EC_Type                          AS EcType,
+                E.CT_No                            AS TiersNo,
                 ISNULL(A.NbAffectations, 0)        AS NbAffectations,
                 A.Regle                            AS Regle,
                 A.[Declare]                        AS [Declare]
@@ -1279,6 +1280,50 @@ public class DeclarationRepository : IDeclarationRepository
             NumerosTronque = numeroSearch is null && numeros.Count == DistinctsTopBound,
             ReferencesTronque = referenceSearch is null && references.Count == DistinctsTopBound
         };
+    }
+
+    // ─── TASK-135 — Mesure du délai de paiement fournisseur (indicateur de pilotage) ─────
+    //
+    // Réutilise EXACTEMENT le même principe que le module TVA (RapprochementDateRappExpr,
+    // ci-dessus §"Interrogation Rapprochement bancaire globale") : date de rapprochement
+    // pertinente = MV_Date pour l'espèce (MV_Type=0, auto-rapprochée) ; sinon MV_PointDate
+    // débarrassé du sentinel SQL min 1753 (non pointé ⇒ NULL). Décision PO 19/07/2026 (CDC §3.3) :
+    // même source locale que la TVA (RT_MOUVEMENT.MV_Point/MV_PointDate), jamais le mécanisme
+    // Sage de l'ancien module RAS.
+    //
+    // Une facture peut être soldée par PLUSIEURS règlements (affectations partielles cumulées) :
+    // on retient le MAX (la date à laquelle la facture a réellement été soldée dans son
+    // intégralité), jamais le premier. LECTURE SEULE STRICTE.
+
+    /// <summary>
+    /// TASK-135 : dernière date de rapprochement bancaire pertinente par <c>EC_Id</c>, pour les
+    /// factures fournies (LECTURE SEULE, base GRF). Un <c>EC_Id</c> absent du dictionnaire, ou
+    /// présent avec une valeur NULL, signifie qu'aucune affectation rattachée n'est encore
+    /// rapprochée (aucune date inventée — l'appelant doit traiter ce cas explicitement).
+    /// </summary>
+    public async Task<Dictionary<int, DateTime?>> GetDernieresDatesRapprochementAsync(int soId, IEnumerable<int> ecIds)
+    {
+        var ids = ecIds.Distinct().ToList();
+        var result = new Dictionary<int, DateTime?>();
+        if (ids.Count == 0) return result;
+
+        using var connection = _connectionFactory.CreateGrfConnection();
+        var rows = await connection.QueryAsync<DerniereDateRapprochementRow>(@"
+            SELECT AF.EC_Id AS EcId,
+                   MAX(CASE WHEN M.MV_Type = 0 THEN M.MV_Date ELSE NULLIF(M.MV_PointDate, '17530101') END) AS DerniereDateRapprochement
+            FROM RT_AFFECTATION AF
+            JOIN RT_MOUVEMENT M ON M.MV_Id = AF.MV_Id
+            WHERE M.SO_Id = @soId AND AF.EC_Id IN @ecIds
+            GROUP BY AF.EC_Id", new { soId, ecIds = ids });
+
+        foreach (var r in rows) result[r.EcId] = r.DerniereDateRapprochement;
+        return result;
+    }
+
+    private sealed class DerniereDateRapprochementRow
+    {
+        public int EcId { get; set; }
+        public DateTime? DerniereDateRapprochement { get; set; }
     }
 
     // ─── Tampon DT_Id (TASK-028) ───────────────────────────────────────────────────

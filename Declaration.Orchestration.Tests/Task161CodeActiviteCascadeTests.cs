@@ -343,6 +343,7 @@ namespace Declaration.Orchestration.Tests
                 IReadOnlyList<string>? numero, string? fournisseur, IReadOnlyList<string>? reference,
                 IReadOnlyList<string>? origines, IReadOnlyList<string>? statuts) => throw new NotImplementedException();
             public Task<FactureInterrogationDistincts> GetFacturesInterrogationDistinctsAsync(int soId, DateTime dateDebut, DateTime dateFin, string? rechercheNumero = null, string? rechercheReference = null) => throw new NotImplementedException();
+            public Task<Dictionary<int, DateTime?>> GetDernieresDatesRapprochementAsync(int soId, IEnumerable<int> ecIds) => throw new NotImplementedException(); // TASK-135 (stub, non exercé par ces tests)
 
             public Task TamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => Task.CompletedTask;
             public Task DetamponnerAffectationsAsync(int dtId, IEnumerable<string> numerosRapprochement) => Task.CompletedTask;
