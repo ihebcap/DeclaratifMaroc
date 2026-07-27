@@ -1,5 +1,24 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-07-27 (revue architecte — recadrage TODO.md vs code source)
+
+### TASK-158 — Popup « Colonnes » ouvert hors écran : flip vertical (APPROUVÉE rétroactivement)
+- **Module :** declaration-tva-web (`ColumnSelector.tsx`)
+- **Impact :** correctif retrouvé déjà livré en code le 23/07/2026 (commit `cdb37e8a`, noyé sous le
+  libellé `TASK-161`), jamais tracé via `IN_PROGRESS`/`VERIFY`. Détecté lors d'une revue de
+  recadrage `TODO.md` contre le code source demandée par le PO. Aucun nouveau code écrit — VERIFY
+  rétroactif rédigé par l'architecte à la place du cycle normal.
+- **Sécurité :** aucun impact (front seul, popup de sélection de colonnes).
+- **Notes :** `npx tsc -b`/`npx vite build` rejoués indépendamment → 0 erreur. Voir
+  `DONE_DETAIL/TASK-158_verify.md` pour le détail complet et la note d'hygiène process (2ᵉ cas de
+  correctif livré hors cycle déclaré, après TASK-176/commit `99ef0fc`).
+
+### TODO.md — correction de dépendance stale : TASK-126 vs statut réel de TASK-115
+- TASK-115 (wizard `Declaration.Setup`) est clôturée et approuvée depuis le 2026-07-23 (`DONE.md`) ;
+  `TODO.md`/`TASKS/TASK-126-*.md` affirmaient encore à tort qu'elle était `IN_PROGRESS`. Corrigé —
+  TASK-126 n'a plus de dépendance bloquante, reste `à faire` (aucun code touché par cette correction
+  documentaire).
+
 ## 2026-07-24 (suite — TASK-185, correction TASK-184 : ligne Total au lieu de colonne Domaine)
 
 ### TASK-185 — Correction TASK-184 : ligne « Total Collecté »/« Total Deductible » (APPROUVÉE)

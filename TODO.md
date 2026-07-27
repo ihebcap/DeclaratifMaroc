@@ -174,12 +174,15 @@ l'environnement source du log) :
 ## 🐞 Popup « Colonnes » ouvert hors écran (signalement PO 23/07/2026, capture écran ① Sélection)
 Signalement PO : clic sur le bouton « Colonnes » (pied de grille, écran ① Sélection) → le popup de
 sélection de colonnes s'ouvre vers le bas et se retrouve caché sous le bas de la fenêtre, inutilisable.
-Cause (code) : `ColumnSelector.tsx:26-33` ouvre toujours le popup en dessous du bouton, sans jamais
-tester l'espace restant ni basculer au-dessus (`flip`) — composant partagé par 6 écrans.
 
-| # | Task | Objet | État |
-|---|---|---|---|
-| 1 | [TASK-158](TASKS/TASK-158-popup-colonnes-cache-sous-bas-ecran.md) | `ColumnSelector.tsx` : basculer le popup au-dessus du bouton quand l'espace en dessous est insuffisant (flip vertical, même logique que le flip horizontal déjà en place). | 🎯 **prêt** — front seul, aucune dépendance. |
+> ✅ **TASK-158 approuvée rétroactivement** (27/07/2026, revue architecte de recadrage `TODO.md` vs
+> code source demandée par le PO) — le correctif (flip vertical dans `ColumnSelector.tsx`) s'est
+> avéré **déjà livré en code** le 23/07/2026 (commit `cdb37e8a`), noyé sous le libellé `TASK-161`,
+> jamais tracé via `IN_PROGRESS`/`VERIFY`. `npx tsc -b`/`npx vite build` rejoués indépendamment →
+> 0 erreur, périmètre confirmé limité à `ColumnSelector.tsx`. Voir `DONE.md`.
+> ⚠️ Réserve non bloquante : pas de reproduction visuelle réelle du cas PO dans cette revue.
+> **Note d'hygiène process** : 2ᵉ cas de correctif livré hors cycle déclaré (après TASK-176/commit
+> `99ef0fc`) — à surveiller si ça se reproduit une 3ᵉ fois.
 
 ## 🐞 Contention rafraîchissement valorisation OM (signalement client 23/07/2026, log serveur)
 Signalement client : `[VALO] batch OM en exception, repli individuel : Timeout lors de l'exécution du worker
@@ -386,7 +389,7 @@ cible (`Initial Catalog`) sans dépendre de ce texte, seule la copie livrée en 
 
 | # | Task | Objet | État |
 |---|---|---|---|
-| 1 | [TASK-126](TASKS/TASK-126-simplification-script-sql-install-execution-auto-setup.md) | Retirer la section login/droits de `DeclarationTVA.sql`, le nettoyer de toute note interne de dev, rendre le `USE` dynamique (nom de base échappé), intégrer son exécution automatique + le livrer dans le dossier d'installation du client, via le wizard `Declaration.Setup` (TASK-115). | 🆕 **à faire** — dépend de TASK-115 (wizard, `IN_PROGRESS`) pour le point d'intégration. |
+| 1 | [TASK-126](TASKS/TASK-126-simplification-script-sql-install-execution-auto-setup.md) | Retirer la section login/droits de `DeclarationTVA.sql`, le nettoyer de toute note interne de dev, rendre le `USE` dynamique (nom de base échappé), intégrer son exécution automatique + le livrer dans le dossier d'installation du client, via le wizard `Declaration.Setup` (TASK-115). | 🎯 **prêt** — TASK-115 est **clôturée depuis le 23/07/2026** (`DONE.md`), plus de dépendance bloquante (correction 27/07/2026 : `TODO.md` affirmait encore à tort `IN_PROGRESS`). |
 
 ## 🔴 CRITIQUE — API cassée sur tout déploiement : `Microsoft.Data.SqlClient` incompatible `net10.0` (signalement PO 19/07/2026)
 Signalement PO : « Serveur injoignable » persistant en écran de connexion sur déploiement réel

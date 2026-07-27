@@ -163,9 +163,11 @@ Sortie  : DeclarationTVA.sql réduit aux tables/migrations/triggers, nettoyé de
 - Aucun rollback transactionnel si le script échoue à mi-parcours sur une base existante (DDL
   réparti sur plusieurs batches `GO`, non atomique) — l'échec doit être signalé clairement à
   l'utilisateur avec l'état exact atteint, jamais présenté comme un succès partiel.
-- **Dépend de TASK-115** (wizard de setup) pour le point d'intégration dans le flux — TASK-115 est
-  actuellement en `IN_PROGRESS` (refonte wizard 6 étapes) ; coordonner l'étape d'insertion de
-  l'exécution SQL avec cette refonte plutôt que de la greffer sur l'ancien `TabControl`.
+- **Dépendait de TASK-115** (wizard de setup) pour le point d'intégration dans le flux — **TASK-115
+  est clôturée et approuvée depuis le 23/07/2026** (`DONE.md`, wizard 6 étapes livré et installé sur
+  2 environnements réels) ; correction 27/07/2026, cette task n'a plus de dépendance bloquante.
+  S'intégrer dans le wizard tel que livré par TASK-115 (`Declaration.Setup/SetupForm.cs`), pas
+  l'ancien `TabControl`.
 - Nom de base saisi au formulaire utilisé pour cibler l'exécution (`USE`/objets qualifiés) :
   entrée utilisateur, jamais interpolée sans validation stricte d'identifiant SQL (risque
   d'injection sinon). Pour la copie livrée en clair, le doublement de `]` suffit à couvrir

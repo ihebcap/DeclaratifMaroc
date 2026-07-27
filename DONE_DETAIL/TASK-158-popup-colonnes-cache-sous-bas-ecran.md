@@ -1,6 +1,7 @@
 # TASK-158 — Popup « Colonnes » ouvert hors écran quand le bouton est proche du bas
 
-Status: 🆕 à faire
+Status: ✅ done — 27/07/2026 (revue architecte rétroactive, voir `DONE_DETAIL/TASK-158_verify.md` ;
+code déjà livré le 23/07/2026 dans le commit `cdb37e8a`, jamais tracé via `IN_PROGRESS`/`VERIFY`)
 Priority: LOW
 Risk: LOW (front seul, aucun changement de donnée)
 Module: declaration-tva-web
