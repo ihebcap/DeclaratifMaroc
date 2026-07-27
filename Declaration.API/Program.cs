@@ -44,6 +44,15 @@ builder.Services.AddScoped<IDeclarationRepository, DeclarationRepository>();
 builder.Services.AddScoped<ISelectionExpliqueeService, SelectionExpliqueeService>();
 builder.Services.AddScoped<DeclarationWorkflowService>();
 
+// TASK-128 : bootstrap Delai de Paiement Maroc (parametre "date de mise en route" par societe +
+// reprise manuelle par echeance). Independant du socle TASK-127 (IConventionDelaiPaiementRepository
+// / DelaiPaiementService NE SONT PAS enregistres ici -- cable par TASK-129, cf. TASK-127 §Reste a
+// valider). DelaiPaiementBootstrapRepository implemente les 2 interfaces (meme pattern que
+// DelaiPaiementReferentielRepository pour IJoursReposRepository/IDelaiPaiementParametrageRepository).
+builder.Services.AddScoped<IParametrageDelaiPaiementSocieteRepository, DelaiPaiementBootstrapRepository>();
+builder.Services.AddScoped<IRepriseDelaiPaiementRepository, DelaiPaiementBootstrapRepository>();
+builder.Services.AddScoped<IDelaiPaiementBootstrapService, DelaiPaiementBootstrapService>();
+
 // TASK-117 : verification de licence ApLicence (GRLicence, protocole REQUEST en lecture seule --
 // jamais SUBREQ, aucun siege consomme). Le subject est fige en dur (LicenceConstants), jamais lu
 // depuis connections.json (anti-contournement : un fichier de config sur le poste client serait

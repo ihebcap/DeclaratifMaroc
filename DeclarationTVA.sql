@@ -7,8 +7,9 @@
 -- Contenu (dans l'ordre), fusion de tous les scripts SQL du repo
 -- (racine DeclarationTVA.sql + Declaration.Infrastructure/SQL/*.sql) :
 --   1. Tables de persistance : DM_ENTTVA, DM_LGTVA, DM_SELECTION_REGLEMENT,
---      DM_VENTILATION_SAGE_CACHE + toutes les migrations historiques
---      (TASK-055/057/064/065/066/072/076/077/078/094/097/118).
+--      DM_VENTILATION_SAGE_CACHE, DM_PARAM_DELAIPAIEMENT_SOCIETE,
+--      DM_REPRISE_DELAIPAIEMENT + toutes les migrations historiques
+--      (TASK-055/057/064/065/066/072/076/077/078/094/097/118/128).
 --   2. Trigger d'immuabilite (TASK-064) sur les tables ERP existantes
 --      RT_AFFECTATION / RT_MOUVEMENT.
 --   3. Login + droits SQL du compte applicatif (TASK-114, moindre privilege)
@@ -502,6 +503,50 @@ BEGIN
 END;
 GO
 
+-- ---------------------------------------------------------------------
+-- 1i. Delai de Paiement Maroc (TASK-128) : parametre "date de mise en route" par societe +
+--     reprise manuelle par echeance. DEUX TABLES NEUVES, propriete exclusive GRF -- AUCUNE
+--     modification de P_SOCIETE (partagee avec l'app legacy et le reste de GRF, exigence PO
+--     explicite). SO_Id/EC_Id/UT_Id sont des references LOGIQUES a P_SOCIETE.SO_Id /
+--     RT_ECHEANCE.EC_Id / P_UTILISATEUR.UT_Id, volontairement SANS contrainte FOREIGN KEY (meme
+--     principe que DM_VENTILATION_SAGE_CACHE.SO_Id ci-dessus, section 1g).
+--
+--     DM_PARAM_DELAIPAIEMENT_SOCIETE : une ligne par societe ayant configure sa bascule. ABSENCE
+--     de ligne = "pas encore configure" (jamais une date par defaut arbitraire) -- le repository
+--     (DelaiPaiementBootstrapRepository.GetAsync) renvoie null dans ce cas, jamais une valeur de
+--     repli silencieuse.
+--
+--     DM_REPRISE_DELAIPAIEMENT : reprise manuelle ponctuelle "retard deja connu/declare jusqu'au
+--     [date]", par echeance precise (SO_Id, EC_Id). Cle primaire (SO_Id, EC_Id) : une seule reprise
+--     active par echeance (une nouvelle saisie ecrase la precedente via MERGE, pas d'historique de
+--     versions -- decision worker, aucune exigence PO explicite sur l'historisation des reprises ;
+--     a signaler si un besoin d'audit multi-versions emerge cote consommateurs).
+-- ---------------------------------------------------------------------
+IF OBJECT_ID('dbo.DM_PARAM_DELAIPAIEMENT_SOCIETE', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.DM_PARAM_DELAIPAIEMENT_SOCIETE (
+        SO_Id           INT             NOT NULL, -- reference logique P_SOCIETE.SO_Id, sans FK
+        DateMiseEnRoute DATETIME2       NOT NULL,
+        UT_Id           INT             NULL,      -- reference logique P_UTILISATEUR.UT_Id, sans FK
+        DateSaisie      DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT PK_DM_PARAM_DELAIPAIEMENT_SOCIETE PRIMARY KEY (SO_Id)
+    );
+END;
+GO
+
+IF OBJECT_ID('dbo.DM_REPRISE_DELAIPAIEMENT', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.DM_REPRISE_DELAIPAIEMENT (
+        SO_Id                    INT             NOT NULL, -- reference logique P_SOCIETE.SO_Id, sans FK
+        EC_Id                    INT             NOT NULL, -- reference logique RT_ECHEANCE.EC_Id, sans FK
+        DateDejaDeclareeJusquau  DATETIME2       NOT NULL,
+        UT_Id                    INT             NULL,      -- reference logique P_UTILISATEUR.UT_Id, sans FK
+        DateSaisie               DATETIME2       NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT PK_DM_REPRISE_DELAIPAIEMENT PRIMARY KEY (SO_Id, EC_Id)
+    );
+END;
+GO
+
 -- =====================================================================
 -- 2. Trigger d'immuabilite TOTALE d'une affectation declaree (TASK-064)
 --    Cible : tables ERP existantes RT_AFFECTATION / RT_MOUVEMENT (base GRF).
@@ -714,8 +759,9 @@ GO
 --     - Lecture large (db_datareader) : l'ecran Selection lit les tables ERP
 --       existantes (reglements, factures, rapprochements...).
 --     - Ecriture CIBLEE :
---         * les 4 tables de persistance ci-dessus (DM_ENTTVA, DM_LGTVA,
---           DM_SELECTION_REGLEMENT, DM_VENTILATION_SAGE_CACHE) ;
+--         * les 6 tables de persistance ci-dessus (DM_ENTTVA, DM_LGTVA,
+--           DM_SELECTION_REGLEMENT, DM_VENTILATION_SAGE_CACHE,
+--           DM_PARAM_DELAIPAIEMENT_SOCIETE, DM_REPRISE_DELAIPAIEMENT) ;
 --         * UPDATE sur la seule colonne RT_AFFECTATION.DT_Id (pose/retrait du
 --           tampon de cloture — DeclarationRepository.TamponnerAffectationsAsync/
 --           DetamponnerAffectationsAsync). Jamais d'ecriture sur RT_MOUVEMENT ni
@@ -751,6 +797,13 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.DM_SELECTION_REGLEMENT TO decl_tva_a
 GO
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.DM_VENTILATION_SAGE_CACHE TO decl_tva_app;
+GO
+
+-- TASK-128 : les 2 tables neuves du bootstrap Delai de Paiement Maroc.
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.DM_PARAM_DELAIPAIEMENT_SOCIETE TO decl_tva_app;
+GO
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.DM_REPRISE_DELAIPAIEMENT TO decl_tva_app;
 GO
 
 -- Moindre privilege : autorisation d'ecriture limitee a la colonne DT_Id (pas
