@@ -82,6 +82,13 @@ builder.Services.AddScoped<ISelectionDelaiPaiementService, SelectionDelaiPaiemen
 builder.Services.AddScoped<IDeclarationDelaiPaiementRepository, DeclarationDelaiPaiementRepository>();
 builder.Services.AddScoped<IDeclarationDelaiPaiementService, DeclarationDelaiPaiementService>();
 
+// TASK-133 : generation du fichier XML/ZIP de depot Delai de Paiement (structure legacy reprise a
+// l'identique) + annulation de generation (supprime aussi les fichiers physiques, amelioration
+// assumee vs l'anomalie legacy documentee en VERIFY TASK-132 §10.4). Aucun controller expose ici :
+// le perimetre STRICT de TASK-133 exclut l'UI (TASK-134), qui consommera
+// IDeclarationDelaiPaiementGenerationService.
+builder.Services.AddScoped<IDeclarationDelaiPaiementGenerationService, DeclarationDelaiPaiementGenerationService>();
+
 // TASK-117 : verification de licence ApLicence (GRLicence, protocole REQUEST en lecture seule --
 // jamais SUBREQ, aucun siege consomme). Le subject est fige en dur (LicenceConstants), jamais lu
 // depuis connections.json (anti-contournement : un fichier de config sur le poste client serait
