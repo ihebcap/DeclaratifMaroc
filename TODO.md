@@ -150,10 +150,29 @@ obligatoires) dès que ces éléments seront précisés par le PO.
 
 **Extension confirmée au module Délai de Paiement (PO 28/07/2026)** : même principe d'indépendance
 vis-à-vis de Sage à terme, appliqué cette fois au module DDP — GRF deviendra une source parmi d'autres,
-le grand livre comptable s'ajoutant comme nouvelle source. Voir la réserve n°6 et
-[TASK-191](TASKS/TASK-191-cablage-nature-date-livraison-marchandise-ddp.md) dans la section DDP
-ci-dessous — même remarque de vigilance : pas d'abstraction multi-source anticipée tant que le schéma
-cible n'est pas précisé.
+le grand livre comptable s'ajoutant comme nouvelle source. Voir la réserve n°6 et TASK-191 ci-dessous
+— même remarque de vigilance : pas d'abstraction multi-source anticipée tant que le schéma cible
+n'est pas précisé.
+
+> ✅ **TASK-191 approuvée** (28/07/2026, revue architecte complète : diff `2972acb` relu intégralement
+> — 11 fichiers, tous dans le périmètre strict —, build solution complète + 3 suites de tests
+> **rejoués indépendamment par l'architecte** : Core 218/218, Export.Xml 26/26, Orchestration
+> 228/228). Câblage réel de `<natureMarchandise>`/`<dateLivraisonMarchandise>` (export XML DDP),
+> réplique à l'identique le pattern `SO_ColValueNumRegistreCommerceFournisseur`/
+> `GetIdentitesFiscalesTiersAsync` déjà en place (whitelist colonne, tolérance absence config, lecture
+> Sage par lot). Clé de jointure `F_DOCENTETE.DO_Piece = RT_ECHEANCE.DO_Numero AND DO_Domaine=1`
+> identifiée et **revérifiée indépendamment par l'architecte** sur les 2 bases réelles
+> (`GR_EMA_DISTRIBUTION`/`NEW_EMA DISTRIBUTION`) : schéma `P_SOCIETE`/`F_DOCENTETE` confirmé réel,
+> unicité `(DO_Piece, DO_Domaine=1)` reconfirmée (0 doublon, requête rejouée indépendamment), cas
+> `FC2501193` reconfirmé concordant entre les deux bases. Point additionnel détecté par le worker et
+> corrigé : `<natureMarchandise>` était en réalité hardcodé dans l'exporter XML, pas dans le modèle —
+> le câblage repository seul aurait été un no-op silencieux sans cette correction. Aucune modification
+> de schéma, aucun bypass sécurité. Voir `DONE_DETAIL/TASK-191-cablage-nature-date-livraison-marchandise-ddp.md`
+> et `DONE_DETAIL/TASK-191_verify.md`.
+> ⚠️ **Réserve non bloquante** : une seule société existe dans `GR_EMA_DISTRIBUTION` (`SO_Id=1`) et ses
+> 2 colonnes de config sont `NULL` — le câblage effectif (config + valeur réelle présentes) est donc
+> prouvé par les tests automatisés, pas par une société réellement configurée en base. À revérifier en
+> conditions réelles dès qu'une société cliente configurera ces 2 colonnes.
 
 ## 🗺️ ROADMAP — écran ③ Vérifier & Intégrer (+ écran ② Affectations) : trop de boutons d'action distincts (ressenti PO 24/07/2026, à évaluer, pas une TASK prête)
 Ressenti PO : l'écran est devenu compliqué à l'usage. Vérification architecte : **confirmé** — rien

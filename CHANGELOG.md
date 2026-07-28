@@ -1,5 +1,30 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-07-28 (revue architecte — DDP, levée de dette CDC §4.2/§4.3/§5.A-4)
+
+### TASK-191 — Câblage réel natureMarchandise/dateLivraisonMarchandise export DDP (APPROUVÉE)
+- **Module :** back (`Declaration.Infrastructure/Repositories/DeclarationDelaiPaiementRepository.cs`,
+  `Declaration.Core/DeclarationDelaiPaiementXmlModele.cs`,
+  `Declaration.Export.Xml/DeclarationDelaiPaiementXmlExporter.cs`,
+  `Declaration.Application/Services/DeclarationDelaiPaiementGenerationService.cs`)
+- **Impact :** les 2 champs XML de dépôt DDP `<natureMarchandise>`/`<dateLivraisonMarchandise>`,
+  jusqu'ici toujours vide/date facture (dette assumée TASK-133), reflètent désormais la valeur réelle
+  lue sur `F_DOCENTETE` (Sage) quand la société a configuré les 2 colonnes correspondantes dans
+  `P_SOCIETE` — réplique à l'identique le pattern déjà en place pour `SO_ColValueNumRegistreCommerceFournisseur`.
+  Clé de jointure `F_DOCENTETE.DO_Piece = RT_ECHEANCE.DO_Numero AND DO_Domaine=1` identifiée et
+  vérifiée empiriquement unique avant tout code. Point additionnel corrigé : `<natureMarchandise>`
+  était en réalité hardcodé dans l'exporter (pas dans le modèle), rendu réellement câblable.
+- **Sécurité :** lecture Sage strictement lecture seule, whitelist de nom de colonne réutilisée à
+  l'identique (`ValiderNomColonneOptionnelle`), aucun secret codé en dur, aucune modification de schéma.
+- **Notes :** diff `2972acb` relu intégralement par l'architecte, build solution complète + tests
+  rejoués indépendamment (Core 218/218, Export.Xml 26/26, Orchestration 228/228), schéma
+  `P_SOCIETE`/`F_DOCENTETE` et unicité `(DO_Piece, DO_Domaine=1)` reconfirmés par requêtes
+  indépendantes sur `GR_EMA_DISTRIBUTION`/`NEW_EMA DISTRIBUTION`. **Réserve non bloquante** : aucune
+  société réelle n'a la config renseignée à ce jour (`SO_Id=1`, colonnes `NULL`) — câblage effectif
+  prouvé par tests automatisés, pas par une société réellement configurée. Voir
+  `DONE_DETAIL/TASK-191-cablage-nature-date-livraison-marchandise-ddp.md` et
+  `DONE_DETAIL/TASK-191_verify.md`.
+
 ## 2026-07-27/28 (revue architecte — nouveau périmètre « Délai de Paiement Maroc », TASK-127→136)
 
 Périmètre neuf (aucune réutilisation de DLL/code WinForms), développement encadré par
