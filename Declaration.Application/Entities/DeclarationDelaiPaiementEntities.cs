@@ -262,4 +262,15 @@ public sealed class SocieteDelaiPaiementInfo
 
     /// <summary><c>P_SOCIETE.SO_ChiffreAffaire</c>.</summary>
     public decimal ChiffreAffaire { get; init; }
+
+    /// <summary>
+    /// TASK-134 : <c>P_SOCIETE.SO_TypeDecDP</c> — type de déclaration Délai de Paiement PAR DÉFAUT de
+    /// la société (CDC §7.1, 1 = Annuelle, 2 = Trimestrielle). Lecture seule, colonne EXISTANTE
+    /// (vérifiée en base réelle) : sert UNIQUEMENT à pré-remplir le formulaire de création et le
+    /// filtre de période raisonné de l'écran de contrôle — le type effectif reste toujours choisi par
+    /// l'utilisateur et validé par <c>DeclarationDelaiPaiementCycleDeVie.CalculerPeriode</c>. Une
+    /// valeur hors 1..2 en base (société non paramétrée) est restituée telle quelle : c'est l'appelant
+    /// qui décide du repli, jamais un silence ici.
+    /// </summary>
+    public int TypeDeclarationParDefautCode { get; init; }
 }

@@ -73,6 +73,14 @@ public interface IDeclarationDelaiPaiementService
 
     Task<IReadOnlyList<DeclarationDelaiPaiementListItem>> GetAllAsync(int soId);
 
+    /// <summary>
+    /// TASK-134 : paramétrage société lu en LECTURE SEULE sur <c>P_SOCIETE</c> — utilisé par l'écran
+    /// pour proposer le type de déclaration par défaut (<c>SO_TypeDecDP</c>, CDC §7.1). Ajout
+    /// strictement additif : aucun contrôle métier n'en dépend (le type effectif reste choisi par
+    /// l'utilisateur puis validé par <see cref="DeclarationDelaiPaiementCycleDeVie.CalculerPeriode"/>).
+    /// </summary>
+    Task<SocieteDelaiPaiementInfo> GetParametrageSocieteAsync(int soId);
+
     /// <summary>Seule modification autorisée après création (legacy <c>Update</c>) : le libellé.</summary>
     Task ModifierLibelleAsync(int ddpId, string? libelle, int utilisateurId);
 
@@ -218,6 +226,8 @@ public sealed class DeclarationDelaiPaiementService : IDeclarationDelaiPaiementS
     public Task<DeclarationDelaiPaiement?> GetAsync(int ddpId) => _repository.GetEnteteAsync(ddpId);
 
     public Task<IReadOnlyList<DeclarationDelaiPaiementListItem>> GetAllAsync(int soId) => _repository.GetAllAsync(soId);
+
+    public Task<SocieteDelaiPaiementInfo> GetParametrageSocieteAsync(int soId) => _repository.GetSocieteInfoAsync(soId);
 
     public async Task ModifierLibelleAsync(int ddpId, string? libelle, int utilisateurId)
     {

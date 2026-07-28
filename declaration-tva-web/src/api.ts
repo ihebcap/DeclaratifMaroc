@@ -213,3 +213,271 @@ export async function supprimerConventionDelaiPaiement(cpId: number): Promise<vo
 export function urlFichierConventionDelaiPaiement(cpId: number): string {
   return `/conventions-delai-paiement/${cpId}/fichier`;
 }
+
+// ─── TASK-134 (Délai de Paiement Maroc — déclaration : liste/fiche/sélection/contrôle) ─────────
+//
+// Consomme DeclarationsDelaiPaiementController (créé par TASK-134 : aucun endpoint n'existait pour
+// ce domaine, point laissé explicitement par les VERIFY TASK-131/132/133), lui-même pur passe-plat
+// vers IDeclarationDelaiPaiementService (TASK-132), ISelectionDelaiPaiementService (TASK-131) et
+// IDeclarationDelaiPaiementGenerationService (TASK-133).
+//
+// RÈGLE STRUCTURANTE (demande PO 19/07/2026) : AUCUNE fonction ci-dessous n'accepte de dateDebut /
+// dateFin. Les deux seules périodes possibles sont (a) les bornes de la déclaration parente, lues
+// côté serveur, et (b) un exercice + type (+ trimestre) dont les bornes sont CALCULÉES par le même
+// code que la création d'une déclaration. Aucun filtre de date libre n'existe dans ce périmètre.
+
+export type TypeDeclarationDdp = 'Annuelle' | 'Trimestrielle';
+export type StatutDeclarationDdp = 'EnCours' | 'Cloture';
+
+/** Transitions autorisées, calculées CÔTÉ SERVEUR depuis les gardes TASK-132 (jamais déduites ici). */
+export interface ActionsDeclarationDdp {
+  peutModifierLibelle: boolean;
+  peutIntegrerLignes: boolean;
+  peutCloturer: boolean;
+  peutAnnulerCloture: boolean;
+  peutGenererFichier: boolean;
+  peutAnnulerGeneration: boolean;
+  peutDeposer: boolean;
+  peutSupprimer: boolean;
+}
+
+export interface DeclarationDdpDto {
+  ddpId: number;
+  numero: string;
+  soId: number;
+  date: string;
+  exercice: number;
+  type: TypeDeclarationDdp;
+  /** 1..4, null pour une annuelle. */
+  trimestre: number | null;
+  dateDebut: string;
+  /** Stocké à 23:59:59 du dernier jour de période (convention legacy reproduite par TASK-132). */
+  dateFin: string;
+  statut: StatutDeclarationDdp;
+  estDeposee: boolean;
+  fichierGenere: boolean;
+  libelle: string | null;
+  nombreLignes: number;
+  dateCreation: string;
+  dateModification: string;
+  actions: ActionsDeclarationDdp;
+}
+
+/** Ligne candidate (ou bloquée) renvoyée par la sélection TASK-131. */
+export interface LigneSelectionDdpDto {
+  ecId: number;
+  afId: number | null;
+  bucket: string;
+  statut: 'Candidate' | 'RepriseManuelleRequise';
+  echeanceLegale: string;
+  nombreJoursDelaiApplique: number;
+  origineDelai: string;
+  borneActuelle: string;
+  borneReference: string | null;
+  origineBorneReference: string;
+  /** null (jamais 0) pour une ligne « antérieure à la mise en route — retard réel inconnu ». */
+  depassement: number | null;
+  montantLigne: number;
+  doNumero: string | null;
+  doDate: string;
+  doReference: string | null;
+  echeanceContractuelle: string;
+  montantEcheance: number;
+  soldeEcheance: number;
+  tiersNo: number;
+  tiersCode: string | null;
+  tiersIntitule: string | null;
+  typeReglement: string | null;
+  dateReglement: string | null;
+  dateRapprochement: string | null;
+  reglementPiece: string | null;
+}
+
+export interface SelectionDdpDto {
+  dateDebutPeriode: string;
+  dateFinPeriode: string;
+  /** null = société non configurée (TASK-128) ⇒ 0 candidate, tout en reprise manuelle requise. */
+  dateMiseEnRouteSociete: string | null;
+  nombreEcheancesExaminees: number;
+  lignes: LigneSelectionDdpDto[];
+  lignesRepriseManuelleRequise: LigneSelectionDdpDto[];
+}
+
+export interface LigneIntegreeDdpDto {
+  ddplId: number;
+  ecId: number;
+  afId: number | null;
+  depassement: number;
+  echeanceLegale: string;
+  tiersNo: number;
+  tiersCode: string | null;
+  tiersIntitule: string | null;
+  doNumero: string | null;
+  doDate: string;
+  doReference: string | null;
+  echeanceContractuelle: string;
+  montantEcheance: number;
+  soldeEcheance: number;
+  montantAffecte: number | null;
+  reglementNumero: string | null;
+  reglementPiece: string | null;
+  reglementDate: string | null;
+  reglementRapproche: boolean | null;
+  reglementDateRapprochement: string | null;
+}
+
+export interface CleLigneDdp {
+  ecId: number;
+  afId: number | null;
+}
+
+export interface ResultatIntegrationDdpDto {
+  ddpId: number;
+  nombreCandidates: number;
+  nombreIntegrees: number;
+  clesDejaIntegrees: CleLigneDdp[];
+  clesRefuseesRepriseManuelleRequise: CleLigneDdp[];
+  clesIntrouvablesDansSelection: CleLigneDdp[];
+  nombreRepriseManuelleRequiseDisponibles: number;
+  dateMiseEnRouteSociete: string | null;
+}
+
+export interface FournisseurFautifDdpDto {
+  tiersNo: number;
+  tiersCode: string;
+  tiersIntitule: string | null;
+  identifiantFiscal: string | null;
+  ice: string | null;
+  nombreLignes: number;
+  /** Motifs déjà libellés par le back (TASK-132) — affichés tels quels, jamais reformulés. */
+  motifsLibelles: string[];
+}
+
+export interface ControleIfIceDdpDto {
+  estConforme: boolean;
+  nombreFournisseursExamines: number;
+  nombreLignesExaminees: number;
+  messageBloquant: string;
+  fournisseursFautifs: FournisseurFautifDdpDto[];
+}
+
+export async function getDeclarationsDdp(soId: number): Promise<DeclarationDdpDto[]> {
+  const res = await api.get('/declarations-delai-paiement', { params: { soId } });
+  return res.data as DeclarationDdpDto[];
+}
+
+export async function getDeclarationDdp(ddpId: number): Promise<DeclarationDdpDto> {
+  const res = await api.get(`/declarations-delai-paiement/${ddpId}`);
+  return res.data as DeclarationDdpDto;
+}
+
+/** Type de déclaration par défaut de la société (P_SOCIETE.SO_TypeDecDP, CDC §7.1). */
+export async function getParametrageTypeDdp(soId: number): Promise<{ typeParDefaut: TypeDeclarationDdp | null }> {
+  const res = await api.get('/declarations-delai-paiement/parametrage', { params: { soId } });
+  return { typeParDefaut: (res.data?.typeParDefaut ?? null) as TypeDeclarationDdp | null };
+}
+
+export interface CreerDeclarationDdpPayload {
+  soId: number;
+  exercice: number;
+  type: 'annuelle' | 'trimestrielle';
+  trimestre?: number | null;
+  libelle?: string | null;
+}
+
+export async function creerDeclarationDdp(payload: CreerDeclarationDdpPayload): Promise<{ ddpId: number }> {
+  const res = await api.post('/declarations-delai-paiement', payload);
+  return res.data as { ddpId: number };
+}
+
+export async function modifierLibelleDeclarationDdp(ddpId: number, libelle: string | null): Promise<void> {
+  await api.put(`/declarations-delai-paiement/${ddpId}/libelle`, { libelle });
+}
+
+export async function supprimerDeclarationDdp(ddpId: number): Promise<void> {
+  await api.delete(`/declarations-delai-paiement/${ddpId}`);
+}
+
+export async function getLignesDeclarationDdp(ddpId: number): Promise<LigneIntegreeDdpDto[]> {
+  const res = await api.get(`/declarations-delai-paiement/${ddpId}/lignes`);
+  return res.data as LigneIntegreeDdpDto[];
+}
+
+export async function supprimerLigneDeclarationDdp(ddpId: number, ddplId: number): Promise<void> {
+  await api.delete(`/declarations-delai-paiement/${ddpId}/lignes/${ddplId}`);
+}
+
+/** Popup de sélection : la période est celle de la déclaration parente (aucune borne transmise). */
+export async function getSelectionDeclarationDdp(ddpId: number): Promise<SelectionDdpDto> {
+  const res = await api.get(`/declarations-delai-paiement/${ddpId}/selection`);
+  return res.data as SelectionDdpDto;
+}
+
+export async function integrerLignesDeclarationDdp(ddpId: number, selection: CleLigneDdp[] | null): Promise<ResultatIntegrationDdpDto> {
+  const res = await api.post(`/declarations-delai-paiement/${ddpId}/lignes`, { selection });
+  return res.data as ResultatIntegrationDdpDto;
+}
+
+export async function cloturerDeclarationDdp(ddpId: number): Promise<void> {
+  await api.post(`/declarations-delai-paiement/${ddpId}/cloture`);
+}
+
+export async function decloturerDeclarationDdp(ddpId: number): Promise<void> {
+  await api.post(`/declarations-delai-paiement/${ddpId}/decloture`);
+}
+
+export async function deposerDeclarationDdp(ddpId: number): Promise<void> {
+  await api.post(`/declarations-delai-paiement/${ddpId}/depot`);
+}
+
+/** Contrôle IF/ICE informatif (ne bloque pas) — sert à annoncer les fautifs avant de générer. */
+export async function getControleIfIceDdp(ddpId: number): Promise<ControleIfIceDdpDto> {
+  const res = await api.get(`/declarations-delai-paiement/${ddpId}/controle-identite-fiscale`);
+  return res.data as ControleIfIceDdpDto;
+}
+
+export async function genererFichierDeclarationDdp(ddpId: number): Promise<{ fichier: string }> {
+  const res = await api.post(`/declarations-delai-paiement/${ddpId}/generation`);
+  return res.data as { fichier: string };
+}
+
+export async function annulerGenerationDeclarationDdp(ddpId: number): Promise<void> {
+  await api.post(`/declarations-delai-paiement/${ddpId}/generation/annulation`);
+}
+
+export function urlFichierDeclarationDdp(ddpId: number): string {
+  return `/declarations-delai-paiement/${ddpId}/fichier`;
+}
+
+/**
+ * Écran de contrôle (CDC §5.A-9) : période RAISONNÉE — exercice + type (+ trimestre). Les bornes
+ * exactes sont calculées par le serveur (même code que la création d'une déclaration), jamais
+ * saisies. LECTURE SEULE : cet écran n'offre aucun chemin d'intégration.
+ */
+export async function getControleLignesDdp(
+  soId: number,
+  exercice: number,
+  type: 'annuelle' | 'trimestrielle',
+  trimestre: number | null,
+): Promise<SelectionDdpDto> {
+  const res = await api.get('/declarations-delai-paiement/controle', { params: { soId, exercice, type, trimestre } });
+  return res.data as SelectionDdpDto;
+}
+
+// ─── TASK-128 : paramétrage « date de mise en route » + reprise manuelle (endpoints DÉJÀ livrés) ──
+// Aucun front ne les consommait avant TASK-134 : sans la date de mise en route, TASK-131 renvoie
+// 0 ligne intégrable (constaté sur données réelles) et l'écran apparaîtrait vide sans explication.
+
+export async function getDateMiseEnRouteDdp(soId: number): Promise<{ dateMiseEnRoute: string | null }> {
+  const res = await api.get(`/delai-paiement/parametrage/${soId}`);
+  return { dateMiseEnRoute: (res.data?.dateMiseEnRoute ?? null) as string | null };
+}
+
+export async function setDateMiseEnRouteDdp(soId: number, dateMiseEnRoute: string): Promise<void> {
+  await api.put(`/delai-paiement/parametrage/${soId}`, { dateMiseEnRoute });
+}
+
+/** Reprise manuelle « déjà déclaré jusqu'au [date] » pour UNE échéance (solde d'ouverture, TASK-128). */
+export async function setRepriseManuelleDdp(soId: number, ecId: number, dateDejaDeclareeJusquau: string): Promise<void> {
+  await api.post('/delai-paiement/reprise', { soId, ecId, dateDejaDeclareeJusquau });
+}

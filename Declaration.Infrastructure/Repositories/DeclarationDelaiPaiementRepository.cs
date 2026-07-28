@@ -521,10 +521,13 @@ public sealed class DeclarationDelaiPaiementRepository : IDeclarationDelaiPaieme
     {
         using var connection = _connectionFactory.CreateGrfConnection();
         var row = await connection.QuerySingleOrDefaultAsync<SocieteInfoRow>(
+            // SO_TypeDecDP ajouté par TASK-134 (SELECT additif, colonne EXISTANTE de P_SOCIETE) :
+            // type de déclaration DDP par défaut de la société, CDC §7.1.
             @"SELECT SO_Identifiant     AS IdentifiantFiscal,
                      SO_ActiviteMarroc  AS ActiviteMarrocCode,
                      SO_DateJugement    AS DateJugement,
-                     SO_ChiffreAffaire  AS ChiffreAffaire
+                     SO_ChiffreAffaire  AS ChiffreAffaire,
+                     SO_TypeDecDP       AS TypeDeclarationParDefautCode
               FROM P_SOCIETE WHERE SO_Id = @SoId",
             new { SoId = soId });
 
@@ -538,7 +541,8 @@ public sealed class DeclarationDelaiPaiementRepository : IDeclarationDelaiPaieme
             IdentifiantFiscal = row.IdentifiantFiscal,
             ActiviteMarrocCode = row.ActiviteMarrocCode,
             DateJugement = row.DateJugement,
-            ChiffreAffaire = row.ChiffreAffaire
+            ChiffreAffaire = row.ChiffreAffaire,
+            TypeDeclarationParDefautCode = row.TypeDeclarationParDefautCode
         };
     }
 
@@ -627,6 +631,9 @@ public sealed class DeclarationDelaiPaiementRepository : IDeclarationDelaiPaieme
         public int ActiviteMarrocCode { get; set; }
         public DateTime? DateJugement { get; set; }
         public decimal ChiffreAffaire { get; set; }
+
+        /// <summary>TASK-134 : <c>SO_TypeDecDP</c> (1 = Annuelle, 2 = Trimestrielle).</summary>
+        public int TypeDeclarationParDefautCode { get; set; }
     }
 
     /// <summary>Projection brute P_MODEREGLEMENT — TASK-133.</summary>
