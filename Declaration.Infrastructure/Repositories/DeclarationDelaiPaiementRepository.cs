@@ -423,6 +423,13 @@ public sealed class DeclarationDelaiPaiementRepository : IDeclarationDelaiPaieme
     /// est résolue par <c>SO_Id</c> (TASK-118) et les noms de colonnes IF/ICE proviennent de
     /// <c>P_SOCIETE</c> via <see cref="IdentiteFiscaleFournisseurConfig"/> (TASK-048), qui les valide
     /// par whitelist avant tout quotage — les codes tiers, eux, restent paramétrés.
+    ///
+    /// TASK-133 (SELECT additif, aucune duplication de logique — cf. VERIFY TASK-132 §10.9) : projette
+    /// en plus <c>NumRc</c> (colonne configurable par société, <c>SO_ColValueNumRegistreCommerceFournisseur</c>,
+    /// vide/non-configurée toléré — legacy émet une chaîne vide dans ce cas) et <c>Adresse</c>
+    /// (<c>CT_Adresse</c>, colonne FIXE, jamais configurable). Les deux servent UNIQUEMENT au fichier
+    /// XML de dépôt (<c>&lt;numRC&gt;</c>/<c>&lt;adresseSiegeSocial&gt;</c>) — n'entrent PAS dans le
+    /// contrôle bloquant IF/ICE de TASK-132.
     /// </summary>
     public async Task<IReadOnlyDictionary<string, IdentiteFiscaleTiersErp>> GetIdentitesFiscalesTiersAsync(
         int soId, IReadOnlyCollection<string> tiersCodes)
@@ -439,18 +446,30 @@ public sealed class DeclarationDelaiPaiementRepository : IDeclarationDelaiPaieme
 
         var grfCs = _connectionFactory.GetGrfConnectionString();
         IdentiteFiscaleFournisseurConfig identiteConfig;
+        string? colonneNumRc;
         using (var grfConnection = new SqlConnection(grfCs))
         {
             await grfConnection.OpenAsync();
             identiteConfig = await IdentiteFiscaleFournisseurConfig.ChargerAsync(grfConnection, soId);
+            colonneNumRc = await grfConnection.QuerySingleOrDefaultAsync<string?>(
+                "SELECT SO_ColValueNumRegistreCommerceFournisseur FROM P_SOCIETE WHERE SO_Id = @SoId",
+                new { SoId = soId });
         }
+
+        // Toléré vide/absent (pas de RC configuré pour cette société) : legacy émet '' dans ce cas,
+        // jamais une erreur (le n° RC n'est pas soumis au contrôle bloquant IF/ICE).
+        var expressionNumRc = ValiderNomColonneOptionnelle(colonneNumRc) is string nomValide
+            ? $"F_COMPTET.[{nomValide}]"
+            : "''";
 
         var sageInfo = await _connectionFactory.GetSageConnectionInfoAsync(soId);
 
         var sql = $@"
             SELECT CT_Num AS TiersCode,
                    {identiteConfig.SelectIdentifiantExpression("F_COMPTET")} AS IdentifiantFiscal,
-                   {identiteConfig.SelectIceExpression("F_COMPTET")}         AS Ice
+                   {identiteConfig.SelectIceExpression("F_COMPTET")}         AS Ice,
+                   {expressionNumRc}                                        AS NumRc,
+                   CT_Adresse                                               AS Adresse
             FROM F_COMPTET
             WHERE CT_Num IN @Codes";
 
@@ -466,6 +485,85 @@ public sealed class DeclarationDelaiPaiementRepository : IDeclarationDelaiPaieme
                 resultat[row.TiersCode.Trim()] = row;
             }
         }
+
+        return resultat;
+    }
+
+    /// <summary>
+    /// Valide un nom de colonne SQL OPTIONNEL (whitelist <c>^[A-Za-z0-9_]+$</c>, tolère les crochets
+    /// englobants) — même principe que <see cref="IdentiteFiscaleFournisseurConfig"/> (TASK-048), mais
+    /// dupliqué localement à dessein : ce champ (n° RC) est TOLÉRANT à l'absence (retourne <c>null</c>),
+    /// contrairement à l'IF/l'ICE qui sont OBLIGATOIRES et lèvent — les deux contrats sont donc
+    /// délibérément distincts, pas une simple omission de réutilisation.
+    /// </summary>
+    private static string? ValiderNomColonneOptionnelle(string? valeurBrute)
+    {
+        var nom = (valeurBrute ?? string.Empty).Trim();
+        if (nom.Length >= 2 && nom[0] == '[' && nom[^1] == ']')
+            nom = nom.Substring(1, nom.Length - 2).Trim();
+
+        if (nom.Length == 0) return null;
+
+        return System.Text.RegularExpressions.Regex.IsMatch(nom, "^[A-Za-z0-9_]+$")
+            ? nom
+            : throw new InvalidOperationException(
+                $"Nom de colonne n° registre de commerce invalide dans P_SOCIETE : « {valeurBrute} ». " +
+                "Seuls les caractères A-Z, a-z, 0-9 et « _ » sont autorisés.");
+    }
+
+    // ─── Société (LECTURE SEULE, base GRF) — TASK-133 ─────────────────────────────────────────────
+
+    /// <summary>
+    /// TASK-133 : champs société de l'en-tête XML — LECTURE SEULE sur <c>P_SOCIETE</c> (base GRF).
+    /// Échec explicite si la société est introuvable, jamais un en-tête incomplet silencieux.
+    /// </summary>
+    public async Task<SocieteDelaiPaiementInfo> GetSocieteInfoAsync(int soId)
+    {
+        using var connection = _connectionFactory.CreateGrfConnection();
+        var row = await connection.QuerySingleOrDefaultAsync<SocieteInfoRow>(
+            @"SELECT SO_Identifiant     AS IdentifiantFiscal,
+                     SO_ActiviteMarroc  AS ActiviteMarrocCode,
+                     SO_DateJugement    AS DateJugement,
+                     SO_ChiffreAffaire  AS ChiffreAffaire
+              FROM P_SOCIETE WHERE SO_Id = @SoId",
+            new { SoId = soId });
+
+        if (row == null)
+            throw new InvalidOperationException(
+                $"Société SO_Id={soId} introuvable dans P_SOCIETE : impossible de construire l'en-tête " +
+                "du fichier de dépôt Délai de Paiement.");
+
+        return new SocieteDelaiPaiementInfo
+        {
+            IdentifiantFiscal = row.IdentifiantFiscal,
+            ActiviteMarrocCode = row.ActiviteMarrocCode,
+            DateJugement = row.DateJugement,
+            ChiffreAffaire = row.ChiffreAffaire
+        };
+    }
+
+    // ─── Référentiel mode de règlement (LECTURE SEULE, base GRF) — TASK-133 ───────────────────────
+
+    /// <summary>
+    /// TASK-133 : <c>P_MODEREGLEMENT.MR_TypeNo</c> (table EXISTANTE, propriété GRF, réutilisée telle
+    /// quelle) indexé par <c>MR_Id</c>. Un <c>MR_Id</c> absent du dictionnaire retourné = mode
+    /// introuvable (legacy : <c>modeLigne == null</c>, jamais bloquant).
+    /// </summary>
+    public async Task<IReadOnlyDictionary<int, Declaration.Core.Model.TypeModeReglementDelaiPaiement>> GetTypesModeReglementAsync(
+        IReadOnlyCollection<int> modeIds)
+    {
+        var resultat = new Dictionary<int, Declaration.Core.Model.TypeModeReglementDelaiPaiement>();
+
+        var ids = (modeIds ?? Array.Empty<int>()).Distinct().ToList();
+        if (ids.Count == 0) return resultat;
+
+        using var connection = _connectionFactory.CreateGrfConnection();
+        var rows = await connection.QueryAsync<ModeReglementRow>(
+            "SELECT MR_Id AS MrId, MR_TypeNo AS TypeNo FROM P_MODEREGLEMENT WHERE MR_Id IN @Ids",
+            new { Ids = ids });
+
+        foreach (var row in rows)
+            resultat[row.MrId] = (Declaration.Core.Model.TypeModeReglementDelaiPaiement)row.TypeNo;
 
         return resultat;
     }
@@ -520,5 +618,21 @@ public sealed class DeclarationDelaiPaiementRepository : IDeclarationDelaiPaieme
         public bool FichierGenere { get; set; }
         public int Periode { get; set; }
         public int NombreLignes { get; set; }
+    }
+
+    /// <summary>Projection brute P_SOCIETE — TASK-133.</summary>
+    private sealed class SocieteInfoRow
+    {
+        public string? IdentifiantFiscal { get; set; }
+        public int ActiviteMarrocCode { get; set; }
+        public DateTime? DateJugement { get; set; }
+        public decimal ChiffreAffaire { get; set; }
+    }
+
+    /// <summary>Projection brute P_MODEREGLEMENT — TASK-133.</summary>
+    private sealed class ModeReglementRow
+    {
+        public int MrId { get; set; }
+        public int TypeNo { get; set; }
     }
 }

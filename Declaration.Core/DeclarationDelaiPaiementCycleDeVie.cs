@@ -196,6 +196,27 @@ namespace Declaration.Core
                 : PeriodeNonApplicable;
 
         /// <summary>
+        /// TASK-133 : valeur à émettre dans la balise XML <c>&lt;periode&gt;</c> du fichier de dépôt —
+        /// JAMAIS <c>DDP_Periode</c> brut (0 pour une annuelle, cf. <see cref="ResoudrePeriodePersistee"/>
+        /// et VERIFY TASK-132 §Décisions n°5). Le générateur legacy écrit la valeur littérale
+        /// <c>5</c> pour une annuelle, <c>1..4</c> pour un trimestre.
+        /// </summary>
+        public static int ResoudrePeriodeXml(TypeDeclarationDelaiPaiement type, TrimestreDelaiPaiement? trimestre)
+            => type == TypeDeclarationDelaiPaiement.Trimestrielle
+                ? (int)(trimestre ?? throw new InvalidOperationException("Trimestre invalide."))
+                : 5;
+
+        /// <summary>
+        /// TASK-133 : segment de nommage de fichier (<c>{Numero}-{Exercice}-{periode}</c>, legacy
+        /// <c>DeclarationDelaisPaiementFileGenerator.cs:170-172</c>) : <c>"T1".."T4"</c> pour un
+        /// trimestre, <c>"A"</c> pour une annuelle.
+        /// </summary>
+        public static string ResoudrePeriodeFichier(TypeDeclarationDelaiPaiement type, TrimestreDelaiPaiement? trimestre)
+            => type == TypeDeclarationDelaiPaiement.Trimestrielle
+                ? $"T{(int)(trimestre ?? throw new InvalidOperationException("Trimestre invalide."))}"
+                : "A";
+
+        /// <summary>
         /// Unicité de période (legacy l.655 + l.658-660), les DEUX contrôles reproduits :
         /// <list type="number">
         /// <item><b>égalité exacte des bornes</b> pour l'exercice — le contrôle nominal, suffisant

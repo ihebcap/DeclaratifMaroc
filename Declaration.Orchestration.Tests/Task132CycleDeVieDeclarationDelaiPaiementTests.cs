@@ -561,6 +561,26 @@ public class Task132CycleDeVieDeclarationDelaiPaiementTests
             return Task.FromResult<IReadOnlyDictionary<string, IdentiteFiscaleTiersErp>>(resultat);
         }
 
+        // ── TASK-133 : stubs non exercés par les tests TASK-132 (aucune assertion de ce périmètre ici,
+        // couverts par Task133GenerationFichierDelaiPaiementTests). ────────────────────────────────
+
+        public SocieteDelaiPaiementInfo? SocieteInfo { get; set; }
+
+        public Task<SocieteDelaiPaiementInfo> GetSocieteInfoAsync(int soId)
+            => Task.FromResult(SocieteInfo ?? throw new InvalidOperationException($"Société SO_Id={soId} introuvable."));
+
+        public Dictionary<int, Declaration.Core.Model.TypeModeReglementDelaiPaiement> TypesModeReglement { get; } = new();
+
+        public Task<IReadOnlyDictionary<int, Declaration.Core.Model.TypeModeReglementDelaiPaiement>> GetTypesModeReglementAsync(
+            IReadOnlyCollection<int> modeIds)
+        {
+            var resultat = new Dictionary<int, Declaration.Core.Model.TypeModeReglementDelaiPaiement>();
+            foreach (var id in modeIds ?? Array.Empty<int>())
+                if (TypesModeReglement.TryGetValue(id, out var type)) resultat[id] = type;
+
+            return Task.FromResult<IReadOnlyDictionary<int, Declaration.Core.Model.TypeModeReglementDelaiPaiement>>(resultat);
+        }
+
         private static DeclarationDelaiPaiement Cloner(DeclarationDelaiPaiement source, int ddpId) => new()
         {
             DdpId = ddpId,

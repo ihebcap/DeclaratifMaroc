@@ -226,4 +226,40 @@ public sealed class IdentiteFiscaleTiersErp
 
     public string? IdentifiantFiscal { get; init; }
     public string? Ice { get; init; }
+
+    /// <summary>
+    /// TASK-133 : n° de registre de commerce fournisseur (<c>F_COMPTET</c>, colonne configurable par
+    /// société — <c>P_SOCIETE.SO_ColValueNumRegistreCommerceFournisseur</c>, legacy
+    /// <c>FournisseurErpHelper.GetAllInfoFournisseur</c> + <c>ErpTiersIceRepository.GetAllTiersIceToMaroc</c>).
+    /// <c>null</c> quand la colonne n'est pas configurée pour la société (legacy : émet une chaîne
+    /// vide dans ce cas, jamais une erreur — le n° RC ne fait PAS partie du contrôle bloquant IF/ICE
+    /// de TASK-132). Absent du contrôle IF/ICE : uniquement utilisé pour le tag XML <c>&lt;numRC&gt;</c>.
+    /// </summary>
+    public string? NumRc { get; init; }
+
+    /// <summary>
+    /// TASK-133 : adresse siège social fournisseur (<c>F_COMPTET.CT_Adresse</c> — colonne FIXE, pas
+    /// configurable par société, contrairement à l'IF/l'ICE/le n° RC ; legacy <c>IErpFournisseur.Adresse</c>).
+    /// </summary>
+    public string? Adresse { get; init; }
+}
+
+/// <summary>
+/// TASK-133 : champs société nécessaires à l'en-tête du fichier XML de dépôt Délai de Paiement,
+/// lecture seule sur <c>P_SOCIETE</c> (table EXISTANTE, propriété <c>apbs-gr_winform</c> — aucune
+/// modification de schéma, uniquement des <c>SELECT</c>).
+/// </summary>
+public sealed class SocieteDelaiPaiementInfo
+{
+    /// <summary><c>P_SOCIETE.SO_Identifiant</c> (IF de la société, DISTINCT de <c>SO_Id</c> — même colonne que TASK-155/TVA).</summary>
+    public string? IdentifiantFiscal { get; init; }
+
+    /// <summary><c>P_SOCIETE.SO_ActiviteMarroc</c> : 1 = Normal, 2 = EntrepriseEnCourDeProcedure.</summary>
+    public int ActiviteMarrocCode { get; init; }
+
+    /// <summary><c>P_SOCIETE.SO_DateJugement</c> — pertinent uniquement si <see cref="ActiviteMarrocCode"/> = 2.</summary>
+    public DateTime? DateJugement { get; init; }
+
+    /// <summary><c>P_SOCIETE.SO_ChiffreAffaire</c>.</summary>
+    public decimal ChiffreAffaire { get; init; }
 }

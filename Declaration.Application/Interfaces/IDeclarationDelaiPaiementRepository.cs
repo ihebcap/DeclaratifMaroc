@@ -106,4 +106,26 @@ public interface IDeclarationDelaiPaiementRepository
     /// introuvable dans le référentiel (motif bloquant distinct d'un IF/ICE vide).
     /// </summary>
     Task<IReadOnlyDictionary<string, IdentiteFiscaleTiersErp>> GetIdentitesFiscalesTiersAsync(int soId, IReadOnlyCollection<string> tiersCodes);
+
+    // ─── Société (LECTURE SEULE, base GRF) — TASK-133 ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Champs société nécessaires à l'en-tête du fichier XML de dépôt (<see cref="SocieteDelaiPaiementInfo"/>),
+    /// LECTURE SEULE sur <c>P_SOCIETE</c>. Échec explicite si la société est introuvable — jamais un
+    /// en-tête incomplet silencieux.
+    /// </summary>
+    Task<SocieteDelaiPaiementInfo> GetSocieteInfoAsync(int soId);
+
+    // ─── Référentiel mode de règlement (LECTURE SEULE, base GRF) — TASK-133 ───────────────────────
+
+    /// <summary>
+    /// <c>P_MODEREGLEMENT.MR_TypeNo</c> (table EXISTANTE, propriété GRF, réutilisée telle quelle —
+    /// aucune modification de schéma) indexé par <c>MR_Id</c>, pour convertir le mode de règlement
+    /// d'une ligne (<c>LigneDeclarationDelaiPaiement.ReglementModeId</c>) en code <c>modePaiement</c>
+    /// DDP (<see cref="Declaration.Core.Model.DeclarationDelaiPaiementLigneCalculator"/>). Un
+    /// <c>MR_Id</c> ABSENT du dictionnaire = mode introuvable (legacy : <c>modeLigne == null</c>,
+    /// <c>modePaiement</c> reste vide, jamais bloquant).
+    /// </summary>
+    Task<IReadOnlyDictionary<int, Declaration.Core.Model.TypeModeReglementDelaiPaiement>> GetTypesModeReglementAsync(
+        IReadOnlyCollection<int> modeIds);
 }
