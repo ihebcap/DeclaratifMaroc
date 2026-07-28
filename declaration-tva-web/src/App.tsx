@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   LogOut, LayoutDashboard, Landmark, FileText, FileCheck,
-  Scissors, Send, BarChart3, Lock, ShieldAlert, AlertTriangle,
+  Scissors, Send, BarChart3, Lock, ShieldAlert, AlertTriangle, CalendarClock,
 } from 'lucide-react';
 import './index.css';
 import './App.css';
@@ -11,6 +11,9 @@ import { CreateDeclarationModal } from './CreateDeclarationModal';
 import { DeclarationStepper } from './DeclarationStepper';
 import { RapprochementInterrogation } from './RapprochementInterrogation';
 import { FactureInterrogation } from './FactureInterrogation';
+import { DeclarationsDelaiPaiementPanel } from './DeclarationsDelaiPaiementPanel';
+import { ControleLignesDelaiPaiementPanel } from './ControleLignesDelaiPaiementPanel';
+import { ConventionsDelaiPaiementPanel } from './ConventionsDelaiPaiementPanel';
 import { getLicenceStatus, type LicenceStatusDto } from './api';
 
 export interface User {
@@ -23,7 +26,12 @@ export interface User {
 }
 
 // Sections navigables (le shell ne fait que router — aucun calcul/API ici).
-type SectionKey = 'rapprochement' | 'factures' | 'declaration';
+type SectionKey = 'rapprochement' | 'factures' | 'declaration' | 'delai-paiement';
+
+// TASK-136 : sous-écrans internes au domaine « Délai de paiement » (sous-navigation interne à la
+// section, pas des SectionKey supplémentaires — le sidebar n'affiche qu'UNE entrée « Délai de
+// paiement », cf. décision PO 19/07/2026 rappelée dans DDP-TASK-136).
+type DdpSousEcran = 'declarations' | 'controle' | 'conventions';
 
 type MenuStatus = 'live' | 'soon' | 'todo';
 
@@ -51,6 +59,10 @@ const MENU_GROUPS: MenuGroup[] = [
     title: 'DÉCLARATION',
     entries: [
       { key: 'declaration', label: 'Déclaration TVA', icon: FileCheck, status: 'live' },
+      // TASK-136 : entrée autonome au même niveau que « Déclaration TVA » (décision PO 19/07/2026,
+      // DDP-TASK-136) — pas un regroupement sous une entrée existante. Sous-navigation interne vers
+      // les 3 écrans TASK-130 (conventions)/TASK-134 (déclarations DDP + contrôle) : cf. Dashboard.
+      { key: 'delai-paiement', label: 'Délai de paiement', icon: CalendarClock, status: 'live' },
     ],
   },
   {
@@ -205,11 +217,17 @@ function LicenceExpirationBanner({ joursRestants, dateExpiration }: { joursResta
   );
 }
 
-function Dashboard({ user, onLogout, showToast }: { user: User; onLogout: () => void; showToast: (msg: string, type?: 'success'|'error'|'warning') => void }) {
+// TASK-136 : exportée pour permettre au harnais de test e2e (task136-harness.tsx) de monter le
+// VRAI shell de navigation sans rejouer tout le flux licence/connexion (déjà couvert par
+// declaration.spec.ts) — même esprit que l'export de composants dédiés par TASK-130/134.
+export function Dashboard({ user, onLogout, showToast }: { user: User; onLogout: () => void; showToast: (msg: string, type?: 'success'|'error'|'warning') => void }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState<SectionKey>('declaration');
   const [currentDeclarationId, setCurrentDeclarationId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  // TASK-136 : sous-écran actif au sein de la section « Délai de paiement » (sous-navigation
+  // interne, cf. DdpSousEcran) — indépendant de activeSection, ne modifie rien au sidebar.
+  const [ddpSousEcran, setDdpSousEcran] = useState<DdpSousEcran>('declarations');
 
   const handleSelect = (entry: MenuEntry) => {
     if (entry.status === 'todo') return; // "à venir" : non cliquable, aucune route morte
@@ -307,6 +325,43 @@ function Dashboard({ user, onLogout, showToast }: { user: User; onLogout: () => 
           <RapprochementInterrogation societeId={user.societeId} showToast={showToast} />
         ) : activeSection === 'factures' ? (
           <FactureInterrogation societeId={user.societeId} showToast={showToast} />
+        ) : activeSection === 'delai-paiement' ? (
+          // TASK-136 : sous-navigation interne (Déclarations / Sélection-Contrôle / Conventions),
+          // même niveau de densité que le reste du shell — aucun des 3 écrans TASK-130/134 n'est
+          // modifié ici, ce bloc ne fait que router.
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+            <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+              <div style={{ display: 'inline-flex', border: '1px solid var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
+                <button
+                  onClick={() => setDdpSousEcran('declarations')}
+                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', border: 'none', cursor: 'pointer', background: ddpSousEcran === 'declarations' ? 'var(--accent-primary)' : 'white', color: ddpSousEcran === 'declarations' ? 'white' : 'var(--text-primary)' }}
+                >
+                  Déclarations
+                </button>
+                <button
+                  onClick={() => setDdpSousEcran('controle')}
+                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', border: 'none', cursor: 'pointer', background: ddpSousEcran === 'controle' ? 'var(--accent-primary)' : 'white', color: ddpSousEcran === 'controle' ? 'white' : 'var(--text-primary)' }}
+                >
+                  Sélection / Contrôle
+                </button>
+                <button
+                  onClick={() => setDdpSousEcran('conventions')}
+                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', border: 'none', cursor: 'pointer', background: ddpSousEcran === 'conventions' ? 'var(--accent-primary)' : 'white', color: ddpSousEcran === 'conventions' ? 'white' : 'var(--text-primary)' }}
+                >
+                  Conventions
+                </button>
+              </div>
+            </div>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex' }}>
+              {ddpSousEcran === 'declarations' ? (
+                <DeclarationsDelaiPaiementPanel societeId={user.societeId} showToast={showToast} />
+              ) : ddpSousEcran === 'controle' ? (
+                <ControleLignesDelaiPaiementPanel societeId={user.societeId} showToast={showToast} />
+              ) : (
+                <ConventionsDelaiPaiementPanel societeId={user.societeId} showToast={showToast} />
+              )}
+            </div>
+          </div>
         ) : null}
       </main>
 
