@@ -45,4 +45,25 @@ public interface IConventionDelaiPaiementTiersRepository
 
     /// <summary>Suppression directe, sans garde (reproduit legacy l.554-562 à l'identique, décision assumée).</summary>
     Task DeleteAsync(int cpId);
+
+    // ─── TASK-130 (front) : projections de lecture nécessaires à l'écran, additives — aucune des ───
+    // méthodes ci-dessus n'est modifiée.
+
+    /// <summary>
+    /// Liste pour l'écran (colonnes n° facture + présence pièce jointe résolues, jamais le contenu
+    /// binaire). Voir <see cref="Entities.ConventionDelaiPaiementListItem"/>.
+    /// </summary>
+    Task<IReadOnlyList<Entities.ConventionDelaiPaiementListItem>> GetAllForListAsync(int societeId, DomaineDelaiPaiement domaine);
+
+    /// <summary>
+    /// Candidats « facture non payée » du tiers/domaine, pour le formulaire de création (type
+    /// Facture). Voir <see cref="Entities.FactureNonPayeeItem"/>.
+    /// </summary>
+    Task<IReadOnlyList<Entities.FactureNonPayeeItem>> GetFacturesNonPayeesAsync(int societeId, int tiersNo, DomaineDelaiPaiement domaine);
+
+    /// <summary>
+    /// Recherche de tiers (code/intitulé) pour le formulaire de création. Voir
+    /// <see cref="Entities.TiersRechercheItem"/>.
+    /// </summary>
+    Task<IReadOnlyList<Entities.TiersRechercheItem>> SearchTiersAsync(int societeId, DomaineDelaiPaiement domaine, string? recherche);
 }

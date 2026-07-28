@@ -125,3 +125,91 @@ export async function resynchroniserLignesBulk(
   const res = await api.post(`/declarations/${declarationId}/lignes/resynchroniser:bulk`, selection);
   return res.data as ResynchroBulkResultat;
 }
+
+// ─── TASK-130 (Délai de Paiement Maroc — Convention par tiers, FRONT) ──────────────────────────
+// Consomme le contrôleur créé pour cette TASK (aucun n'existait — cf. VERIFY TASK-129 « reste à
+// valider »), lui-même pur passe-plat vers IConventionDelaiPaiementService (TASK-129, métier non
+// dupliqué côté front : plafond 180j vérifié ICI en plus, en local, uniquement pour un retour
+// immédiat sans aller-retour serveur — la vérité reste le contrôle serveur).
+
+export type DomaineConvention = 'achat' | 'vente';
+export type TypeConvention = 'Convention' | 'Facture';
+
+export interface ConventionDelaiPaiementDto {
+  cpId: number;
+  tiersNo: number;
+  tiersCode: string;
+  date: string;
+  numero: string;
+  dateDebut: string | null;
+  dateFin: string | null;
+  nombreJoursDelaisPaiement: number;
+  domaine: string;
+  type: TypeConvention;
+  factureNo: number | null;
+  factureNumero: string | null;
+  hasFile: boolean;
+  valide: boolean;
+}
+
+export async function getConventionsDelaiPaiement(soId: number, domaine: DomaineConvention): Promise<ConventionDelaiPaiementDto[]> {
+  const res = await api.get('/conventions-delai-paiement', { params: { soId, domaine } });
+  return res.data as ConventionDelaiPaiementDto[];
+}
+
+export interface TiersRechercheDto {
+  ctNo: number;
+  ctCode: string;
+  ctIntitule: string;
+}
+
+export async function searchTiersConvention(soId: number, domaine: DomaineConvention, recherche: string): Promise<TiersRechercheDto[]> {
+  const res = await api.get('/conventions-delai-paiement/tiers', { params: { soId, domaine, recherche } });
+  return (res.data as any[]).map(t => ({ ctNo: t.tiersNo, ctCode: t.tiersCode, ctIntitule: t.tiersIntitule }));
+}
+
+export interface FactureNonPayeeDto {
+  ecId: number;
+  doNumero: string;
+  doDate: string;
+  montant: number;
+  solde: number;
+}
+
+export async function getFacturesNonPayees(soId: number, tiersNo: number, domaine: DomaineConvention): Promise<FactureNonPayeeDto[]> {
+  const res = await api.get('/conventions-delai-paiement/factures-non-payees', { params: { soId, tiersNo, domaine } });
+  return res.data as FactureNonPayeeDto[];
+}
+
+export interface CreerConventionPayload {
+  soId: number;
+  tiersNo: number;
+  tiersCode: string;
+  date: string;
+  numero: string;
+  dateDebut?: string | null;
+  dateFin?: string | null;
+  nombreJoursDelaisPaiement: number;
+  domaine: DomaineConvention;
+  type: TypeConvention;
+  factureNo?: number | null;
+  fileName?: string | null;
+  fileBase64?: string | null;
+}
+
+export async function creerConventionDelaiPaiement(payload: CreerConventionPayload): Promise<{ cpId: number }> {
+  const res = await api.post('/conventions-delai-paiement', payload);
+  return res.data as { cpId: number };
+}
+
+export async function terminerConventionDelaiPaiement(cpId: number, nouvelleDateFin: string): Promise<void> {
+  await api.put(`/conventions-delai-paiement/${cpId}/terminer`, { nouvelleDateFin });
+}
+
+export async function supprimerConventionDelaiPaiement(cpId: number): Promise<void> {
+  await api.delete(`/conventions-delai-paiement/${cpId}`);
+}
+
+export function urlFichierConventionDelaiPaiement(cpId: number): string {
+  return `/conventions-delai-paiement/${cpId}/fichier`;
+}

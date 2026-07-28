@@ -205,4 +205,83 @@ public sealed class ConventionDelaiPaiementRepository :
         using var connection = _connectionFactory.CreateGrfConnection();
         await connection.ExecuteAsync("DELETE FROM RT_CONVENTIONTIERS WHERE CP_Id = @CpId", new { CpId = cpId });
     }
+
+    // ─── TASK-130 (front) : projections de lecture additives pour l'écran ──────────────────────────
+
+    /// <summary>
+    /// Liste pour l'écran : mêmes colonnes que <see cref="SelectColonnes"/> MOINS <c>CP_File</c>
+    /// (jamais le contenu binaire dans une liste, perf), PLUS FactureNumero (jointure RT_ECHEANCE,
+    /// même pattern que <see cref="GetConventionsActivesAsync"/>) et HasFile (présence calculée en SQL).
+    /// </summary>
+    public async Task<IReadOnlyList<ConventionDelaiPaiementListItem>> GetAllForListAsync(int societeId, DomaineDelaiPaiement domaine)
+    {
+        using var connection = _connectionFactory.CreateGrfConnection();
+        var rows = await connection.QueryAsync<ConventionDelaiPaiementListItem>(@"
+            SELECT
+                c.CP_Id             AS CpId,
+                c.SO_Id             AS SocieteId,
+                c.CT_No             AS TiersNo,
+                c.CT_Code           AS TiersCode,
+                c.CP_Date           AS Date,
+                c.CP_Numero         AS Numero,
+                c.CP_DateDebut      AS DateDebut,
+                c.CP_DateFin        AS DateFin,
+                c.CP_DelaisPaiement AS NombreJoursDelaisPaiement,
+                c.CP_Domaine        AS Domaine,
+                c.CP_Type           AS Type,
+                c.CP_FactureNo      AS FactureNo,
+                e.DO_Numero         AS FactureNumero,
+                CASE WHEN c.CP_File IS NOT NULL THEN 1 ELSE 0 END AS HasFile
+            FROM RT_CONVENTIONTIERS c
+            LEFT JOIN RT_ECHEANCE e ON e.EC_Id = c.CP_FactureNo
+            WHERE c.SO_Id = @SocieteId AND c.CP_Domaine = @Domaine
+            ORDER BY c.CP_Date DESC",
+            new { SocieteId = societeId, Domaine = ToCpDomaine(domaine) });
+        return rows.ToList();
+    }
+
+    /// <summary>
+    /// Candidats « facture non payée » du tiers/domaine (formulaire de création, type Facture) —
+    /// mêmes critères que <see cref="EcheanceNonPayeeExisteAsync"/> (EC_Etat=0, DO_Domaine mappé
+    /// INVERSÉ via <see cref="ToDoDomaineErp"/>), mais retourne la LISTE des candidats.
+    /// </summary>
+    public async Task<IReadOnlyList<FactureNonPayeeItem>> GetFacturesNonPayeesAsync(int societeId, int tiersNo, DomaineDelaiPaiement domaine)
+    {
+        using var connection = _connectionFactory.CreateGrfConnection();
+        var rows = await connection.QueryAsync<FactureNonPayeeItem>(@"
+            SELECT
+                EC_Id     AS EcId,
+                DO_Numero AS DoNumero,
+                DO_Date   AS DoDate,
+                EC_Montant AS Montant,
+                EC_Solde   AS Solde
+            FROM RT_ECHEANCE
+            WHERE SO_Id = @SocieteId AND CT_No = @TiersNo AND DO_Domaine = @DoDomaine AND EC_Etat = 0
+            ORDER BY DO_Date DESC",
+            new { SocieteId = societeId, TiersNo = tiersNo, DoDomaine = ToDoDomaineErp(domaine) });
+        return rows.ToList();
+    }
+
+    /// <summary>
+    /// Recherche de tiers (formulaire de création) — source <c>RT_ECHEANCE</c> (CT_No/CT_Code/
+    /// CT_Intitule déjà dénormalisés sur cette table GRF), PAS de jointure Sage <c>F_COMPTET</c>
+    /// (leçon TASK-154). Limite assumée : seuls les tiers ayant au moins une échéance dans ce
+    /// domaine sont trouvables (documenté en VERIFY TASK-130).
+    /// </summary>
+    public async Task<IReadOnlyList<TiersRechercheItem>> SearchTiersAsync(int societeId, DomaineDelaiPaiement domaine, string? recherche)
+    {
+        using var connection = _connectionFactory.CreateGrfConnection();
+        var terme = string.IsNullOrWhiteSpace(recherche) ? null : $"%{recherche.Trim()}%";
+        var rows = await connection.QueryAsync<TiersRechercheItem>(@"
+            SELECT DISTINCT TOP 50
+                CT_No       AS TiersNo,
+                CT_Code     AS TiersCode,
+                CT_Intitule AS TiersIntitule
+            FROM RT_ECHEANCE
+            WHERE SO_Id = @SocieteId AND DO_Domaine = @DoDomaine
+              AND (@Terme IS NULL OR CT_Code LIKE @Terme OR CT_Intitule LIKE @Terme)
+            ORDER BY CT_Code",
+            new { SocieteId = societeId, DoDomaine = ToDoDomaineErp(domaine), Terme = terme });
+        return rows.ToList();
+    }
 }

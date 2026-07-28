@@ -48,6 +48,11 @@ public interface IConventionDelaiPaiementService
     Task<IReadOnlyList<ConventionDelaiPaiementTiers>> GetAllAsync(int societeId, DomaineDelaiPaiement domaine);
     Task TerminerAsync(int cpId, DateTime nouvelleDateFin);
     Task DeleteAsync(int cpId);
+
+    // ─── TASK-130 (front) : projections de lecture additives pour l'écran conventions ───────────
+    Task<IReadOnlyList<ConventionDelaiPaiementListItem>> GetAllForListAsync(int societeId, DomaineDelaiPaiement domaine);
+    Task<IReadOnlyList<FactureNonPayeeItem>> GetFacturesNonPayeesAsync(int societeId, int tiersNo, DomaineDelaiPaiement domaine);
+    Task<IReadOnlyList<TiersRechercheItem>> SearchTiersAsync(int societeId, DomaineDelaiPaiement domaine, string? recherche);
 }
 
 /// <inheritdoc cref="IConventionDelaiPaiementService"/>
@@ -173,4 +178,14 @@ public sealed class ConventionDelaiPaiementService : IConventionDelaiPaiementSer
     /// pas un comportement non demandé.
     /// </summary>
     public Task DeleteAsync(int cpId) => _repository.DeleteAsync(cpId);
+
+    // ─── TASK-130 (front) : pur passe-plat vers le repository, aucun métier additionnel ici ─────
+    public Task<IReadOnlyList<ConventionDelaiPaiementListItem>> GetAllForListAsync(int societeId, DomaineDelaiPaiement domaine)
+        => _repository.GetAllForListAsync(societeId, domaine);
+
+    public Task<IReadOnlyList<FactureNonPayeeItem>> GetFacturesNonPayeesAsync(int societeId, int tiersNo, DomaineDelaiPaiement domaine)
+        => _repository.GetFacturesNonPayeesAsync(societeId, tiersNo, domaine);
+
+    public Task<IReadOnlyList<TiersRechercheItem>> SearchTiersAsync(int societeId, DomaineDelaiPaiement domaine, string? recherche)
+        => _repository.SearchTiersAsync(societeId, domaine, recherche);
 }
