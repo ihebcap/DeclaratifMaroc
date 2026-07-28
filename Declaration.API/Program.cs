@@ -74,6 +74,14 @@ builder.Services.AddScoped<IConventionDelaiPaiementService, ConventionDelaiPaiem
 builder.Services.AddScoped<ISelectionDelaiPaiementRepository, SelectionDelaiPaiementRepository>();
 builder.Services.AddScoped<ISelectionDelaiPaiementService, SelectionDelaiPaiementService>();
 
+// TASK-132 : cycle de vie de la declaration Delai de Paiement (RT_DECLARATIONDELAISPAIEMENT/LG,
+// tables EXISTANTES reutilisees telles quelles -- aucune migration) + controle IF/ICE bloquant
+// reutilisable par TASK-133. Aucun controller expose ici : le perimetre STRICT de TASK-132 exclut
+// l'UI (TASK-134) et la generation XML/ZIP (TASK-133), qui consommeront
+// IDeclarationDelaiPaiementService.
+builder.Services.AddScoped<IDeclarationDelaiPaiementRepository, DeclarationDelaiPaiementRepository>();
+builder.Services.AddScoped<IDeclarationDelaiPaiementService, DeclarationDelaiPaiementService>();
+
 // TASK-117 : verification de licence ApLicence (GRLicence, protocole REQUEST en lecture seule --
 // jamais SUBREQ, aucun siege consomme). Le subject est fige en dur (LicenceConstants), jamais lu
 // depuis connections.json (anti-contournement : un fichier de config sur le poste client serait
