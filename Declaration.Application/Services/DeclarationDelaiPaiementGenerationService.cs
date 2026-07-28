@@ -164,9 +164,18 @@ public sealed class DeclarationDelaiPaiementGenerationService : IDeclarationDela
             .ToList();
         var typesMode = await _repository.GetTypesModeReglementAsync(modeIds);
 
+        // TASK-191 : nature marchandise / date livraison marchandise réelles (F_DOCENTETE), tolérant à
+        // l'absence de configuration société (dictionnaire vide, aucun aller-retour Sage superflu).
+        var numerosFacture = lignes
+            .Select(l => (l.DoNumero ?? string.Empty).Trim())
+            .Where(n => n.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var valeursMarchandise = await _repository.GetValeursMarchandiseAsync(entete.SocieteId, numerosFacture);
+
         var enTeteXml = ConstruireEnTeteXml(entete, societe);
 
-        var factures = lignes.Select(ligne => ConstruireFactureXml(entete, ligne, identites, typesMode)).ToList();
+        var factures = lignes.Select(ligne => ConstruireFactureXml(entete, ligne, identites, typesMode, valeursMarchandise)).ToList();
 
         return new DeclarationDelaiPaiementXmlModele
         {
@@ -204,7 +213,8 @@ public sealed class DeclarationDelaiPaiementGenerationService : IDeclarationDela
         DeclarationDelaiPaiement entete,
         LigneDeclarationDelaiPaiement ligne,
         IReadOnlyDictionary<string, IdentiteFiscaleTiersErp> identites,
-        IReadOnlyDictionary<int, TypeModeReglementDelaiPaiement> typesMode)
+        IReadOnlyDictionary<int, TypeModeReglementDelaiPaiement> typesMode,
+        IReadOnlyDictionary<string, ValeursMarchandiseErp> valeursMarchandise)
     {
         var code = (ligne.TiersCode ?? string.Empty).Trim();
 
@@ -221,12 +231,20 @@ public sealed class DeclarationDelaiPaiementGenerationService : IDeclarationDela
                 ? t
                 : null;
 
+        // TASK-191 : absent du dictionnaire (config société absente OU document Sage introuvable) ⇒
+        // ValeursMarchandiseErp? reste null, le calculateur applique alors le même repli qu'avant.
+        var numFacture = ligne.DoNumero?.Trim();
+        ValeursMarchandiseErp? valeurs = !string.IsNullOrEmpty(numFacture)
+            && valeursMarchandise.TryGetValue(numFacture, out var v)
+                ? v
+                : null;
+
         return DeclarationDelaiPaiementLigneCalculator.Calculer(
             dateFinPeriode: entete.DateFin,
             identifiantFiscalFournisseur: identite.IdentifiantFiscal,
             numRc: identite.NumRc,
             adresseSiegeSocial: identite.Adresse,
-            numFacture: ligne.DoNumero?.Trim(),
+            numFacture: numFacture,
             dateEmission: ligne.DoDate,
             dateConvenuePaiementFacture: ligne.EcheanceLegale,
             montantFactureTtc: ligne.MontantEcheance,
@@ -235,7 +253,9 @@ public sealed class DeclarationDelaiPaiementGenerationService : IDeclarationDela
             reglementRapproche: ligne.ReglementRapproche,
             dateRapprochement: ligne.ReglementDateRapprochement,
             referencePaiement: ligne.ReglementPiece?.Trim(),
-            typeModeReglement: typeMode);
+            typeModeReglement: typeMode,
+            natureMarchandiseReelle: valeurs?.NatureMarchandise,
+            dateLivraisonMarchandiseReelle: valeurs?.DateLivraisonMarchandise);
     }
 
     private static void SupprimerFichiersSiPresents(EnTeteDeclarationDelaiPaiementXml enTeteXml, string dossierSortie)

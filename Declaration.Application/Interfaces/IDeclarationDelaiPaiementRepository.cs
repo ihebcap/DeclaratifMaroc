@@ -107,6 +107,19 @@ public interface IDeclarationDelaiPaiementRepository
     /// </summary>
     Task<IReadOnlyDictionary<string, IdentiteFiscaleTiersErp>> GetIdentitesFiscalesTiersAsync(int soId, IReadOnlyCollection<string> tiersCodes);
 
+    /// <summary>
+    /// TASK-191 : valeurs réelles « nature marchandise »/« date livraison marchandise » des documents
+    /// facture fournisseur dont le numéro figure dans <paramref name="numerosFacture"/>, lues sur
+    /// <c>F_DOCENTETE</c> (Sage, lecture seule) via les 2 colonnes configurables par société
+    /// (<c>P_SOCIETE.SO_ColValueNatureMarchandise</c>/<c>SO_ColValueDateLivraisonMarchandise</c>),
+    /// même contrat de tolérance que <see cref="GetIdentitesFiscalesTiersAsync"/> : AUCUNE des deux
+    /// colonnes configurée ⇒ dictionnaire vide, AUCUN aller-retour Sage (jamais une erreur). Indexé
+    /// par numéro de facture (<c>DO_Numero</c>/<c>DO_Piece</c>) ; un numéro ABSENT du dictionnaire
+    /// signifie que le document Sage correspondant est introuvable (l'appelant applique alors le
+    /// même repli que si la valeur était vide).
+    /// </summary>
+    Task<IReadOnlyDictionary<string, ValeursMarchandiseErp>> GetValeursMarchandiseAsync(int soId, IReadOnlyCollection<string> numerosFacture);
+
     // ─── Société (LECTURE SEULE, base GRF) — TASK-133 ─────────────────────────────────────────────
 
     /// <summary>

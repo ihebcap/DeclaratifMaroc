@@ -245,6 +245,24 @@ public sealed class IdentiteFiscaleTiersErp
 }
 
 /// <summary>
+/// TASK-191 : valeurs réelles « nature marchandise »/« date livraison marchandise » d'UN document
+/// facture fournisseur, lues sur <c>F_DOCENTETE</c> (Sage, lecture seule) via les 2 colonnes
+/// configurables par société (<c>P_SOCIETE.SO_ColValueNatureMarchandise</c>/
+/// <c>SO_ColValueDateLivraisonMarchandise</c>) — même famille que <see cref="IdentiteFiscaleTiersErp.NumRc"/>
+/// (TASK-133). <c>null</c> sur l'un des 2 champs ⇔ colonne non configurée pour la société OU valeur
+/// absente sur le document trouvé : dans les deux cas, l'appelant applique le même repli qu'aujourd'hui
+/// (jamais une erreur liée à l'absence de configuration/valeur).
+/// </summary>
+public sealed class ValeursMarchandiseErp
+{
+    /// <summary><c>F_DOCENTETE.[SO_ColValueNatureMarchandise]</c> — <c>null</c> si non configurée ou vide sur le document.</summary>
+    public string? NatureMarchandise { get; init; }
+
+    /// <summary><c>F_DOCENTETE.[SO_ColValueDateLivraisonMarchandise]</c> — <c>null</c> si non configurée ou vide sur le document.</summary>
+    public DateTime? DateLivraisonMarchandise { get; init; }
+}
+
+/// <summary>
 /// TASK-133 : champs société nécessaires à l'en-tête du fichier XML de dépôt Délai de Paiement,
 /// lecture seule sur <c>P_SOCIETE</c> (table EXISTANTE, propriété <c>apbs-gr_winform</c> — aucune
 /// modification de schéma, uniquement des <c>SELECT</c>).

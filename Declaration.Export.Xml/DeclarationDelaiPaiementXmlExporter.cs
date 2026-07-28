@@ -111,7 +111,9 @@ namespace Declaration.Export.Xml
                 sb.Append($"<adresseSiegeSocial>{EscapeXml(facture.AdresseSiegeSocial)}</adresseSiegeSocial>\r\n");
                 sb.Append($"<numFacture>{EscapeXml(facture.NumFacture)}</numFacture>\r\n");
                 sb.Append($"<dateEmission>{FormatDate(facture.DateEmission)}</dateEmission>\r\n");
-                sb.Append("<natureMarchandise></natureMarchandise>\r\n");
+                // TASK-191 : câblé sur le modèle (vide par défaut si non configuré/non trouvé — même
+                // comportement observable qu'avant, cf. FactureHorsDelaiXml.NatureMarchandise).
+                sb.Append($"<natureMarchandise>{EscapeXml(facture.NatureMarchandise)}</natureMarchandise>\r\n");
                 sb.Append($"<dateLivraisonMarchandise>{FormatDate(facture.DateLivraisonMarchandise)}</dateLivraisonMarchandise>\r\n");
                 sb.Append($"<dateConvenuePaiementFacture>{FormatDate(facture.DateConvenuePaiementFacture)}</dateConvenuePaiementFacture>\r\n");
                 sb.Append($"<montantFactureTtc>{FormatDecimal(facture.MontantFactureTtc)}</montantFactureTtc>\r\n");

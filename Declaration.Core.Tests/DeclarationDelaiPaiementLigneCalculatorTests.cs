@@ -19,7 +19,9 @@ public class DeclarationDelaiPaiementLigneCalculatorTests
         decimal solde = 1000m,
         decimal? montantAffecte = null,
         TypeModeReglementDelaiPaiement? typeMode = null,
-        string? reference = "RF001")
+        string? reference = "RF001",
+        string? natureMarchandiseReelle = null,
+        DateTime? dateLivraisonMarchandiseReelle = null)
         => DeclarationDelaiPaiementLigneCalculator.Calculer(
             dateFinPeriode: FinPeriode,
             identifiantFiscalFournisseur: "12345678",
@@ -34,7 +36,9 @@ public class DeclarationDelaiPaiementLigneCalculatorTests
             reglementRapproche: reglementRapproche,
             dateRapprochement: dateRapprochement,
             referencePaiement: reference,
-            typeModeReglement: typeMode);
+            typeModeReglement: typeMode,
+            natureMarchandiseReelle: natureMarchandiseReelle,
+            dateLivraisonMarchandiseReelle: dateLivraisonMarchandiseReelle);
 
     [Fact]
     public void FactureNonPayee_MontantNonEncorePayeEstLeSoldeSeul()
@@ -145,6 +149,44 @@ public class DeclarationDelaiPaiementLigneCalculatorTests
     {
         var facture = Calculer();
         Assert.Equal(new DateTime(2025, 12, 1), facture.DateLivraisonMarchandise);
+        Assert.Equal(facture.DateEmission, facture.DateLivraisonMarchandise);
+    }
+
+    // ── TASK-191 : câblage nature marchandise / date livraison marchandise ──────────────────────────
+
+    [Fact]
+    public void NatureEtDateLivraisonReellesAbsentes_RepliIdentiqueALaDetteAssumee_NonRegression()
+    {
+        // Cas 1/3 (TASK-191) : société non configurée (ou dictionnaire de valeurs vide) — équivalent à
+        // ne PAS fournir les 2 nouveaux paramètres optionnels. Comportement STRICTEMENT inchangé.
+        var facture = Calculer(natureMarchandiseReelle: null, dateLivraisonMarchandiseReelle: null);
+
+        Assert.Equal(string.Empty, facture.NatureMarchandise);
+        Assert.Equal(facture.DateEmission, facture.DateLivraisonMarchandise);
+    }
+
+    [Fact]
+    public void NatureEtDateLivraisonReelles_PresentesEtNonNulles_ReflèteLesValeursReelles()
+    {
+        // Cas 3/3 (TASK-191) : société configurée ET valeur réelle trouvée sur F_DOCENTETE — le modèle
+        // doit porter la VRAIE valeur, jamais le repli (dette assumée).
+        var dateLivraisonReelle = new DateTime(2025, 12, 15);
+        var facture = Calculer(natureMarchandiseReelle: "Materiel informatique", dateLivraisonMarchandiseReelle: dateLivraisonReelle);
+
+        Assert.Equal("Materiel informatique", facture.NatureMarchandise);
+        Assert.Equal(dateLivraisonReelle, facture.DateLivraisonMarchandise);
+        Assert.NotEqual(facture.DateEmission, facture.DateLivraisonMarchandise);
+    }
+
+    [Fact]
+    public void NatureMarchandiseSeulePresente_DateLivraisonReplieSurDateEmission()
+    {
+        // Cas 2/3 (TASK-191) : société configurée pour la nature mais valeur de date absente sur le
+        // document (ou colonne date non configurée) — chaque champ se replie INDÉPENDAMMENT, jamais
+        // d'exception.
+        var facture = Calculer(natureMarchandiseReelle: "Alimentaire", dateLivraisonMarchandiseReelle: null);
+
+        Assert.Equal("Alimentaire", facture.NatureMarchandise);
         Assert.Equal(facture.DateEmission, facture.DateLivraisonMarchandise);
     }
 

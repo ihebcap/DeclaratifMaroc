@@ -511,6 +511,96 @@ public sealed class DeclarationDelaiPaiementRepository : IDeclarationDelaiPaieme
                 "Seuls les caractères A-Z, a-z, 0-9 et « _ » sont autorisés.");
     }
 
+    /// <summary>
+    /// TASK-191 : <c>RT_ECHEANCE.DO_Domaine</c> pour le domaine Achat (même enum legacy <c>ErpDomaine</c>
+    /// inversé que <c>SelectionDelaiPaiementRepository.DoDomaineAchat</c> — la DDP ne porte que des
+    /// factures fournisseur). Sert ici à restreindre la jointure <c>F_DOCENTETE</c> au même domaine,
+    /// condition nécessaire à l'unicité de <c>DO_Piece</c> (vérifiée en base réelle
+    /// <c>NEW_EMA DISTRIBUTION</c>, cf. VERIFY TASK-191 : 0 doublon <c>(DO_Piece, DO_Domaine)</c> sur le
+    /// périmètre Achat).
+    /// </summary>
+    private const int DoDomaineAchat = 1;
+
+    /// <summary>
+    /// TASK-191 : lecture des valeurs réelles « nature marchandise »/« date livraison marchandise »
+    /// (<c>F_DOCENTETE</c>, Sage, lecture seule), pilotée par les 2 colonnes configurables par société
+    /// (<c>P_SOCIETE.SO_ColValueNatureMarchandise</c>/<c>SO_ColValueDateLivraisonMarchandise</c>), même
+    /// contrat de tolérance que <see cref="GetIdentitesFiscalesTiersAsync"/> (whitelist
+    /// <see cref="ValiderNomColonneOptionnelle"/>, jamais d'erreur liée à l'absence de configuration).
+    ///
+    /// Clé de jointure retenue (cf. VERIFY TASK-191) : <c>F_DOCENTETE.DO_Piece = RT_ECHEANCE.DO_Numero</c>
+    /// (déjà projeté par <c>GetLignesAsync</c>/<c>SelectionDelaiPaiementRepository</c>, colonne
+    /// <c>DoNumero</c>) restreinte à <c>DO_Domaine = @DoDomaineAchat</c> — même pattern que
+    /// <c>SageTaxReaderService.ExtraireTaxes</c> (<c>WHERE DO_Piece = @piece</c>), vérifiée empiriquement
+    /// unique sur ce périmètre (0 doublon <c>(DO_Piece, DO_Domaine=1)</c> en base réelle).
+    /// </summary>
+    public async Task<IReadOnlyDictionary<string, ValeursMarchandiseErp>> GetValeursMarchandiseAsync(
+        int soId, IReadOnlyCollection<string> numerosFacture)
+    {
+        var resultat = new Dictionary<string, ValeursMarchandiseErp>(StringComparer.OrdinalIgnoreCase);
+
+        var numeros = (numerosFacture ?? Array.Empty<string>())
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Select(n => n.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (numeros.Count == 0) return resultat;
+
+        string? colonneNatureBrute;
+        string? colonneDateLivraisonBrute;
+        using (var grfConnection = new SqlConnection(_connectionFactory.GetGrfConnectionString()))
+        {
+            await grfConnection.OpenAsync();
+            var row = await grfConnection.QuerySingleOrDefaultAsync<ConfigurationMarchandiseRow>(
+                @"SELECT SO_ColValueNatureMarchandise         AS ColonneNature,
+                         SO_ColValueDateLivraisonMarchandise  AS ColonneDateLivraison
+                  FROM P_SOCIETE WHERE SO_Id = @SoId",
+                new { SoId = soId });
+            colonneNatureBrute = row?.ColonneNature;
+            colonneDateLivraisonBrute = row?.ColonneDateLivraison;
+        }
+
+        var colonneNature = ValiderNomColonneOptionnelle(colonneNatureBrute);
+        var colonneDateLivraison = ValiderNomColonneOptionnelle(colonneDateLivraisonBrute);
+
+        // Toléré : AUCUNE des deux colonnes configurée pour cette société ⇒ comportement actuel
+        // inchangé, sans même interroger Sage (non-régression stricte, TASK-191).
+        if (colonneNature == null && colonneDateLivraison == null) return resultat;
+
+        var expressionNature = colonneNature != null ? $"F_DOCENTETE.[{colonneNature}]" : "NULL";
+        var expressionDateLivraison = colonneDateLivraison != null ? $"F_DOCENTETE.[{colonneDateLivraison}]" : "NULL";
+
+        var sageInfo = await _connectionFactory.GetSageConnectionInfoAsync(soId);
+
+        var sql = $@"
+            SELECT DO_Piece                     AS NumeroFacture,
+                   {expressionNature}            AS NatureMarchandise,
+                   {expressionDateLivraison}     AS DateLivraisonMarchandise
+            FROM F_DOCENTETE
+            WHERE DO_Domaine = @DoDomaineAchat AND DO_Piece IN @Numeros";
+
+        using var sageConnection = new SqlConnection(sageInfo.ConnectionString);
+        await sageConnection.OpenAsync();
+
+        foreach (var lot in Decouper(numeros, TailleLot))
+        {
+            var rows = await sageConnection.QueryAsync<ValeursMarchandiseRow>(
+                sql, new { DoDomaineAchat, Numeros = lot });
+            foreach (var row in rows)
+            {
+                if (string.IsNullOrWhiteSpace(row.NumeroFacture)) continue;
+                resultat[row.NumeroFacture.Trim()] = new ValeursMarchandiseErp
+                {
+                    NatureMarchandise = row.NatureMarchandise,
+                    DateLivraisonMarchandise = row.DateLivraisonMarchandise
+                };
+            }
+        }
+
+        return resultat;
+    }
+
     // ─── Société (LECTURE SEULE, base GRF) — TASK-133 ─────────────────────────────────────────────
 
     /// <summary>
@@ -641,5 +731,20 @@ public sealed class DeclarationDelaiPaiementRepository : IDeclarationDelaiPaieme
     {
         public int MrId { get; set; }
         public int TypeNo { get; set; }
+    }
+
+    /// <summary>Projection brute des 2 colonnes de config P_SOCIETE — TASK-191.</summary>
+    private sealed class ConfigurationMarchandiseRow
+    {
+        public string? ColonneNature { get; set; }
+        public string? ColonneDateLivraison { get; set; }
+    }
+
+    /// <summary>Projection brute F_DOCENTETE (nature/date livraison marchandise) — TASK-191.</summary>
+    private sealed class ValeursMarchandiseRow
+    {
+        public string? NumeroFacture { get; set; }
+        public string? NatureMarchandise { get; set; }
+        public DateTime? DateLivraisonMarchandise { get; set; }
     }
 }

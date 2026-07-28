@@ -92,6 +92,79 @@ public class Task133GenerationFichierDelaiPaiementTests : IDisposable
     }
 
     [Fact]
+    public async Task GenererFichierAsync_SansConfigMarchandise_NatureVideEtDateLivraisonEgaleDateEmission_NonRegression()
+    {
+        // TASK-191, cas 1/3 : AUCUNE société configurée (ValeursMarchandise reste vide) — le
+        // comportement legacy/TASK-133 (natureMarchandise vide, dateLivraisonMarchandise = dateEmission)
+        // doit rester STRICTEMENT inchangé.
+        var (generation, repository, service) = ConstruireChaine();
+        var ddpId = await CreerDeclarationAvecUneLigne(repository, integrer: true);
+        await service.CloturerAsync(ddpId, UtId);
+        RendreIdentiteConforme(repository);
+
+        var zipPath = await generation.GenererFichierAsync(ddpId, UtId);
+        Assert.True(File.Exists(zipPath));
+        var numero = (await service.GetAsync(ddpId))!.Numero;
+        var xml = File.ReadAllText(Path.Combine(_dossierExports, $"{numero}-2026-T1.xml"));
+
+        Assert.Contains("<natureMarchandise></natureMarchandise>", xml);
+        Assert.Contains("<dateLivraisonMarchandise>2025-12-01</dateLivraisonMarchandise>", xml); // = dateEmission (DoDate de la ligne)
+    }
+
+    [Fact]
+    public async Task GenererFichierAsync_ConfigPresenteMaisValeurAbsenteSurDocument_MemeRepliQuAvant()
+    {
+        // TASK-191, cas 2/3 : société configurée (colonnes désignées) mais le document Sage n'a pas de
+        // valeur exploitable (dictionnaire renvoie une entrée avec des champs null) — le repli doit
+        // rester identique à aujourd'hui (natureMarchandise vide, dateLivraisonMarchandise = dateEmission),
+        // jamais une exception liée à une valeur absente.
+        var (generation, repository, service) = ConstruireChaine();
+        var ddpId = await CreerDeclarationAvecUneLigne(repository, integrer: true);
+        await service.CloturerAsync(ddpId, UtId);
+        RendreIdentiteConforme(repository);
+
+        repository.ValeursMarchandise["FAC001"] = new ValeursMarchandiseErp
+        {
+            NatureMarchandise = null,
+            DateLivraisonMarchandise = null
+        };
+
+        var zipPath = await generation.GenererFichierAsync(ddpId, UtId);
+        Assert.True(File.Exists(zipPath));
+        var numero = (await service.GetAsync(ddpId))!.Numero;
+        var xml = File.ReadAllText(Path.Combine(_dossierExports, $"{numero}-2026-T1.xml"));
+
+        Assert.Contains("<natureMarchandise></natureMarchandise>", xml);
+        Assert.Contains("<dateLivraisonMarchandise>2025-12-01</dateLivraisonMarchandise>", xml);
+    }
+
+    [Fact]
+    public async Task GenererFichierAsync_ConfigEtValeurReellesPresentes_XmlRefleteLaValeurReelle()
+    {
+        // TASK-191, cas 3/3 : société configurée ET valeur réelle présente sur le document Sage — le
+        // XML doit refléter la VRAIE valeur, pas le repli.
+        var (generation, repository, service) = ConstruireChaine();
+        var ddpId = await CreerDeclarationAvecUneLigne(repository, integrer: true);
+        await service.CloturerAsync(ddpId, UtId);
+        RendreIdentiteConforme(repository);
+
+        repository.ValeursMarchandise["FAC001"] = new ValeursMarchandiseErp
+        {
+            NatureMarchandise = "Materiel informatique",
+            DateLivraisonMarchandise = new DateTime(2025, 12, 20)
+        };
+
+        var zipPath = await generation.GenererFichierAsync(ddpId, UtId);
+        Assert.True(File.Exists(zipPath));
+        var numero = (await service.GetAsync(ddpId))!.Numero;
+        var xml = File.ReadAllText(Path.Combine(_dossierExports, $"{numero}-2026-T1.xml"));
+
+        Assert.Contains("<natureMarchandise>Materiel informatique</natureMarchandise>", xml);
+        Assert.Contains("<dateLivraisonMarchandise>2025-12-20</dateLivraisonMarchandise>", xml);
+        Assert.DoesNotContain("<dateLivraisonMarchandise>2025-12-01</dateLivraisonMarchandise>", xml); // pas le fallback dateEmission
+    }
+
+    [Fact]
     public async Task GenererFichierAsync_FichierDejaExistant_Leve_FlagResteFaux()
     {
         var (generation, repository, service) = ConstruireChaine();
@@ -280,6 +353,14 @@ public class Task133GenerationFichierDelaiPaiementTests : IDisposable
         public List<DeclarationDelaiPaiement> Entetes { get; } = new();
         public List<LigneStockee> Lignes { get; } = new();
         public Dictionary<string, IdentiteFiscaleTiersErp> IdentitesErp { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// TASK-191 : simule le résultat de <c>GetValeursMarchandiseAsync</c> — vide par défaut (aucune
+        /// société configurée, comportement actuel inchangé), une entrée AVEC des champs null simule
+        /// « configurée mais valeur absente sur le document », une entrée avec des valeurs réelles
+        /// simule le câblage effectif. Indexé par numéro de facture, comme le contrat réel.
+        /// </summary>
+        public Dictionary<string, ValeursMarchandiseErp> ValeursMarchandise { get; } = new(StringComparer.OrdinalIgnoreCase);
         public Dictionary<int, LigneDeclarationDelaiPaiement> DetailsParEcId { get; } = new();
         public Dictionary<int, TypeModeReglementDelaiPaiement> TypesModeReglement { get; } = new();
         public SocieteDelaiPaiementInfo? SocieteInfo { get; set; }
@@ -427,6 +508,15 @@ public class Task133GenerationFichierDelaiPaiementTests : IDisposable
 
         public Task<SocieteDelaiPaiementInfo> GetSocieteInfoAsync(int soId)
             => Task.FromResult(SocieteInfo ?? throw new InvalidOperationException($"Société SO_Id={soId} introuvable."));
+
+        public Task<IReadOnlyDictionary<string, ValeursMarchandiseErp>> GetValeursMarchandiseAsync(
+            int soId, IReadOnlyCollection<string> numerosFacture)
+        {
+            var resultat = new Dictionary<string, ValeursMarchandiseErp>(StringComparer.OrdinalIgnoreCase);
+            foreach (var numero in numerosFacture)
+                if (ValeursMarchandise.TryGetValue(numero, out var valeurs)) resultat[numero] = valeurs;
+            return Task.FromResult<IReadOnlyDictionary<string, ValeursMarchandiseErp>>(resultat);
+        }
 
         public Task<IReadOnlyDictionary<int, TypeModeReglementDelaiPaiement>> GetTypesModeReglementAsync(IReadOnlyCollection<int> modeIds)
         {

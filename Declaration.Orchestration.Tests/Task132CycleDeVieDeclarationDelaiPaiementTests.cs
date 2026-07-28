@@ -561,6 +561,13 @@ public class Task132CycleDeVieDeclarationDelaiPaiementTests
             return Task.FromResult<IReadOnlyDictionary<string, IdentiteFiscaleTiersErp>>(resultat);
         }
 
+        // TASK-191 : non exercé par les scénarios de ce fichier (cycle de vie, pas génération XML) —
+        // dictionnaire vide par défaut, même contrat de tolérance que la config absente en production.
+        public Task<IReadOnlyDictionary<string, ValeursMarchandiseErp>> GetValeursMarchandiseAsync(
+            int soId, IReadOnlyCollection<string> numerosFacture)
+            => Task.FromResult<IReadOnlyDictionary<string, ValeursMarchandiseErp>>(
+                new Dictionary<string, ValeursMarchandiseErp>(StringComparer.OrdinalIgnoreCase));
+
         // ── TASK-133 : stubs non exercés par les tests TASK-132 (aucune assertion de ce périmètre ici,
         // couverts par Task133GenerationFichierDelaiPaiementTests). ────────────────────────────────
 

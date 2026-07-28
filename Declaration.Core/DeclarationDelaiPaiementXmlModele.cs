@@ -89,9 +89,20 @@ namespace Declaration.Core.Model
         public DateTime DateEmission { get; init; }
 
         /// <summary>
-        /// Dette assumée reproduite du legacy (TASK-133 §Dette assumée) : identique à
-        /// <see cref="DateEmission"/>, PAS une vraie date de livraison (mapping réel jamais branché
-        /// dans le legacy — non bloquant pour ce livrable, cf. TASK-133).
+        /// TASK-191 : nature de la marchandise, lue sur <c>F_DOCENTETE</c> (colonne configurable par
+        /// société, <c>P_SOCIETE.SO_ColValueNatureMarchandise</c>) quand la config existe et que la
+        /// valeur est présente sur le document ; <c>string.Empty</c> sinon (dette assumée reproduite du
+        /// legacy tant que la société n'a pas cette colonne configurée — cf. TASK-133 §Dette assumée).
+        /// </summary>
+        public string NatureMarchandise { get; init; } = string.Empty;
+
+        /// <summary>
+        /// TASK-191 : câblée sur la valeur réelle lue sur <c>F_DOCENTETE</c> (colonne configurable par
+        /// société, <c>P_SOCIETE.SO_ColValueDateLivraisonMarchandise</c>) quand la config existe et que
+        /// la valeur est présente sur le document. Repli IDENTIQUE au comportement d'origine (dette
+        /// assumée, TASK-133 §Dette assumée) sinon : égale à <see cref="DateEmission"/> — reproduit tel
+        /// quel, PAS une vraie date de livraison, quand la société n'a pas cette colonne configurée ou
+        /// que la valeur est absente sur le document.
         /// </summary>
         public DateTime DateLivraisonMarchandise { get; init; }
 
@@ -171,7 +182,9 @@ namespace Declaration.Core.Model
             bool? reglementRapproche,
             DateTime? dateRapprochement,
             string? referencePaiement,
-            TypeModeReglementDelaiPaiement? typeModeReglement)
+            TypeModeReglementDelaiPaiement? typeModeReglement,
+            string? natureMarchandiseReelle = null,
+            DateTime? dateLivraisonMarchandiseReelle = null)
         {
             // Payée « hors délai » (au sens du fichier : réglée pendant la période couverte) ⇔
             // effectivement rapprochée ET une date de rapprochement exploitable tombant dans la période.
@@ -207,7 +220,10 @@ namespace Declaration.Core.Model
                 AdresseSiegeSocial = adresseSiegeSocial,
                 NumFacture = numFacture,
                 DateEmission = dateEmission,
-                DateLivraisonMarchandise = dateEmission, // dette assumée (cf. TASK-133 §Dette assumée)
+                // TASK-191 : câblage réel si société configurée + valeur présente sur F_DOCENTETE ;
+                // repli IDENTIQUE à la dette assumée d'origine sinon (cf. TASK-133 §Dette assumée).
+                NatureMarchandise = natureMarchandiseReelle ?? string.Empty,
+                DateLivraisonMarchandise = dateLivraisonMarchandiseReelle ?? dateEmission,
                 DateConvenuePaiementFacture = dateConvenuePaiementFacture,
                 MontantFactureTtc = montantFactureTtc,
                 MontantNonEncorePaye = soldeFacture,
