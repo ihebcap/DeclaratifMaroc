@@ -28,6 +28,19 @@ public interface IDelaiPaiementService
         string? documentNumero,
         DateTime dateDocument,
         DomaineDelaiPaiement domaine);
+
+    /// <summary>
+    /// TASK-131 (ajout additif au socle TASK-127) : charge UNE SEULE FOIS le référentiel de calcul
+    /// (conventions filtrées par domaine + jours de repos + délai défaut société) pour résoudre
+    /// ensuite N échéances légales sans requête supplémentaire.
+    ///
+    /// Nécessaire à la sélection DDP (TASK-131), qui traite plusieurs centaines/milliers d'échéances
+    /// en une passe : <see cref="ResoudreDelaiAsync"/> émettrait 3 requêtes SQL PAR échéance (N+1).
+    /// Le métier reste dans le SEUL calculateur <see cref="EcheanceLegaleCalculator"/>, appelé par
+    /// <see cref="ContexteDelaiPaiement.Resoudre"/> — aucune logique dupliquée, aucun changement de
+    /// comportement pour les consommateurs existants de <see cref="ResoudreDelaiAsync"/>.
+    /// </summary>
+    Task<ContexteDelaiPaiement> ChargerContexteAsync(int societeId, DomaineDelaiPaiement domaine);
 }
 
 /// <inheritdoc cref="IDelaiPaiementService"/>
@@ -65,5 +78,20 @@ public sealed class DelaiPaiementService : IDelaiPaiementService
             conventions,
             nombreJoursDefaut,
             joursRepos);
+    }
+
+    /// <inheritdoc />
+    public async Task<ContexteDelaiPaiement> ChargerContexteAsync(int societeId, DomaineDelaiPaiement domaine)
+    {
+        var conventions = await _conventions.GetConventionsActivesAsync(societeId, domaine);
+        var joursRepos = await _joursRepos.GetJoursReposAsync(societeId);
+        var nombreJoursDefaut = await _parametrage.GetNombreJoursDelaiDefautAsync(societeId);
+
+        return new ContexteDelaiPaiement
+        {
+            Conventions = conventions,
+            JoursRepos = joursRepos,
+            NombreJoursDefautSociete = nombreJoursDefaut
+        };
     }
 }

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using Declaration.Application.Entities;
@@ -55,6 +57,20 @@ public sealed class DelaiPaiementBootstrapRepository :
             @"SELECT SO_Id AS SoId, EC_Id AS EcId, DateDejaDeclareeJusquau, UT_Id AS UtId, DateSaisie
               FROM DM_REPRISE_DELAIPAIEMENT WHERE SO_Id = @SocieteId AND EC_Id = @EcId",
             new { SocieteId = societeId, EcId = ecId });
+    }
+
+    /// <summary>
+    /// TASK-131 : lecture en lot des reprises d'une société (évite un N+1 dans la sélection DDP).
+    /// SELECT seul, mêmes colonnes que <see cref="GetAsync(int,int)"/>.
+    /// </summary>
+    public async Task<IReadOnlyList<RepriseDelaiPaiement>> GetAllAsync(int societeId)
+    {
+        using var connection = _connectionFactory.CreatePersistenceConnection();
+        var rows = await connection.QueryAsync<RepriseDelaiPaiement>(
+            @"SELECT SO_Id AS SoId, EC_Id AS EcId, DateDejaDeclareeJusquau, UT_Id AS UtId, DateSaisie
+              FROM DM_REPRISE_DELAIPAIEMENT WHERE SO_Id = @SocieteId",
+            new { SocieteId = societeId });
+        return rows.ToList();
     }
 
     public async Task SetAsync(int societeId, int ecId, DateTime dateDejaDeclareeJusquau, int? utilisateurId)

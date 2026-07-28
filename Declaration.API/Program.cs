@@ -66,6 +66,14 @@ builder.Services.AddScoped<IConventionDelaiPaiementTiersRepository, ConventionDe
 builder.Services.AddScoped<IDelaiPaiementService, DelaiPaiementService>();
 builder.Services.AddScoped<IConventionDelaiPaiementService, ConventionDelaiPaiementService>();
 
+// TASK-131 : selection des lignes hors delai + calcul incremental anti-double-declaration.
+// LECTURE SEULE STRICTE (SELECT sur RT_ECHEANCE/RT_AFFECTATION/RT_MOUVEMENT/
+// RT_DECLARATIONDELAISPAIEMENT(LG)/P_SOCIETE(DEVISE)). Aucun controller expose ici : le perimetre
+// STRICT de TASK-131 exclut l'UI (TASK-134) et le cycle de vie/integration (TASK-132), qui
+// consommeront ISelectionDelaiPaiementService.
+builder.Services.AddScoped<ISelectionDelaiPaiementRepository, SelectionDelaiPaiementRepository>();
+builder.Services.AddScoped<ISelectionDelaiPaiementService, SelectionDelaiPaiementService>();
+
 // TASK-117 : verification de licence ApLicence (GRLicence, protocole REQUEST en lecture seule --
 // jamais SUBREQ, aucun siege consomme). Le subject est fige en dur (LicenceConstants), jamais lu
 // depuis connections.json (anti-contournement : un fichier de config sur le poste client serait

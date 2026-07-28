@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Declaration.Application.Entities;
 using Declaration.Application.Interfaces;
@@ -24,6 +25,13 @@ public interface IDelaiPaiementBootstrapService
 
     /// <summary>Reprise manuelle saisie pour cette échéance précise, ou null si aucune.</summary>
     Task<RepriseDelaiPaiement?> GetRepriseAsync(int societeId, int ecId);
+
+    /// <summary>
+    /// TASK-131 (ajout additif) : TOUTES les reprises saisies de la société, en une lecture — la
+    /// sélection DDP évalue le garde-fou sur des centaines d'échéances par période et ne peut pas
+    /// appeler <see cref="GetRepriseAsync"/> une fois par échéance (N+1).
+    /// </summary>
+    Task<IReadOnlyList<RepriseDelaiPaiement>> GetToutesReprisesAsync(int societeId);
 
     /// <summary>Saisie de la reprise manuelle "retard déjà connu/déclaré jusqu'au [date]" pour une échéance précise.</summary>
     Task SetRepriseAsync(int societeId, int ecId, DateTime dateDejaDeclareeJusquau, int? utilisateurId);
@@ -66,6 +74,9 @@ public sealed class DelaiPaiementBootstrapService : IDelaiPaiementBootstrapServi
 
     public Task<RepriseDelaiPaiement?> GetRepriseAsync(int societeId, int ecId)
         => _reprise.GetAsync(societeId, ecId);
+
+    public Task<IReadOnlyList<RepriseDelaiPaiement>> GetToutesReprisesAsync(int societeId)
+        => _reprise.GetAllAsync(societeId);
 
     public Task SetRepriseAsync(int societeId, int ecId, DateTime dateDejaDeclareeJusquau, int? utilisateurId)
         => _reprise.SetAsync(societeId, ecId, dateDejaDeclareeJusquau, utilisateurId);
