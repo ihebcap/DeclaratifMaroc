@@ -1,5 +1,164 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-07-27/28 (revue architecte — nouveau périmètre « Délai de Paiement Maroc », TASK-127→136)
+
+Périmètre neuf (aucune réutilisation de DLL/code WinForms), développement encadré par
+`DOCS/PROMPT-WORKER-DDP-27-07-2026.md`. Les 10 TASKs ont été revues indépendamment par un agent
+dédié par task (diff réel relu intégralement, build/tests rejoués, vérifications DB en lecture
+seule reproduites sur `GR_EMA_DISTRIBUTION`/`NEW_EMA DISTRIBUTION`). **Toutes APPROUVÉES** — build
+solution 0 erreur, front (`tsc -b`+`vite build`) 0 erreur, tests Core 215/215, Orchestration
+225/225, Export.Xml 26/26, Export.Excel 3/3 (2 échecs préexistants sans rapport : Selection 59/60
+auth SQL locale, Controle 1/2 données locales absentes). Aucune violation de la contrainte de
+schéma (aucune table `apbs-gr_winform` modifiée, uniquement des tables neuves `DM_*`), aucun bypass
+sécurité, aucune dette technique silencieuse non documentée.
+
+### TASK-136 — Menu « Délai de paiement » (APPROUVÉE)
+- **Module :** front (`App.tsx`)
+- **Impact :** nouvelle entrée de menu autonome (groupe DÉCLARATION), route vers TASK-130/134.
+- **Sécurité :** aucun impact.
+- **Notes :** diff strictement additif, build front rejoué. Réserve : choix onglets internes vs
+  sous-menu imbriqué, réversible, non tranché PO. Voir `DONE_DETAIL/DDP-TASK-136-menu-entree-delai-de-paiement.md`.
+
+### TASK-135 — Mesure du délai de paiement fournisseur, écran Factures (APPROUVÉE)
+- **Module :** back + front (extension ciblée, 2 colonnes)
+- **Impact :** formule redéfinie par le PO (rapprochement local GRF vs échéance légale), les 2
+  anciennes formules DMP legacy explicitement abandonnées ne sont pas reprises.
+- **Sécurité :** aucun impact.
+- **Notes :** vérification DB réelle reproduite à l'identique. Voir
+  `DONE_DETAIL/DDP-TASK-135-mesure-delai-fournisseur-extension-ecran-factures.md`.
+
+### TASK-134 — Front DDP liste/fiche/sélection/contrôle (APPROUVÉE)
+- **Module :** front + contrôleur HTTP domaine déclaration DDP
+- **Impact :** câblage réel des API TASK-131/132/133, séparation stricte contrôle/intégration
+  respectée (§5.A-9 CDC).
+- **Sécurité :** `[Authorize]` + garde société, aucun secret en dur.
+- **Notes :** DI manquante signalée par le worker déjà corrigée par commit ultérieur `d2c9953`.
+  **Réserve à arbitrer PO/fiscaliste** : longueur IF(8)/ICE(15) stricte bloquerait une part
+  significative du parc fournisseurs réel. Voir `DONE_DETAIL/DDP-TASK-134-front-liste-fiche-selection-controle.md`.
+
+### TASK-133 — Génération fichier XML/ZIP de dépôt (APPROUVÉE)
+- **Module :** `Declaration.Export.Xml`, `Declaration.Core`, `Declaration.Application`
+- **Impact :** structure XML fidèle au legacy validé PO, contrôle IF/ICE branché avant écriture,
+  annulation avec nettoyage physique (amélioration vs legacy).
+- **Sécurité :** aucun bypass, contrôle bloquant réel.
+- **Notes :** colonnes `P_SOCIETE`/`P_MODEREGLEMENT`/`F_COMPTET` confirmées existantes en base
+  réelle (aucune modification de schéma). Dette assumée `natureMarchandise`/`dateLivraisonMarchandise`
+  non branchée (décision PO §5.A-4, progressif). Voir `DONE_DETAIL/DDP-TASK-133-generation-fichier-xml-zip.md`.
+
+### TASK-132 — Cycle de vie déclaration + contrôle IF/ICE bloquant (APPROUVÉE)
+- **Module :** `Declaration.Core` (state machine + contrôle identité fiscale)
+- **Impact :** cycle de vie strictement conforme au CDC §3.1, contrôle IF/ICE réellement bloquant
+  (contrairement au legacy désactivé, §4.4 CDC).
+- **Sécurité :** aucun chemin de contournement identifié, requêtes paramétrées.
+- **Notes :** **réserve majeure à arbitrer PO/fiscaliste avant production** — le contrôle strict
+  bloquerait >50% du parc fournisseurs réel vérifié (357 tiers). Voir
+  `DONE_DETAIL/DDP-TASK-132-cycle-de-vie-declaration-controle-if-ice.md`.
+
+### TASK-131 — Sélection lignes hors délai + calcul incrémental (APPROUVÉE)
+- **Module :** `Declaration.Core`/`Declaration.Infrastructure`
+- **Impact :** calcul incrémental anti-double-déclaration (borne = dernière période déjà déclarée),
+  affectation partielle corrigée sur le bucket hors période non payée, seuils légaux 10 000 MAD
+  conformes bit-à-bit.
+- **Sécurité :** SQL paramétré, aucune table créée/modifiée.
+- **Notes :** point le plus sensible du périmètre. **Réserves à arbitrer** : couche
+  service/repository sans test dédié, calcul incrémental jamais exercé contre un historique
+  réellement écrit (table vide), interaction avec le garde-fou TASK-128 sur les échéances
+  antérieures à la mise en route. Voir `DONE_DETAIL/DDP-TASK-131-selection-lignes-hors-delai-calcul-incremental.md`.
+
+### TASK-130 — Convention délai de paiement par tiers, front (APPROUVÉE)
+- **Module :** front (`ConventionsDelaiPaiementPanel.tsx`)
+- **Impact :** liste + création (Convention/Facture) + clôture anticipée, message serveur affiché
+  tel quel, bug d'affichage legacy §4.7 non reproduit.
+- **Sécurité :** téléchargement pièce jointe authentifié via blob (pas de lien direct sans JWT).
+- **Notes :** parcours réel bout-en-bout et suite Playwright complète non re-confirmés dans cette
+  session (non-régression jugée probable). Voir `DONE_DETAIL/DDP-TASK-130-convention-delai-paiement-tiers-front.md`.
+
+### TASK-129 — Convention délai de paiement par tiers, back (APPROUVÉE)
+- **Module :** `Declaration.Core`/`Declaration.Infrastructure`
+- **Impact :** corrige le chevauchement de conventions incomplet du legacy (jamais résolu dans le
+  code d'origine), plafond 180j en contrôle applicatif sans contrainte base (conforme décision PO).
+- **Sécurité :** SQL paramétré, aucune colonne ajoutée à `RT_CONVENTIONTIERS`.
+- **Notes :** aucune réserve bloquante. Voir `DONE_DETAIL/DDP-TASK-129-convention-delai-paiement-tiers-back.md`.
+
+### TASK-128 — Paramètre « date de mise en route » société (APPROUVÉE)
+- **Module :** back (2 tables neuves + garde-fou pur)
+- **Impact :** tables neuves `DM_PARAM_DELAIPAIEMENT_SOCIETE`/`DM_REPRISE_DELAIPAIEMENT`
+  (propriété exclusive GRF), garde-fou anti-intégration automatique d'un retard antérieur à la
+  bascule sans reprise manuelle.
+- **Sécurité :** aucune modification de `P_SOCIETE`, migration idempotente, `GRANT` scopé.
+- **Notes :** **réserve à arbitrer PO** — interprétation « désactivation inconditionnelle sans date
+  configurée, même avec historique » documentée par le worker comme un choix, pas une exigence PO
+  explicite. Voir `DONE_DETAIL/DDP-TASK-128-parametre-date-mise-en-route-bootstrap.md`.
+
+### TASK-127 — Socle résolution délai + échéance légale (APPROUVÉE)
+- **Module :** `Declaration.Core`/`Declaration.Infrastructure`
+- **Impact :** résolution du délai applicable (priorité Facture > Convention > défaut société) +
+  calcul de l'échéance légale (jour ouvré via `P_JOURSREPOS`) — socle bloquant pour 5 tasks en aval.
+- **Sécurité :** aucune table créée/modifiée, aucun SQL hors repository.
+- **Notes :** aucune réserve bloquante. Voir `DONE_DETAIL/DDP-TASK-127-socle-resolution-delai-echeance-legale.md`.
+
+## 2026-07-27 (revue architecte — correctifs Déclaration suite test comptable)
+
+### TASK-190 — Backfill rétroactif DateFacture/Reference sur lignes déjà figées (APPROUVÉE)
+- **Module :** back (`IDeclarationRepository`/`DeclarationRepository`, `DeclarationWorkflowService`,
+  `DeclarationsController` — nouvel endpoint admin)
+- **Impact :** corrige les ~5148 lignes `DM_LGTVA` des 6 déclarations `EnCours` déjà figées avant
+  TASK-186/189 (`DateFacture`/`Reference` gravées avec les anciennes valeurs fausses/vides). Écriture
+  ciblée strictement 2 colonnes, jamais sur une déclaration Clôturée/Déposée. Deux bugs réels
+  découverts et corrigés à l'exécution sur le volume de production (dépassement 2100 paramètres SQL
+  Server ; arrondi `DateTime`/`DateTime2` cassant l'idempotence bit-à-bit).
+- **Sécurité :** endpoint gardé `UT_Admin=1` (même garde que TASK-073/079/094), déclenchement manuel
+  exclusivement, aucun secret codé en dur.
+- **Notes :** diff `4bda5b4` relu intégralement, comparaison réelle `DM_LGTVA` vs `RT_ECHEANCE`
+  rejouée indépendamment par l'architecte (5148/5148 `Reference` exacte, 5106/5148 `DateFacture`
+  exacte à la seconde, 42/5148 avec un résidu de 333 microsecondes compris et sans impact métier).
+  **Réserve** : à rejouer séparément sur le serveur du client réel une fois l'endpoint déployé là-bas.
+  Voir `DONE_DETAIL/TASK-190_verify.md`.
+
+### TASK-186 — Correction « Date Facture » erronée (APPROUVÉE)
+- **Module :** back (`Declaration.Selection/SelectionExpliqueeService.cs`)
+- **Impact :** les 3 requêtes règlement-first affichaient `RT_AFFECTATION.AF_Date` sous le nom
+  `DateFacture` au lieu de la vraie `RT_ECHEANCE.DO_Date`, laissant croire que des factures 2025
+  manquaient de la Déclaration. Corrigé (3 lignes SQL), chemin facture-first non concerné.
+- **Sécurité :** aucun impact.
+- **Notes :** diff `3fb550f` relu intégralement, rejeu SQL réel sur `FC2501193` + 4 échantillons,
+  4 suites de tests rejouées indépendamment par l'architecte. Voir `DONE_DETAIL/TASK-186_verify.md`.
+
+### TASK-188 — Colonnes « N° Pièce »/« Échéance » sur la feuille « Règlements sélectionnés » (APPROUVÉE)
+- **Module :** back (`DeclarationRepository.cs`, `DeclarationWorkflowService.cs`) + export
+  (`Exporter.cs`)
+- **Impact :** ajout `RT_MOUVEMENT.MV_Piece`/`MV_Echeance` sur l'export de contrôle, chemin réellement
+  câblé par l'API.
+- **Sécurité :** aucun impact.
+- **Notes :** diff `2211d03` relu intégralement, statistique base réelle `MV_Piece` vide (7,5 %)
+  revérifiée. Voir `DONE_DETAIL/TASK-188_verify.md`.
+
+### TASK-187 — Colonne « Référence » propagée SQL→export (APPROUVÉE pour son périmètre — trou comblé par TASK-189)
+- **Module :** back (`SelectionExpliqueeService.cs`, `SelectionExpliqueeEvaluator.cs`,
+  `ConstructeurDeclaration.cs`, `Declaration.Core/Model.cs`) + export (`Exporter.cs`)
+- **Impact :** propagation correcte et testée, mais initialement **inopérante dans tout export réel** —
+  les méthodes réellement câblées côté API lisent `DM_LGTVA`/`LigneCandidate` directement, jamais
+  `ConstructeurDeclaration`, et `DM_LGTVA` n'avait pas de colonne `Reference`. Découvert par le worker,
+  confirmé indépendamment par l'architecte sur le schéma réel. **Comblé le jour même par TASK-189.**
+- **Sécurité :** aucun impact.
+- **Notes :** diff `1f55fcd` relu intégralement. Voir `DONE_DETAIL/TASK-187_verify.md`.
+
+### TASK-189 — Persistance `DM_LGTVA.Reference` (comble le trou TASK-187, APPROUVÉE)
+- **Module :** migration SQL (`Declaration.Infrastructure/SQL/011_DM_LGTVA_Reference.sql`,
+  `DeclarationTVA.sql`) + back (`WorkflowEntities.cs`, `DeclarationRepository.cs`,
+  `DeclarationWorkflowService.cs`)
+- **Impact :** `Reference` désormais persistée au figeage et relue par les deux méthodes réellement
+  câblées côté API (`ConstruireModeleExportAsync`/`ConstruireModeleControleAsync`). Régression
+  silencieuse évitée sur `RecalculerLigneDepuisCacheAsync` (TASK-147), découverte par la recherche
+  exhaustive demandée par la TASK.
+- **Sécurité :** aucun impact. Migration additive/idempotente sur une table `DM_*` (GRF), aucune table
+  `apbs-gr_winform` touchée.
+- **Notes :** diff `20405ee` relu intégralement, migration rejouée une 3ᵉ fois indépendamment par
+  l'architecte (idempotente confirmée). Réserve non bloquante héritée de TASK-186/187/188 : cycle
+  complet non démontré via un export `.xlsx` réel généré par l'API tournante (process verrouillé sur ce
+  poste, PID 33068 inchangé) — preuve apportée par mécanique SQL réelle + cycle applicatif simulé. Voir
+  `DONE_DETAIL/TASK-189_verify.md`.
+
 ## 2026-07-27 (revue architecte — recadrage TODO.md vs code source)
 
 ### TASK-158 — Popup « Colonnes » ouvert hors écran : flip vertical (APPROUVÉE rétroactivement)

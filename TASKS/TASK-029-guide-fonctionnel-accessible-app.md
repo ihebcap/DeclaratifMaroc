@@ -6,6 +6,32 @@ Un **guide fonctionnel** (version client) décrivant le process de déclaration 
 imprimable, aucune dépendance externe). Il doit être **consultable directement depuis le front**
 `declaration-tva-web` (React 19 / Vite / TS), sans que l'utilisateur ait à ouvrir un fichier hors application.
 
+> ✅ **Guide rafraîchi en v2 (28/07/2026)**, à la demande du PO (« la partie TVA est plus au moins stable,
+> on peut mettre à jour ») — contenu revu par l'architecte contre tout ce qui a été livré depuis la v1
+> (08/07/2026) : le modèle métier de fond (4 interrogations, affectation, statuts, calcul, origines,
+> dépôt DGI) n'a pas changé, confirmant le constat de stabilité. Deux ajouts réels : (1) nouvelle section
+> « 5 · Code activité » (jusqu'ici absente), décrivant le référentiel par domaine (Achats/Ventes disjoints,
+> TASK-172), la résolution automatique par le tiers ERP avec repli explicite sur vide (jamais de défaut
+> silencieux, TASK-179), l'affectation manuelle unitaire/en masse (TASK-173), et la ventilation à 3 axes
+> source/taux/code activité (TASK-174/184/185) ; (2) note sur la **réouverture d'une déclaration clôturée
+> par un profil administrateur** (§6, TASK-095), absente de la v1. Le module « Délai de Paiement » (DDP,
+> TASK-127-136) est un périmètre **distinct**, non couvert par ce guide. Voir le fichier HTML pour le
+> détail — **la source de vérité reste ce fichier `DOCS/`**, à copier tel quel dans `public/` (étape 1
+> ci-dessous), non réécrit.
+>
+> ⚠️ **Correction factuelle supplémentaire (28/07/2026, signalée par le PO : « Exclue ça n'existe pas
+> maintenant »)** — vérification code demandée et faite avant de rectifier. Confirmé par grep exhaustif
+> (`Declaration.Application/Services/DeclarationWorkflowService.cs`) : `EtatLigne.Exclue`/`Reportee`/
+> `Ecartee` ne sont **plus jamais assignés** depuis TASK-097/099 (décision PO 14/07/2026, déjà livrée)
+> — seuls `Proposee`/`Integree` sont produits aujourd'hui ; le geste « je ne déclare pas » est
+> simplement **ne pas cocher** un règlement à l'étape Sélection (aucun motif, aucun statut créé,
+> resélectionnable sans limite de temps). Le composant portant l'ancien bouton « Exclure »
+> (`WorkstationPanel.tsx`) est confirmé **mort** — plus aucun `import`/`<WorkstationPanel` dans le
+> front. §6 (Statuts) réécrite en conséquence (2 états au lieu de 5), §4 (4ᵉ interrogation) et §7
+> (dates — la borne basse « dans le mois » a aussi été supprimée par TASK-099, corrigée en écho) mis
+> à jour en cohérence. Les 3 statuts legacy restent lisibles en base sur des déclarations figées
+> avant TASK-097 (non rétroactif) mais ne sont plus produits pour les nouvelles.
+
 État front vérifié (08/07/2026) :
 - `declaration-tva-web/public/` existe (sert les assets statiques à la racine ; copiés dans `dist/` au build).
 - `src/App.tsx` porte une **sidebar** (`.sidebar-menu`, items `.sidebar-item`) avec les entrées « Mes Déclarations »

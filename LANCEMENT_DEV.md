@@ -133,8 +133,10 @@ cd d:\_vibe\GRF\Declaration.API
 dotnet run
 ```
 
-- API : **http://localhost:5018**
-- Swagger (test des endpoints) : **http://localhost:5018/swagger**
+- API : **http://localhost:5000** (port gouverné par `connections.json → ServerConfig.Port`,
+  cf. TASK-115 — `Program.cs` force `UseUrls` avec cette valeur, qui écrase l'`applicationUrl`
+  de `launchSettings.json`)
+- Swagger (test des endpoints) : **http://localhost:5000/swagger**
 - En dev → mode **fixtures** automatique : aucune connexion GRF/Sage requise.
 
 ### 2. Frontend (React / Vite)
@@ -158,7 +160,7 @@ npm run dev
 
 ```powershell
 # Backend répond
-Invoke-RestMethod "http://localhost:5018/swagger/index.html" | Out-Null; "API OK"
+Invoke-RestMethod "http://localhost:5000/swagger/index.html" | Out-Null; "API OK"
 ```
 
 Ouvrir **http://localhost:5173** → l'écran de déclaration TVA doit s'afficher.

@@ -72,6 +72,7 @@ IT6 Égalité ventilation cache ↔ OM                    ✅  SQL Server
     "ModePaiement": "",
     "DatePaiement": null,
     "DateFacture": null,
+    "Reference": null,
     "Source": 0,
     "IsReport": false
   }
@@ -102,6 +103,7 @@ IT6 Égalité ventilation cache ↔ OM                    ✅  SQL Server
     "ModePaiement": "",
     "DatePaiement": null,
     "DateFacture": null,
+    "Reference": null,
     "Source": 0,
     "IsReport": false
   }

@@ -120,7 +120,7 @@
   <p class="sub">Ce que le module fait, pourquoi, et selon quelles règles. Document fonctionnel de référence
      décrivant le fonctionnement de la déclaration de TVA déductible et le relevé de déductions.</p>
   <div class="meta">
-    <span><b>Version</b> 1 — 08/07/2026</span>
+    <span><b>Version</b> 2 — 28/07/2026</span>
     <span><b>Objet</b> Déclaration de TVA déductible (Maroc)</span>
     <span><b>Nature</b> Document fonctionnel de référence</span>
     <span><b>Déploiement</b> Multi-client</span>
@@ -136,6 +136,7 @@
       <li><a href="#perimetre">Périmètre : système ≠ dépôt</a></li>
       <li><a href="#modele">Le modèle : l'affectation</a></li>
       <li><a href="#interrogations">Les 4 interrogations</a></li>
+      <li><a href="#codeactivite">Code activité</a></li>
       <li><a href="#statuts">Statuts de ligne &amp; transparence</a></li>
       <li><a href="#inclusion">Règles d'inclusion par source</a></li>
       <li><a href="#calcul">Le calcul (précision)</a></li>
@@ -151,8 +152,9 @@
     <p><strong>Fiabilité du calcul</strong> — produire une déclaration dont chaque montant est exact :
        calcul en pleine précision, arrondi maîtrisé, aucune dérive.</p>
     <p><strong>Transparence totale</strong> — chaque montant déclaré est justifiable, et
-       <strong>aucune ligne n'est jamais écartée en silence</strong> : ce qui est déclaré, reporté ou exclu
-       est toujours visible, avec son motif.</p>
+       <strong>aucun règlement déclarable n'est jamais perdu en silence</strong> : ce qui n'est pas
+       sélectionné aujourd'hui reste candidat demain (aucune limite de temps), et toute anomalie détectée
+       reste visible avec son motif, jamais mise de côté silencieusement.</p>
     <div class="callout c-info">
       <span class="tag">Principe directeur</span>
       <p>La preuve de confiance n'est <strong>pas</strong> un total qui égale un autre total. C'est :
@@ -219,7 +221,8 @@
       <div class="qcard">
         <div class="qh"><div class="qn">1</div><h4>Rapprochement</h4></div>
         <p class="role"><span class="pill p-info">preuve · lecture seule</span></p>
-        <p>Le règlement est-il rapproché en banque ? → <strong>éligible ce mois</strong> ou <strong>reporté</strong>.</p>
+        <p>Le règlement est-il rapproché en banque ? → <strong>déclarable dès maintenant</strong> ou
+           <strong>pas encore</strong> (redevient candidat dès son rapprochement, sans limite de temps).</p>
       </div>
       <div class="qcard">
         <div class="qh"><div class="qn">2</div><h4>Affectation</h4></div>
@@ -234,13 +237,14 @@
            <span style="color:var(--stop)">rouge = rejet DGI</span>. À corriger en amont, pas dans la déclaration.</p>
       </div>
       <div class="qcard" style="border-color:var(--accent)">
-        <div class="qh"><div class="qn">4</div><h4>Factures à déclarer</h4></div>
+        <div class="qh"><div class="qn">4</div><h4>Sélection à déclarer</h4></div>
         <p class="role"><span class="pill p-ok">action</span></p>
-        <p>Le relevé de déductions — <strong>deux faces</strong>, décisions et clôture. La seule surface où l'on agit.</p>
+        <p>Un seul geste engage la déclaration : <strong>cocher/décocher</strong> les règlements à intégrer.
+           La seule surface où l'on agit.</p>
       </div>
     </div>
     <p style="margin-top:14px">Les 3 preuves sont en <strong>lecture seule</strong>. Elles ne servent qu'à
-       <strong>justifier</strong> : depuis n'importe quelle ligne des Factures, on remonte à ses 3 preuves
+       <strong>justifier</strong> : depuis n'importe quelle ligne, on remonte à ses 3 preuves
        (<em>payé ? bien affecté ? conforme ?</em>).</p>
     <h3>Les domaines ne sont pas des étapes</h3>
     <p>Décaissement / Encaissement / Dépense / Frais bancaire sont des <strong>facettes / filtres transverses</strong>
@@ -248,45 +252,87 @@
   </section>
 
   <!-- 5 -->
-  <section id="statuts">
-    <h2>5 · Statuts de ligne &amp; règles de transparence</h2>
-    <p class="lead">La face « je ne déclare pas » est aussi importante que « je déclare » — chaque exclusion porte
-       un <strong>motif en clair</strong>.</p>
-    <h3>Face « je déclare »</h3>
-    <p>Les affectations éligibles, éclatées par facture → le relevé de déductions. Montant = TVA au prorata
-       réellement affecté. Seul le <strong>déductible</strong> sort au XML DGI.</p>
-    <h3>Face « je ne déclare pas » — trois statuts distincts</h3>
+  <section id="codeactivite">
+    <h2>5 · Code activité : une troisième facette de ventilation</h2>
+    <p class="lead">Indépendant du domaine et du taux : chaque ligne peut aussi être rattachée à un
+       <strong>code activité</strong>, qui qualifie la nature de l'opération pour la déclaration.</p>
+    <p>Deux référentiels <strong>distincts et jamais mélangés</strong> : les codes « Achats » (côté Décaissement)
+       et les codes « Ventes » (côté Encaissement) sont deux listes séparées — le menu de sélection ne propose
+       jamais un code de l'autre domaine.</p>
+    <h3>Résolution du code</h3>
+    <p>Le code est d'abord recherché <strong>automatiquement</strong> sur le tiers de la pièce (code d'activité
+       déclaré côté ERP). <strong>À défaut, il reste vide</strong> — jamais assigné par défaut en silence.
+       Une ligne sans code résolu peut être affectée <strong>manuellement</strong>, ligne par ligne ou en masse
+       (par sélection ou par filtre de domaine).</p>
+    <div class="callout c-info">
+      <span class="tag">Transparence, même règle qu'ailleurs</span>
+      <p>Une ligne sans code activité résolu n'est <strong>jamais masquée</strong> : elle apparaît, code vide,
+         dans les mêmes tableaux de contrôle que les lignes classées — cohérent avec le principe directeur
+         (§1) de ne jamais écarter une ligne en silence.</p>
+    </div>
+    <h3>À quoi il sert</h3>
+    <p>Le code activité ventile les totaux de la déclaration selon un <strong>3ᵉ axe</strong>, en plus des deux
+       déjà connus :</p>
     <table>
-      <tr><th>Statut</th><th>Nature</th><th>Signification</th></tr>
-      <tr><td><span class="pill p-warn">Reportée</span></td><td>système</td>
-          <td>Règlement pas encore rapproché → repart au mois de son rapprochement. On reporte le <em>règlement</em>.
-              <strong>Hors équilibre du mois</strong> : compteur séparé.</td></tr>
-      <tr><td><span class="pill p-stop">Écartée</span></td><td>système</td>
-          <td>Non éligible, <strong>motif affiché</strong> : pas de TVA, hors période, doublon, nature non déductible…</td></tr>
-      <tr><td><span class="pill p-info">Exclue</span></td><td>manuelle</td>
-          <td>Choix du comptable — <strong>tracé et réversible</strong>.</td></tr>
+      <tr><th>Axe</th><th>Répond à</th></tr>
+      <tr><td>Par <strong>source</strong></td><td>décaissement banque / espèce / dépense / frais bancaire</td></tr>
+      <tr><td>Par <strong>taux</strong></td><td>quel taux de TVA (0 %, 7 %, 10 %, 14 %, 20 %…)</td></tr>
+      <tr><td>Par <strong>code activité</strong></td><td>quelle nature d'activité (achat ou vente)</td></tr>
     </table>
-    <div class="callout c-ok">
-      <span class="tag">La réconciliation boucle toujours</span>
-      <pre>Σ candidates = intégrées + exclues + reportées + écartées + proposées</pre>
-      <p>Elle est garantie en permanence et affichée comme réassurance : <strong>aucune ligne n'existe hors de
-         cette somme</strong>.</p>
-    </div>
-    <p><strong>Actions possibles</strong> (sur le règlement / l'affectation) : <em>exclure</em> ·
-       <em>réintégrer / annuler l'exclusion</em> · <em>forcer le report</em>. <strong>Geste final : clôturer</strong>,
-       verrouillé tant qu'il reste des lignes à décider ou une anomalie bloquante (le bouton affiche le reste-à-faire).</p>
-    <div class="callout c-warn">
-      <span class="tag">Reportées : deux totaux, jamais mélangés</span>
-      <p>L'équilibre du mois ne porte que sur les <strong>rapprochées</strong> (mois déclaré). Les reportées sont un
-         compteur séparé « ce qui attend le rapprochement ». Les mélanger fausserait la lecture de l'équilibre.</p>
-    </div>
+    <p class="legend">Trois lectures croisées du même montant total, jamais recalculées différemment selon l'axe
+       choisi — utile pour l'écran de contrôle et l'export Excel (feuille Récap).</p>
   </section>
 
   <!-- 6 -->
+  <section id="statuts">
+    <h2>6 · Statuts de ligne &amp; règles de transparence</h2>
+    <p class="lead">Le modèle a été volontairement <strong>simplifié</strong> : ne pas déclarer un règlement n'est
+       pas un rejet à motiver, c'est simplement <strong>ne pas le cocher</strong>.</p>
+    <h3>Un seul geste, deux statuts de ligne</h3>
+    <p>Une fois un règlement coché à l'étape « Sélection » et le calcul lancé, chacune de ses lignes n'a plus
+       que <strong>deux</strong> états possibles :</p>
+    <table>
+      <tr><th>Statut</th><th>Signification</th></tr>
+      <tr><td><span class="pill p-info">Proposée</span></td>
+          <td>Candidate retenue par la sélection, valorisée, pas encore confirmée.</td></tr>
+      <tr><td><span class="pill p-ok">Intégrée</span></td>
+          <td>Confirmée pour cette déclaration — c'est elle qui compose le relevé de déductions.</td></tr>
+    </table>
+    <div class="callout c-ok">
+      <span class="tag">La réconciliation boucle toujours</span>
+      <pre>Σ candidates = intégrées + proposées</pre>
+      <p>Garantie en permanence et affichée comme réassurance : <strong>aucune ligne n'existe hors de cette
+         somme</strong>.</p>
+    </div>
+    <h3>« Je ne déclare pas » = ne pas cocher, rien de plus</h3>
+    <p>Un règlement non rapproché, ou simplement laissé décoché par choix, <strong>ne produit aucune ligne</strong> —
+       ni motif, ni statut de rejet enregistré. Il reste sélectionnable tel quel à une période future, sans
+       limite de temps : le critère réel est « non encore déclaré » (voir §7), pas « déclaré ou perdu ». Aucun
+       geste de « réintégration » n'est donc nécessaire : il suffit de le cocher quand son tour vient.</p>
+    <div class="callout c-info">
+      <span class="tag">Anomalie de qualité de donnée ≠ mise à l'écart</span>
+      <p>Un problème détecté sur une facture sélectionnée (tiers sans ICE, facture introuvable côté ERP…) ne
+         retire <strong>jamais</strong> la ligne du lot : elle reste <em>Proposée</em>/<em>Intégrée</em>, avec une
+         <strong>alerte bloquante affichée</strong> à l'écran de vérification — à corriger avant de pouvoir
+         clôturer, jamais mise de côté en silence.</p>
+    </div>
+    <p><strong>Geste final : clôturer</strong>, verrouillé tant qu'il reste une anomalie bloquante (le bouton
+       affiche le reste-à-faire).</p>
+    <div class="callout c-info">
+      <span class="tag">Réouverture (profil administrateur)</span>
+      <p>Une déclaration clôturée reste, en cas d'erreur détectée après coup, <strong>réouvrable par un profil
+         administrateur</strong> : le geste est tracé (horodatage, traçabilité), et remet la déclaration en état
+         modifiable avant une nouvelle clôture. Ce n'est <strong>pas</strong> une action du parcours normal —
+         seulement un filet de sécurité.</p>
+    </div>
+  </section>
+
+  <!-- 7 -->
   <section id="inclusion">
-    <h2>6 · Règles d'inclusion par source</h2>
-    <p class="lead">On déclare le mois précédent : en 07/2026 on déclare 06/2026.
-       <strong>La date de facture ne décide jamais l'inclusion</strong> (affichage seulement).</p>
+    <h2>7 · Règles d'inclusion par source</h2>
+    <p class="lead">On déclare jusqu'au mois précédent inclus : en 07/2026 on déclare tout ce qui est
+       déclarable jusqu'au 30/06/2026. <strong>La date de facture ne décide jamais l'inclusion</strong>
+       (affichage seulement).</p>
     <p><strong>Quelle date décide de la période ?</strong> Celle qui matérialise le <strong>paiement effectif</strong> —
        car c'est le paiement, pas la facture, qui ouvre le droit à déduire :</p>
     <ul>
@@ -296,19 +342,26 @@
       <li><strong>Décaissement espèce</strong> → la <strong>date de règlement</strong> (pas de rapprochement bancaire).</li>
       <li><strong>Dépense / Frais bancaire</strong> → la <strong>date de l'opération</strong> elle-même.</li>
     </ul>
+    <div class="callout c-warn">
+      <span class="tag">Pas de borne basse — rattrapage de l'arriéré</span>
+      <p>Le critère n'est <strong>pas</strong> « rapproché pendant le mois » mais <strong>« rapproché jusqu'à la
+         fin de la période ET pas encore déclaré »</strong> (<code>DT_Id</code> non posé). Un règlement rapproché
+         en avril mais jamais déclaré reste donc proposable en juin, juillet, ou n'importe quand après — rien ne
+         se perd entre deux mois, même l'espèce (aucune borne basse, quel que soit le mode de paiement).</p>
+    </div>
     <table>
       <tr><th>Source</th><th>Critère de date</th><th>Conditions</th></tr>
       <tr><td>Décaissement fournisseur<br>(chèque / traite / virement)</td>
-          <td><strong>date de rapprochement</strong> dans le mois</td>
-          <td>rapproché + affecté à une facture, affectation non déclarée</td></tr>
+          <td><strong>date de rapprochement</strong> ≤ fin de période</td>
+          <td>rapproché + affecté à une facture, affectation non encore déclarée (<code>DT_Id IS NULL</code>)</td></tr>
       <tr><td>Décaissement espèce</td>
-          <td><strong>date de règlement</strong> dans le mois</td>
-          <td>affecté à une facture, affectation non déclarée</td></tr>
-      <tr><td>Dépense</td><td>date de la dépense</td><td>uniquement <strong>avec TVA</strong></td></tr>
-      <tr><td>Frais bancaire</td><td>date du frais</td><td>uniquement <strong>avec TVA</strong></td></tr>
+          <td><strong>date de règlement</strong> ≤ fin de période</td>
+          <td>affecté à une facture, affectation non encore déclarée</td></tr>
+      <tr><td>Dépense</td><td>date de la dépense ≤ fin de période</td><td>uniquement <strong>avec TVA</strong></td></tr>
+      <tr><td>Frais bancaire</td><td>date du frais ≤ fin de période</td><td>uniquement <strong>avec TVA</strong></td></tr>
     </table>
     <p>Critère réel du « reste à déclarer » = <strong>rapproché ≤ fin de période</strong> ET
-       <strong>affectation non encore déclarée</strong>.</p>
+       <strong>affectation non encore déclarée</strong> — sans aucune borne de début.</p>
     <div class="callout c-info">
       <span class="tag">Exemple concret</span>
       <p>Facture fournisseur datée du <strong>12/03</strong>, réglée par chèque émis le <strong>28/05</strong>,
@@ -318,14 +371,15 @@
          décide</strong>.</p>
       <p style="margin-top:8px"><strong>Paiement en plusieurs fois</strong> : une facture réglée par deux chèques
          rapprochés — l'un en juin, l'autre en juillet — donne <strong>deux affectations</strong>, déclarées
-         respectivement sur juin et juillet, chacune au <strong>prorata de son montant</strong>. Le reste attend
-         son rapprochement (statut <em>Reportée</em>).</p>
+         respectivement sur juin et juillet, chacune au <strong>prorata de son montant</strong>. Le second chèque,
+         tant qu'il n'est pas rapproché, <strong>n'apparaît simplement pas encore</strong> dans le lot à déclarer —
+         il y entrera naturellement une fois pointé, sans action de rattrapage à faire.</p>
     </div>
   </section>
 
-  <!-- 7 -->
+  <!-- 8 -->
   <section id="calcul">
-    <h2>7 · Le calcul (garantie de précision)</h2>
+    <h2>8 · Le calcul (garantie de précision)</h2>
     <p>Pour chaque affectation (paiement partiel ou total d'une facture) :</p>
 <pre>proration_paiement = montant_affecté / TTC_facture      (pleine précision, AUCUN arrondi intermédiaire)
 
@@ -346,9 +400,9 @@ Pour chaque taux i de la facture (HT_i, TVA_i issus de l'ERP) :
        toutes les affectations qui la pointent (performance et cohérence).</p>
   </section>
 
-  <!-- 8 -->
+  <!-- 9 -->
   <section id="origines">
-    <h2>8 · Origines de la TVA</h2>
+    <h2>9 · Origines de la TVA</h2>
     <p class="lead">Toutes les échéances ne se lisent pas de la même façon ; le module route chaque écriture vers
        la bonne source de détail TVA.</p>
     <table>
@@ -367,9 +421,9 @@ Pour chaque taux i de la facture (HT_i, TVA_i issus de l'ERP) :
     </div>
   </section>
 
-  <!-- 9 -->
+  <!-- 10 -->
   <section id="dgi">
-    <h2>9 · Dépôt DGI (relevé de déductions, Simpl-TVA)</h2>
+    <h2>10 · Dépôt DGI (relevé de déductions, Simpl-TVA)</h2>
     <p>Le module génère lui-même le fichier XML de dépôt, au format du relevé de déductions. Deux artefacts sont
        consultables <strong>avant dépôt</strong> : un <strong>écran de contrôle</strong> et un <strong>export
        Excel</strong> (feuille Détail + feuille Récap).</p>

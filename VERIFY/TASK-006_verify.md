@@ -38,6 +38,7 @@
       "ModePaiement": "2",
       "DatePaiement": "2026-07-01T00:00:00",
       "DateFacture": "2026-06-15T00:00:00",
+      "Reference": null,
       "Source": 0,
       "IsReport": false
     },
@@ -61,6 +62,7 @@
       "ModePaiement": "2",
       "DatePaiement": "2026-07-01T00:00:00",
       "DateFacture": "2026-06-15T00:00:00",
+      "Reference": null,
       "Source": 0,
       "IsReport": false
     },
@@ -84,6 +86,7 @@
       "ModePaiement": "2",
       "DatePaiement": "2026-07-01T00:00:00",
       "DateFacture": "2026-06-15T00:00:00",
+      "Reference": null,
       "Source": 0,
       "IsReport": false
     },
@@ -107,6 +110,7 @@
       "ModePaiement": "1",
       "DatePaiement": "2026-07-02T00:00:00",
       "DateFacture": "2026-06-16T00:00:00",
+      "Reference": null,
       "Source": 1,
       "IsReport": false
     },
@@ -130,6 +134,7 @@
       "ModePaiement": "1",
       "DatePaiement": "2026-07-02T00:00:00",
       "DateFacture": "2026-06-16T00:00:00",
+      "Reference": null,
       "Source": 1,
       "IsReport": false
     },
@@ -153,6 +158,7 @@
       "ModePaiement": "",
       "DatePaiement": null,
       "DateFacture": null,
+      "Reference": null,
       "Source": 0,
       "IsReport": false
     },
@@ -176,6 +182,7 @@
       "ModePaiement": "",
       "DatePaiement": null,
       "DateFacture": null,
+      "Reference": null,
       "Source": 0,
       "IsReport": false
     },
@@ -199,6 +206,7 @@
       "ModePaiement": "",
       "DatePaiement": null,
       "DateFacture": null,
+      "Reference": null,
       "Source": 0,
       "IsReport": false
     },
@@ -222,6 +230,7 @@
       "ModePaiement": "",
       "DatePaiement": null,
       "DateFacture": null,
+      "Reference": null,
       "Source": 0,
       "IsReport": false
     },
@@ -245,6 +254,7 @@
       "ModePaiement": "",
       "DatePaiement": null,
       "DateFacture": null,
+      "Reference": null,
       "Source": 0,
       "IsReport": false
     },
@@ -268,6 +278,7 @@
       "ModePaiement": "",
       "DatePaiement": null,
       "DateFacture": null,
+      "Reference": null,
       "Source": 0,
       "IsReport": false
     }

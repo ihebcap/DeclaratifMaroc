@@ -38,6 +38,7 @@
       "ModePaiement": "",
       "DatePaiement": null,
       "DateFacture": null,
+      "Reference": null,
       "Source": 0,
       "IsReport": false
     },
@@ -61,6 +62,7 @@
       "ModePaiement": "",
       "DatePaiement": null,
       "DateFacture": null,
+      "Reference": null,
       "Source": 0,
       "IsReport": false
     },
@@ -84,6 +86,7 @@
       "ModePaiement": "",
       "DatePaiement": null,
       "DateFacture": null,
+      "Reference": null,
       "Source": 0,
       "IsReport": false
     }
@@ -99,6 +102,7 @@
   "RecapsParTaux": [
     {
       "Taux": 20,
+      "Collecte": false,
       "TotalHT": 2000.0,
       "TotalTva": 400.0,
       "TotalTtc": 2400.0
@@ -107,6 +111,7 @@
   "RecapsParActivite": [
     {
       "CodeActivite": "(sans activit\u00E9)",
+      "Collecte": false,
       "TotalHT": 2000.0,
       "TotalTva": 400.0,
       "TotalTtc": 2400.0

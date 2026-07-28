@@ -1,5 +1,95 @@
 # TODO — Module Déclaration TVA (GRF)
 
+## 🐞 « Date Facture » erronée dans la Déclaration (grilles + export Excel) — signalée via un test comptable sur factures 2025 (PO 27/07/2026)
+Signalement PO, déclenché par un retour comptable : « il manque les factures de 2025 » sur la
+Déclaration. Diagnostic architecte (lecture code + vérification base réelle `GR_EMA_DISTRIBUTION`,
+lecture seule) : **la sélection n'a aucun défaut** — la règle « date de rapprochement » (TASK-062,
+§1quater/quinquies `MODULE_DECLARATION_TVA.md`) fonctionne correctement, confirmée sur données réelles
+(352 factures fournisseur datées 2025, toutes rapprochées uniquement en 2026 — aucun rapprochement 2025
+n'existe dans cette base —, non encore déclarées, donc légitimement candidates à une déclaration 2026).
+Le vrai défaut est un **champ d'affichage faux** : la colonne « Date Facture » (grilles + export Excel,
+feuille « Factures à déclarer ») montre en réalité `RT_AFFECTATION.AF_Date` (date d'enregistrement de
+l'affectation) au lieu de `RT_ECHEANCE.DO_Date` (date réelle de la facture) — vérifié sur le cas concret
+`FC2501193` fourni par le PO (`DO_Date` réel = 18/07/2025 ; valeur affichée 15/04/2026 = `AF_Date` exacte
+de son affectation) et confirmé sur 4 autres échantillons. Cause : `SelectionExpliqueeService.cs`
+(chemin règlement-first uniquement) aliase `A.AF_Date AS DateFacture` au lieu de `E.DO_Date AS
+DateFacture`, alors que `RT_ECHEANCE E` est déjà jointe. Le chemin facture-first (TASK-050) est déjà
+correct, non concerné. Conséquence : en cherchant les factures par année réelle, aucune ligne 2025
+n'apparaît jamais dans cette colonne — d'où l'impression de factures manquantes, alors qu'elles sont
+bien sélectionnées.
+
+Demande PO complémentaire (même session de test) : ajouter la colonne `RT_ECHEANCE.DO_Reference` à
+l'export, absente de bout en bout de la chaîne Déclaration (existe déjà côté écran Factures, TASK-041).
+Puis une 3ᵉ demande (même session) : ajouter `RT_MOUVEMENT.MV_Piece`/`MV_Echeance` à la feuille
+« Règlements sélectionnés » — `MV_Echeance` est déjà lu ailleurs dans le pipeline (juste à relier),
+`MV_Piece` nécessite un `SELECT` neuf.
+
+> ✅ **TASK-186 approuvée** (27/07/2026, revue architecte complète : diff `3fb550f` relu intégralement
+> — 3 lignes changées, rien d'autre —, rejeu SQL indépendant confirmant `FC2501193` passe bien de
+> `AF_Date`=15/04/2026 à `DO_Date`=18/07/2025, build individuel des 5 projets concernés + 4 suites de
+> tests **rejouées indépendamment par l'architecte** — Core 89/89, Export.Excel 3/3, Selection 59/60
+> (même échec préexistant non lié, auth SQL locale), Orchestration 189/189 — process `Declaration.API.exe`
+> verrouillant le build solution confirmé être le même PID 33068 que documenté par le worker, donc
+> blocage environnemental réel et non fabriqué). Voir `DONE_DETAIL/TASK-186-...md`.
+>
+> ✅ **TASK-188 approuvée** (27/07/2026, même revue) — colonnes « N° Pièce »/« Échéance » ajoutées à la
+> feuille « Règlements sélectionnés », chemin réellement câblé par l'API (`ConstruireModeleControleAsync`
+> → `GetReglementsRapprochementAsync`, aucun gap architecture). Diff `2211d03` relu intégralement,
+> statistique `MV_Piece` vide (7,5 %, 110/1462) revérifiée indépendamment et confirmée exacte, échantillon
+> `Reference`/`MvPiece` sur cas réels revérifié. Voir `DONE_DETAIL/TASK-188-...md`.
+>
+> ⚠️ **TASK-187 approuvée pour son périmètre écrit** (27/07/2026) — la propagation `Reference` (diff
+> `1f55fcd`) est livrée et testée correctement de bout en bout jusqu'à
+> `ConstructeurDeclaration`/`Exporter.cs`. **Trou fonctionnel comblé par TASK-189 ci-dessous** (le champ
+> n'était pas persisté sur `DM_LGTVA`, donc jamais lu par les deux méthodes réellement câblées côté API).
+>
+> ✅ **TASK-189 approuvée** (27/07/2026, revue architecte complète : diff `20405ee` relu intégralement —
+> migration additive `DM_LGTVA.Reference` (NVARCHAR(200) NULL) **rejouée une 3ᵉ fois indépendamment par
+> l'architecte** sur `GR_EMA_DISTRIBUTION` → idempotente confirmée, type/nullabilité de la colonne
+> revérifiés en base, 5148 lignes existantes confirmées lisibles avec `Reference = NULL`. Câblage des 5
+> points du périmètre (`LigneCandidate`, `SaveLignesCandidatesAsync`, `MapLignesCandidates` 2 branches,
+> `ConstruireModeleExportAsync`/`ConstruireModeleControleAsync`) relu et cohérent. Point additionnel
+> légitime détecté par la recherche exhaustive demandée par la TASK et corrigé :
+> `RecalculerLigneDepuisCacheAsync` (TASK-147) aurait silencieusement effacé une `Reference` déjà
+> persistée lors d'un recalcul de ligne — vérifié conforme au même patron que `CodeActivite` déjà en
+> place au même endroit. Tests **rejoués indépendamment par l'architecte** : Core 89/89, Selection 59/60
+> (même échec préexistant non lié), Orchestration 196/196 (189 existants + 7 nouveaux). Voir
+> `DONE_DETAIL/TASK-189-...md`.
+> ⚠️ **Suivi opérationnel (27/07/2026, après-coup)** : le PO a testé en conditions réelles et confirmé
+> le symptôme persistant — cause identifiée par l'architecte, **pas un défaut de code** :
+> 1. Le service Windows `DeclaratifMaroc` installé (`C:\Program Files\APBS\Declaratif Maroc\`) était
+>    resté sur un binaire du 24/07/2026 (antérieur aux 4 correctifs), **arrêté** au moment du contrôle.
+>    Le PO a relancé `Deploy-All.ps1` (build frais confirmé : `deploy\Declaration.Selection.dll`
+>    horodaté après le commit TASK-189) — **il reste à exécuter `installer\DeclaratifMaroc.exe` en
+>    administrateur** pour que l'installation soit réellement mise à jour, puis démarrer le service.
+> 2. **Même une fois l'API à jour, les lignes `DM_LGTVA` des 6 déclarations déjà existantes
+>    (`TVA1-2026-01` à `06`, 5148 lignes, toutes `EnCours`) resteront fausses** : `DateFacture`/
+>    `Reference` sont figées à l'écriture et jamais recalculées par le code existant (vérifié :
+>    chargement, revalidation, resynchronisation ne les retouchent pas). **Décision PO (27/07/2026) :
+>    backfill rétroactif demandé, limité aux déclarations `EnCours`** (jamais Clôturée/Déposée,
+>    cohérent avec la doctrine déjà appliquée TASK-094) → **TASK-190 ouverte ci-dessous**.
+
+> ✅ **TASK-190 approuvée** (27/07/2026, revue architecte complète : diff `4bda5b4` relu intégralement
+> — écriture strictement limitée à `DateFacture`/`Reference`, endpoint gardé `UT_Admin=1`, garde-fou
+> Clôturée/Déposée dans le code, pas seulement dans le rapport). **Exécution réelle vérifiée
+> indépendamment sur `GR_EMA_DISTRIBUTION`** : requête de comparaison directe rejouée par
+> l'architecte → 5148/5148 lignes `EnCours` avec `Reference` exacte (100 %), `DateFacture` exacte à la
+> seconde sur 5106/5148 (99,2 %), les 42 restantes (0,8 %) avec un écart de **333 microsecondes**
+> confirmé et compris (rounding client .NET DateTime ↔ `datetime`/`datetime2` SQL Server, sans impact
+> — identiques à la seconde près, `DateFacture` n'étant jamais consommée à une précision supérieure).
+> `FC2501193` revérifié directement : `DateFacture=2025-07-18`, `Reference=NULL` (attendu), HT/Taux/
+> TVA/TTC/Etat confirmés inchangés. Les 6 déclarations reconfirmées `EnCours` (aucune touchée en
+> dehors de ce statut). Build solution complète et 3 suites de tests **rejouées indépendamment** :
+> Core 89/89, Selection 59/60 (échec préexistant non lié), Orchestration 205/205 — plus aucun verrou
+> de process (confirmé). Voir `DONE_DETAIL/TASK-190-...md` et `DONE_DETAIL/TASK-190_verify.md`.
+>
+> ⚠️ **Précision PO (27/07/2026)** : l'exécution ci-dessus a eu lieu sur la base de référence de ce
+> poste de dev (`GR_EMA_DISTRIBUTION`) — **le backfill doit être rejoué séparément sur le serveur du
+> client réel** une fois l'endpoint livré là-bas (pipeline habituel `Deploy-All.ps1` →
+> `installer\DeclaratifMaroc.exe` → installation). Refaire sur place les mêmes vérifications
+> (déclarations bien `EnCours`, dry-run d'abord, rejeu à vide en 2ᵉ passage) — ne pas supposer que
+> l'état constaté ici (6 déclarations, toutes `EnCours`) se reproduit chez le client.
+
 ## 🐞 Drill « Codes activité » (écran ③) : impossible de basculer Achats/Ventes sans sortir (signalement PO 24/07/2026, capture d'écran)
 Signalement PO : dans le drill « Codes activité » ouvert depuis l'onglet Déductible (Achats), seule la
 grille Achats est accessible — aucun moyen de voir/affecter les codes activité côté Encaissement
@@ -57,6 +147,13 @@ ce mapping compte↔taux est-il **configurable par société** (cohérent avec l
 Pas de TASK ouverte : contexte insuffisant (schéma exact du grand livre cible, client concerné,
 échéance, réponses aux deux questions ci-dessus). À transformer en TASK complète (tous champs
 obligatoires) dès que ces éléments seront précisés par le PO.
+
+**Extension confirmée au module Délai de Paiement (PO 28/07/2026)** : même principe d'indépendance
+vis-à-vis de Sage à terme, appliqué cette fois au module DDP — GRF deviendra une source parmi d'autres,
+le grand livre comptable s'ajoutant comme nouvelle source. Voir la réserve n°6 et
+[TASK-191](TASKS/TASK-191-cablage-nature-date-livraison-marchandise-ddp.md) dans la section DDP
+ci-dessous — même remarque de vigilance : pas d'abstraction multi-source anticipée tant que le schéma
+cible n'est pas précisé.
 
 ## 🗺️ ROADMAP — écran ③ Vérifier & Intégrer (+ écran ② Affectations) : trop de boutons d'action distincts (ressenti PO 24/07/2026, à évaluer, pas une TASK prête)
 Ressenti PO : l'écran est devenu compliqué à l'usage. Vérification architecte : **confirmé** — rien
@@ -445,7 +542,49 @@ H3 jointure cross-catalogue `GrfConnection`/`PersistenceConnection` dans `/rappr
 > ou réouverture) — pas de retry automatique, hors périmètre de cette task, amélioration UX
 > distincte à cadrer si le PO le souhaite. Voir `DONE.md`.
 
-## 🆕 Nouveau périmètre — Délai de Paiement Maroc (analyse PO 19/07/2026)
+## 🆕 Délai de Paiement Maroc — TASK-127 à 136 : LIVRÉES ET APPROUVÉES (revue architecte 28/07/2026)
+
+Les 10 TASKs du périmètre ci-dessous (analyse PO 19/07/2026) ont été traitées de bout en bout par le
+worker (`DOCS/PROMPT-WORKER-DDP-27-07-2026.md`) et **toutes approuvées** après revue architecte
+indépendante (10 agents dédiés, diff réel relu intégralement + build/tests rejoués + vérifications DB
+en lecture seule reproduites sur `GR_EMA_DISTRIBUTION`/`NEW_EMA DISTRIBUTION` pour chacune). Détail par
+task dans `DONE.md` et `CHANGELOG.md`, fichiers TASK archivés dans `DONE_DETAIL/DDP-TASK-127...136-*.md`.
+
+**Points ouverts issus de la revue, non bloquants pour cette livraison mais à trancher avant mise en
+production** :
+1. **Longueur IF(8)/ICE(15) stricte bloquante** (TASK-132/133/134) : sur les 357 fournisseurs réels
+   vérifiés (`NEW_EMA DISTRIBUTION`), 175 IF vides et 160 ICE vides — le contrôle bloquant (conforme
+   décision PO §5.A-5 du CDC) empêcherait la génération du fichier de dépôt pour plus de la moitié du
+   parc tant que les fiches fournisseurs ne sont pas complétées. **Même divergence déjà connue côté
+   module TVA voisin** (`ValidationIdentiteFiscale`) — à arbitrer PO/fiscaliste conjointement pour les
+   deux modules plutôt que séparément.
+2. **Interaction TASK-128 ↔ TASK-131 sur les échéances antérieures à la « date de mise en route »** :
+   le garde-fou TASK-128 désactive le calcul automatique de retard **inconditionnellement** tant
+   qu'aucune date de mise en route n'est configurée pour la société, même si l'échéance a un
+   historique de déclaration legacy — interprétation documentée par le worker comme un choix, pas une
+   exigence PO explicite (`DONE_DETAIL/DDP-TASK-128-parametre-date-mise-en-route-bootstrap.md`, section
+   « Décisions worker documentées », point 2). Effet réel vérifié : **0 ligne chiffrée** dans l'écran de
+   sélection tant qu'une société n'a pas saisi cette date (TASK-134 expose bien cette saisie). À
+   confirmer par le PO avant le premier usage réel en déclaration.
+3. **Couverture de test de la sélection incrémentale (TASK-131)** : le calcul anti-double-déclaration
+   est testé de façon rigoureuse au niveau du calculateur pur (scénario T1→T2 explicite), mais la
+   couche service/repository n'a pas de test automatisé dédié, et le mécanisme n'a **jamais été exercé
+   avec un historique réellement écrit en base** (`RT_DECLARATIONDELAISPAIEMENTLG` vide à ce jour, le
+   périmètre étant neuf) — ne pourra être vérifié en conditions réelles qu'après une première
+   déclaration DDP effectivement intégrée en production/pré-production.
+4. **Choix UI réversibles non tranchés PO** : sous-navigation en onglets internes vs sous-menu imbriqué
+   à 2 niveaux (TASK-134/136) ; modale partagée vs écran dédié pour la saisie de mise en route
+   (TASK-134).
+5. **Asymétrie annuelle/trimestrielle du contrôle de chevauchement de déclarations** (TASK-132),
+   reproduite du legacy, non corrigée — documentée, non bloquante.
+6. **`natureMarchandise`/`dateLivraisonMarchandise` toujours au fallback** (CDC §5.A-4, dette déjà
+   assumée par TASK-133) — requalifiée en tâche planifiée le 28/07/2026 :
+   [TASK-191](TASKS/TASK-191-cablage-nature-date-livraison-marchandise-ddp.md). Motivation PO : le module
+   sera indépendant à terme, GRF deviendra une source parmi d'autres, ajout prévu du **grand livre
+   comptable** comme nouvelle source — cohérent avec la roadmap V2 déjà actée côté TVA (24/07/2026,
+   ci-dessus). Non bloquant pour l'usage actuel.
+
+### Analyse d'origine (PO 19/07/2026)
 Cahier des charges source : `D:\_vibe\apbs-gr_winform\analayse\CDC-DELAI-PAIEMENT-MAROC.md` (analyse
 lecture seule de l'ancien applicatif `apbs-gr_winform`, Tresorerie.*). Décisions actées en session
 d'analyse architecte (19/07/2026), avec vérification directe du code legacy (au-delà du CDC fourni) :
@@ -478,20 +617,24 @@ d'analyse architecte (19/07/2026), avec vérification directe du code legacy (au
 
 | # | Task | Objet | État |
 |---|---|---|---|
-| 1 | [TASK-127](TASKS/DDP-TASK-127-socle-resolution-delai-echeance-legale.md) | Socle : résolution du délai applicable + calcul de l'échéance légale (jour ouvré, `P_JOURSREPOS`) | 🎯 **prêt** — bloquant pour 129/131/135 |
-| 2 | [TASK-128](TASKS/DDP-TASK-128-parametre-date-mise-en-route-bootstrap.md) | Paramètre « date de mise en route » par société (nouvelle table) + garde-fou de bascule | 🎯 **prêt** — bloquant pour 131 |
-| 3 | [TASK-129](TASKS/DDP-TASK-129-convention-delai-paiement-tiers-back.md) | Convention délai de paiement par tiers (back) — corrige le chevauchement bidirectionnel | 🎯 **prêt** — dépend de 127 |
-| 4 | [TASK-130](TASKS/DDP-TASK-130-convention-delai-paiement-tiers-front.md) | Convention délai de paiement par tiers (front) | 🎯 **prêt** — dépend de 129 |
-| 5 | [TASK-131](TASKS/DDP-TASK-131-selection-lignes-hors-delai-calcul-incremental.md) | DDP : sélection des lignes hors délai + calcul incrémental anti-double-déclaration | 🎯 **prêt** — dépend de 127/128, bloquant pour 132/134 |
-| 6 | [TASK-132](TASKS/DDP-TASK-132-cycle-de-vie-declaration-controle-if-ice.md) | DDP : cycle de vie déclaration + contrôle IF/ICE bloquant | 🎯 **prêt** — dépend de 131, bloquant pour 133/134 |
-| 7 | [TASK-133](TASKS/DDP-TASK-133-generation-fichier-xml-zip.md) | DDP : génération fichier XML/ZIP (structure legacy reprise à l'identique) | 🎯 **prêt** — dépend de 132 |
-| 8 | [TASK-134](TASKS/DDP-TASK-134-front-liste-fiche-selection-controle.md) | DDP : front (liste/fiche/sélection/contrôle), filtre de période raisonné (jamais de plage libre) | 🎯 **prêt** — dépend de 131/132/133 |
-| 9 | [TASK-135](TASKS/DDP-TASK-135-mesure-delai-fournisseur-extension-ecran-factures.md) | Mesure du délai fournisseur (§3.3) : extension écran Factures (2 colonnes) | 🎯 **prêt** — dépend de 127, indépendant de DDP |
-| 10 | [TASK-136](TASKS/DDP-TASK-136-menu-entree-delai-de-paiement.md) | Menu : nouvelle entrée « Délai de paiement » (groupe DÉCLARATION) | 🎯 **prêt** — dépend de 130/134 |
+| 1 | [TASK-127](DONE_DETAIL/DDP-TASK-127-socle-resolution-delai-echeance-legale.md) | Socle : résolution du délai applicable + calcul de l'échéance légale (jour ouvré, `P_JOURSREPOS`) | ✅ **approuvée** (28/07/2026) |
+| 2 | [TASK-128](DONE_DETAIL/DDP-TASK-128-parametre-date-mise-en-route-bootstrap.md) | Paramètre « date de mise en route » par société (nouvelle table) + garde-fou de bascule | ✅ **approuvée** (28/07/2026) — réserve n°2 ci-dessus |
+| 3 | [TASK-129](DONE_DETAIL/DDP-TASK-129-convention-delai-paiement-tiers-back.md) | Convention délai de paiement par tiers (back) — corrige le chevauchement bidirectionnel | ✅ **approuvée** (28/07/2026) |
+| 4 | [TASK-130](DONE_DETAIL/DDP-TASK-130-convention-delai-paiement-tiers-front.md) | Convention délai de paiement par tiers (front) | ✅ **approuvée** (28/07/2026) |
+| 5 | [TASK-131](DONE_DETAIL/DDP-TASK-131-selection-lignes-hors-delai-calcul-incremental.md) | DDP : sélection des lignes hors délai + calcul incrémental anti-double-déclaration | ✅ **approuvée** (28/07/2026) — réserves n°2/3 ci-dessus |
+| 6 | [TASK-132](DONE_DETAIL/DDP-TASK-132-cycle-de-vie-declaration-controle-if-ice.md) | DDP : cycle de vie déclaration + contrôle IF/ICE bloquant | ✅ **approuvée** (28/07/2026) — réserve n°1 ci-dessus |
+| 7 | [TASK-133](DONE_DETAIL/DDP-TASK-133-generation-fichier-xml-zip.md) | DDP : génération fichier XML/ZIP (structure legacy reprise à l'identique) | ✅ **approuvée** (28/07/2026) |
+| 8 | [TASK-134](DONE_DETAIL/DDP-TASK-134-front-liste-fiche-selection-controle.md) | DDP : front (liste/fiche/sélection/contrôle), filtre de période raisonné (jamais de plage libre) | ✅ **approuvée** (28/07/2026) — réserves n°1/4 ci-dessus |
+| 9 | [TASK-135](DONE_DETAIL/DDP-TASK-135-mesure-delai-fournisseur-extension-ecran-factures.md) | Mesure du délai fournisseur (§3.3) : extension écran Factures (2 colonnes) | ✅ **approuvée** (28/07/2026) |
+| 10 | [TASK-136](DONE_DETAIL/DDP-TASK-136-menu-entree-delai-de-paiement.md) | Menu : nouvelle entrée « Délai de paiement » (groupe DÉCLARATION) | ✅ **approuvée** (28/07/2026) — réserve n°4 ci-dessus |
 
 > **Ordre d'exécution recommandé** : 127 → 128 → (129 → 130) ∥ (131 → 132 → 133 → 134) ∥ 135 → 136.
 > Attestation de régularité fiscale (§3.4) explicitement hors périmètre de cette vague — à cadrer plus
 > tard si le PO le demande, pas de task créée.
+
+| # | Task | Objet | État |
+|---|---|---|---|
+| 11 | [TASK-191](TASKS/TASK-191-cablage-nature-date-livraison-marchandise-ddp.md) | Câblage réel `natureMarchandise`/`dateLivraisonMarchandise` (lève la dette CDC §5.A-4) — cf. réserve n°6 ci-dessus | 🎯 **prête** (créée 28/07/2026) |
 
 ## 🎨 Re-thème identité visuelle « noir + vert signature » (PO 18/07/2026)
 Demande PO : faire évoluer la palette posée en TASK-083 (indigo) vers une teinte inspirée de
@@ -895,7 +1038,7 @@ contre `.\sql2022`/`GR_EMA_DISTRIBUTION`) — voir `DONE.md`.
 ### 📘 Documentation
 | # | Task | Objet | État |
 |---|---|---|---|
-| 1 | [TASK-029](TASKS/TASK-029-guide-fonctionnel-accessible-app.md) | **Guide fonctionnel accessible depuis l'app** : servir `DOCS/GUIDE_PROCESS_DECLARATION_TVA.html` comme asset statique (`public/guide-fonctionnel-tva.html`) + entrée « Guide » dans la sidebar `App.tsx` (ouverture nouvel onglet) ; source unique = `DOCS/`, `public/` en miroir | 🎯 **prêt** — front-only, découplé des chemins critiques. Guide client v1 livré (design v0). |
+| 1 | [TASK-029](TASKS/TASK-029-guide-fonctionnel-accessible-app.md) | **Guide fonctionnel accessible depuis l'app** : servir `DOCS/GUIDE_PROCESS_DECLARATION_TVA.html` comme asset statique (`public/guide-fonctionnel-tva.html`) + entrée « Guide » dans la sidebar `App.tsx` (ouverture nouvel onglet) ; source unique = `DOCS/`, `public/` en miroir | 🎯 **prêt** — front-only, découplé des chemins critiques. Guide client **v2** livré (28/07/2026, PO : partie TVA jugée stable). Section « Code activité » ajoutée + note réouverture admin. **Correction factuelle** (PO : « Exclue ça n'existe pas maintenant ») confirmée par grep du code (`EtatLigne.Exclue/Reportee/Ecartee` plus jamais assignés depuis TASK-097/099, `WorkstationPanel.tsx` mort) — §6 Statuts réécrite (2 états : Proposée/Intégrée), §7 dates corrigée (plus de borne basse depuis TASK-099). |
 
 ### 📦 Déploiement
 | # | Task | Objet | État |
