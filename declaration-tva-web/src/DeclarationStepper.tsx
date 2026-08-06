@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     ChevronLeft, Loader2, Landmark, Lock,
-    ShieldCheck, CheckCircle2, Circle, ArrowRight,
+    ShieldCheck, CheckCircle2, Circle, ArrowRight, FileText, ShieldAlert,
 } from 'lucide-react';
 import api from './api';
 import { DeclarationFinalePanel } from './DeclarationFinalePanel';
@@ -9,35 +9,27 @@ import { ReglementsSelection, periodeBounds } from './ReglementsSelection';
 import type { ReglementRow } from './ReglementsSelection';
 import { AffectationsDrill } from './AffectationsDrill';
 import { VerifierIntegrerPanel } from './VerifierIntegrerPanel';
+import { FacturesADeclarerPanel } from './FacturesADeclarerPanel';
 import { formatMoney, formatDate } from './utils';
 
 export type DomaineTVA = 'Décaissement' | 'Encaissement' | 'Dépense' | 'Frais bancaire';
 
-// Tunnel règlement-first (TASK-053, cf. "reflexion dectva.md") : le règlement pilote,
-// pas la facture. Les écrans dédiés ①②④⑤ arrivent en TASK-054/055/057/058 ; en attendant,
-// ils sont affichés en placeholder honnête (aucune donnée factice). ③ et ⑥ réutilisent
-// WorkstationPanel/GenerationPanel existants, intouchables.
-type StepId = 'reglements' | 'verifier_integrer' | 'declaration';
+type StepId = 'reglements' | 'factures' | 'verifier' | 'confirmer' | 'declaration';
 
 const STEPS: { id: StepId; label: string; icon: typeof Landmark }[] = [
     { id: 'reglements', label: 'Sélection', icon: Landmark },
-    { id: 'verifier_integrer', label: 'Vérifier & Intégrer', icon: Lock },
+    { id: 'factures', label: 'Factures à déclarer', icon: FileText },
+    { id: 'verifier', label: 'Vérifier', icon: ShieldAlert },
+    { id: 'confirmer', label: 'Confirmer', icon: CheckCircle2 },
     { id: 'declaration', label: 'Déclaration', icon: ShieldCheck },
 ];
 
-// StatutDeclaration (back, WorkflowEntities.cs) : 0=EnCours, 1=Cloturee, 2=Generee, 3=Deposee.
-// Seul signal réel disponible aujourd'hui côté API. Le tampon DT_Id (TASK-028/057)
-// affinera ce gate quand l'écran ④ sera livré.
 const STATUT_LABELS: Record<number, string> = { 0: 'En cours', 1: 'Clôturée', 2: 'Générée', 3: 'Déposée' };
 
 function isIntegree(statut: number | undefined) {
     return statut !== undefined && statut !== 0;
 }
 
-// ⑤⑥ n'ont de sens qu'une fois l'intégration actée (règle réellement vérifiable).
-// ③④ restent groupées tant que 056/057 n'exposent pas de gate plus fin — c'est un
-// placeholder honnête, pas une simulation de règle métier. ② requiert désormais une
-// sélection réelle en ① (TASK-054 : le règlement pilote, pas de drill sans sélection).
 function isUnlocked(stepId: StepId, integree: boolean) {
     if (stepId === 'declaration') return integree;
     return true;
@@ -52,6 +44,9 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
     const [showDrill, setShowDrill] = useState(false);
     const [savedSelection, setSavedSelection] = useState<string[] | null>(null);
 
+    const [facturesFilters, setFacturesFilters] = useState<Record<string, any> | undefined>(undefined);
+    const [facturesDomaine, setFacturesDomaine] = useState<DomaineTVA>('Décaissement');
+
     const fetchInfo = async () => {
         try {
             const res = await api.get(`/declarations/${declarationId}`);
@@ -60,7 +55,6 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
                 setActiveStep('declaration');
             }
 
-            // TASK-097 : Charger la sélection sauvegardée
             const selRes = await api.get(`/declarations/${declarationId}/selection`);
             setSavedSelection(selRes.data);
         } catch (e) {
@@ -78,13 +72,13 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
 
     const handlePasserAuCalcul = async () => {
         if (integree) {
-            goTo('verifier_integrer');
+            goTo('factures');
             return;
         }
         setLoading(true);
         try {
             await persisterSelection();
-            goTo('verifier_integrer');
+            goTo('factures');
         } catch (e: any) {
             console.error(e);
             showToast(e?.response?.data?.message || 'Erreur lors de la sauvegarde de la sélection', 'error');
@@ -93,11 +87,6 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
         }
     };
 
-    // TASK-109 : le premier figeage back (ConstruireLignesFigeesAsync) filtre sur la
-    // sélection PERSISTÉE côté serveur, jamais sur selectedRows (état front) — seul
-    // « Passer au calcul » persistait jusqu'ici. Ouvrir « Détail des lignes » sans ce
-    // même appel préalable pouvait donc figer zéro ligne (sélection serveur vide/périmée)
-    // pour une sélection front pourtant non vide.
     const handleOuvrirDrill = async () => {
         if (integree) {
             setShowDrill(true);
@@ -124,7 +113,7 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
     if (!info) return <div>Erreur de chargement</div>;
 
     const integree = isIntegree(info.statut);
-    const readOnlyStep = integree && (activeStep === 'reglements' || activeStep === 'verifier_integrer');
+    const readOnlyStep = integree && (activeStep === 'reglements' || activeStep === 'factures' || activeStep === 'verifier' || activeStep === 'confirmer');
     const hasSelection = selectedKeys.size > 0;
 
     const goTo = (id: StepId) => {
@@ -141,8 +130,6 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
         </BottomBar>
     );
 
-    // Bandeau bas dédié à ① (TASK-054) : total vivant de la sélection + CTA unique,
-    // désactivé tant qu'aucun règlement éligible/à contrôler n'est sélectionné (sauf en mode intégré).
     const reglementsBottomBar = (
         <BottomBar>
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
@@ -169,7 +156,7 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
                     className="btn btn-primary"
                     style={ctaStyle}
                 >
-                    Passer au calcul <ArrowRight size={16} />
+                    Passer aux factures <ArrowRight size={16} />
                 </button>
             </div>
         </BottomBar>
@@ -208,7 +195,6 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
                         Déclaration intégrée — drill en lecture (lecture seule).
                     </div>
                 )}
-                {/* Header for returning to step 1 */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'white', flexShrink: 0 }}>
                     <button onClick={() => setShowDrill(false)} className="btn" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.4rem 0.8rem', fontSize: '0.8125rem', cursor: 'pointer', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'white' }}>
                         <ChevronLeft size={16} /> Retour à la sélection
@@ -236,7 +222,7 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {readOnlyStep && (
                     <div style={{ padding: '0.5rem 1.5rem', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', color: 'var(--status-ok-text)', fontSize: '0.8125rem', fontWeight: 500, flexShrink: 0 }}>
-                        Déclaration intégrée — {activeStep === 'reglements' ? 'Sélection figée' : 'Vérification figée'} (lecture seule).
+                        Déclaration intégrée — mode lecture seule.
                     </div>
                 )}
 
@@ -255,14 +241,40 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
                             declarationId={declarationId}
                         />
                     )}
-                    {activeStep === 'verifier_integrer' && (
+                    {activeStep === 'factures' && (
+                        <FacturesADeclarerPanel
+                            declarationId={declarationId}
+                            readOnly={readOnlyStep}
+                            showToast={showToast}
+                            initialFilters={facturesFilters}
+                            initialDomaine={facturesDomaine}
+                        />
+                    )}
+                    {activeStep === 'verifier' && (
                         <VerifierIntegrerPanel
+                            mode="verifier"
+                            declarationId={declarationId}
+                            selectedRows={selectedRows}
+                            readOnly={readOnlyStep}
+                            integree={integree}
+                            showToast={showToast}
+                            onVoirLignes={(domaine, filter) => {
+                                setFacturesDomaine(domaine);
+                                setFacturesFilters(filter);
+                                goTo('factures');
+                            }}
+                        />
+                    )}
+                    {activeStep === 'confirmer' && (
+                        <VerifierIntegrerPanel
+                            mode="confirmer"
                             declarationId={declarationId}
                             selectedRows={selectedRows}
                             readOnly={readOnlyStep}
                             integree={integree}
                             showToast={showToast}
                             onIntegrationSuccess={fetchInfo}
+                            onGoToVerifier={() => goTo('verifier')}
                         />
                     )}
                     {activeStep === 'declaration' && (
@@ -276,7 +288,9 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
                 </div>
 
                 {activeStep === 'reglements' && reglementsBottomBar}
-                {activeStep === 'verifier_integrer' && integree && nextStep('declaration', 'Continuer vers la déclaration')}
+                {activeStep === 'factures' && nextStep('verifier', 'Continuer vers la vérification')}
+                {activeStep === 'verifier' && nextStep('confirmer', 'Continuer vers la confirmation')}
+                {activeStep === 'confirmer' && integree && nextStep('declaration', 'Continuer vers la déclaration')}
             </div>
         </div>
     );
@@ -290,7 +304,7 @@ function StepBar({ activeStep, integree, onSelect, leading, trailing }: { active
             {STEPS.map((step, i) => {
                 const unlocked = isUnlocked(step.id, integree);
                 const isActive = activeStep === step.id;
-                const isDone = integree && (step.id === 'reglements' || step.id === 'verifier_integrer');
+                const isDone = integree && step.id !== 'declaration';
                 return (
                     <button
                         key={step.id}

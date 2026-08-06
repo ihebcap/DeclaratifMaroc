@@ -4,7 +4,7 @@ import { ApbsGrid } from './grid/ApbsGrid';
 import { CustomListFilter } from './grid/CustomListFilter';
 import { formatMoney } from './utils';
 import api from './api';
-import { Loader2, CheckSquare, XSquare, Clock, RefreshCw, Calculator, X } from 'lucide-react';
+import { Loader2, CheckSquare, RefreshCw, Calculator, X } from 'lucide-react';
 import type { DomaineTVA } from './DeclarationStepper';
 import { relireDepuisSage, resynchroniserLignesBulk, enregistrerSaisieSoldeInitial } from './api';
 
@@ -468,8 +468,6 @@ export function DomainGrid({
                             {(selectedIds.size > 0 || selectAllFilters) && (
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     <button title="Ces lignes seront COMPTÉES dans la TVA de cette déclaration." onClick={() => doBulkAction('Intégrée')} className="btn" style={{ background: 'var(--status-ok-bg)', color: 'var(--status-ok-text)', border: '1px solid #bbf7d0', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><CheckSquare size={14}/> Intégrer</button>
-                                    <button title="Ces lignes NE SERONT PAS déclarées, ni sur cette période ni sur une autre (exclusion définitive)." onClick={() => doBulkAction('Exclue')} className="btn" style={{ background: 'var(--status-blocking-bg)', color: 'var(--status-blocking-text)', border: '1px solid #fecaca', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><XSquare size={14}/> Exclure</button>
-                                    <button title="Ces lignes ne sont pas déclarées ce mois-ci ; elles restent disponibles pour une déclaration ultérieure." onClick={() => doBulkAction('Reportée')} className="btn" style={{ background: '#fef3c7', color: 'var(--status-warning-text-alt)', border: '1px solid var(--status-warning-border)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><Clock size={14}/> Reporter</button>
                                     <button title="Annule la décision manuelle : ces lignes repassent à l'état proposé par l'application." onClick={() => doBulkAction('Proposée')} className="btn" style={{ background: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>Réinitialiser</button>
                                     {showResynchroniserAction && (
                                         <button onClick={doBulkResynchroniser} disabled={resynchroMasseEnCours} className="btn" style={{ background: 'white', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><RefreshCw size={14} className={resynchroMasseEnCours ? 'animate-spin' : ''}/> {resynchroMasseEnCours ? 'Resynchronisation…' : 'Resynchroniser la sélection'}</button>
