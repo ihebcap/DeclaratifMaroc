@@ -11,6 +11,26 @@ namespace Declaration.Selection
         public const int Domaine_ReglementFournisseur = 1;
         public const int Domaine_Depense = 6;
 
+        // TASK-194 : CT_Type (RT_MOUVEMENT / F_COMPTET) — type de tiers : Client=0, Fournisseur=1.
+        // Les règlements type "autre" (CT_Type != 0 et CT_Type != 1) sont ignorés à la sélection.
+        public const int CtType_Client = 0;
+        public const int CtType_Fournisseur = 1;
+
+        // TASK-031 : RT_PREVISIONNELLE.PT_Domaine — DISTINCT de RT_MOUVEMENT.MV_Domaine ci-dessus
+        // (même valeur numérique 6, table différente, ne pas confondre — vérifié sur données
+        // réelles GR_EMA_DISTRIBUTION le 03/08/2026 : RT_MOUVEMENT.MV_Domaine=6 est bien Dépense,
+        // RT_PREVISIONNELLE.PT_Domaine=6 est bien Opération bancaire).
+        public const int PtDomaine_FraisBancaire = 6;
+
+        // P_TYPEOPBANQUE.TO_Sens (Tresorerie.Core.Enum.SensPrevisionnelle) : Encaissement=0, Décaissement=1.
+        public const int SensPrevisionnelle_Encaissement = 0;
+        public const int SensPrevisionnelle_Decaissement = 1;
+
+        // Sentinelle EC_Type pour les lignes valorisées directement (frais bancaire) : n'est ni
+        // une vraie facture Sage (0), ni FGR (111), ni solde (4) — exclue par construction des
+        // routages OM/FGR de l'orchestrateur (voir OrchestrateurDeclaration.resoudreFactureBrute).
+        public const int EcType_FraisBancaireDirect = 999;
+
         // RT_ECHEANCE.DO_Domaine — type de document Sage (enum Sage ErpDomaine,
         // Tresorerie.Core.Enum.ErpDomaine) : Vente=0, Achat=1, Stock=2, Ticket=3, Interne=4.
         // TASK-145 : nécessaire pour ne lire QUE les factures d'achat dans GetFactureFirstSql
@@ -25,6 +45,11 @@ namespace Declaration.Selection
         // MV_Compta
         public const int Compta_NonComptabilise = 0;
         public const int Compta_Comptabilise = 1;
+
+        // MV_Tva (RT_MOUVEMENT) — TASK-032 : la dépense ne doit être déclarée QUE si elle porte de
+        // la TVA (comportement legacy `DeclarationTvaController.cs` : dépense sans taxe ERP résolue
+        // = ignorée). Filtre appliqué uniquement au domaine Dépense.
+        public const int Tva_Avec = 1;
 
         // RT_ECHEANCE.EC_Type — origine de l'échéance (discriminant de valorisation).
         // LISTE BLANCHE : on ne valorise QUE ces trois types (vraies factures / solde).

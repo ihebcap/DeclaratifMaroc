@@ -1,6 +1,69 @@
 # TASK-031 — Domaine manquant : Opération bancaire (frais bancaire) avec TVA
 
-> ⏸️ **DIFFÉRÉ (backlog).** Décision PO 09/07/2026 : **le client ne gère pas ce cas aujourd'hui** dans ses déclarations. À traiter plus tard, hors chemin critique. Aucune dépendance ne doit être bloquée par cette tâche.
+> ⚠️ **PARTIELLEMENT IMPLÉMENTÉE (03/08/2026)** — dérogation ponctuelle : Claude a codé directement,
+> pas de revue par un 2ᵉ agent indépendant. **Cartographie corrigée en cours de route** (fausse
+> piste de la version précédente de cette TASK) : la source réelle est **exclusivement**
+> `RT_PREVISIONNELLE.PT_Domaine=6` — `RT_MOUVEMENT.MV_Domaine=6` (cité plus haut comme source) est
+> en réalité le domaine **Dépense** (vérifié sur données réelles + code existant
+> `GrfEnums.Domaine_Depense`), pas frais bancaire. Taux résolu via
+> `P_TYPEOPBANQUE.TO_ErpTaxeNo → F_TAXE.TA_No` (Sage, connexion séparée, jamais cross-base —
+> TASK-154). Vérifié bout-en-bout sur base réelle : 2 frais bancaires avec TVA (FRAIS 10%,
+> COMMLEASING 14%) correctement valorisés (assiette/TVA/TTC exacts), 1 opération sans TVA (agio)
+> correctement exclue. Build solution + 3 suites de tests rejouées : Core 218/218, Selection
+> 60/60 (dont fixture `IntegrationRegressionTests` corrigée — connexion Sage distincte de la
+> connexion GRF, cf. réserve ci-dessous), Orchestration 228/228.
+>
+> **Livré** : sélection (`SelectionExpliqueeService.SelectionnerFraisBancaireAsync`), valorisation
+> directe (`OrchestrateurDeclaration.resoudreFactureBrute`, nouveau `SourceAffectation.FraisBancaire`),
+> mode paiement Simpl-TVA fixe = 3, identité banque (IF/ICE via `RT_INFOCBANQ`, jamais de valeur
+> inventée si absente — actuellement vide sur cette base, jamais configurée côté client).
+>
+> ✅ **Anti-double-déclaration clarifié et corrigé (03/08/2026, suite question PO)** : le tampon
+> `DT_Id`/TASK-028 (`RT_AFFECTATION`) ne s'applique en effet jamais ici (pas de ligne
+> `RT_AFFECTATION` pour un frais bancaire — **exactement comme pour la Dépense**, vérifié : 0/123
+> dépenses réelles n'ont de ligne `RT_AFFECTATION` non plus). Mais ce n'est **pas** le mécanisme
+> qui protège réellement contre la double déclaration : c'est le garde-fou d'exclusivité
+> inter-déclaration (TASK-080, `DeclarationWorkflowService.AppliquerExclusiviteInterDeclarationAsync`)
+> qui clé sur `(NumeroFacture, NumeroRapprochement)` contre `DM_LGTVA` de **toute autre**
+> déclaration (`EnCours`/`Cloturée`) de la société — domaine-agnostique, déjà actif en production
+> pour la Dépense. **Bug initial corrigé** : la clé générée était `MV_Numero` seul (ex. `"FRAIS"`,
+> `"COMMLEASING"`) — le LIBELLÉ du type d'opération, pas un identifiant unique ; deux frais du même
+> type dans la période auraient partagé la même clé. Corrigé en `"{MV_Numero}-{PT_Id}"`
+> (`SelectionExpliqueeService.cs`) — vérifié unique sur les 2 exemples réels
+> (`FRAIS-84`/`COMMLEASING-85`), build + 3 suites de tests rejouées (218/60/228).
+>
+> ✅ **Export Excel/XML vérifié (03/08/2026)** : entièrement générique, aucun code touché.
+> - Excel (`Declaration.Export.Excel/Exporter.cs`) : aucune référence à `SourceAffectation`, aucune
+>   validation bloquante — itère `RecapsParSource`/`RecapsParTaux`/`Lignes` sans distinction de
+>   domaine. Fonctionne tel quel.
+> - XML (`DeclarationXmlExporter.cs`) : filtre `Source != Encaissement` (déductible uniquement, PO
+>   14/07/2026) — inclut `FraisBancaire` naturellement. `MapModePaiement` gère déjà explicitement
+>   `mode == "3"` → `<mp><id>3</id></mp>` (code préexistant, anticipait ce cas). Vérifié par 2 tests
+>   temporaires (supprimés après) : ligne avec IF/ICE renseignés → XML correct
+>   (`<mp><id>3</id></mp>`, `<tx>0.1</tx>`) ; ligne sans IF/ICE → `ApplicationException` explicite
+>   (`ValidationIdentiteFiscale.ValiderPourExport`), **bloque l'export entier** (pas seulement la
+>   ligne). C'est le comportement voulu et déjà appliqué à tous les autres domaines (TASK-048/151,
+>   jamais de valeur inventée) — **pas un bug**, mais un vrai prérequis opérationnel :
+>
+> 🔴 **Prérequis client avant tout export réel avec frais bancaire** : `RT_INFOCBANQ.IB_ICE`/
+> `IB_IDENTIFIANT` doivent être configurés pour la banque concernée (actuellement vides sur
+> `GR_EMA_DISTRIBUTION`, jamais configurés) — sinon la clôture/export bloquera dès qu'une ligne
+> frais bancaire y figure. Configuration côté client (Sage/GRF), pas un correctif de code.
+>
+> ⚠️ **"Poste 4 interrogations" (TASK-019)** : pas une brique séparée — les interrogations
+> « Rapprochement » et « Affectation » de ce poste de travail sont alimentées par
+> `GetReglementsRapprochementAsync` (voir point suivant, non câblé) ; l'interrogation « Factures à
+> déclarer » (4ᵉ) est pilotée par `DM_LGTVA`/le pipeline générique déjà vérifié ci-dessus — elle
+> fonctionne déjà pour les frais bancaire une fois figés.
+>
+> ⛔ **Écran Rapprochement (① Sélection) — décision PO (04/08/2026) : PAS d'ajout.**
+> `GetReglementsRapprochementAsync` (`DeclarationRepository.cs:838`) reste inchangé — ni Dépense ni
+> Frais bancaire n'y sont ajoutés (ce dernier avait été évalué trop risqué à chaud : requête massive
+> — 15+ filtres, tri, pagination — sans aucun test unitaire réel ; la décision PO confirme qu'il ne
+> faut de toute façon pas le faire, y compris pour la Dépense qui n'y est pas non plus aujourd'hui).
+> Ces deux domaines restent sélectionnés/valorisés/déclarés directement par le backend
+> (`SelectionExpliqueeService`/`OrchestrateurDeclaration`), sans passer par l'écran de preuve
+> Rapprochement — comportement assumé, pas un gap à combler.
 
 > 🔎 **Mise à jour 09/07/2026 (source confirmée par le PO).** Le domaine est porté par `RT_MOUVEMENT.MV_Domaine` : **0 = Encaissement, 1 = Décaissement, 6 = Frais bancaire**. Les frais bancaires **prévisionnels** proviennent de `RT_PREVISIONNELLE` avec `PT_Domaine = 6` (table distincte de `RT_MOUVEMENT`). Ceci lève l'inconnue de l'étape 1 / du risque « localiser la source exacte ».
 >

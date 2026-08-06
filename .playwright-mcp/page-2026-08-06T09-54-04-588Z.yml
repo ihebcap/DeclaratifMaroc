@@ -1,0 +1,55 @@
+- generic [ref=f3e18]:
+  - complementary [ref=f3e19]:
+    - generic [ref=f3e20] [cursor=pointer]:
+      - generic [ref=f3e22]:
+        - img "DM" [ref=f3e28]
+        - generic [ref=f3e29]: TVA
+      - generic [ref=f3e30]: NEW_EMA DISTRIBUTION
+    - generic [ref=f3e31]:
+      - generic [ref=f3e32]:
+        - generic [ref=f3e33]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f3e34] [cursor=pointer]
+        - generic "Factures" [ref=f3e38] [cursor=pointer]
+      - generic [ref=f3e43]:
+        - generic [ref=f3e44]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f3e45] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f3e51] [cursor=pointer]
+    - generic [ref=f3e57]:
+      - generic [ref=f3e58]: Admin Admin
+      - button "Déconnexion" [ref=f3e59] [cursor=pointer]
+  - main [ref=f3e64]:
+    - generic [ref=f3e65]:
+      - generic [ref=f3e66]:
+        - generic [ref=f3e71]:
+          - heading "Déclarations TVA" [level=2] [ref=f3e72]
+          - generic [ref=f3e73]: Déclaration TVA Maroc — modèle SIMPL-TVA
+        - generic [ref=f3e74]:
+          - button "Créer une déclaration" [ref=f3e75] [cursor=pointer]
+          - button "Colonnes" [ref=f3e78] [cursor=pointer]
+      - generic [ref=f3e83]:
+        - text: "Déclarations :"
+        - strong [ref=f3e84]: "1"
+        - text: / 1
+      - generic [ref=f3e86]:
+        - generic [ref=f3e87]:
+          - generic [ref=f3e88]: N° déclaration
+          - generic [ref=f3e89]:
+            - text: Période
+            - button "Filtrer" [ref=f3e91] [cursor=pointer]
+          - generic [ref=f3e94]:
+            - text: Déclaration
+            - button "Filtrer" [ref=f3e96] [cursor=pointer]
+          - generic [ref=f3e99]: Nombre de factures
+          - generic [ref=f3e100]:
+            - text: Statut
+            - button "Filtrer" [ref=f3e102] [cursor=pointer]
+          - generic [ref=f3e105]: Actions
+        - generic [ref=f3e106]:
+          - button "TVA1-2026-07" [ref=f3e108] [cursor=pointer]
+          - generic [ref=f3e109]: Juillet 2026
+          - generic [ref=f3e110]: Mensuelle
+          - generic [ref=f3e111]: "2480"
+          - generic [ref=f3e112]: En cours
+          - generic [ref=f3e115]:
+            - button "Ouvrir" [ref=f3e116] [cursor=pointer]
+            - button "Supprimer" [ref=f3e117] [cursor=pointer]

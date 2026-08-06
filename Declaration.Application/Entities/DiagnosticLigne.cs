@@ -83,6 +83,7 @@ public sealed class CacheBucketRow
     public decimal HT { get; set; }
     public decimal Tva { get; set; }
     public decimal TTC { get; set; }
+    public string CodeTaxe { get; set; } = "";
 }
 
 /// <summary>Résultat agrégé du diagnostic d'une ligne en anomalie (TASK-144).</summary>

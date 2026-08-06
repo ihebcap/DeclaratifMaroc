@@ -1,0 +1,85 @@
+- generic [ref=f1e3]:
+  - complementary [ref=f1e4]:
+    - generic [ref=f1e5] [cursor=pointer]:
+      - generic [ref=f1e7]:
+        - img "DM" [ref=f1e13]
+        - generic [ref=f1e14]: TVA
+      - generic [ref=f1e15]: NEW_EMA DISTRIBUTION
+    - generic [ref=f1e16]:
+      - generic [ref=f1e17]:
+        - generic [ref=f1e18]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f1e19] [cursor=pointer]
+        - generic "Factures" [ref=f1e23] [cursor=pointer]
+      - generic [ref=f1e28]:
+        - generic [ref=f1e29]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f1e30] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f1e36] [cursor=pointer]
+    - generic [ref=f1e42]:
+      - generic [ref=f1e43]: Admin Admin
+      - button "Déconnexion" [ref=f1e44] [cursor=pointer]
+  - main [ref=f1e49]:
+    - generic [ref=f1e50]:
+      - generic [ref=f1e51]:
+        - generic [ref=f1e56]:
+          - heading "Déclarations TVA" [level=2] [ref=f1e57]
+          - generic [ref=f1e58]: Déclaration TVA Maroc — modèle SIMPL-TVA
+        - generic [ref=f1e59]:
+          - button "Créer une déclaration" [active] [ref=f1e60] [cursor=pointer]
+          - button "Colonnes" [ref=f1e63] [cursor=pointer]
+      - generic [ref=f1e70]:
+        - text: "Déclarations :"
+        - strong [ref=f1e71]: "0"
+        - text: / 0
+      - generic [ref=f1e72]:
+        - generic [ref=f1e74]:
+          - generic [ref=f1e75]: N° déclaration
+          - generic [ref=f1e76]:
+            - text: Période
+            - button "Filtrer" [ref=f1e78] [cursor=pointer]
+          - generic [ref=f1e81]:
+            - text: Déclaration
+            - button "Filtrer" [ref=f1e83] [cursor=pointer]
+          - generic [ref=f1e86]: Nombre de factures
+          - generic [ref=f1e87]:
+            - text: Statut
+            - button "Filtrer" [ref=f1e89] [cursor=pointer]
+          - generic [ref=f1e92]: Actions
+        - paragraph [ref=f1e97]: Aucune déclaration existante pour cette société.
+  - generic [ref=f1e99]:
+    - generic [ref=f1e100]:
+      - heading "Nouvelle Déclaration" [level=3] [ref=f1e101]
+      - button [ref=f1e102] [cursor=pointer]
+    - generic [ref=f1e106]:
+      - generic [ref=f1e107]:
+        - generic [ref=f1e108]: Société
+        - textbox [disabled] [ref=f1e109]: NEW_EMA DISTRIBUTION
+      - generic [ref=f1e110]:
+        - generic [ref=f1e111]:
+          - generic [ref=f1e112]: Exercice
+          - spinbutton [ref=f1e113]: "2026"
+        - generic [ref=f1e114]:
+          - generic [ref=f1e115]: Type
+          - combobox [ref=f1e116]:
+            - option "Mensuel" [selected]
+            - option "Trimestriel"
+      - generic [ref=f1e117]:
+        - generic [ref=f1e118]: Période
+        - combobox [ref=f1e119]:
+          - option "Janvier (01)" [selected]
+          - option "Février (02)"
+          - option "Mars (03)"
+          - option "Avril (04)"
+          - option "Mai (05)"
+          - option "Juin (06)"
+          - option "Juillet (07)"
+          - option "Août (08)"
+          - option "Septembre (09)"
+          - option "Octobre (10)"
+          - option "Novembre (11)"
+          - option "Décembre (12)"
+      - generic [ref=f1e120]:
+        - text: "Numéro généré :"
+        - strong [ref=f1e121]: TVA1-2026-01
+      - generic [ref=f1e122]:
+        - button "Annuler" [ref=f1e123] [cursor=pointer]
+        - button "Créer" [ref=f1e124] [cursor=pointer]

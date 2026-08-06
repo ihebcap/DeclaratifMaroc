@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { X, AlertTriangle, Search, CheckCircle2, XCircle, Info, RefreshCw } from 'lucide-react';
-import { getDiagnosticLigne, recalculerLigneDepuisCache, relireDepuisSage, type DiagnosticLigneDto } from './api';
+import { X, AlertTriangle, Search, CheckCircle2, XCircle, Info, RefreshCw, Calculator } from 'lucide-react';
+import { getDiagnosticLigne, recalculerLigneDepuisCache, relireDepuisSage, enregistrerSaisieSoldeInitial, type DiagnosticLigneDto } from './api';
 
 // TASK-144 — Panneau « Diagnostiquer » d'une ligne en anomalie.
 //
@@ -67,6 +67,32 @@ export function DiagnosticModal({
   const [relisant, setRelisant] = useState(false);
   const [relireError, setRelireError] = useState<string | null>(null);
   const [relireResultat, setRelireResultat] = useState<string | null>(null);
+
+  // TASK-025 (solde initial, EC_Type=4 — décision PO) : saisie manuelle taux+montant TVA.
+  const [taux, setTaux] = useState<number | ''>('');
+  const [montantTva, setMontantTva] = useState<number | ''>('');
+  const [saisieEnCours, setSaisieEnCours] = useState(false);
+  const [saisieError, setSaisieError] = useState<string | null>(null);
+  const [saisieResultat, setSaisieResultat] = useState<string | null>(null);
+
+  async function handleSaisieSoldeInitial() {
+    if (montantTva === '' || Number(montantTva) < 0) { setSaisieError('Le montant de TVA est obligatoire (≥ 0).'); return; }
+    setSaisieEnCours(true);
+    setSaisieError(null);
+    setSaisieResultat(null);
+    try {
+      const { resolue } = await enregistrerSaisieSoldeInitial(declarationId, ecId, Number(taux || 0), Number(montantTva));
+      if (resolue) {
+        onRecalculated?.();
+      } else {
+        setSaisieResultat('Saisie enregistrée, mais la ligne reste en anomalie (motif inchangé, voir ci-dessus).');
+      }
+    } catch (e: any) {
+      setSaisieError(e?.response?.data?.Message || e?.response?.data?.message || "Échec de l'enregistrement de la saisie.");
+    } finally {
+      setSaisieEnCours(false);
+    }
+  }
 
   async function handleRecalculer() {
     setRecalculating(true);
@@ -197,7 +223,50 @@ export function DiagnosticModal({
                   cache n'est pas simplement périmé mais absent/en erreur (le cas le plus fréquent,
                   ex. FC2502094 « Facture introuvable »), aucune autre action n'existait jusqu'ici
                   dans cet écran pour relancer une vraie lecture Sage sur cette seule pièce. */}
-              {!data.cachePerime && (
+              {data.codeMotifReconnu === 'SOLDE_INITIAL_SAISIE_REQUISE' ? (
+                // TASK-025 : ce motif ne se résout jamais par une relecture Sage (aucun détail
+                // HT/TVA/taux n'existe côté Sage pour un solde initial) — remplace le bloc
+                // « Relire depuis Sage » par la saisie manuelle attendue par le comptable.
+                <div style={{ ...card, borderColor: 'var(--accent-primary)' }}>
+                  <div style={cardHeader}><Calculator size={15} /> Solde initial — saisie du taux et du montant de TVA</div>
+                  <div style={cardBody}>
+                    <p style={{ margin: '0 0 0.6rem 0', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                      Le solde n'a aucun détail de TVA côté Sage (montant connu en TTC seul, {data.montantDevise != null ? data.montantDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) : '—'} MAD).
+                      Saisissez le taux et le montant de TVA pour l'intégrer à la déclaration (HT = TTC − TVA).
+                    </p>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1 }}>
+                        <label style={{ fontSize: '0.78rem', fontWeight: 500 }}>Taux de TVA (%)</label>
+                        <input type="number" step="0.01" min={0} className="form-input" value={taux} onChange={e => setTaux(e.target.value === '' ? '' : Number(e.target.value))} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1 }}>
+                        <label style={{ fontSize: '0.78rem', fontWeight: 500 }}>Montant de TVA</label>
+                        <input type="number" step="0.01" min={0} className="form-input" value={montantTva} onChange={e => setMontantTva(e.target.value === '' ? '' : Number(e.target.value))} />
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSaisieSoldeInitial}
+                      disabled={saisieEnCours}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                        padding: '0.45rem 0.8rem', borderRadius: '6px', border: '1px solid var(--accent-primary)',
+                        background: saisieEnCours ? 'var(--bg-secondary)' : 'var(--accent-primary)',
+                        color: saisieEnCours ? 'var(--text-primary)' : 'white', fontWeight: 600, fontSize: '0.82rem',
+                        cursor: saisieEnCours ? 'default' : 'pointer',
+                      }}
+                    >
+                      <Calculator size={14} />
+                      {saisieEnCours ? 'Enregistrement…' : 'Enregistrer et intégrer'}
+                    </button>
+                    {saisieResultat && (
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--status-warning-text-alt)' }}>{saisieResultat}</div>
+                    )}
+                    {saisieError && (
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--status-blocking-text, #b91c1c)' }}>{saisieError}</div>
+                    )}
+                  </div>
+                </div>
+              ) : !data.cachePerime && (
                 <div style={{ ...card, borderColor: 'var(--border-color)' }}>
                   <div style={cardHeader}><RefreshCw size={15} /> Relancer une lecture Sage réelle</div>
                   <div style={cardBody}>

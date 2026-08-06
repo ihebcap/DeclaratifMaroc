@@ -35,6 +35,20 @@ public sealed class ResultatSelectionDelaiPaiement
 
     /// <summary>Nombre d'échéances lues après application des seuils légaux + devise société (traçabilité).</summary>
     public int NombreEcheancesExaminees { get; init; }
+
+    /// <summary>
+    /// AUDIT UX (correctif « faux zéro silencieux ») : nombre d'échéances candidates de cette période
+    /// qui figurent DÉJÀ dans une déclaration antérieure (<c>RT_DECLARATIONDELAISPAIEMENTLG</c>). Leur
+    /// retard a été compté une première fois et ne peut plus l'être : sans ce compteur, un écran vide
+    /// se lit à tort « aucun retard » alors que la bonne lecture est « déjà déclaré ».
+    /// </summary>
+    public int NombreEcheancesDejaDeclarees { get; init; }
+
+    /// <summary>
+    /// Borne la plus récente déjà déclarée parmi ces échéances (max <c>DDP_DateFin</c>). <c>null</c>
+    /// quand aucune échéance de la période n'a jamais été déclarée.
+    /// </summary>
+    public DateTime? DerniereBorneDejaDeclaree { get; init; }
 }
 
 /// <summary>
@@ -151,7 +165,11 @@ public sealed class SelectionDelaiPaiementService : ISelectionDelaiPaiementServi
             DateMiseEnRouteSociete = dateMiseEnRoute,
             Lignes = lignes.Where(l => l.Statut == StatutLigneDelaiPaiement.Candidate).ToList(),
             LignesRepriseManuelleRequise = lignes.Where(l => l.Statut == StatutLigneDelaiPaiement.RepriseManuelleRequise).ToList(),
-            NombreEcheancesExaminees = echeances.Count
+            NombreEcheancesExaminees = echeances.Count,
+            // Traçabilité du calcul incrémental : combien d'échéances de cette période ont DÉJÀ été
+            // déclarées (leur retard ne peut plus être compté) et jusqu'à quelle date.
+            NombreEcheancesDejaDeclarees = dernieresBornes.Count,
+            DerniereBorneDejaDeclaree = dernieresBornes.Count == 0 ? null : dernieresBornes.Values.Max()
         };
     }
 }

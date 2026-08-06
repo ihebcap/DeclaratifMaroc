@@ -19,6 +19,7 @@ namespace Declaration.Orchestration
         private readonly string _persistenceConnectionString; // base dédiée (cache)
 
         private readonly IVentilationSageCacheRepository _ventilationCache;
+        private readonly ISoldeInitialTvaRepository _soldeInitialTva;
 
         // TASK-118 : société (SO_Id) traitée par cette instance — scope le cache de ventilation
         // Sage (DM_VENTILATION_SAGE_CACHE) pour éviter toute collision d'EC_Id entre deux bases
@@ -39,7 +40,8 @@ namespace Declaration.Orchestration
             IVentilationSageCacheRepository? ventilationCache = null,
             string persistenceConnectionString = "",
             Action<string>? log = null,
-            int soId = 0)
+            int soId = 0,
+            ISoldeInitialTvaRepository? soldeInitialTva = null)
         {
             _invoker = invoker;
             _config = config;
@@ -50,6 +52,7 @@ namespace Declaration.Orchestration
             _persistenceConnectionString = persistenceConnectionString;
             _log = log;
             _soId = soId;
+            _soldeInitialTva = soldeInitialTva ?? new SoldeInitialTvaRepository();
         }
 
         public DeclarationModele Traiter(IEnumerable<AffectationADeclarer> affectations, int n)
@@ -108,6 +111,31 @@ namespace Declaration.Orchestration
                         // EC_Id → contrôle croisé ignoré (jamais bloquant), comportement identique.
                         _log?.Invoke($"[VALO] échec chargement batch RT_ECHEANCE.EC_MtDevise ({ecIdsAll.Count} EC_Id) — contrôle croisé ignoré : {ex.Message}");
                     }
+                }
+            }
+
+            // TASK-025 : solde initial (EC_Type=4) — recharge en batch la saisie manuelle
+            // taux+montant TVA déjà enregistrée par le comptable pour ces EC_Id, et la reporte sur
+            // les affectations correspondantes AVANT résolution (le resolver ci-dessous en dépend
+            // pour distinguer « à saisir » de « déjà saisi »).
+            var ecIdsSoldeInitial = affectationsList.Where(a => a.EC_Type == 4 && a.EC_Id > 0).Select(a => a.EC_Id).Distinct().ToList();
+            if (ecIdsSoldeInitial.Count > 0 && !string.IsNullOrEmpty(_persistenceConnectionString))
+            {
+                try
+                {
+                    var saisies = _soldeInitialTva.GetSaisiesBatch(_soId, ecIdsSoldeInitial, _persistenceConnectionString);
+                    foreach (var a in affectationsList)
+                    {
+                        if (a.EC_Type == 4 && a.EC_Id > 0 && saisies.TryGetValue(a.EC_Id, out var saisie))
+                        {
+                            a.SoldeInitialTaux = saisie.Taux;
+                            a.SoldeInitialTva = saisie.MontantTva;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log?.Invoke($"[VALO] échec chargement saisies solde initial ({ecIdsSoldeInitial.Count} EC_Id) — traitées comme non saisies : {ex.Message}");
                 }
             }
 
@@ -336,8 +364,67 @@ namespace Declaration.Orchestration
             // ── Résolveur unifié ───────────────────────────────────────────────────────────
             Func<AffectationADeclarer, DocumentTaxesInfo?> resoudreFactureBrute = (affectation) =>
             {
+                // TASK-031 : opération bancaire — valorisation DIRECTE déjà connue à la sélection
+                // (RT_PREVISIONNELLE.PT_MontantTva), jamais de facture/OM/FGR à résoudre. Construit
+                // un DocumentTaxesInfo synthétique à une seule ligne de taxe pour réutiliser tel
+                // quel le pipeline Ventilateur/ConstructeurDeclaration existant (prorata = 100%,
+                // MontantAffecte déjà posé au TTC exact par SelectionnerFraisBancaireAsync).
+                if (affectation.Source == SourceAffectation.FraisBancaire)
+                {
+                    var tauxDirect = affectation.ValorisationDirecteTaux ?? 0m;
+                    var tvaDirect = affectation.ValorisationDirecteTva ?? 0m;
+                    var htDirect = affectation.MontantAffecte - tvaDirect;
+                    return new DocumentTaxesInfo
+                    {
+                        NumeroPiece = affectation.NumeroFacture,
+                        TotalHT = (double)htDirect,
+                        TotalHTNet = (double)htDirect,
+                        TotalTva = (double)tvaDirect,
+                        TotalTtc = (double)affectation.MontantAffecte,
+                        MontantsBrutsDisponibles = true,
+                        LignesTaxe = new List<SageTaxReader.Contracts.TaxeDetail>
+                        {
+                            new SageTaxReader.Contracts.TaxeDetail
+                            {
+                                Code = "", Type = "0",
+                                Taux = (double)tauxDirect, BaseHT = (double)htDirect, MontantTva = (double)tvaDirect
+                            }
+                        }
+                    };
+                }
+
                 if (affectation.EC_Type == 4)
-                    return null; // Alerte gérée dans ConstructeurDeclaration
+                {
+                    // Solde initial (TASK-025 → décision PO : intégrer via saisie manuelle) — même
+                    // pattern que la valorisation directe FraisBancaire ci-dessus : un document
+                    // synthétique à une seule ligne de taxe, réutilisant tel quel le pipeline
+                    // Ventilateur/ConstructeurDeclaration existant. Sans saisie (SoldeInitialTva
+                    // null) : null → alerte actionnable gérée dans ConstructeurDeclaration, jamais
+                    // de calcul deviné sur un TTC sans détail.
+                    if (!affectation.SoldeInitialTva.HasValue)
+                        return null;
+
+                    var tvaSaisie = affectation.SoldeInitialTva.Value;
+                    var tauxSaisi = affectation.SoldeInitialTaux ?? 0m;
+                    var htSaisi = affectation.MontantAffecte - tvaSaisie;
+                    return new DocumentTaxesInfo
+                    {
+                        NumeroPiece = affectation.NumeroFacture,
+                        TotalHT = (double)htSaisi,
+                        TotalHTNet = (double)htSaisi,
+                        TotalTva = (double)tvaSaisie,
+                        TotalTtc = (double)affectation.MontantAffecte,
+                        MontantsBrutsDisponibles = true,
+                        LignesTaxe = new List<SageTaxReader.Contracts.TaxeDetail>
+                        {
+                            new SageTaxReader.Contracts.TaxeDetail
+                            {
+                                Code = "", Type = "0",
+                                Taux = (double)tauxSaisi, BaseHT = (double)htSaisi, MontantTva = (double)tvaSaisie
+                            }
+                        }
+                    };
+                }
 
                 if (affectation.EC_Type == 111)
                     return _lecteurFgr.LireTvaFgr(

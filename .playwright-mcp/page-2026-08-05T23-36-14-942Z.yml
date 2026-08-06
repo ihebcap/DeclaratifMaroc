@@ -1,0 +1,1226 @@
+- generic [ref=f2e1]:
+  - generic [ref=f2e3]:
+    - complementary [ref=f2e4]:
+      - generic [ref=f2e5] [cursor=pointer]:
+        - generic [ref=f2e7]:
+          - img "DM" [ref=f2e13]
+          - generic [ref=f2e14]: TVA
+        - generic [ref=f2e15]: NEW_EMA DISTRIBUTION
+      - generic [ref=f2e16]:
+        - generic [ref=f2e17]:
+          - generic [ref=f2e18]: INTERROGATION
+          - generic "Rapprochement bancaire" [ref=f2e19] [cursor=pointer]
+          - generic "Factures" [ref=f2e23] [cursor=pointer]
+        - generic [ref=f2e28]:
+          - generic [ref=f2e29]: DÉCLARATION
+          - generic "Déclaration TVA" [ref=f2e30] [cursor=pointer]
+          - generic "Délai de paiement" [ref=f2e36] [cursor=pointer]
+      - generic [ref=f2e42]:
+        - generic [ref=f2e43]: Admin Admin
+        - button "Déconnexion" [ref=f2e44] [cursor=pointer]
+    - main [ref=f2e49]:
+      - generic [ref=f2e460]:
+        - generic [ref=f2e462]:
+          - button "Déclarations" [ref=f2e463] [cursor=pointer]
+          - button "Sélection / Contrôle" [ref=f2e464] [cursor=pointer]
+          - button "Conventions" [ref=f2e465] [cursor=pointer]
+        - generic [ref=f2e606]:
+          - generic [ref=f2e607]:
+            - button "Liste" [ref=f2e608] [cursor=pointer]
+            - generic [ref=f2e611]:
+              - heading "Déclaration DDP26080001" [level=2] [ref=f2e612]
+              - generic [ref=f2e613]: Annuelle 2026 — période 01/01/2026 → 31/12/2026
+            - generic [ref=f2e614]: Clôturée
+            - button "Colonnes" [ref=f2e618] [cursor=pointer]
+          - generic [ref=f2e621]:
+            - button "Déclôturer" [ref=f2e622] [cursor=pointer]
+            - button "Contrôler IF/ICE" [ref=f2e626] [cursor=pointer]
+            - button "Générer le fichier" [ref=f2e630] [cursor=pointer]
+            - generic [ref=f2e644]:
+              - text: "Lignes intégrées :"
+              - strong [ref=f2e645]: "1125"
+          - generic [ref=f2e646]:
+            - generic [ref=f2e647]:
+              - text: Total des
+              - strong [ref=f2e14307]: "114"
+              - text: "ligne(s) affichée(s) sur 1125 :"
+              - strong [ref=f2e648]: 547 755,33 MAD
+            - 'generic "Lignes dont aucune part n''a été réglée : c''est le solde restant dû qui est déclaré." [ref=f2e649]':
+              - text: dont
+              - strong [ref=f2e650]: "114"
+              - text: ligne(s) non réglée(s)
+            - generic "Plus grand dépassement (en jours) parmi les lignes affichées." [ref=f2e651]:
+              - text: "Dépassement le plus élevé :"
+              - strong [ref=f2e652]: 624 j
+            - button "Effacer filtres (1)" [ref=f2e14308] [cursor=pointer]
+          - generic [ref=f2e654]:
+            - generic [ref=f2e655]:
+              - generic [ref=f2e656]:
+                - text: Fournisseur
+                - button "Filtrer" [ref=f2e658] [cursor=pointer]
+              - generic [ref=f2e661]:
+                - text: Facture
+                - button "Filtrer" [ref=f2e663] [cursor=pointer]
+              - generic [ref=f2e666]: Date facture
+              - generic [ref=f2e667]: Échéance légale
+              - generic [ref=f2e668]: Dépassement (j)
+              - generic [ref=f2e669]: Montant
+              - generic [ref=f2e670]:
+                - text: Règlement
+                - button "Filtre actif" [ref=f2e14309] [cursor=pointer]
+              - generic [ref=f2e675]: Retirer
+            - generic [ref=f2e712]:
+              - generic [ref=f2e714]:
+                - strong [ref=f2e715]: 4411ELEC
+                - text: SRM-CS
+              - generic [ref=f2e716]: FF260097
+              - generic [ref=f2e717]: 08/07/2026
+              - generic [ref=f2e718]: 07/09/2026
+              - strong [ref=f2e720]: "115"
+              - generic [ref=f2e721]: 1 082,06 MAD
+              - generic [ref=f2e722]: non réglé
+            - generic [ref=f2e725]:
+              - generic [ref=f2e727]:
+                - strong [ref=f2e728]: 4411INWI
+                - text: Tiers à créer
+              - generic [ref=f2e729]: FF260026
+              - generic [ref=f2e730]: 01/12/2025
+              - generic [ref=f2e731]: 30/01/2026
+              - strong [ref=f2e733]: "335"
+              - generic [ref=f2e734]: 446,40 MAD
+              - generic [ref=f2e735]: non réglé
+            - generic [ref=f2e774]:
+              - generic [ref=f2e776]:
+                - strong [ref=f2e777]: 4411ORANGE
+                - text: Tiers à créer
+              - generic [ref=f2e778]: FF260078
+              - generic [ref=f2e779]: 12/06/2026
+              - generic [ref=f2e780]: 11/08/2026
+              - strong [ref=f2e782]: "142"
+              - generic [ref=f2e783]: 349,92 MAD
+              - generic [ref=f2e784]: non réglé
+            - generic [ref=f2e967]:
+              - generic [ref=f2e969]:
+                - strong [ref=f2e970]: F0004
+                - text: AEVEA PLUS SARL
+              - generic [ref=f2e971]: FC2600841
+              - generic [ref=f2e972]: 11/06/2026
+              - generic [ref=f2e973]: 10/08/2026
+              - strong [ref=f2e975]: "143"
+              - generic [ref=f2e976]: 23 200,00 MAD
+              - generic [ref=f2e977]: non réglé
+            - generic [ref=f2e1796]:
+              - generic [ref=f2e1798]:
+                - strong [ref=f2e1799]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1800]: FC2600591
+              - generic [ref=f2e1801]: 01/05/2026
+              - generic [ref=f2e1802]: 30/06/2026
+              - strong [ref=f2e1804]: "184"
+              - generic [ref=f2e1805]: 1 440,00 MAD
+              - generic [ref=f2e1806]: non réglé
+            - generic [ref=f2e1809]:
+              - generic [ref=f2e1811]:
+                - strong [ref=f2e1812]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1813]: FC2600595
+              - generic [ref=f2e1814]: 04/05/2026
+              - generic [ref=f2e1815]: 03/07/2026
+              - strong [ref=f2e1817]: "181"
+              - generic [ref=f2e1818]: 965,00 MAD
+              - generic [ref=f2e1819]: non réglé
+            - generic [ref=f2e1822]:
+              - generic [ref=f2e1824]:
+                - strong [ref=f2e1825]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1826]: FC2600604
+              - generic [ref=f2e1827]: 05/05/2026
+              - generic [ref=f2e1828]: 06/07/2026
+              - strong [ref=f2e1830]: "178"
+              - generic [ref=f2e1831]: 2 820,88 MAD
+              - generic [ref=f2e1832]: non réglé
+            - generic [ref=f2e1835]:
+              - generic [ref=f2e1837]:
+                - strong [ref=f2e1838]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1839]: FC2600618
+              - generic [ref=f2e1840]: 07/05/2026
+              - generic [ref=f2e1841]: 06/07/2026
+              - strong [ref=f2e1843]: "178"
+              - generic [ref=f2e1844]: 3 269,70 MAD
+              - generic [ref=f2e1845]: non réglé
+            - generic [ref=f2e1848]:
+              - generic [ref=f2e1850]:
+                - strong [ref=f2e1851]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1852]: FC2600632
+              - generic [ref=f2e1853]: 08/05/2026
+              - generic [ref=f2e1854]: 07/07/2026
+              - strong [ref=f2e1856]: "177"
+              - generic [ref=f2e1857]: 4 298,68 MAD
+              - generic [ref=f2e1858]: non réglé
+            - generic [ref=f2e1861]:
+              - generic [ref=f2e1863]:
+                - strong [ref=f2e1864]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1865]: FC2600657
+              - generic [ref=f2e1866]: 11/05/2026
+              - generic [ref=f2e1867]: 10/07/2026
+              - strong [ref=f2e1869]: "174"
+              - generic [ref=f2e1870]: 926,94 MAD
+              - generic [ref=f2e1871]: non réglé
+            - generic [ref=f2e1874]:
+              - generic [ref=f2e1876]:
+                - strong [ref=f2e1877]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1878]: FC2600665
+              - generic [ref=f2e1879]: 12/05/2026
+              - generic [ref=f2e1880]: 13/07/2026
+              - strong [ref=f2e1882]: "171"
+              - generic [ref=f2e1883]: 2 320,30 MAD
+              - generic [ref=f2e1884]: non réglé
+            - generic [ref=f2e1887]:
+              - generic [ref=f2e1889]:
+                - strong [ref=f2e1890]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1891]: FC2600683
+              - generic [ref=f2e1892]: 14/05/2026
+              - generic [ref=f2e1893]: 13/07/2026
+              - strong [ref=f2e1895]: "171"
+              - generic [ref=f2e1896]: 5 135,68 MAD
+              - generic [ref=f2e1897]: non réglé
+            - generic [ref=f2e1900]:
+              - generic [ref=f2e1902]:
+                - strong [ref=f2e1903]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1904]: FC2600705
+              - generic [ref=f2e1905]: 16/05/2026
+              - generic [ref=f2e1906]: 15/07/2026
+              - strong [ref=f2e1908]: "169"
+              - generic [ref=f2e1909]: 6 572,88 MAD
+              - generic [ref=f2e1910]: non réglé
+            - generic [ref=f2e1913]:
+              - generic [ref=f2e1915]:
+                - strong [ref=f2e1916]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1917]: FC2600721
+              - generic [ref=f2e1918]: 19/05/2026
+              - generic [ref=f2e1919]: 20/07/2026
+              - strong [ref=f2e1921]: "164"
+              - generic [ref=f2e1922]: 6 467,90 MAD
+              - generic [ref=f2e1923]: non réglé
+            - generic [ref=f2e1926]:
+              - generic [ref=f2e1928]:
+                - strong [ref=f2e1929]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1930]: FC2600734
+              - generic [ref=f2e1931]: 21/05/2026
+              - generic [ref=f2e1932]: 20/07/2026
+              - strong [ref=f2e1934]: "164"
+              - generic [ref=f2e1935]: 1 061,00 MAD
+              - generic [ref=f2e1936]: non réglé
+            - generic [ref=f2e1939]:
+              - generic [ref=f2e1941]:
+                - strong [ref=f2e1942]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1943]: FC2600747
+              - generic [ref=f2e1944]: 01/06/2026
+              - generic [ref=f2e1945]: 31/07/2026
+              - strong [ref=f2e1947]: "153"
+              - generic [ref=f2e1948]: 3 601,74 MAD
+              - generic [ref=f2e1949]: non réglé
+            - generic [ref=f2e1952]:
+              - generic [ref=f2e1954]:
+                - strong [ref=f2e1955]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1956]: FC2600779
+              - generic [ref=f2e1957]: 03/06/2026
+              - generic [ref=f2e1958]: 03/08/2026
+              - strong [ref=f2e1960]: "150"
+              - generic [ref=f2e1961]: 3 000,41 MAD
+              - generic [ref=f2e1962]: non réglé
+            - generic [ref=f2e1965]:
+              - generic [ref=f2e1967]:
+                - strong [ref=f2e1968]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1969]: FC2600782
+              - generic [ref=f2e1970]: 05/06/2026
+              - generic [ref=f2e1971]: 04/08/2026
+              - strong [ref=f2e1973]: "149"
+              - generic [ref=f2e1974]: 2 282,02 MAD
+              - generic [ref=f2e1975]: non réglé
+            - generic [ref=f2e1978]:
+              - generic [ref=f2e1980]:
+                - strong [ref=f2e1981]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1982]: FC2600808
+              - generic [ref=f2e1983]: 08/06/2026
+              - generic [ref=f2e1984]: 07/08/2026
+              - strong [ref=f2e1986]: "146"
+              - generic [ref=f2e1987]: 2 739,40 MAD
+              - generic [ref=f2e1988]: non réglé
+            - generic [ref=f2e1991]:
+              - generic [ref=f2e1993]:
+                - strong [ref=f2e1994]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e1995]: FC2600819
+              - generic [ref=f2e1996]: 09/06/2026
+              - generic [ref=f2e1997]: 10/08/2026
+              - strong [ref=f2e1999]: "143"
+              - generic [ref=f2e2000]: 11 906,96 MAD
+              - generic [ref=f2e2001]: non réglé
+            - generic [ref=f2e2004]:
+              - generic [ref=f2e2006]:
+                - strong [ref=f2e2007]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e2008]: FC2600840
+              - generic [ref=f2e2009]: 11/06/2026
+              - generic [ref=f2e2010]: 10/08/2026
+              - strong [ref=f2e2012]: "143"
+              - generic [ref=f2e2013]: 1 085,00 MAD
+              - generic [ref=f2e2014]: non réglé
+            - generic [ref=f2e2017]:
+              - generic [ref=f2e2019]:
+                - strong [ref=f2e2020]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e2021]: FC2600852
+              - generic [ref=f2e2022]: 16/06/2026
+              - generic [ref=f2e2023]: 17/08/2026
+              - strong [ref=f2e2025]: "136"
+              - generic [ref=f2e2026]: 1 021,75 MAD
+              - generic [ref=f2e2027]: non réglé
+            - generic [ref=f2e2030]:
+              - generic [ref=f2e2032]:
+                - strong [ref=f2e2033]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e2034]: FC2600855
+              - generic [ref=f2e2035]: 17/06/2026
+              - generic [ref=f2e2036]: 17/08/2026
+              - strong [ref=f2e2038]: "136"
+              - generic [ref=f2e2039]: 2 692,26 MAD
+              - generic [ref=f2e2040]: non réglé
+            - generic [ref=f2e2043]:
+              - generic [ref=f2e2045]:
+                - strong [ref=f2e2046]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e2047]: FC2600877
+              - generic [ref=f2e2048]: 23/06/2026
+              - generic [ref=f2e2049]: 24/08/2026
+              - strong [ref=f2e2051]: "129"
+              - generic [ref=f2e2052]: 4 339,70 MAD
+              - generic [ref=f2e2053]: non réglé
+            - generic [ref=f2e2056]:
+              - generic [ref=f2e2058]:
+                - strong [ref=f2e2059]: F0011
+                - text: MAXI LV
+              - generic [ref=f2e2060]: FC2600878
+              - generic [ref=f2e2061]: 24/06/2026
+              - generic [ref=f2e2062]: 24/08/2026
+              - strong [ref=f2e2064]: "129"
+              - generic [ref=f2e2065]: 3 611,20 MAD
+              - generic [ref=f2e2066]: non réglé
+            - generic [ref=f2e2297]:
+              - generic [ref=f2e2299]:
+                - strong [ref=f2e2300]: F0021
+                - text: CARREFOUR
+              - generic [ref=f2e2301]: FC2502239
+              - generic [ref=f2e2302]: 15/02/2025
+              - generic [ref=f2e2303]: 16/04/2025
+              - strong [ref=f2e2305]: "624"
+              - generic [ref=f2e2306]: 521,23 MAD
+              - generic [ref=f2e2307]: non réglé
+            - generic [ref=f2e2310]:
+              - generic [ref=f2e2312]:
+                - strong [ref=f2e2313]: F0021
+                - text: CARREFOUR
+              - generic [ref=f2e2314]: FC2502240
+              - generic [ref=f2e2315]: 12/03/2025
+              - generic [ref=f2e2316]: 12/05/2025
+              - strong [ref=f2e2318]: "598"
+              - generic [ref=f2e2319]: 406,24 MAD
+              - generic [ref=f2e2320]: non réglé
+            - generic [ref=f2e2323]:
+              - generic [ref=f2e2325]:
+                - strong [ref=f2e2326]: F0021
+                - text: CARREFOUR
+              - generic [ref=f2e2327]: FC2502241
+              - generic [ref=f2e2328]: 26/03/2025
+              - generic [ref=f2e2329]: 26/05/2025
+              - strong [ref=f2e2331]: "584"
+              - generic [ref=f2e2332]: 1 368,72 MAD
+              - generic [ref=f2e2333]: non réglé
+            - generic [ref=f2e2336]:
+              - generic [ref=f2e2338]:
+                - strong [ref=f2e2339]: F0021
+                - text: CARREFOUR
+              - generic [ref=f2e2340]: FC2502242
+              - generic [ref=f2e2341]: 10/04/2025
+              - generic [ref=f2e2342]: 09/06/2025
+              - strong [ref=f2e2344]: "570"
+              - generic [ref=f2e2345]: 679,97 MAD
+              - generic [ref=f2e2346]: non réglé
+            - generic [ref=f2e2349]:
+              - generic [ref=f2e2351]:
+                - strong [ref=f2e2352]: F0021
+                - text: CARREFOUR
+              - generic [ref=f2e2353]: FC2502243
+              - generic [ref=f2e2354]: 22/04/2025
+              - generic [ref=f2e2355]: 23/06/2025
+              - strong [ref=f2e2357]: "556"
+              - generic [ref=f2e2358]: 1 549,86 MAD
+              - generic [ref=f2e2359]: non réglé
+            - generic [ref=f2e3526]:
+              - generic [ref=f2e3528]:
+                - strong [ref=f2e3529]: F0026
+                - text: ATLANTIC FOODS
+              - generic [ref=f2e3530]: FC2600749
+              - generic [ref=f2e3531]: 01/06/2026
+              - generic [ref=f2e3532]: 31/07/2026
+              - strong [ref=f2e3534]: "153"
+              - generic [ref=f2e3535]: 1 254,00 MAD
+              - generic [ref=f2e3536]: non réglé
+            - generic [ref=f2e3539]:
+              - generic [ref=f2e3541]:
+                - strong [ref=f2e3542]: F0026
+                - text: ATLANTIC FOODS
+              - generic [ref=f2e3543]: FC2600754
+              - generic [ref=f2e3544]: 01/06/2026
+              - generic [ref=f2e3545]: 31/07/2026
+              - strong [ref=f2e3547]: "153"
+              - generic [ref=f2e3548]: 3 244,36 MAD
+              - generic [ref=f2e3549]: non réglé
+            - generic [ref=f2e3552]:
+              - generic [ref=f2e3554]:
+                - strong [ref=f2e3555]: F0026
+                - text: ATLANTIC FOODS
+              - generic [ref=f2e3556]: FC2600757
+              - generic [ref=f2e3557]: 01/06/2026
+              - generic [ref=f2e3558]: 31/07/2026
+              - strong [ref=f2e3560]: "153"
+              - generic [ref=f2e3561]: 120,00 MAD
+              - generic [ref=f2e3562]: non réglé
+            - generic [ref=f2e3565]:
+              - generic [ref=f2e3567]:
+                - strong [ref=f2e3568]: F0026
+                - text: ATLANTIC FOODS
+              - generic [ref=f2e3569]: FC2600823
+              - generic [ref=f2e3570]: 09/06/2026
+              - generic [ref=f2e3571]: 10/08/2026
+              - strong [ref=f2e3573]: "143"
+              - generic [ref=f2e3574]: 3 121,32 MAD
+              - generic [ref=f2e3575]: non réglé
+            - generic [ref=f2e3578]:
+              - generic [ref=f2e3580]:
+                - strong [ref=f2e3581]: F0026
+                - text: ATLANTIC FOODS
+              - generic [ref=f2e3582]: FC2600824
+              - generic [ref=f2e3583]: 09/06/2026
+              - generic [ref=f2e3584]: 10/08/2026
+              - strong [ref=f2e3586]: "143"
+              - generic [ref=f2e3587]: 4 060,60 MAD
+              - generic [ref=f2e3588]: non réglé
+            - generic [ref=f2e3591]:
+              - generic [ref=f2e3593]:
+                - strong [ref=f2e3594]: F0026
+                - text: ATLANTIC FOODS
+              - generic [ref=f2e3595]: FC2600825
+              - generic [ref=f2e3596]: 09/06/2026
+              - generic [ref=f2e3597]: 10/08/2026
+              - strong [ref=f2e3599]: "143"
+              - generic [ref=f2e3600]: 627,00 MAD
+              - generic [ref=f2e3601]: non réglé
+            - generic [ref=f2e3604]:
+              - generic [ref=f2e3606]:
+                - strong [ref=f2e3607]: F0026
+                - text: ATLANTIC FOODS
+              - generic [ref=f2e3608]: FC2600848
+              - generic [ref=f2e3609]: 11/06/2026
+              - generic [ref=f2e3610]: 10/08/2026
+              - strong [ref=f2e3612]: "143"
+              - generic [ref=f2e3613]: 2 508,00 MAD
+              - generic [ref=f2e3614]: non réglé
+            - generic [ref=f2e3617]:
+              - generic [ref=f2e3619]:
+                - strong [ref=f2e3620]: F0026
+                - text: ATLANTIC FOODS
+              - generic [ref=f2e3621]: FC2600847
+              - generic [ref=f2e3622]: 12/06/2026
+              - generic [ref=f2e3623]: 11/08/2026
+              - strong [ref=f2e3625]: "142"
+              - generic [ref=f2e3626]: 1 632,10 MAD
+              - generic [ref=f2e3627]: non réglé
+            - generic [ref=f2e3630]:
+              - generic [ref=f2e3632]:
+                - strong [ref=f2e3633]: F0026
+                - text: ATLANTIC FOODS
+              - generic [ref=f2e3634]: FC2600856
+              - generic [ref=f2e3635]: 16/06/2026
+              - generic [ref=f2e3636]: 17/08/2026
+              - strong [ref=f2e3638]: "136"
+              - generic [ref=f2e3639]: 1 254,00 MAD
+              - generic [ref=f2e3640]: non réglé
+            - generic [ref=f2e3643]:
+              - generic [ref=f2e3645]:
+                - strong [ref=f2e3646]: F0026
+                - text: ATLANTIC FOODS
+              - generic [ref=f2e3647]: FC2600857
+              - generic [ref=f2e3648]: 16/06/2026
+              - generic [ref=f2e3649]: 17/08/2026
+              - strong [ref=f2e3651]: "136"
+              - generic [ref=f2e3652]: 4 501,60 MAD
+              - generic [ref=f2e3653]: non réglé
+            - generic [ref=f2e3656]:
+              - generic [ref=f2e3658]:
+                - strong [ref=f2e3659]: F0026
+                - text: ATLANTIC FOODS
+              - generic [ref=f2e3660]: FC2600876
+              - generic [ref=f2e3661]: 22/06/2026
+              - generic [ref=f2e3662]: 21/08/2026
+              - strong [ref=f2e3664]: "132"
+              - generic [ref=f2e3665]: 372,00 MAD
+              - generic [ref=f2e3666]: non réglé
+            - generic [ref=f2e3669]:
+              - generic [ref=f2e3671]:
+                - strong [ref=f2e3672]: F0026
+                - text: ATLANTIC FOODS
+              - generic [ref=f2e3673]: FC2600886
+              - generic [ref=f2e3674]: 23/06/2026
+              - generic [ref=f2e3675]: 24/08/2026
+              - strong [ref=f2e3677]: "129"
+              - generic [ref=f2e3678]: 2 798,50 MAD
+              - generic [ref=f2e3679]: non réglé
+            - generic [ref=f2e3682]:
+              - generic [ref=f2e3684]:
+                - strong [ref=f2e3685]: F0027
+                - text: MARJANE
+              - generic [ref=f2e3686]: FC2502244
+              - generic [ref=f2e3687]: 03/07/2025
+              - generic [ref=f2e3688]: 01/09/2025
+              - strong [ref=f2e3690]: "486"
+              - generic [ref=f2e3691]: 399,50 MAD
+              - generic [ref=f2e3692]: non réglé
+            - generic [ref=f2e4031]:
+              - generic [ref=f2e4033]:
+                - strong [ref=f2e4034]: F0031
+                - text: FROMAGERIE ITALIENNE FROMITAL
+              - generic [ref=f2e4035]: FC2600879
+              - generic [ref=f2e4036]: 24/06/2026
+              - generic [ref=f2e4037]: 24/08/2026
+              - strong [ref=f2e4039]: "129"
+              - generic [ref=f2e4040]: 366,71 MAD
+              - generic [ref=f2e4041]: non réglé
+            - generic [ref=f2e4644]:
+              - generic [ref=f2e4646]:
+                - strong [ref=f2e4647]: F0036
+                - text: LEADER FROMAGGI
+              - generic [ref=f2e4648]: FC2600775
+              - generic [ref=f2e4649]: 02/06/2026
+              - generic [ref=f2e4650]: 03/08/2026
+              - strong [ref=f2e4652]: "150"
+              - generic [ref=f2e4653]: 5 263,98 MAD
+              - generic [ref=f2e4654]: non réglé
+            - generic [ref=f2e5341]:
+              - generic [ref=f2e5343]:
+                - strong [ref=f2e5344]: F0039
+                - text: COPRALIM
+              - generic [ref=f2e5345]: FC2600743
+              - generic [ref=f2e5346]: 01/06/2026
+              - generic [ref=f2e5347]: 31/07/2026
+              - strong [ref=f2e5349]: "153"
+              - generic [ref=f2e5350]: 13 463,46 MAD
+              - generic [ref=f2e5351]: non réglé
+            - generic [ref=f2e5354]:
+              - generic [ref=f2e5356]:
+                - strong [ref=f2e5357]: F0039
+                - text: COPRALIM
+              - generic [ref=f2e5358]: FC2600785
+              - generic [ref=f2e5359]: 05/06/2026
+              - generic [ref=f2e5360]: 04/08/2026
+              - strong [ref=f2e5362]: "149"
+              - generic [ref=f2e5363]: 10 082,40 MAD
+              - generic [ref=f2e5364]: non réglé
+            - generic [ref=f2e5367]:
+              - generic [ref=f2e5369]:
+                - strong [ref=f2e5370]: F0039
+                - text: COPRALIM
+              - generic [ref=f2e5371]: FC2600842
+              - generic [ref=f2e5372]: 12/06/2026
+              - generic [ref=f2e5373]: 11/08/2026
+              - strong [ref=f2e5375]: "142"
+              - generic [ref=f2e5376]: 22 068,00 MAD
+              - generic [ref=f2e5377]: non réglé
+            - generic [ref=f2e5380]:
+              - generic [ref=f2e5382]:
+                - strong [ref=f2e5383]: F0039
+                - text: COPRALIM
+              - generic [ref=f2e5384]: FC2600863
+              - generic [ref=f2e5385]: 17/06/2026
+              - generic [ref=f2e5386]: 17/08/2026
+              - strong [ref=f2e5388]: "136"
+              - generic [ref=f2e5389]: 2 335,20 MAD
+              - generic [ref=f2e5390]: non réglé
+            - generic [ref=f2e5393]:
+              - generic [ref=f2e5395]:
+                - strong [ref=f2e5396]: F0039
+                - text: COPRALIM
+              - generic [ref=f2e5397]: FC2600887
+              - generic [ref=f2e5398]: 24/06/2026
+              - generic [ref=f2e5399]: 24/08/2026
+              - strong [ref=f2e5401]: "129"
+              - generic [ref=f2e5402]: 7 020,39 MAD
+              - generic [ref=f2e5403]: non réglé
+            - generic [ref=f2e5910]:
+              - generic [ref=f2e5912]:
+                - strong [ref=f2e5913]: F0040
+                - text: SOFRALIM
+              - generic [ref=f2e5914]: FC2600744
+              - generic [ref=f2e5915]: 01/06/2026
+              - generic [ref=f2e5916]: 31/07/2026
+              - strong [ref=f2e5918]: "153"
+              - generic [ref=f2e5919]: 2 232,00 MAD
+              - generic [ref=f2e5920]: non réglé
+            - generic [ref=f2e5923]:
+              - generic [ref=f2e5925]:
+                - strong [ref=f2e5926]: F0040
+                - text: SOFRALIM
+              - generic [ref=f2e5927]: FC2600784
+              - generic [ref=f2e5928]: 05/06/2026
+              - generic [ref=f2e5929]: 04/08/2026
+              - strong [ref=f2e5931]: "149"
+              - generic [ref=f2e5932]: 2 232,00 MAD
+              - generic [ref=f2e5933]: non réglé
+            - generic [ref=f2e5936]:
+              - generic [ref=f2e5938]:
+                - strong [ref=f2e5939]: F0040
+                - text: SOFRALIM
+              - generic [ref=f2e5940]: FC2600862
+              - generic [ref=f2e5941]: 17/06/2026
+              - generic [ref=f2e5942]: 17/08/2026
+              - strong [ref=f2e5944]: "136"
+              - generic [ref=f2e5945]: 3 936,00 MAD
+              - generic [ref=f2e5946]: non réglé
+            - generic [ref=f2e5949]:
+              - generic [ref=f2e5951]:
+                - strong [ref=f2e5952]: F0040
+                - text: SOFRALIM
+              - generic [ref=f2e5953]: FC2600888
+              - generic [ref=f2e5954]: 24/06/2026
+              - generic [ref=f2e5955]: 24/08/2026
+              - strong [ref=f2e5957]: "129"
+              - generic [ref=f2e5958]: 1 440,00 MAD
+              - generic [ref=f2e5959]: non réglé
+            - generic [ref=f2e6046]:
+              - generic [ref=f2e6048]:
+                - strong [ref=f2e6049]: F0041
+                - text: MAROC ASSAISONNEMENTS
+              - generic [ref=f2e6050]: FC2600594
+              - generic [ref=f2e6051]: 02/05/2026
+              - generic [ref=f2e6052]: 01/07/2026
+              - strong [ref=f2e6054]: "183"
+              - generic [ref=f2e6055]: 9 138,24 MAD
+              - generic [ref=f2e6056]: non réglé
+            - generic [ref=f2e6059]:
+              - generic [ref=f2e6061]:
+                - strong [ref=f2e6062]: F0041
+                - text: MAROC ASSAISONNEMENTS
+              - generic [ref=f2e6063]: FC2600730
+              - generic [ref=f2e6064]: 19/05/2026
+              - generic [ref=f2e6065]: 20/07/2026
+              - strong [ref=f2e6067]: "164"
+              - generic [ref=f2e6068]: 9 730,08 MAD
+              - generic [ref=f2e6069]: non réglé
+            - generic [ref=f2e6072]:
+              - generic [ref=f2e6074]:
+                - strong [ref=f2e6075]: F0041
+                - text: MAROC ASSAISONNEMENTS
+              - generic [ref=f2e6076]: FC2600902
+              - generic [ref=f2e6077]: 27/06/2026
+              - generic [ref=f2e6078]: 26/08/2026
+              - strong [ref=f2e6080]: "127"
+              - generic [ref=f2e6081]: 11 034,24 MAD
+              - generic [ref=f2e6082]: non réglé
+            - generic [ref=f2e6085]:
+              - generic [ref=f2e6087]:
+                - strong [ref=f2e6088]: F0044
+                - text: BHB FOOD
+              - generic [ref=f2e6089]: FC2600904
+              - generic [ref=f2e6090]: 26/06/2026
+              - generic [ref=f2e6091]: 25/08/2026
+              - strong [ref=f2e6093]: "128"
+              - generic [ref=f2e6094]: 1 008,00 MAD
+              - generic [ref=f2e6095]: non réglé
+            - generic [ref=f2e6950]:
+              - generic [ref=f2e6952]:
+                - strong [ref=f2e6953]: F0051
+                - text: TECHNO FOODS SARL
+              - generic [ref=f2e6954]: FC2600892
+              - generic [ref=f2e6955]: 19/06/2026
+              - generic [ref=f2e6956]: 18/08/2026
+              - strong [ref=f2e6958]: "135"
+              - generic [ref=f2e6959]: 4 080,00 MAD
+              - generic [ref=f2e6960]: non réglé
+            - generic [ref=f2e6963]:
+              - generic [ref=f2e6965]:
+                - strong [ref=f2e6966]: F0051
+                - text: TECHNO FOODS SARL
+              - generic [ref=f2e6967]: FC2600893
+              - generic [ref=f2e6968]: 25/06/2026
+              - generic [ref=f2e6969]: 24/08/2026
+              - strong [ref=f2e6971]: "129"
+              - generic [ref=f2e6972]: 960,00 MAD
+              - generic [ref=f2e6973]: non réglé
+            - generic [ref=f2e7396]:
+              - generic [ref=f2e7398]:
+                - strong [ref=f2e7399]: F0055
+                - text: ECOMAB
+              - generic [ref=f2e7400]: FC2600791
+              - generic [ref=f2e7401]: 06/06/2026
+              - generic [ref=f2e7402]: 05/08/2026
+              - strong [ref=f2e7404]: "148"
+              - generic [ref=f2e7405]: 3 394,21 MAD
+              - generic [ref=f2e7406]: non réglé
+            - generic [ref=f2e7409]:
+              - generic [ref=f2e7411]:
+                - strong [ref=f2e7412]: F0055
+                - text: ECOMAB
+              - generic [ref=f2e7413]: FC2600837
+              - generic [ref=f2e7414]: 11/06/2026
+              - generic [ref=f2e7415]: 10/08/2026
+              - strong [ref=f2e7417]: "143"
+              - generic [ref=f2e7418]: 7 639,75 MAD
+              - generic [ref=f2e7419]: non réglé
+            - generic [ref=f2e7422]:
+              - generic [ref=f2e7424]:
+                - strong [ref=f2e7425]: F0055
+                - text: ECOMAB
+              - generic [ref=f2e7426]: FC2600885
+              - generic [ref=f2e7427]: 24/06/2026
+              - generic [ref=f2e7428]: 24/08/2026
+              - strong [ref=f2e7430]: "129"
+              - generic [ref=f2e7431]: 3 658,56 MAD
+              - generic [ref=f2e7432]: non réglé
+            - generic [ref=f2e7507]:
+              - generic [ref=f2e7509]:
+                - strong [ref=f2e7510]: F0056
+                - text: LESIEUR CRISTAL
+              - generic [ref=f2e7511]: FC2600846
+              - generic [ref=f2e7512]: 12/06/2026
+              - generic [ref=f2e7513]: 11/08/2026
+              - strong [ref=f2e7515]: "142"
+              - generic [ref=f2e7516]: 43 300,40 MAD
+              - generic [ref=f2e7517]: non réglé
+            - generic [ref=f2e7808]:
+              - generic [ref=f2e7810]:
+                - strong [ref=f2e7811]: F0059
+                - text: CANAL FOOD
+              - generic [ref=f2e7812]: FC2600702
+              - generic [ref=f2e7813]: 15/05/2026
+              - generic [ref=f2e7814]: 14/07/2026
+              - strong [ref=f2e7816]: "170"
+              - generic [ref=f2e7817]: 44 270,05 MAD
+              - generic [ref=f2e7818]: non réglé
+            - generic [ref=f2e7821]:
+              - generic [ref=f2e7823]:
+                - strong [ref=f2e7824]: F0059
+                - text: CANAL FOOD
+              - generic [ref=f2e7825]: FC2600703
+              - generic [ref=f2e7826]: 15/05/2026
+              - generic [ref=f2e7827]: 14/07/2026
+              - strong [ref=f2e7829]: "170"
+              - generic [ref=f2e7830]: 10 915,00 MAD
+              - generic [ref=f2e7831]: non réglé
+            - generic [ref=f2e7834]:
+              - generic [ref=f2e7836]:
+                - strong [ref=f2e7837]: F0059
+                - text: CANAL FOOD
+              - generic [ref=f2e7838]: FC2600704
+              - generic [ref=f2e7839]: 15/05/2026
+              - generic [ref=f2e7840]: 14/07/2026
+              - strong [ref=f2e7842]: "170"
+              - generic [ref=f2e7843]: 925,10 MAD
+              - generic [ref=f2e7844]: non réglé
+            - generic [ref=f2e7847]:
+              - generic [ref=f2e7849]:
+                - strong [ref=f2e7850]: F0059
+                - text: CANAL FOOD
+              - generic [ref=f2e7851]: FCR2600017
+              - generic [ref=f2e7852]: 18/05/2026
+              - generic [ref=f2e7853]: 17/07/2026
+              - strong [ref=f2e7855]: "167"
+              - generic [ref=f2e7856]: "-508,89 MAD"
+              - generic [ref=f2e7857]: non réglé
+            - generic [ref=f2e8772]:
+              - generic [ref=f2e8774]:
+                - strong [ref=f2e8775]: F0078
+                - text: JESSY DIFFUSION
+              - generic [ref=f2e8776]: FC2600805
+              - generic [ref=f2e8777]: 04/06/2026
+              - generic [ref=f2e8778]: 03/08/2026
+              - strong [ref=f2e8780]: "150"
+              - generic [ref=f2e8781]: 6 039,07 MAD
+              - generic [ref=f2e8782]: non réglé
+            - generic [ref=f2e8785]:
+              - generic [ref=f2e8787]:
+                - strong [ref=f2e8788]: F0078
+                - text: JESSY DIFFUSION
+              - generic [ref=f2e8789]: FC2600906
+              - generic [ref=f2e8790]: 26/06/2026
+              - generic [ref=f2e8791]: 25/08/2026
+              - strong [ref=f2e8793]: "128"
+              - generic [ref=f2e8794]: 8 506,22 MAD
+              - generic [ref=f2e8795]: non réglé
+            - generic [ref=f2e9218]:
+              - generic [ref=f2e9220]:
+                - strong [ref=f2e9221]: F0088
+                - text: ASIA STORE
+              - generic [ref=f2e9222]: FC2600750
+              - generic [ref=f2e9223]: 02/06/2026
+              - generic [ref=f2e9224]: 03/08/2026
+              - strong [ref=f2e9226]: "150"
+              - generic [ref=f2e9227]: 9 184,00 MAD
+              - generic [ref=f2e9228]: non réglé
+            - generic [ref=f2e9231]:
+              - generic [ref=f2e9233]:
+                - strong [ref=f2e9234]: F0088
+                - text: ASIA STORE
+              - generic [ref=f2e9235]: FC2600822
+              - generic [ref=f2e9236]: 10/06/2026
+              - generic [ref=f2e9237]: 10/08/2026
+              - strong [ref=f2e9239]: "143"
+              - generic [ref=f2e9240]: 3 602,00 MAD
+              - generic [ref=f2e9241]: non réglé
+            - generic [ref=f2e9244]:
+              - generic [ref=f2e9246]:
+                - strong [ref=f2e9247]: F0088
+                - text: ASIA STORE
+              - generic [ref=f2e9248]: FC2600883
+              - generic [ref=f2e9249]: 24/06/2026
+              - generic [ref=f2e9250]: 24/08/2026
+              - strong [ref=f2e9252]: "129"
+              - generic [ref=f2e9253]: 2 040,00 MAD
+              - generic [ref=f2e9254]: non réglé
+            - generic [ref=f2e9713]:
+              - generic [ref=f2e9715]:
+                - strong [ref=f2e9716]: F0108
+                - text: OMNITRADE
+              - generic [ref=f2e9717]: FC2600644
+              - generic [ref=f2e9718]: 08/05/2026
+              - generic [ref=f2e9719]: 07/07/2026
+              - strong [ref=f2e9721]: "177"
+              - generic [ref=f2e9722]: 38 059,77 MAD
+              - generic [ref=f2e9723]: non réglé
+            - generic [ref=f2e9750]:
+              - generic [ref=f2e9752]:
+                - strong [ref=f2e9753]: F0108
+                - text: OMNITRADE
+              - generic [ref=f2e9754]: FCR2600022
+              - generic [ref=f2e9755]: 15/05/2026
+              - generic [ref=f2e9756]: 14/07/2026
+              - strong [ref=f2e9758]: "170"
+              - generic [ref=f2e9759]: "-3 577,43 MAD"
+              - generic [ref=f2e9760]: non réglé
+            - generic [ref=f2e9979]:
+              - generic [ref=f2e9981]:
+                - strong [ref=f2e9982]: F0112
+                - text: VISCA FOOD
+              - generic [ref=f2e9983]: FC2600845
+              - generic [ref=f2e9984]: 12/06/2026
+              - generic [ref=f2e9985]: 11/08/2026
+              - strong [ref=f2e9987]: "142"
+              - generic [ref=f2e9988]: 2 476,00 MAD
+              - generic [ref=f2e9989]: non réglé
+            - generic [ref=f2e9992]:
+              - generic [ref=f2e9994]:
+                - strong [ref=f2e9995]: F0112
+                - text: VISCA FOOD
+              - generic [ref=f2e9996]: FC2600907
+              - generic [ref=f2e9997]: 27/06/2026
+              - generic [ref=f2e9998]: 26/08/2026
+              - strong [ref=f2e10000]: "127"
+              - generic [ref=f2e10001]: 3 378,00 MAD
+              - generic [ref=f2e10002]: non réglé
+            - generic [ref=f2e10113]:
+              - generic [ref=f2e10115]:
+                - strong [ref=f2e10116]: F0113
+                - text: BANCHEREAU MAROC
+              - generic [ref=f2e10117]: FCR2600011
+              - generic [ref=f2e10118]: 05/03/2026
+              - generic [ref=f2e10119]: 04/05/2026
+              - strong [ref=f2e10121]: "241"
+              - generic [ref=f2e10122]: "-273,78 MAD"
+              - generic [ref=f2e10123]: non réglé
+            - generic [ref=f2e10414]:
+              - generic [ref=f2e10416]:
+                - strong [ref=f2e10417]: F0121
+                - text: FRL COMPANY
+              - generic [ref=f2e10418]: FC2600793
+              - generic [ref=f2e10419]: 05/06/2026
+              - generic [ref=f2e10420]: 04/08/2026
+              - strong [ref=f2e10422]: "149"
+              - generic [ref=f2e10423]: 1 800,00 MAD
+              - generic [ref=f2e10424]: non réglé
+            - generic [ref=f2e10427]:
+              - generic [ref=f2e10429]:
+                - strong [ref=f2e10430]: F0121
+                - text: FRL COMPANY
+              - generic [ref=f2e10431]: FC2600866
+              - generic [ref=f2e10432]: 15/06/2026
+              - generic [ref=f2e10433]: 14/08/2026
+              - strong [ref=f2e10435]: "139"
+              - generic [ref=f2e10436]: 3 085,60 MAD
+              - generic [ref=f2e10437]: non réglé
+            - generic [ref=f2e10440]:
+              - generic [ref=f2e10442]:
+                - strong [ref=f2e10443]: F0121
+                - text: FRL COMPANY
+              - generic [ref=f2e10444]: FC2600897
+              - generic [ref=f2e10445]: 26/06/2026
+              - generic [ref=f2e10446]: 25/08/2026
+              - strong [ref=f2e10448]: "128"
+              - generic [ref=f2e10449]: 772,80 MAD
+              - generic [ref=f2e10450]: non réglé
+            - generic [ref=f2e10453]:
+              - generic [ref=f2e10455]:
+                - strong [ref=f2e10456]: F0125
+                - text: MAXI LV
+              - generic [ref=f2e10457]: FC2502245
+              - generic [ref=f2e10458]: 09/07/2025
+              - generic [ref=f2e10459]: 08/09/2025
+              - strong [ref=f2e10461]: "479"
+              - generic [ref=f2e10462]: 627,64 MAD
+              - generic [ref=f2e10463]: non réglé
+            - generic [ref=f2e10550]:
+              - generic [ref=f2e10552]:
+                - strong [ref=f2e10553]: F0131
+                - text: COMPTOIR MAROCAIN DU SEL
+              - generic [ref=f2e10554]: FC2600870
+              - generic [ref=f2e10555]: 19/06/2026
+              - generic [ref=f2e10556]: 18/08/2026
+              - strong [ref=f2e10558]: "135"
+              - generic [ref=f2e10559]: 3 300,00 MAD
+              - generic [ref=f2e10560]: non réglé
+            - generic [ref=f2e10671]:
+              - generic [ref=f2e10673]:
+                - strong [ref=f2e10674]: F0133
+                - text: GROUPE KAYNA
+              - generic [ref=f2e10675]: FCR2600019
+              - generic [ref=f2e10676]: 20/01/2026
+              - generic [ref=f2e10677]: 23/03/2026
+              - strong [ref=f2e10679]: "283"
+              - generic [ref=f2e10680]: "-4 140,00 MAD"
+              - generic [ref=f2e10681]: non réglé
+            - generic [ref=f2e10840]:
+              - generic [ref=f2e10842]:
+                - strong [ref=f2e10843]: F0148
+                - text: AFI DIFFUSION
+              - generic [ref=f2e10844]: FC2600635
+              - generic [ref=f2e10845]: 06/05/2026
+              - generic [ref=f2e10846]: 06/07/2026
+              - strong [ref=f2e10848]: "178"
+              - generic [ref=f2e10849]: 708,00 MAD
+              - generic [ref=f2e10850]: non réglé
+            - generic [ref=f2e10853]:
+              - generic [ref=f2e10855]:
+                - strong [ref=f2e10856]: F0148
+                - text: AFI DIFFUSION
+              - generic [ref=f2e10857]: FC2600707
+              - generic [ref=f2e10858]: 14/05/2026
+              - generic [ref=f2e10859]: 13/07/2026
+              - strong [ref=f2e10861]: "171"
+              - generic [ref=f2e10862]: 3 250,00 MAD
+              - generic [ref=f2e10863]: non réglé
+            - generic [ref=f2e11190]:
+              - generic [ref=f2e11192]:
+                - strong [ref=f2e11193]: F0162
+                - text: 3M BUSINESS
+              - generic [ref=f2e11194]: FC2600844
+              - generic [ref=f2e11195]: 12/06/2026
+              - generic [ref=f2e11196]: 11/08/2026
+              - strong [ref=f2e11198]: "142"
+              - generic [ref=f2e11199]: 1 350,00 MAD
+              - generic [ref=f2e11200]: non réglé
+            - generic [ref=f2e11275]:
+              - generic [ref=f2e11277]:
+                - strong [ref=f2e11278]: F0164
+                - text: AJP
+              - generic [ref=f2e11279]: FC2600869
+              - generic [ref=f2e11280]: 18/06/2026
+              - generic [ref=f2e11281]: 17/08/2026
+              - strong [ref=f2e11283]: "136"
+              - generic [ref=f2e11284]: 11 935,24 MAD
+              - generic [ref=f2e11285]: non réglé
+            - generic [ref=f2e11324]:
+              - generic [ref=f2e11326]:
+                - strong [ref=f2e11327]: F0165
+                - text: BEST FOOD DISTRIBUTION
+              - generic [ref=f2e11328]: FC2600903
+              - generic [ref=f2e11329]: 26/06/2026
+              - generic [ref=f2e11330]: 25/08/2026
+              - strong [ref=f2e11332]: "128"
+              - generic [ref=f2e11333]: 4 080,00 MAD
+              - generic [ref=f2e11334]: non réglé
+            - generic [ref=f2e11421]:
+              - generic [ref=f2e11423]:
+                - strong [ref=f2e11424]: F0170
+                - text: LARKIN EDDY DISTRIBUTION
+              - generic [ref=f2e11425]: FC2600865
+              - generic [ref=f2e11426]: 18/06/2026
+              - generic [ref=f2e11427]: 17/08/2026
+              - strong [ref=f2e11429]: "136"
+              - generic [ref=f2e11430]: 35 400,00 MAD
+              - generic [ref=f2e11431]: non réglé
+            - generic [ref=f2e11530]:
+              - generic [ref=f2e11532]:
+                - strong [ref=f2e11533]: F0171
+                - text: AREA PACK
+              - generic [ref=f2e11534]: FC2600875
+              - generic [ref=f2e11535]: 22/06/2026
+              - generic [ref=f2e11536]: 21/08/2026
+              - strong [ref=f2e11538]: "132"
+              - generic [ref=f2e11539]: 5 202,00 MAD
+              - generic [ref=f2e11540]: non réglé
+            - generic [ref=f2e11711]:
+              - generic [ref=f2e11713]:
+                - strong [ref=f2e11714]: F0180
+                - text: TSM
+              - generic [ref=f2e11715]: FC2600701
+              - generic [ref=f2e11716]: 15/05/2026
+              - generic [ref=f2e11717]: 14/07/2026
+              - strong [ref=f2e11719]: "170"
+              - generic [ref=f2e11720]: 960,00 MAD
+              - generic [ref=f2e11721]: non réglé
+            - generic [ref=f2e11724]:
+              - generic [ref=f2e11726]:
+                - strong [ref=f2e11727]: F0180
+                - text: TSM
+              - generic [ref=f2e11728]: FC2600898
+              - generic [ref=f2e11729]: 26/06/2026
+              - generic [ref=f2e11730]: 25/08/2026
+              - strong [ref=f2e11732]: "128"
+              - generic [ref=f2e11733]: 3 606,24 MAD
+              - generic [ref=f2e11734]: non réglé
+            - generic [ref=f2e11941]:
+              - generic [ref=f2e11943]:
+                - strong [ref=f2e11944]: F0187
+                - text: KING GENERATION
+              - generic [ref=f2e11945]: FC2600867
+              - generic [ref=f2e11946]: 19/06/2026
+              - generic [ref=f2e11947]: 18/08/2026
+              - strong [ref=f2e11949]: "135"
+              - generic [ref=f2e11950]: 6 943,26 MAD
+              - generic [ref=f2e11951]: non réglé
+            - generic [ref=f2e11954]:
+              - generic [ref=f2e11956]:
+                - strong [ref=f2e11957]: F0187
+                - text: KING GENERATION
+              - generic [ref=f2e11958]: FC2600868
+              - generic [ref=f2e11959]: 19/06/2026
+              - generic [ref=f2e11960]: 18/08/2026
+              - strong [ref=f2e11962]: "135"
+              - generic [ref=f2e11963]: 2 607,36 MAD
+              - generic [ref=f2e11964]: non réglé
+            - generic [ref=f2e12267]:
+              - generic [ref=f2e12269]:
+                - strong [ref=f2e12270]: F0196
+                - text: FUNFRIES
+              - generic [ref=f2e12271]: FC2600725
+              - generic [ref=f2e12272]: 06/05/2026
+              - generic [ref=f2e12273]: 06/07/2026
+              - strong [ref=f2e12275]: "178"
+              - generic [ref=f2e12276]: 1 537,50 MAD
+              - generic [ref=f2e12277]: non réglé
+            - generic [ref=f2e12280]:
+              - generic [ref=f2e12282]:
+                - strong [ref=f2e12283]: F0196
+                - text: FUNFRIES
+              - generic [ref=f2e12284]: FC2600774
+              - generic [ref=f2e12285]: 03/06/2026
+              - generic [ref=f2e12286]: 03/08/2026
+              - strong [ref=f2e12288]: "150"
+              - generic [ref=f2e12289]: 3 530,00 MAD
+              - generic [ref=f2e12290]: non réglé
+            - generic [ref=f2e12293]:
+              - generic [ref=f2e12295]:
+                - strong [ref=f2e12296]: F0196
+                - text: FUNFRIES
+              - generic [ref=f2e12297]: FC2600889
+              - generic [ref=f2e12298]: 25/06/2026
+              - generic [ref=f2e12299]: 24/08/2026
+              - strong [ref=f2e12301]: "129"
+              - generic [ref=f2e12302]: 1 000,00 MAD
+              - generic [ref=f2e12303]: non réglé
+            - generic [ref=f2e12366]:
+              - generic [ref=f2e12368]:
+                - strong [ref=f2e12369]: F0201
+                - text: MAROCAINE DE DISTRIBUTION DIRECT
+              - generic [ref=f2e12370]: FCR2600004
+              - generic [ref=f2e12371]: 02/04/2026
+              - generic [ref=f2e12372]: 01/06/2026
+              - strong [ref=f2e12374]: "213"
+              - generic [ref=f2e12375]: "-1 131,00 MAD"
+              - generic [ref=f2e12376]: non réglé
+            - generic [ref=f2e13039]:
+              - generic [ref=f2e13041]:
+                - strong [ref=f2e13042]: F0211
+                - text: TAMOUNTE SERVICE
+              - generic [ref=f2e13043]: FF260091
+              - generic [ref=f2e13044]: 03/07/2026
+              - generic [ref=f2e13045]: 01/09/2026
+              - strong [ref=f2e13047]: "121"
+              - generic [ref=f2e13048]: 720,00 MAD
+              - generic [ref=f2e13049]: non réglé
+            - generic [ref=f2e13244]:
+              - generic [ref=f2e13246]:
+                - strong [ref=f2e13247]: F0221
+                - text: OVOTEC
+              - generic [ref=f2e13248]: FC2600759
+              - generic [ref=f2e13249]: 02/06/2026
+              - generic [ref=f2e13250]: 03/08/2026
+              - strong [ref=f2e13252]: "150"
+              - generic [ref=f2e13253]: 1 719,55 MAD
+              - generic [ref=f2e13254]: non réglé
+            - generic [ref=f2e13257]:
+              - generic [ref=f2e13259]:
+                - strong [ref=f2e13260]: F0221
+                - text: OVOTEC
+              - generic [ref=f2e13261]: FC2600818
+              - generic [ref=f2e13262]: 09/06/2026
+              - generic [ref=f2e13263]: 10/08/2026
+              - strong [ref=f2e13265]: "143"
+              - generic [ref=f2e13266]: 413,09 MAD
+              - generic [ref=f2e13267]: non réglé
+            - generic [ref=f2e13270]:
+              - generic [ref=f2e13272]:
+                - strong [ref=f2e13273]: F0221
+                - text: OVOTEC
+              - generic [ref=f2e13274]: FC2600854
+              - generic [ref=f2e13275]: 16/06/2026
+              - generic [ref=f2e13276]: 17/08/2026
+              - strong [ref=f2e13278]: "136"
+              - generic [ref=f2e13279]: 184,32 MAD
+              - generic [ref=f2e13280]: non réglé
+            - generic [ref=f2e14027]:
+              - generic [ref=f2e14029]:
+                - strong [ref=f2e14030]: F0239
+                - text: ADAROUICHE FOOD
+              - generic [ref=f2e14031]: FC2600908
+              - generic [ref=f2e14032]: 16/06/2026
+              - generic [ref=f2e14033]: 17/08/2026
+              - strong [ref=f2e14035]: "136"
+              - generic [ref=f2e14036]: 2 279,00 MAD
+              - generic [ref=f2e14037]: non réglé
+            - generic [ref=f2e14052]:
+              - generic [ref=f2e14054]:
+                - strong [ref=f2e14055]: F1004
+                - text: LAILA LUBRIFIANT
+              - generic [ref=f2e14056]: FF260023
+              - generic [ref=f2e14057]: 26/12/2025
+              - generic [ref=f2e14058]: 24/02/2026
+              - strong [ref=f2e14060]: "310"
+              - generic [ref=f2e14061]: 739,92 MAD
+              - generic [ref=f2e14062]: non réglé
+            - generic [ref=f2e14065]:
+              - generic [ref=f2e14067]:
+                - strong [ref=f2e14068]: F1004
+                - text: LAILA LUBRIFIANT
+              - generic [ref=f2e14069]: FF260007
+              - generic [ref=f2e14070]: 24/01/2026
+              - generic [ref=f2e14071]: 25/03/2026
+              - strong [ref=f2e14073]: "281"
+              - generic [ref=f2e14074]: 960,00 MAD
+              - generic [ref=f2e14075]: non réglé
+            - generic [ref=f2e14078]:
+              - generic [ref=f2e14080]:
+                - strong [ref=f2e14081]: F1004
+                - text: LAILA LUBRIFIANT
+              - generic [ref=f2e14082]: FF260083
+              - generic [ref=f2e14083]: 08/04/2026
+              - generic [ref=f2e14084]: 08/06/2026
+              - strong [ref=f2e14086]: "206"
+              - generic [ref=f2e14087]: 620,04 MAD
+              - generic [ref=f2e14088]: non réglé
+            - generic [ref=f2e14091]:
+              - generic [ref=f2e14093]:
+                - strong [ref=f2e14094]: F1007
+                - text: BELVEDERE ASSURANCES
+              - generic [ref=f2e14095]: FF260053
+              - generic [ref=f2e14096]: 26/01/2026
+              - generic [ref=f2e14097]: 27/03/2026
+              - strong [ref=f2e14099]: "279"
+              - generic [ref=f2e14100]: 6 597,48 MAD
+              - generic [ref=f2e14101]: non réglé
+            - generic [ref=f2e14104]:
+              - generic [ref=f2e14106]:
+                - strong [ref=f2e14107]: F1007
+                - text: BELVEDERE ASSURANCES
+              - generic [ref=f2e14108]: FF260054
+              - generic [ref=f2e14109]: 13/04/2026
+              - generic [ref=f2e14110]: 12/06/2026
+              - strong [ref=f2e14112]: "202"
+              - generic [ref=f2e14113]: 4 045,92 MAD
+              - generic [ref=f2e14114]: non réglé
+            - generic [ref=f2e14117]:
+              - generic [ref=f2e14119]:
+                - strong [ref=f2e14120]: F1007
+                - text: BELVEDERE ASSURANCES
+              - generic [ref=f2e14121]: FF260087
+              - generic [ref=f2e14122]: 19/06/2026
+              - generic [ref=f2e14123]: 18/08/2026
+              - strong [ref=f2e14125]: "135"
+              - generic [ref=f2e14126]: 6 614,40 MAD
+              - generic [ref=f2e14127]: non réglé
+            - generic [ref=f2e14190]:
+              - generic [ref=f2e14192]:
+                - strong [ref=f2e14193]: F1203
+                - text: GLOBAL INTERNATIONAL MOTORS
+              - generic [ref=f2e14194]: FF260074
+              - generic [ref=f2e14195]: 08/06/2026
+              - generic [ref=f2e14196]: 07/08/2026
+              - strong [ref=f2e14198]: "146"
+              - generic [ref=f2e14199]: 786,66 MAD
+              - generic [ref=f2e14200]: non réglé
+            - generic [ref=f2e14203]:
+              - generic [ref=f2e14205]:
+                - strong [ref=f2e14206]: F1210
+                - text: CONSILIUMPRO
+              - generic [ref=f2e14207]: FF260002
+              - generic [ref=f2e14208]: 06/01/2026
+              - generic [ref=f2e14209]: 09/03/2026
+              - strong [ref=f2e14211]: "297"
+              - generic [ref=f2e14212]: 9 720,00 MAD
+              - generic [ref=f2e14213]: non réglé
+            - generic [ref=f2e14240]:
+              - generic [ref=f2e14242]:
+                - strong [ref=f2e14243]: F1220
+                - text: JAMEEL MOBILITY COMPANY
+              - generic [ref=f2e14244]: FF260086
+              - generic [ref=f2e14245]: 28/04/2026
+              - generic [ref=f2e14246]: 29/06/2026
+              - strong [ref=f2e14248]: "185"
+              - generic [ref=f2e14249]: 7 054,80 MAD
+              - generic [ref=f2e14250]: non réglé
+            - generic [ref=f2e14265]:
+              - generic [ref=f2e14267]:
+                - strong [ref=f2e14268]: F2230
+                - text: LS LINGLO SPEAKSY ACADEMY
+              - generic [ref=f2e14269]: FF260090
+              - generic [ref=f2e14270]: 03/07/2026
+              - generic [ref=f2e14271]: 01/09/2026
+              - strong [ref=f2e14273]: "121"
+              - generic [ref=f2e14274]: 2 400,00 MAD
+              - generic [ref=f2e14275]: non réglé
+  - generic [ref=f2e14290]:
+    - textbox "Rechercher..." [ref=f2e14295]
+    - generic [ref=f2e14296]:
+      - generic [ref=f2e14297] [cursor=pointer]:
+        - checkbox "(Tout sélectionner)" [ref=f2e14298]
+        - strong [ref=f2e14299]: (Tout sélectionner)
+      - generic [ref=f2e14300] [cursor=pointer]:
+        - checkbox "Réglé" [ref=f2e14301]
+        - text: Réglé
+      - generic [ref=f2e14302] [cursor=pointer]:
+        - checkbox "Non réglé (solde restant)" [checked] [active] [ref=f2e14303]
+        - text: Non réglé (solde restant)
+    - generic [ref=f2e14304]:
+      - button "Effacer" [ref=f2e14305] [cursor=pointer]
+      - button "Fermer" [ref=f2e14306] [cursor=pointer]

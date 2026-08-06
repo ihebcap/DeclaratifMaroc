@@ -43,12 +43,16 @@ namespace Declaration.Selection
                     domaineFournisseur = GrfEnums.Domaine_ReglementFournisseur,
                     domaineClient = GrfEnums.Domaine_ReglementClient,
                     domaineDepense = GrfEnums.Domaine_Depense,
+                    // TASK-194 : CT_Type = 1 pour Fournisseur, 0 pour Client (exclut les règlements type "autre")
+                    ctTypeFournisseur = GrfEnums.CtType_Fournisseur,
+                    ctTypeClient = GrfEnums.CtType_Client,
                     // TASK-050 : MV_DECAISSE ne concerne QUE les traites/effets → on ne filtre plus
                     // dessus. La direction du mouvement vient de MV_Domaine seul (0=encaissement,
                     // 1=décaissement fournisseur, 6=dépense). Usage exact de MV_DECAISSE pour les
                     // traites à revoir séparément (hors périmètre TASK-050).
                     modeEspece = GrfEnums.ModePaiement_Espece,
-                    pointOui = GrfEnums.Point_Oui
+                    pointOui = GrfEnums.Point_Oui,
+                    avecTva = GrfEnums.Tva_Avec
                 };
 
                 // 1. Décaissements Fournisseur + Espèces Fournisseur
@@ -73,6 +77,11 @@ namespace Declaration.Selection
                 await MapAndEvaluate(result, depenses, dateDebut, dateFin, SensAffectation.Achat, verifierFacture);
                 await MapAndEvaluate(result, encaissements, dateDebut, dateFin, SensAffectation.Vente, verifierFacture);
 
+                // TASK-031 : opérations bancaires avec TVA (RT_PREVISIONNELLE) — valorisation
+                // directe, hors périmètre RT_MOUVEMENT/RT_AFFECTATION, jamais via OM/FGR.
+                var fraisBancaires = await SelectionnerFraisBancaireAsync(soId, dateDebut, dateFin, connection, sageConnectionString);
+                result.AddRange(fraisBancaires.Select(a => new AffectationCandidate { Motif = MotifRejet.Eligible, Affectation = a }));
+
                 return result;
             }
             catch (Exception ex)
@@ -81,6 +90,131 @@ namespace Declaration.Selection
                 throw;
             }
         }
+
+        internal class FraisBancaireRow
+        {
+            public int PT_Id { get; set; }
+            public string MV_Numero { get; set; } = "";
+            public string? MV_PieceBq { get; set; }
+            public DateTime MV_Date { get; set; }
+            public decimal MV_Montant { get; set; }
+            public decimal PT_MontantTva { get; set; }
+            public int? TO_ErpTaxeNo { get; set; }
+            public int? TO_Sens { get; set; }
+            public string? TO_Intitule { get; set; }
+            public string? BanqueCode { get; set; }
+            public string? IB_ICE { get; set; }
+            public string? IB_IDENTIFIANT { get; set; }
+        }
+
+        internal static List<AffectationADeclarer> MapFraisBancaireRows(
+            IEnumerable<FraisBancaireRow> rows,
+            Dictionary<int, (decimal Taux, string CodeTaxe)> tauxInfo)
+        {
+            var result = new List<AffectationADeclarer>();
+            foreach (var r in rows)
+            {
+                if (!r.TO_ErpTaxeNo.HasValue || !tauxInfo.TryGetValue(r.TO_ErpTaxeNo.Value, out var infoTaxe))
+                    continue;
+
+                var sens = r.TO_Sens == GrfEnums.SensPrevisionnelle_Encaissement
+                    ? SensAffectation.Vente : SensAffectation.Achat;
+
+                var cleUnique = $"{r.MV_Numero}-{r.PT_Id}";
+
+                result.Add(new AffectationADeclarer
+                {
+                    NumeroFacture = cleUnique,
+                    NumeroRapprochement = cleUnique,
+                    Reference = r.MV_PieceBq ?? "",
+                    Sens = sens,
+                    Source = SourceAffectation.FraisBancaire,
+                    MontantAffecte = r.MV_Montant + r.PT_MontantTva,
+                    DatePaiement = r.MV_Date,
+                    DateFacture = r.MV_Date,
+                    ModePaiement = "3", // Frais bancaire : mode paiement Simpl-TVA fixe = Opération bancaire (table officielle DOCS/GUIDE_PROCESS_DECLARATION_TVA.html, TASK-031)
+                    Tiers = new TiersInfo
+                    {
+                        Numero = r.BanqueCode ?? "",
+                        Nom = string.IsNullOrWhiteSpace(r.TO_Intitule) ? (r.BanqueCode ?? "") : r.TO_Intitule!,
+                        IdentifiantFiscal = r.IB_IDENTIFIANT ?? "",
+                        Ice = r.IB_ICE ?? "",
+                        CodeActivite = Declaration.Core.CodeActiviteResolver.Resoudre(surchargeManuelle: null, codeActiviteSage: null)
+                    },
+                    EC_Type = GrfEnums.EcType_FraisBancaireDirect,
+                    EC_Id = 0,
+                    MV_Id = 0,
+                    ValorisationDirecteTaux = infoTaxe.Taux,
+                    ValorisationDirecteTva = r.PT_MontantTva,
+                    ValorisationDirecteCodeTaxe = infoTaxe.CodeTaxe
+                });
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// TASK-031 : sélection des opérations bancaires avec TVA de la période
+        /// (RT_PREVISIONNELLE.PT_Domaine=6), jamais déjà déclarées (DT_Id IS NULL), avec TVA non
+        /// nulle (PT_MontantTva &lt;&gt; 0 — comportement legacy `DeclarationTvaController`, une
+        /// opération sans TVA n'est pas une ligne de déduction). Valorisation DIRECTE (assiette =
+        /// MV_Montant, TVA = PT_MontantTva) : pas de facture, pas de ventilation/prorata.
+        /// Taux résolu via P_TYPEOPBANQUE.TO_ErpTaxeNo → F_TAXE.TA_No (Sage, jamais joint
+        /// cross-base — même règle que TASK-154). Identité banque (IF/ICE) résolue via
+        /// RT_INFOCBANQ.EB_No = RT_PREVISIONNELLE.BN_Id, jamais de valeur inventée si absente.
+        /// </summary>
+        private async Task<List<AffectationADeclarer>> SelectionnerFraisBancaireAsync(
+            int soId, DateTime dateDebut, DateTime dateFin, SqlConnection connection, string sageConnectionString)
+        {
+            var rows = (await connection.QueryAsync<FraisBancaireRow>(GetFraisBancaireSql(), new
+            {
+                so = soId,
+                finExclude = dateFin.AddDays(1),
+                ptDomaineFraisBancaire = GrfEnums.PtDomaine_FraisBancaire,
+                annuleNon = GrfEnums.Annule_Non
+            })).ToList();
+
+            if (rows.Count == 0) return new List<AffectationADeclarer>();
+
+            // Taux et Code Taxe Sage (F_TAXE.TA_No) — batché, jamais un aller-retour par ligne (TASK-154, TASK-198).
+            var taxeNos = rows.Where(r => r.TO_ErpTaxeNo.HasValue).Select(r => r.TO_ErpTaxeNo!.Value).Distinct().ToList();
+            var tauxInfo = new Dictionary<int, (decimal Taux, string CodeTaxe)>();
+            if (taxeNos.Count > 0)
+            {
+                using var sageConnection = new SqlConnection(sageConnectionString);
+                await sageConnection.OpenAsync();
+                var taxeRows = await sageConnection.QueryAsync<(int TA_No, decimal TA_Taux, string? TA_Code)>(
+                    "SELECT TA_No, TA_Taux, TA_Code FROM F_TAXE WHERE TA_No IN @nos", new { nos = taxeNos });
+                foreach (var t in taxeRows) tauxInfo[t.TA_No] = (t.TA_Taux, t.TA_Code ?? "");
+            }
+
+            return MapFraisBancaireRows(rows, tauxInfo);
+        }
+
+        private string GetFraisBancaireSql() => $@"
+            SELECT
+                P.PT_Id,
+                P.MV_Numero,
+                P.MV_PieceBq,
+                P.MV_Date,
+                P.MV_Montant,
+                P.PT_MontantTva,
+                TO_.TO_ErpTaxeNo,
+                TO_.TO_Sens,
+                TO_.TO_Intitule,
+                VB.BanqueCode,
+                IB.IB_ICE,
+                IB.IB_IDENTIFIANT
+            FROM RT_PREVISIONNELLE P
+            LEFT JOIN P_TYPEOPBANQUE TO_ ON TO_.TO_Id = P.TP_No AND TO_.SO_Id = P.SO_Id
+            LEFT JOIN vBanque VB ON VB.No = P.BN_Id AND VB.SocieteNo = P.SO_Id
+            LEFT JOIN RT_INFOCBANQ IB ON IB.EB_No = P.BN_Id AND IB.SO_Id = P.SO_Id
+            WHERE P.SO_Id = @so
+              AND P.PT_Domaine = @ptDomaineFraisBancaire
+              AND P.MV_Annule = @annuleNon
+              AND P.PT_MontantTva <> 0 -- TASK-031 : jamais de ligne sans TVA (comportement legacy)
+              AND P.DT_Id IS NULL -- non encore déclarée
+              AND P.MV_Date < @finExclude
+        ";
 
         private async Task MapAndEvaluate(
             List<AffectationCandidate> list, 
@@ -125,6 +259,8 @@ namespace Declaration.Selection
             LEFT JOIN RT_ECHEANCE E ON A.EC_Id = E.EC_Id
             WHERE M.SO_Id = @so
               AND M.MV_Domaine = @domaineFournisseur
+              -- TASK-194 : ne garder que les règlements fournisseur réels (CT_Type = 1)
+              AND M.CT_Type = @ctTypeFournisseur
               -- TASK-050 : MV_DECAISSE supprimé — cadrage direction par MV_Domaine=1 seul.
               -- MV_DECAISSE concerne uniquement les traites/effets (à revoir séparément).
               -- L'espèce (MV_Type=0) reste incluse via MV_Domaine sans filtre additionnel.
@@ -166,6 +302,9 @@ namespace Declaration.Selection
               AND M.MV_Domaine = @domaineDepense
               -- TASK-050 : MV_DECAISSE supprimé — cadrage direction par MV_Domaine=6 seul.
               -- MV_DECAISSE concerne uniquement les traites/effets (à revoir séparément).
+              -- TASK-032 : ne déclarer que les dépenses AVEC TVA (comportement legacy) — sinon
+              -- bruit de lignes à 0 dans le relevé de déductions.
+              AND M.MV_Tva = @avecTva
               -- TASK-099 : périmètre = date de COUPURE (rattrapage, plus de borne basse) + non
               -- encore déclaré (DT_Id IS NULL). L'ensemble DÉCLARABLE reste gated par l'évaluateur.
               AND A.DT_Id IS NULL
@@ -200,6 +339,8 @@ namespace Declaration.Selection
             LEFT JOIN RT_ECHEANCE E ON A.EC_Id = E.EC_Id
             WHERE M.SO_Id = @so
               AND M.MV_Domaine = @domaineClient
+              -- TASK-194 : ne garder que les règlements client réels (CT_Type = 0)
+              AND M.CT_Type = @ctTypeClient
               -- TASK-050 : MV_DECAISSE supprimé — cadrage direction par MV_Domaine=0 seul.
               -- MV_DECAISSE concerne uniquement les traites/effets (à revoir séparément).
               -- TASK-099 : périmètre = date de COUPURE (rattrapage, plus de borne basse) + non

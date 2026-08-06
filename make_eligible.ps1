@@ -1,4 +1,4 @@
-$json = Get-Content -Raw -Path "$PSScriptRoot/connections.json" | ConvertFrom-Json
+﻿$json = Get-Content -Raw -Path "$PSScriptRoot/connections.json" | ConvertFrom-Json
 $connStr = $json.ConnectionStrings.GrfConnection
 $conn = New-Object System.Data.SqlClient.SqlConnection($connStr)
 $conn.Open()

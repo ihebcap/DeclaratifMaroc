@@ -1,6 +1,15 @@
 # TASK-032 — Revue « dépense avec TVA » : filtre TVA + méthode de calcul
 
-> ⏸️ **DIFFÉRÉ (backlog).** Décision PO 09/07/2026 : à traiter plus tard, en même temps que TASK-031 (le client ne gère pas ces cas prioritairement aujourd'hui). Hors chemin critique.
+> ✅ **APPROUVÉE (03/08/2026)** — implémentée directement (dérogation ponctuelle : Claude a codé,
+> pas de revue par un 2ᵉ agent indépendant cette fois). Filtre `M.MV_Tva = 1` ajouté à
+> `GetSurensembleDepenseSql` (`Declaration.Selection/SelectionExpliqueeService.cs`), constante
+> `GrfEnums.Tva_Avec`. Méthode de valorisation (ventilation/prorata) **non touchée** — seule la
+> décision approuvée par le PO (filtre) a été appliquée. Vérifié sur base réelle
+> `GR_EMA_DISTRIBUTION` : 122 dépenses existantes (0 avec TVA) exclues, 1 dépense de test ajoutée
+> par le PO (`DP26080001`, `MV_Tva=1`) correctement incluse. Build solution 0 erreur. Périmètre
+> confirmé : seul `Declaration.Selection.SelectionExpliqueeService` (chemin réellement câblé côté
+> API, TASK-154) modifié — le comparateur legacy `SelectionnerAffectationsService.cs` (mort, non
+> câblé) n'a pas été touché.
 
 ## Contexte
 La sélection dépense est présente dans notre code (`Declaration.Selection/SelectionnerAffectationsService.cs:171` `GetDepenseSql`, et `SelectionExpliqueeService.cs:122`). Mais l'analyse d'écart vs GRFN (09/07/2026) révèle **deux divergences** avec l'ancien module qui doivent être levées :

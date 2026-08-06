@@ -1,0 +1,89 @@
+- generic [ref=e19]:
+  - complementary [ref=e20]:
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic "Rapprochement bancaire" [ref=e35] [cursor=pointer]
+        - generic "Factures" [ref=e39] [cursor=pointer]
+      - generic [ref=e44]:
+        - generic "Déclaration TVA" [ref=e46] [cursor=pointer]
+        - generic "Délai de paiement" [ref=e52] [cursor=pointer]
+    - button "Déconnexion" [ref=e761] [cursor=pointer]
+  - main [ref=e65]:
+    - generic [ref=e104]:
+      - generic [ref=e108]:
+        - generic [ref=e109]:
+          - button "Retour" [ref=e110] [cursor=pointer]
+          - generic [ref=e113]: TVA1-2026-01
+        - generic [ref=e114]:
+          - button "1. Sélection" [ref=e115] [cursor=pointer]
+          - button "2. Vérifier & Intégrer" [ref=e119] [cursor=pointer]
+          - button "3. Déclaration" [disabled] [ref=e123]
+        - generic [ref=e128]:
+          - generic [ref=e129]: Période 01/01/2026 → 31/01/2026
+          - generic [ref=e130]: En cours
+      - generic [ref=e131]:
+        - generic [ref=e133]:
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - checkbox "Sélectionner toutes les lignes visibles (éligibles/à contrôler)" [ref=e138]
+              - generic [ref=e139]:
+                - text: N° Règlement
+                - button "Filtrer" [ref=e142] [cursor=pointer]
+              - generic [ref=e145] [cursor=pointer]:
+                - text: Date
+                - generic [ref=e146]: ▼
+              - generic [ref=e147]:
+                - text: Échéance
+                - button "Filtrer" [ref=e150] [cursor=pointer]
+              - generic [ref=e153]:
+                - text: Mode
+                - button "Filtrer" [ref=e156] [cursor=pointer]
+              - generic [ref=e159]:
+                - text: Domaine
+                - button "Filtrer" [ref=e162] [cursor=pointer]
+              - generic [ref=e165]:
+                - text: Tiers
+                - button "Filtrer" [ref=e168] [cursor=pointer]
+              - generic [ref=e171] [cursor=pointer]: Montant
+              - generic [ref=e172]: Affecté
+              - generic [ref=e173]:
+                - text: Rappr. banque
+                - button "Filtrer" [ref=e176] [cursor=pointer]
+              - generic [ref=e179]:
+                - text: Date rappro
+                - button "Filtrer" [ref=e182] [cursor=pointer]
+              - generic [ref=e185]:
+                - text: Statut
+                - button "Filtre actif" [ref=e1104] [cursor=pointer]
+            - generic [ref=e1105]:
+              - checkbox [disabled] [ref=e1107]
+              - generic [ref=e1108]: RC26040045
+              - generic [ref=e1109]: 06/04/2026
+              - generic [ref=e1110]: 31/03/2026
+              - generic [ref=e1111]: Virement
+              - generic [ref=e1112]: Encaissement
+              - generic [ref=e1114]: BH CATERING
+              - generic [ref=e1115]: 13 053,66 MAD
+              - generic [ref=e1116]: 1 facture
+              - generic [ref=e1117]: Oui
+              - generic [ref=e1119]: 30/01/2026
+              - generic [ref=e1120]: Impayé (Bloqué)
+          - generic [ref=e191]:
+            - generic [ref=e192]:
+              - generic [ref=e195]:
+                - text: "Règlements :"
+                - strong [ref=e196]: "1"
+                - text: sur 152
+              - generic [ref=e197]:
+                - text: "Sélectionnés :"
+                - strong [ref=e198]: "151"
+              - button "Effacer filtres (1)" [ref=e1126] [cursor=pointer]
+            - generic [ref=e199]:
+              - generic [ref=e200]: "Total sélectionné : 2 762 175,29 MAD"
+              - button "Export de contrôle (Excel)" [ref=e201] [cursor=pointer]
+              - button "Colonnes" [ref=e206] [cursor=pointer]
+        - generic [ref=e209]:
+          - generic [ref=e210]: 151 règlements sélectionnés · Total 2 762 175,29 MAD
+          - generic [ref=e211]:
+            - button "Détail des lignes" [ref=e212] [cursor=pointer]
+            - button "Passer au calcul" [ref=e213] [cursor=pointer]

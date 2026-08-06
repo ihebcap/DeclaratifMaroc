@@ -1,0 +1,472 @@
+- generic [ref=f1e2]:
+  - generic [ref=f1e3]:
+    - complementary [ref=f1e4]:
+      - generic [ref=f1e5] [cursor=pointer]:
+        - generic [ref=f1e7]:
+          - img "DM" [ref=f1e13]
+          - generic [ref=f1e14]: TVA
+        - generic [ref=f1e15]: NEW_EMA DISTRIBUTION
+      - generic [ref=f1e16]:
+        - generic [ref=f1e17]:
+          - generic [ref=f1e18]: INTERROGATION
+          - generic "Rapprochement bancaire" [ref=f1e19] [cursor=pointer]
+          - generic "Factures" [ref=f1e23] [cursor=pointer]
+        - generic [ref=f1e28]:
+          - generic [ref=f1e29]: DÉCLARATION
+          - generic "Déclaration TVA" [ref=f1e30] [cursor=pointer]
+          - generic "Délai de paiement" [ref=f1e36] [cursor=pointer]
+      - generic [ref=f1e42]:
+        - generic [ref=f1e43]: Admin Admin
+        - button "Déconnexion" [ref=f1e44] [cursor=pointer]
+    - main [ref=f1e49]:
+      - generic [ref=f1e125]:
+        - generic [ref=f1e126]:
+          - generic [ref=f1e127]:
+            - button "Retour" [ref=f1e128] [cursor=pointer]
+            - generic [ref=f1e131]: TVA1-2026-07
+          - generic [ref=f1e132]:
+            - button "1. Sélection" [ref=f1e133] [cursor=pointer]
+            - button "2. Vérifier & Intégrer" [ref=f1e137] [cursor=pointer]
+            - button "3. Déclaration" [disabled] [ref=f1e141]
+          - generic [ref=f1e146]:
+            - generic [ref=f1e147]: Période 01/07/2026 → 31/07/2026
+            - generic [ref=f1e148]: En cours
+        - generic [ref=f1e149]:
+          - generic [ref=f1e151]:
+            - generic [ref=f1e153]:
+              - generic [ref=f1e154]:
+                - checkbox "Sélectionner toutes les lignes visibles (éligibles/à contrôler)" [checked] [ref=f1e156]
+                - generic [ref=f1e157]:
+                  - text: N° Règlement
+                  - button "Filtrer" [ref=f1e160] [cursor=pointer]
+                - generic [ref=f1e163] [cursor=pointer]:
+                  - text: Date règlement
+                  - generic [ref=f1e164]: ▼
+                  - button "Filtrer" [ref=f1e167]
+                - generic [ref=f1e170]:
+                  - text: Échéance
+                  - button "Filtrer" [ref=f1e173] [cursor=pointer]
+                - generic [ref=f1e176]:
+                  - text: Mode
+                  - button "Filtrer" [ref=f1e179] [cursor=pointer]
+                - generic [ref=f1e182]:
+                  - text: Date règlement (espèces)
+                  - button "Filtrer" [ref=f1e185] [cursor=pointer]
+                - generic [ref=f1e188]:
+                  - text: Domaine
+                  - button "Filtrer" [ref=f1e191] [cursor=pointer]
+                - generic [ref=f1e194]:
+                  - text: Code tiers
+                  - button "Filtrer" [ref=f1e197] [cursor=pointer]
+                - generic [ref=f1e200]:
+                  - text: Intitulé tiers
+                  - button "Filtrer" [ref=f1e203] [cursor=pointer]
+                - generic [ref=f1e206] [cursor=pointer]:
+                  - text: Montant
+                  - button "Filtrer" [ref=f1e209]
+                - generic [ref=f1e212]:
+                  - text: Affecté
+                  - button "Filtrer" [ref=f1e215] [cursor=pointer]
+                - generic [ref=f1e218]:
+                  - text: Rappr. banque
+                  - button "Filtrer" [ref=f1e221] [cursor=pointer]
+                - generic [ref=f1e224]:
+                  - text: Date rapprochement
+                  - button "Filtrer" [ref=f1e227] [cursor=pointer]
+                - generic [ref=f1e230]:
+                  - text: Statut
+                  - button "Filtrer" [ref=f1e233] [cursor=pointer]
+              - generic [ref=f1e236]:
+                - generic [ref=f1e237] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e239]
+                  - generic [ref=f1e240]: RF26070043
+                  - generic [ref=f1e241]: 13/07/2026
+                  - generic [ref=f1e242]: 30/05/2026
+                  - generic [ref=f1e243]: Espèce
+                  - generic [ref=f1e244]: 13/07/2026
+                  - generic [ref=f1e245]: Décaissement
+                  - generic [ref=f1e247]: F0185
+                  - generic [ref=f1e248]: SAINT PRO
+                  - generic [ref=f1e249]: 2 621,81 MAD
+                  - generic [ref=f1e250]: 1 facture
+                  - generic [ref=f1e251]: Oui
+                  - generic [ref=f1e253]: 13/07/2026
+                  - generic [ref=f1e254]: Éligible
+                - generic [ref=f1e259] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e261]
+                  - generic [ref=f1e262]: RF26070007
+                  - generic [ref=f1e263]: 09/07/2026
+                  - generic [ref=f1e264]: 30/01/2026
+                  - generic [ref=f1e265]: Espèce
+                  - generic [ref=f1e266]: 09/07/2026
+                  - generic [ref=f1e267]: Décaissement
+                  - generic [ref=f1e269]: F0051
+                  - generic [ref=f1e270]: TECHNO FOODS SARL
+                  - generic [ref=f1e271]: 4 838,00 MAD
+                  - generic [ref=f1e272]: 1 facture
+                  - generic [ref=f1e273]: Oui
+                  - generic [ref=f1e275]: 09/07/2026
+                  - generic [ref=f1e276]: Éligible
+                - generic [ref=f1e281] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e283]
+                  - generic [ref=f1e284]: RF26070013
+                  - generic [ref=f1e285]: 09/07/2026
+                  - generic [ref=f1e286]: 02/06/2026
+                  - generic [ref=f1e287]: Espèce
+                  - generic [ref=f1e288]: 09/07/2026
+                  - generic [ref=f1e289]: Décaissement
+                  - generic [ref=f1e291]: F0207
+                  - generic [ref=f1e292]: ABCDIS
+                  - generic [ref=f1e293]: 4 979,69 MAD
+                  - generic [ref=f1e294]: 1 facture
+                  - generic [ref=f1e295]: Oui
+                  - generic [ref=f1e297]: 09/07/2026
+                  - generic [ref=f1e298]: Éligible
+                - generic [ref=f1e303] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e305]
+                  - generic [ref=f1e306]: RF26070014
+                  - generic [ref=f1e307]: 09/07/2026
+                  - generic [ref=f1e308]: 04/06/2026
+                  - generic [ref=f1e309]: Espèce
+                  - generic [ref=f1e310]: 09/07/2026
+                  - generic [ref=f1e311]: Décaissement
+                  - generic [ref=f1e313]: F0207
+                  - generic [ref=f1e314]: ABCDIS
+                  - generic [ref=f1e315]: 4 894,90 MAD
+                  - generic [ref=f1e316]: 1 facture
+                  - generic [ref=f1e317]: Oui
+                  - generic [ref=f1e319]: 09/07/2026
+                  - generic [ref=f1e320]: Éligible
+                - generic [ref=f1e325] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e327]
+                  - generic [ref=f1e328]: RF26070015
+                  - generic [ref=f1e329]: 09/07/2026
+                  - generic [ref=f1e330]: 06/06/2026
+                  - generic [ref=f1e331]: Espèce
+                  - generic [ref=f1e332]: 09/07/2026
+                  - generic [ref=f1e333]: Décaissement
+                  - generic [ref=f1e335]: F0207
+                  - generic [ref=f1e336]: ABCDIS
+                  - generic [ref=f1e337]: 4 916,22 MAD
+                  - generic [ref=f1e338]: 1 facture
+                  - generic [ref=f1e339]: Oui
+                  - generic [ref=f1e341]: 09/07/2026
+                  - generic [ref=f1e342]: Éligible
+                - generic [ref=f1e347] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e349]
+                  - generic [ref=f1e350]: RF26070016
+                  - generic [ref=f1e351]: 09/07/2026
+                  - generic [ref=f1e352]: 08/06/2026
+                  - generic [ref=f1e353]: Espèce
+                  - generic [ref=f1e354]: 09/07/2026
+                  - generic [ref=f1e355]: Décaissement
+                  - generic [ref=f1e357]: F0207
+                  - generic [ref=f1e358]: ABCDIS
+                  - generic [ref=f1e359]: 4 967,40 MAD
+                  - generic [ref=f1e360]: 1 facture
+                  - generic [ref=f1e361]: Oui
+                  - generic [ref=f1e363]: 09/07/2026
+                  - generic [ref=f1e364]: Éligible
+                - generic [ref=f1e369] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e371]
+                  - generic [ref=f1e372]: RF26070017
+                  - generic [ref=f1e373]: 09/07/2026
+                  - generic [ref=f1e374]: 10/06/2026
+                  - generic [ref=f1e375]: Espèce
+                  - generic [ref=f1e376]: 09/07/2026
+                  - generic [ref=f1e377]: Décaissement
+                  - generic [ref=f1e379]: F0207
+                  - generic [ref=f1e380]: ABCDIS
+                  - generic [ref=f1e381]: 4 961,81 MAD
+                  - generic [ref=f1e382]: 1 facture
+                  - generic [ref=f1e383]: Oui
+                  - generic [ref=f1e385]: 09/07/2026
+                  - generic [ref=f1e386]: Éligible
+                - generic [ref=f1e391] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e393]
+                  - generic [ref=f1e394]: RF26070018
+                  - generic [ref=f1e395]: 09/07/2026
+                  - generic [ref=f1e396]: 12/06/2026
+                  - generic [ref=f1e397]: Espèce
+                  - generic [ref=f1e398]: 09/07/2026
+                  - generic [ref=f1e399]: Décaissement
+                  - generic [ref=f1e401]: F0207
+                  - generic [ref=f1e402]: ABCDIS
+                  - generic [ref=f1e403]: 4 940,76 MAD
+                  - generic [ref=f1e404]: 1 facture
+                  - generic [ref=f1e405]: Oui
+                  - generic [ref=f1e407]: 09/07/2026
+                  - generic [ref=f1e408]: Éligible
+                - generic [ref=f1e413] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e415]
+                  - generic [ref=f1e416]: RF26070019
+                  - generic [ref=f1e417]: 09/07/2026
+                  - generic [ref=f1e418]: 13/06/2026
+                  - generic [ref=f1e419]: Espèce
+                  - generic [ref=f1e420]: 09/07/2026
+                  - generic [ref=f1e421]: Décaissement
+                  - generic [ref=f1e423]: F0207
+                  - generic [ref=f1e424]: ABCDIS
+                  - generic [ref=f1e425]: 4 858,08 MAD
+                  - generic [ref=f1e426]: 1 facture
+                  - generic [ref=f1e427]: Oui
+                  - generic [ref=f1e429]: 09/07/2026
+                  - generic [ref=f1e430]: Éligible
+                - generic [ref=f1e435] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e437]
+                  - generic [ref=f1e438]: RF26070020
+                  - generic [ref=f1e439]: 09/07/2026
+                  - generic [ref=f1e440]: 15/06/2026
+                  - generic [ref=f1e441]: Espèce
+                  - generic [ref=f1e442]: 09/07/2026
+                  - generic [ref=f1e443]: Décaissement
+                  - generic [ref=f1e445]: F0207
+                  - generic [ref=f1e446]: ABCDIS
+                  - generic [ref=f1e447]: 4 924,58 MAD
+                  - generic [ref=f1e448]: 1 facture
+                  - generic [ref=f1e449]: Oui
+                  - generic [ref=f1e451]: 09/07/2026
+                  - generic [ref=f1e452]: Éligible
+                - generic [ref=f1e457] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e459]
+                  - generic [ref=f1e460]: RF26070021
+                  - generic [ref=f1e461]: 09/07/2026
+                  - generic [ref=f1e462]: 16/06/2026
+                  - generic [ref=f1e463]: Espèce
+                  - generic [ref=f1e464]: 09/07/2026
+                  - generic [ref=f1e465]: Décaissement
+                  - generic [ref=f1e467]: F0207
+                  - generic [ref=f1e468]: ABCDIS
+                  - generic [ref=f1e469]: 4 855,84 MAD
+                  - generic [ref=f1e470]: 1 facture
+                  - generic [ref=f1e471]: Oui
+                  - generic [ref=f1e473]: 09/07/2026
+                  - generic [ref=f1e474]: Éligible
+                - generic [ref=f1e479] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e481]
+                  - generic [ref=f1e482]: RF26070022
+                  - generic [ref=f1e483]: 09/07/2026
+                  - generic [ref=f1e484]: 17/06/2026
+                  - generic [ref=f1e485]: Espèce
+                  - generic [ref=f1e486]: 09/07/2026
+                  - generic [ref=f1e487]: Décaissement
+                  - generic [ref=f1e489]: F0207
+                  - generic [ref=f1e490]: ABCDIS
+                  - generic [ref=f1e491]: 4 971,36 MAD
+                  - generic [ref=f1e492]: 1 facture
+                  - generic [ref=f1e493]: Oui
+                  - generic [ref=f1e495]: 09/07/2026
+                  - generic [ref=f1e496]: Éligible
+                - generic [ref=f1e501] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e503]
+                  - generic [ref=f1e504]: RF26070023
+                  - generic [ref=f1e505]: 09/07/2026
+                  - generic [ref=f1e506]: 19/06/2026
+                  - generic [ref=f1e507]: Espèce
+                  - generic [ref=f1e508]: 09/07/2026
+                  - generic [ref=f1e509]: Décaissement
+                  - generic [ref=f1e511]: F0207
+                  - generic [ref=f1e512]: ABCDIS
+                  - generic [ref=f1e513]: 4 972,90 MAD
+                  - generic [ref=f1e514]: 1 facture
+                  - generic [ref=f1e515]: Oui
+                  - generic [ref=f1e517]: 09/07/2026
+                  - generic [ref=f1e518]: Éligible
+                - generic [ref=f1e523] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e525]
+                  - generic [ref=f1e526]: RF26070024
+                  - generic [ref=f1e527]: 09/07/2026
+                  - generic [ref=f1e528]: 21/06/2026
+                  - generic [ref=f1e529]: Espèce
+                  - generic [ref=f1e530]: 09/07/2026
+                  - generic [ref=f1e531]: Décaissement
+                  - generic [ref=f1e533]: F0207
+                  - generic [ref=f1e534]: ABCDIS
+                  - generic [ref=f1e535]: 4 963,68 MAD
+                  - generic [ref=f1e536]: 1 facture
+                  - generic [ref=f1e537]: Oui
+                  - generic [ref=f1e539]: 09/07/2026
+                  - generic [ref=f1e540]: Éligible
+                - generic [ref=f1e545] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e547]
+                  - generic [ref=f1e548]: RF26070025
+                  - generic [ref=f1e549]: 09/07/2026
+                  - generic [ref=f1e550]: 24/06/2026
+                  - generic [ref=f1e551]: Espèce
+                  - generic [ref=f1e552]: 09/07/2026
+                  - generic [ref=f1e553]: Décaissement
+                  - generic [ref=f1e555]: F0207
+                  - generic [ref=f1e556]: ABCDIS
+                  - generic [ref=f1e557]: 4 749,88 MAD
+                  - generic [ref=f1e558]: 1 facture
+                  - generic [ref=f1e559]: Oui
+                  - generic [ref=f1e561]: 09/07/2026
+                  - generic [ref=f1e562]: Éligible
+                - generic [ref=f1e567] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e569]
+                  - generic [ref=f1e570]: RF26070026
+                  - generic [ref=f1e571]: 09/07/2026
+                  - generic [ref=f1e572]: 14/06/2026
+                  - generic [ref=f1e573]: Espèce
+                  - generic [ref=f1e574]: 09/07/2026
+                  - generic [ref=f1e575]: Décaissement
+                  - generic [ref=f1e577]: F0207
+                  - generic [ref=f1e578]: ABCDIS
+                  - generic [ref=f1e579]: 4 961,60 MAD
+                  - generic [ref=f1e580]: 1 facture
+                  - generic [ref=f1e581]: Oui
+                  - generic [ref=f1e583]: 09/07/2026
+                  - generic [ref=f1e584]: Éligible
+                - generic [ref=f1e589] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e591]
+                  - generic [ref=f1e592]: RF26070027
+                  - generic [ref=f1e593]: 09/07/2026
+                  - generic [ref=f1e594]: 27/06/2026
+                  - generic [ref=f1e595]: Espèce
+                  - generic [ref=f1e596]: 09/07/2026
+                  - generic [ref=f1e597]: Décaissement
+                  - generic [ref=f1e599]: F0207
+                  - generic [ref=f1e600]: ABCDIS
+                  - generic [ref=f1e601]: 4 848,27 MAD
+                  - generic [ref=f1e602]: 1 facture
+                  - generic [ref=f1e603]: Oui
+                  - generic [ref=f1e605]: 09/07/2026
+                  - generic [ref=f1e606]: Éligible
+                - generic [ref=f1e611] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e613]
+                  - generic [ref=f1e614]: RF26070028
+                  - generic [ref=f1e615]: 09/07/2026
+                  - generic [ref=f1e616]: 22/06/2026
+                  - generic [ref=f1e617]: Espèce
+                  - generic [ref=f1e618]: 09/07/2026
+                  - generic [ref=f1e619]: Décaissement
+                  - generic [ref=f1e621]: F0207
+                  - generic [ref=f1e622]: ABCDIS
+                  - generic [ref=f1e623]: 4 967,90 MAD
+                  - generic [ref=f1e624]: 1 facture
+                  - generic [ref=f1e625]: Oui
+                  - generic [ref=f1e627]: 09/07/2026
+                  - generic [ref=f1e628]: Éligible
+                - generic [ref=f1e633] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e635]
+                  - generic [ref=f1e636]: RF26070029
+                  - generic [ref=f1e637]: 09/07/2026
+                  - generic [ref=f1e638]: 20/06/2026
+                  - generic [ref=f1e639]: Espèce
+                  - generic [ref=f1e640]: 09/07/2026
+                  - generic [ref=f1e641]: Décaissement
+                  - generic [ref=f1e643]: F0207
+                  - generic [ref=f1e644]: ABCDIS
+                  - generic [ref=f1e645]: 4 932,60 MAD
+                  - generic [ref=f1e646]: 1 facture
+                  - generic [ref=f1e647]: Oui
+                  - generic [ref=f1e649]: 09/07/2026
+                  - generic [ref=f1e650]: Éligible
+                - generic [ref=f1e655] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e657]
+                  - generic [ref=f1e658]: RF26070030
+                  - generic [ref=f1e659]: 09/07/2026
+                  - generic [ref=f1e660]: 23/06/2026
+                  - generic [ref=f1e661]: Espèce
+                  - generic [ref=f1e662]: 09/07/2026
+                  - generic [ref=f1e663]: Décaissement
+                  - generic [ref=f1e665]: F0207
+                  - generic [ref=f1e666]: ABCDIS
+                  - generic [ref=f1e667]: 4 963,88 MAD
+                  - generic [ref=f1e668]: 1 facture
+                  - generic [ref=f1e669]: Oui
+                  - generic [ref=f1e671]: 09/07/2026
+                  - generic [ref=f1e672]: Éligible
+                - generic [ref=f1e677] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e679]
+                  - generic [ref=f1e680]: RF26070038
+                  - generic [ref=f1e681]: 09/07/2026
+                  - generic [ref=f1e682]: 08/07/2026
+                  - generic [ref=f1e683]: Virement
+                  - generic [ref=f1e684]: —
+                  - generic [ref=f1e686]: Décaissement
+                  - generic [ref=f1e688]: 4411ELEC
+                  - generic [ref=f1e689]: SRM-CS
+                  - generic [ref=f1e690]: 1 110,71 MAD
+                  - generic [ref=f1e691]: 3 factures
+                  - generic [ref=f1e692]: Oui
+                  - generic [ref=f1e694]: 19/07/2026
+                  - generic [ref=f1e695]: Éligible
+                - generic [ref=f1e700] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e702]
+                  - generic [ref=f1e703]: RF26020040
+                  - generic [ref=f1e704]: 30/06/2026
+                  - generic [ref=f1e705]: 16/02/2026
+                  - generic [ref=f1e706]: Chèque
+                  - generic [ref=f1e707]: —
+                  - generic [ref=f1e709]: Décaissement
+                  - generic [ref=f1e711]: F0160
+                  - generic [ref=f1e712]: TEMPO FOODS
+                  - generic [ref=f1e713]: 8 826,55 MAD
+                  - generic [ref=f1e714]: 1 facture
+                  - generic [ref=f1e715]: Oui
+                  - generic [ref=f1e717]: 28/02/2026
+                  - generic [ref=f1e718]: Éligible
+                - generic [ref=f1e723] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e725]
+                  - generic [ref=f1e726]: RF26060129
+                  - generic [ref=f1e727]: 29/06/2026
+                  - generic [ref=f1e728]: 25/06/2026
+                  - generic [ref=f1e729]: Virement
+                  - generic [ref=f1e730]: —
+                  - generic [ref=f1e732]: Décaissement
+                  - generic [ref=f1e734]: F0027
+                  - generic [ref=f1e735]: MARJANE
+                  - generic [ref=f1e736]: 403,10 MAD
+                  - generic [ref=f1e737]: 1 facture
+                  - generic [ref=f1e738]: Oui
+                  - generic [ref=f1e740]: 30/06/2026
+                  - generic [ref=f1e741]: Éligible
+                - generic [ref=f1e746] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e748]
+                  - generic [ref=f1e749]: RC26060101
+                  - generic [ref=f1e750]: 29/06/2026
+                  - generic [ref=f1e751]: 29/06/2026
+                  - generic [ref=f1e752]: Virement
+                  - generic [ref=f1e753]: —
+                  - generic [ref=f1e755]: Encaissement
+                  - generic [ref=f1e757]: C0068
+                  - generic [ref=f1e758]: HOTEL KENZI BASMA
+                  - generic [ref=f1e759]: 6 573,75 MAD
+                  - generic [ref=f1e760]: 3 factures
+                  - generic [ref=f1e761]: Oui
+                  - generic [ref=f1e763]: 30/06/2026
+                  - generic [ref=f1e764]: Éligible
+                - generic [ref=f1e769] [cursor=pointer]:
+                  - checkbox [checked] [ref=f1e771]
+                  - generic [ref=f1e772]: RC26060102
+                  - generic [ref=f1e773]: 29/06/2026
+                  - generic [ref=f1e774]: 29/06/2026
+                  - generic [ref=f1e775]: Virement
+                  - generic [ref=f1e776]: —
+                  - generic [ref=f1e778]: Encaissement
+                  - generic [ref=f1e780]: C0018
+                  - generic [ref=f1e781]: NEOM EVENT
+                  - generic [ref=f1e782]: 10 000,00 MAD
+                  - generic [ref=f1e783]: 1 facture
+                  - generic [ref=f1e784]: Oui
+                  - generic [ref=f1e786]: 30/06/2026
+                  - generic [ref=f1e787]: Éligible
+            - generic [ref=f1e792]:
+              - generic [ref=f1e793]:
+                - generic [ref=f1e794]:
+                  - text: "Règlements :"
+                  - strong [ref=f1e795]: "939"
+                - generic [ref=f1e796]:
+                  - text: "Sélectionnés :"
+                  - strong [ref=f1e797]: "931"
+              - generic [ref=f1e798]:
+                - generic [ref=f1e799]: "Total sélectionné : 14 441 341,92 MAD"
+                - button "Export de contrôle (Excel)" [ref=f1e800] [cursor=pointer]
+                - button "Colonnes" [ref=f1e805] [cursor=pointer]
+          - generic [ref=f1e808]:
+            - generic [ref=f1e809]: 931 règlements sélectionnés · Total 14 441 341,92 MAD
+            - generic [ref=f1e810]:
+              - button "Détail des lignes" [ref=f1e811] [cursor=pointer]
+              - button "Passer au calcul" [ref=f1e812] [cursor=pointer]
+  - generic [ref=f1e815]: Déclaration créée avec succès

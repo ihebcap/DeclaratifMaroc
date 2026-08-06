@@ -304,7 +304,7 @@ namespace Declaration.Export.Excel.Tests
             // TASK-180 : détail TVA scindé Collecté/Déductible — 4 blocs (taux x2, activité x2).
             // TASK-184 : bloc "Contrôle d'équilibre" retiré.
             // TASK-185 : 4 colonnes (plus de "Domaine Activité") + ligne "Total Collecté"/
-            // "Total Deductible" en pied des blocs "Totaux par taux" uniquement.
+            // "Total Déductible" en pied des blocs "Totaux par taux" uniquement.
             var wsDetailTva = workbook.Worksheet("Détail TVA");
             Assert.Equal("Totaux par taux — Collecté", wsDetailTva.Cell(1, 1).Value.ToString());
             Assert.Equal("Total HT", wsDetailTva.Cell(2, 2).Value.ToString());
@@ -319,7 +319,7 @@ namespace Declaration.Export.Excel.Tests
             Assert.Equal("Totaux par taux — Déductible", wsDetailTva.Cell(6, 1).Value.ToString());
             Assert.Equal(20m, (decimal)wsDetailTva.Cell(8, 1).Value.GetNumber());
             Assert.Equal(1200m, (decimal)wsDetailTva.Cell(8, 4).Value.GetNumber());
-            Assert.Equal("Total Deductible", wsDetailTva.Cell(9, 1).Value.ToString());
+            Assert.Equal("Total Déductible", wsDetailTva.Cell(9, 1).Value.ToString());
             Assert.Equal(1000m, (decimal)wsDetailTva.Cell(9, 2).Value.GetNumber());
             Assert.Equal(200m, (decimal)wsDetailTva.Cell(9, 3).Value.GetNumber());
             Assert.Equal(1200m, (decimal)wsDetailTva.Cell(9, 4).Value.GetNumber());

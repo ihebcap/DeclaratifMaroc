@@ -1,4 +1,4 @@
-Get-ChildItem -Path 'D:\_vibe\GRF\GRFWinform' -Filter '*.dll' | ForEach-Object {
+﻿Get-ChildItem -Path 'D:\_vibe\GRF\GRFWinform' -Filter '*.dll' | ForEach-Object {
     try {
         Add-Type -Path $_.FullName -ErrorAction SilentlyContinue
     } catch {}

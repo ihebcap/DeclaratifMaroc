@@ -240,7 +240,7 @@ namespace Declaration.Orchestration.Tests
             public Task UpdateStatutAsync(Guid id, StatutDeclaration statut) => throw new NotImplementedException();
             public Task<bool> ExistsAsync(int societeId, int exercice, int periode, Declaration.Application.Entities.TypePeriode type) => throw new NotImplementedException();
             public Task DeleteAsync(Guid declarationId) => throw new NotImplementedException();
-            public Task<Dictionary<Guid, (int NbLignes, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds) => throw new NotImplementedException();
+            public Task<Dictionary<Guid, (int NbLignes, int NbFactures, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds) => throw new NotImplementedException();
             public Task<int> CountAffectationsTamponneesAsync(IEnumerable<string> numerosRapprochement) => throw new NotImplementedException();
             public Task SaveLignesCandidatesAsync(IEnumerable<LigneCandidate> lignes) => throw new NotImplementedException();
             public Task<IEnumerable<LigneCandidate>> GetLignesAsync(Guid declarationId, string domaine, int page, int pageSize, string? sort, string? filter) => throw new NotImplementedException();

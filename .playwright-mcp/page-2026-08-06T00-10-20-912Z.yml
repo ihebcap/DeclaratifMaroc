@@ -1,0 +1,46 @@
+- generic [ref=f4e3]:
+  - complementary [ref=f4e4]:
+    - generic [ref=f4e5] [cursor=pointer]:
+      - generic [ref=f4e7]:
+        - img "DM" [ref=f4e13]
+        - generic [ref=f4e14]: TVA
+      - generic [ref=f4e15]: NEW_EMA DISTRIBUTION
+    - generic [ref=f4e16]:
+      - generic [ref=f4e17]:
+        - generic [ref=f4e18]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f4e19] [cursor=pointer]
+        - generic "Factures" [ref=f4e23] [cursor=pointer]
+      - generic [ref=f4e28]:
+        - generic [ref=f4e29]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f4e30] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f4e36] [cursor=pointer]
+    - generic [ref=f4e42]:
+      - generic [ref=f4e43]: Admin Admin
+      - button "Déconnexion" [ref=f4e44] [cursor=pointer]
+  - main [ref=f4e49]:
+    - generic [ref=f4e50]:
+      - generic [ref=f4e51]:
+        - generic [ref=f4e56]:
+          - heading "Déclarations TVA" [level=2] [ref=f4e57]
+          - generic [ref=f4e58]: Déclaration TVA Maroc — modèle SIMPL-TVA
+        - generic [ref=f4e59]:
+          - button "Créer une déclaration" [ref=f4e60] [cursor=pointer]
+          - button "Colonnes" [ref=f4e63] [cursor=pointer]
+      - generic [ref=f4e70]:
+        - text: "Déclarations :"
+        - strong [ref=f4e71]: "0"
+        - text: / 0
+      - generic [ref=f4e74]:
+        - generic [ref=f4e75]: N° déclaration
+        - generic [ref=f4e76]:
+          - text: Période
+          - button "Filtrer" [ref=f4e78] [cursor=pointer]
+        - generic [ref=f4e81]:
+          - text: Déclaration
+          - button "Filtrer" [ref=f4e83] [cursor=pointer]
+        - generic [ref=f4e86]: Lignes
+        - generic [ref=f4e87]: TVA totale (collectée + déductible)
+        - generic [ref=f4e88]:
+          - text: Statut
+          - button "Filtrer" [ref=f4e90] [cursor=pointer]
+        - generic [ref=f4e93]: Actions

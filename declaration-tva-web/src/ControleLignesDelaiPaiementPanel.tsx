@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CalendarSearch, Loader2, PencilLine, Settings2 } from 'lucide-react';
-import { ColumnSelector } from './ColumnSelector';
-import { ExcelFilter } from './ExcelFilter';
-import { useColumnPrefs } from './useColumnPrefs';
+import type { ColDef } from 'ag-grid-community';
+import { ApbsGrid } from './grid/ApbsGrid';
+import { CustomListFilter } from './grid/CustomListFilter';
 import { formatDate, formatMoney } from './utils';
 import { MiseEnRouteDelaiPaiementModal, RepriseManuelleLigneModal, BandeauErreur } from './MiseEnRouteDelaiPaiementModal';
 import { getControleLignesDdp, getParametrageTypeDdp } from './api';
@@ -22,41 +22,54 @@ import type { LigneSelectionDdpDto, SelectionDdpDto } from './api';
 // société : cette anomalie n'est PAS reproduite ici, et aucun champ de date libre n'existe dans cet
 // écran. Le type proposé par défaut vient de P_SOCIETE.SO_TypeDecDP (CDC §7.1).
 
-type Col = { key: string; label: string; width?: string; align?: 'left' | 'right' | 'center'; filterType?: 'list' | 'text' };
+const LIBELLES_MODE: Record<string, string> = {
+  Espece: 'Espèce',
+  Cheque: 'Chèque',
+  Traite: 'Traite',
+  Virement: 'Virement',
+  Autre: 'Autre',
+};
 
-const COLUMNS: Col[] = [
-  { key: 'statut', label: 'Statut', width: '165px', align: 'center', filterType: 'list' },
-  { key: 'tiers', label: 'Fournisseur', filterType: 'text' },
-  { key: 'facture', label: 'Facture', width: '140px' },
-  { key: 'doDate', label: 'Date facture', width: '110px', align: 'center' },
-  { key: 'echeanceLegale', label: 'Échéance légale', width: '120px', align: 'center' },
-  { key: 'origineDelai', label: 'Origine du délai', width: '135px', align: 'center', filterType: 'list' },
-  { key: 'borneReference', label: 'Déjà déclaré au', width: '125px', align: 'center' },
-  { key: 'borneActuelle', label: 'Constaté au', width: '115px', align: 'center' },
-  { key: 'depassement', label: 'Dépassement (j)', width: '130px', align: 'right' },
-  { key: 'montant', label: 'Montant', width: '130px', align: 'right' },
-  { key: 'bucket', label: 'Cas', width: '175px', filterType: 'list' },
-  { key: 'actions', label: 'Action', width: '150px', align: 'center' },
-];
 
-const colStyle = (col: Col): React.CSSProperties =>
-  col.width ? { flex: `0 0 ${col.width}`, width: col.width } : { flex: '1 1 0', minWidth: '170px' };
-const colJustify = (col: Col) => (col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start');
 
 const EXERCICE_MIN = 2023; // 2023-07-01 = début de la déclaration légale (SeuilsLegauxDelaiPaiement).
 
-const LIBELLES_BUCKET: Record<string, string> = {
-  HorsPeriodePartNonAffectee: 'Hors période — part non payée',
-  HorsPeriodePartAffectee: 'Hors période — part payée',
-  DansPeriodePartAffectee: 'Dans la période — part payée',
-  DansPeriodePartNonAffectee: 'Dans la période — part non payée',
-};
+const CAS_PAYE_HORS_DELAI = 'Payé hors délai';
+const CAS_PAYE_NON_RAPPROCHE = 'Payé non rapproché';
+const CAS_NON_PAYE = 'Non payé';
+
+
+/**
+ * Libellé du "Cas" (colonne, ex-"bucket") — demande PO : distinguer un règlement affecté mais
+ * PAS ENCORE rapproché en banque (chèque/traite/virement) du même montant une fois rapproché.
+ * Numériquement les deux sont déjà traités pareil par le calculateur (retard qui court jusqu'à
+ * la fin de période tant que non rapproché, cf. BorneActuelleDansPeriode) — cette distinction est
+ * uniquement un raffinement d'affichage, aucun changement de calcul.
+ */
+function libelleCas(l: LigneSelectionDdpDto): string {
+  const estPartAffectee = l.bucket === 'DansPeriodePartAffectee' || l.bucket === 'HorsPeriodePartAffectee';
+  if (!estPartAffectee) return CAS_NON_PAYE;
+  const estPiece = l.typeReglement === 'Cheque' || l.typeReglement === 'Traite' || l.typeReglement === 'Virement';
+  const estRapprochee = !!l.dateRapprochement;
+  return (estPiece && !estRapprochee) ? CAS_PAYE_NON_RAPPROCHE : CAS_PAYE_HORS_DELAI;
+}
 
 const LIBELLES_ORIGINE_DELAI: Record<string, string> = {
   ConventionFacture: 'Convention facture',
   Convention: 'Convention',
   Defaut: 'Défaut société',
 };
+
+/**
+ * AUDIT UX — « jamais un zéro silencieux ». Un tableau vide a TROIS causes très différentes pour un
+ * comptable, qui doivent être nommées explicitement au lieu du message unique « Aucune ligne hors
+ * délai pour cette période » (qui se lisait à tort « aucun retard chez nos fournisseurs ») :
+ *   1. des filtres de colonne masquent les lignes chargées ;
+ *   2. le retard de ces échéances a DÉJÀ été déclaré (calcul incrémental anti-double-déclaration) —
+ *      c'est le cas le plus fréquent et le plus trompeur ;
+ *   3. il n'y a réellement aucun retard sur la période.
+ */
+
 
 export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
   societeId: number,
@@ -79,8 +92,6 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
   const [showMiseEnRoute, setShowMiseEnRoute] = useState(false);
   const [repriseCible, setRepriseCible] = useState<LigneSelectionDdpDto | null>(null);
 
-  const { visibleColumns, visibleKeys, toggle, reset } = useColumnPrefs('grf.cols.controleLignesDelaiPaiement', COLUMNS);
-
   // Type par défaut de la société (proposition, jamais une contrainte).
   useEffect(() => {
     (async () => {
@@ -94,127 +105,72 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
     })();
   }, [societeId]);
 
+  // Garde anti-course : le type par défaut de la société (effet séparé ci-dessus) arrive de
+  // façon asynchrone et peut déclencher un 2ᵉ appel pendant que le 1ᵉʳ (état initial
+  // trimestriel) est encore en vol. Sans cette garde, si l'ancienne réponse arrive APRÈS la
+  // nouvelle, elle écrase silencieusement le bon résultat avec une période obsolète (bug
+  // constaté : sélecteur affichant "Annuelle" mais données/période encore du 1ᵉʳ trimestre).
+  const requeteEnCoursId = useRef(0);
+
   const charger = useCallback(async () => {
+    const idRequete = ++requeteEnCoursId.current;
     setLoading(true);
     setErreur(null);
     try {
       const res = await getControleLignesDdp(societeId, exercice, type, type === 'trimestrielle' ? trimestre : null);
+      if (idRequete !== requeteEnCoursId.current) return; // réponse obsolète, une requête plus récente est en vol
       setResultat(res);
     } catch (e: any) {
+      if (idRequete !== requeteEnCoursId.current) return;
       console.error(e);
       setErreur(e?.response?.data?.Message || e?.response?.data?.message || 'Erreur lors du chargement des lignes hors délai.');
       setResultat(null);
     } finally {
-      setLoading(false);
+      if (idRequete === requeteEnCoursId.current) setLoading(false);
     }
   }, [societeId, exercice, type, trimestre]);
 
   useEffect(() => { charger(); }, [charger]);
 
-  // Une SEULE liste affichée (candidates + bloquées), le statut restant explicite colonne par colonne :
-  // l'écran de contrôle est un écran de visibilité, il ne doit rien masquer.
   const toutesLignes = useMemo(
-    () => resultat ? [...resultat.lignes, ...resultat.lignesRepriseManuelleRequise] : [],
+    () => (resultat ? [...resultat.lignes, ...resultat.lignesRepriseManuelleRequise] : []),
     [resultat],
   );
 
-  const handleFilterChange = (key: string, val: any) => {
-    setFilters(prev => {
-      const next = { ...prev };
-      if (val === '' || (Array.isArray(val) && val.length === 0)) delete next[key];
-      else next[key] = val;
-      return next;
-    });
-  };
-
-  const visibleRows = toutesLignes.filter(l => {
-    const fTiers = filters['tiers'];
-    if (typeof fTiers === 'string' && fTiers.trim() !== '') {
-      const needle = fTiers.trim().toLowerCase();
-      const cible = `${l.tiersCode ?? ''} ${l.tiersIntitule ?? ''}`.toLowerCase();
-      if (!cible.includes(needle)) return false;
+  const columnDefs: ColDef[] = useMemo(() => [
+    { field: 'statut', headerName: 'Statut', width: 165, filter: CustomListFilter, cellRenderer: (p: any) => p.data ? (p.data.estRepriseManuelleRequise ? <span style={{ color: '#b45309', fontWeight: 600 }}>Reprise manuelle requise</span> : <span style={{ color: 'var(--status-ok-text)', fontWeight: 600 }}>Retard calculé</span>) : null },
+    { field: 'tiers', headerName: 'Fournisseur', filter: 'agTextColumnFilter', valueGetter: (p) => p.data ? `${p.data.tiersCode || ''} · ${p.data.tiersIntitule || ''}` : '' },
+    { field: 'facture', headerName: 'Facture', width: 140, filter: CustomListFilter, valueGetter: (p) => p.data?.doNumero || '' },
+    { field: 'doDate', headerName: 'Date facture', width: 110, valueGetter: (p) => p.data ? formatDate(p.data.doDate) : '' },
+    { field: 'echeanceLegale', headerName: 'Échéance légale', width: 120, valueGetter: (p) => p.data ? formatDate(p.data.echeanceLegale) : '' },
+    { field: 'origineDelai', headerName: 'Origine du délai', width: 135, filter: CustomListFilter, valueGetter: (p) => p.data ? (LIBELLES_ORIGINE_DELAI[p.data.origineDelai] || p.data.origineDelai) : '' },
+    { field: 'borneReference', headerName: 'Déjà déclaré au', width: 125, valueGetter: (p) => p.data ? formatDate(p.data.borneReference) : '' },
+    { field: 'borneActuelle', headerName: 'Constaté au', width: 115, valueGetter: (p) => p.data ? formatDate(p.data.borneActuelle) : '' },
+    { field: 'depassement', headerName: 'Dépassement (j)', width: 130, type: 'numericColumn', valueGetter: (p) => p.data?.depassementJours ?? 0 },
+    { field: 'montant', headerName: 'Montant', width: 130, type: 'numericColumn', valueGetter: (p) => p.data ? formatMoney(p.data.montantPart) : '' },
+    { field: 'reglementNumero', headerName: 'N° Règlement', width: 120, valueGetter: (p) => p.data?.reglementNumero || '—' },
+    { field: 'mode', headerName: 'Mode', width: 100, valueGetter: (p) => p.data?.typeReglement ? (LIBELLES_MODE[p.data.typeReglement] || p.data.typeReglement) : '—' },
+    { field: 'bucket', headerName: 'Cas', width: 175, filter: CustomListFilter, valueGetter: (p) => p.data ? libelleCas(p.data) : '' },
+    {
+      headerName: 'Action',
+      width: 150,
+      pinned: 'right',
+      suppressHeaderMenuButton: true,
+      cellRenderer: (p: any) => {
+        const l = p.data;
+        if (!l || !l.estRepriseManuelleRequise) return null;
+        return (
+          <button
+            className="btn btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', padding: '0.3rem 0.6rem' }}
+            onClick={() => setRepriseCible(l)}
+          >
+            <PencilLine size={13} /> Reprise manuelle
+          </button>
+        );
+      }
     }
-    const fStatut = filters['statut'];
-    if (Array.isArray(fStatut) && fStatut.length > 0) {
-      const v = l.statut === 'RepriseManuelleRequise' ? 'Reprise manuelle requise' : 'Retard calculé';
-      if (!fStatut.includes(v)) return false;
-    }
-    const fBucket = filters['bucket'];
-    if (Array.isArray(fBucket) && fBucket.length > 0 && !fBucket.includes(LIBELLES_BUCKET[l.bucket] ?? l.bucket)) return false;
-    const fOrigine = filters['origineDelai'];
-    if (Array.isArray(fOrigine) && fOrigine.length > 0 && !fOrigine.includes(LIBELLES_ORIGINE_DELAI[l.origineDelai] ?? l.origineDelai)) return false;
-    return true;
-  });
-
-  const optionsFor = (key: string): { label: string, value: string }[] => {
-    if (key === 'statut') return [{ label: 'Retard calculé', value: 'Retard calculé' }, { label: 'Reprise manuelle requise', value: 'Reprise manuelle requise' }];
-    if (key === 'bucket') return Object.values(LIBELLES_BUCKET).map(v => ({ label: v, value: v }));
-    if (key === 'origineDelai') return Object.values(LIBELLES_ORIGINE_DELAI).map(v => ({ label: v, value: v }));
-    return [];
-  };
-
-  const renderCell = (col: Col, l: LigneSelectionDdpDto) => {
-    const bloquee = l.statut === 'RepriseManuelleRequise';
-    switch (col.key) {
-      case 'statut':
-        // Badge EXPLICITE demandé par la TASK pour les lignes antérieures à la mise en route.
-        return bloquee
-          ? (
-            <span
-              data-testid="badge-reprise-manuelle"
-              title="Antérieure à la mise en route — retard réel inconnu tant que la reprise manuelle n'est pas saisie"
-              style={{ background: 'var(--status-blocking-bg)', color: 'var(--status-blocking-text)', padding: '2px 8px', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 600, whiteSpace: 'nowrap' }}
-            >
-              Reprise manuelle requise
-            </span>
-          )
-          : (
-            <span style={{ background: 'var(--status-ok-bg)', color: 'var(--status-ok-text)', padding: '2px 8px', borderRadius: '99px', fontSize: '0.68rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-              Retard calculé
-            </span>
-          );
-      case 'tiers':
-        return <span><strong>{l.tiersCode}</strong> <span style={{ color: 'var(--text-secondary)' }}>{l.tiersIntitule}</span></span>;
-      case 'facture':
-        return l.doNumero || '—';
-      case 'doDate':
-        return formatDate(l.doDate);
-      case 'echeanceLegale':
-        return formatDate(l.echeanceLegale);
-      case 'origineDelai':
-        return `${LIBELLES_ORIGINE_DELAI[l.origineDelai] ?? l.origineDelai} (${l.nombreJoursDelaiApplique} j)`;
-      case 'borneReference':
-        return l.borneReference ? formatDate(l.borneReference) : <span style={{ color: 'var(--text-secondary)' }}>—</span>;
-      case 'borneActuelle':
-        return formatDate(l.borneActuelle);
-      case 'depassement':
-        // JAMAIS un Depassement calculé automatiquement pour une ligne antérieure à la mise en route.
-        return bloquee
-          ? <span style={{ color: 'var(--status-blocking-text)', fontStyle: 'italic' }}>inconnu</span>
-          : <strong>{l.depassement}</strong>;
-      case 'montant':
-        return formatMoney(l.montantLigne);
-      case 'bucket':
-        return <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{LIBELLES_BUCKET[l.bucket] ?? l.bucket}</span>;
-      case 'actions':
-        // Aucune action d'intégration ici (rôle strictement séparé de la popup de sélection) :
-        // uniquement la saisie de reprise manuelle, qui débloque le calcul pour cette échéance.
-        return bloquee
-          ? (
-            <button
-              className="btn"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
-              onClick={() => setRepriseCible(l)}
-              title="Saisir « déjà déclaré jusqu'au [date] » pour cette facture"
-            >
-              <PencilLine size={13} /> Saisie manuelle
-            </button>
-          )
-          : <span style={{ color: 'var(--text-secondary)' }}>—</span>;
-      default:
-        return null;
-    }
-  };
+  ], []);
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -225,7 +181,7 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
           <div>
             <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Contrôle des lignes hors délai</h2>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-              Délai de Paiement Maroc — CDC §5.A-9 · visibilité seule, aucune intégration depuis cet écran
+              Délai de Paiement Maroc — visibilité seule, aucune intégration depuis cet écran
             </div>
           </div>
         </div>
@@ -250,7 +206,6 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
           <button className="btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', padding: '0.3rem 0.6rem' }} onClick={() => setShowMiseEnRoute(true)}>
             <Settings2 size={14} /> Date de mise en route
           </button>
-          <ColumnSelector columns={COLUMNS} visibleKeys={visibleKeys} onToggle={toggle} onReset={reset} />
         </div>
       </div>
 
@@ -263,13 +218,22 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
               Période calculée : <strong data-testid="periode-calculee">{formatDate(resultat.dateDebutPeriode)} → {formatDate(resultat.dateFinPeriode)}</strong>
             </span>
           )}
-          <span>Lignes : <strong>{visibleRows.length}</strong> / {toutesLignes.length}</span>
+          <span>Lignes : <strong>{toutesLignes.length}</strong></span>
           {resultat && resultat.lignesRepriseManuelleRequise.length > 0 && (
             <span style={{ color: 'var(--status-blocking-text)' }}>
               dont <strong>{resultat.lignesRepriseManuelleRequise.length}</strong> en reprise manuelle requise
             </span>
           )}
           {resultat && <span style={{ color: 'var(--text-secondary)' }}>{resultat.nombreEcheancesExaminees} échéance(s) examinée(s)</span>}
+          {resultat && resultat.nombreEcheancesDejaDeclarees > 0 && (
+            <span
+              style={{ color: 'var(--text-secondary)' }}
+              title="Ces échéances figurent déjà dans une déclaration antérieure : leur retard a été compté une première fois et n'est plus recompté ici (anti-double-déclaration)."
+            >
+              dont <strong>{resultat.nombreEcheancesDejaDeclarees}</strong> déjà déclarée(s)
+              {resultat.derniereBorneDejaDeclaree ? ` jusqu'au ${formatDate(resultat.derniereBorneDejaDeclaree)}` : ''}
+            </span>
+          )}
         </div>
         {Object.keys(filters).length > 0 && (
           <button className="btn" onClick={() => setFilters({})} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0, fontSize: '0.8rem', cursor: 'pointer' }}>
@@ -293,40 +257,15 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
         </div>
       )}
 
-      <div style={{ flexGrow: 1, overflow: 'auto', background: 'white' }}>
-        <div style={{ minWidth: '1700px', fontSize: '0.8125rem' }}>
-          <div style={{ display: 'flex', position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderBottom: '1px solid var(--border-color)' }}>
-            {visibleColumns.map(col => (
-              <div key={col.key} style={{ ...colStyle(col), padding: '0.5rem 0.6rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                {col.label}
-                {col.filterType && (
-                  <ExcelFilter
-                    filterType={col.filterType}
-                    options={optionsFor(col.key)}
-                    selectedValues={Array.isArray(filters[col.key]) ? filters[col.key] as string[] : []}
-                    textValue={typeof filters[col.key] === 'string' ? filters[col.key] as string : ''}
-                    onChange={(val) => handleFilterChange(col.key, val)}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-
-          {visibleRows.map(l => (
-            <div key={`${l.ecId}|${l.afId ?? ''}`} style={{ display: 'flex', borderBottom: '1px solid var(--border-color)' }}>
-              {visibleColumns.map(col => (
-                <div key={col.key} style={{ ...colStyle(col), padding: '0.35rem 0.6rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: colJustify(col), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {renderCell(col, l)}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-        {visibleRows.length === 0 && !loading && !erreur && (
-          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-            Aucune ligne hors délai pour cette période.
-          </div>
-        )}
+      <div style={{ flexGrow: 1, position: 'relative' }}>
+        <ApbsGrid
+          rowData={toutesLignes}
+          columnDefs={columnDefs}
+          height="100%"
+          showColumnSelector={true}
+          showExportButton={true}
+          exportFileName="controle_lignes_ddp.xlsx"
+        />
       </div>
 
       {showMiseEnRoute && (

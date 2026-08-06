@@ -1,0 +1,145 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e5] [cursor=pointer]:
+      - generic [ref=f2e7]:
+        - img "DM" [ref=f2e13]
+        - generic [ref=f2e14]: TVA
+      - generic [ref=f2e15]: NEW_EMA DISTRIBUTION
+    - generic [ref=f2e16]:
+      - generic [ref=f2e17]:
+        - generic [ref=f2e18]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f2e19] [cursor=pointer]
+        - generic "Factures" [ref=f2e23] [cursor=pointer]
+      - generic [ref=f2e28]:
+        - generic [ref=f2e29]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f2e30] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f2e36] [cursor=pointer]
+    - generic [ref=f2e42]:
+      - generic [ref=f2e43]: Admin Admin
+      - button "Déconnexion" [ref=f2e44] [cursor=pointer]
+  - main [ref=f2e49]:
+    - generic [ref=f2e328]:
+      - generic [ref=f2e329]:
+        - heading "Déclarations TVA" [level=2] [ref=f2e330]
+        - button "Créer une déclaration" [ref=f2e331] [cursor=pointer]
+      - generic [ref=f2e333]:
+        - generic [ref=f2e334]:
+          - generic [ref=f2e335]:
+            - heading "TVA1-2026-06" [level=3] [ref=f2e336]
+            - generic [ref=f2e337]:
+              - generic [ref=f2e338]:
+                - text: "Période:"
+                - strong [ref=f2e339]: Juin 2026
+              - generic [ref=f2e340]:
+                - text: "Déclaration:"
+                - strong [ref=f2e341]: Mensuelle
+              - generic [ref=f2e342]:
+                - text: "Lignes:"
+                - strong [ref=f2e343]: "844"
+              - generic "Somme de la TVA collectée et de la TVA déductible de la période — ce n'est PAS la TVA due. Le résultat de la période (collectée − déductible) est affiché à l'étape 3." [ref=f2e344]:
+                - text: "TVA totale (collectée + déductible):"
+                - strong [ref=f2e345]: 358 106,77 MAD
+          - generic [ref=f2e346]:
+            - generic [ref=f2e347]: En cours
+            - button "Supprimer" [ref=f2e348] [cursor=pointer]
+            - button "Ouvrir" [ref=f2e352] [cursor=pointer]
+        - generic [ref=f2e355]:
+          - generic [ref=f2e356]:
+            - heading "TVA1-2026-05" [level=3] [ref=f2e357]
+            - generic [ref=f2e358]:
+              - generic [ref=f2e359]:
+                - text: "Période:"
+                - strong [ref=f2e360]: Mai 2026
+              - generic [ref=f2e361]:
+                - text: "Déclaration:"
+                - strong [ref=f2e362]: Mensuelle
+              - generic [ref=f2e363]:
+                - text: "Lignes:"
+                - strong [ref=f2e364]: "735"
+              - generic "Somme de la TVA collectée et de la TVA déductible de la période — ce n'est PAS la TVA due. Le résultat de la période (collectée − déductible) est affiché à l'étape 3." [ref=f2e365]:
+                - text: "TVA totale (collectée + déductible):"
+                - strong [ref=f2e366]: 276 975,36 MAD
+          - generic [ref=f2e367]:
+            - generic [ref=f2e368]: Clôturée
+            - button "Réouvrir" [ref=f2e369] [cursor=pointer]
+            - button "Ouvrir" [ref=f2e373] [cursor=pointer]
+        - generic [ref=f2e376]:
+          - generic [ref=f2e377]:
+            - heading "TVA1-2026-04" [level=3] [ref=f2e378]
+            - generic [ref=f2e379]:
+              - generic [ref=f2e380]:
+                - text: "Période:"
+                - strong [ref=f2e381]: Avril 2026
+              - generic [ref=f2e382]:
+                - text: "Déclaration:"
+                - strong [ref=f2e383]: Mensuelle
+              - generic [ref=f2e384]:
+                - text: "Lignes:"
+                - strong [ref=f2e385]: "1023"
+              - generic "Somme de la TVA collectée et de la TVA déductible de la période — ce n'est PAS la TVA due. Le résultat de la période (collectée − déductible) est affiché à l'étape 3." [ref=f2e386]:
+                - text: "TVA totale (collectée + déductible):"
+                - strong [ref=f2e387]: 328 483,15 MAD
+          - generic [ref=f2e388]:
+            - generic [ref=f2e389]: En cours
+            - button "Supprimer" [ref=f2e390] [cursor=pointer]
+            - button "Ouvrir" [ref=f2e394] [cursor=pointer]
+        - generic [ref=f2e397]:
+          - generic [ref=f2e398]:
+            - heading "TVA1-2026-03" [level=3] [ref=f2e399]
+            - generic [ref=f2e400]:
+              - generic [ref=f2e401]:
+                - text: "Période:"
+                - strong [ref=f2e402]: Mars 2026
+              - generic [ref=f2e403]:
+                - text: "Déclaration:"
+                - strong [ref=f2e404]: Mensuelle
+              - generic [ref=f2e405]:
+                - text: "Lignes:"
+                - strong [ref=f2e406]: "558"
+              - generic "Somme de la TVA collectée et de la TVA déductible de la période — ce n'est PAS la TVA due. Le résultat de la période (collectée − déductible) est affiché à l'étape 3." [ref=f2e407]:
+                - text: "TVA totale (collectée + déductible):"
+                - strong [ref=f2e408]: 236 847,34 MAD
+          - generic [ref=f2e409]:
+            - generic [ref=f2e410]: En cours
+            - button "Supprimer" [ref=f2e411] [cursor=pointer]
+            - button "Ouvrir" [ref=f2e415] [cursor=pointer]
+        - generic [ref=f2e418]:
+          - generic [ref=f2e419]:
+            - heading "TVA1-2026-02" [level=3] [ref=f2e420]
+            - generic [ref=f2e421]:
+              - generic [ref=f2e422]:
+                - text: "Période:"
+                - strong [ref=f2e423]: Février 2026
+              - generic [ref=f2e424]:
+                - text: "Déclaration:"
+                - strong [ref=f2e425]: Mensuelle
+              - generic [ref=f2e426]:
+                - text: "Lignes:"
+                - strong [ref=f2e427]: "750"
+              - generic "Somme de la TVA collectée et de la TVA déductible de la période — ce n'est PAS la TVA due. Le résultat de la période (collectée − déductible) est affiché à l'étape 3." [ref=f2e428]:
+                - text: "TVA totale (collectée + déductible):"
+                - strong [ref=f2e429]: 274 708,84 MAD
+          - generic [ref=f2e430]:
+            - generic [ref=f2e431]: En cours
+            - button "Supprimer" [ref=f2e432] [cursor=pointer]
+            - button "Ouvrir" [ref=f2e436] [cursor=pointer]
+        - generic [ref=f2e439]:
+          - generic [ref=f2e440]:
+            - heading "TVA1-2026-01" [level=3] [ref=f2e441]
+            - generic [ref=f2e442]:
+              - generic [ref=f2e443]:
+                - text: "Période:"
+                - strong [ref=f2e444]: Janvier 2026
+              - generic [ref=f2e445]:
+                - text: "Déclaration:"
+                - strong [ref=f2e446]: Mensuelle
+              - generic [ref=f2e447]:
+                - text: "Lignes:"
+                - strong [ref=f2e448]: "1162"
+              - generic "Somme de la TVA collectée et de la TVA déductible de la période — ce n'est PAS la TVA due. Le résultat de la période (collectée − déductible) est affiché à l'étape 3." [ref=f2e449]:
+                - text: "TVA totale (collectée + déductible):"
+                - strong [ref=f2e450]: 341 224,17 MAD
+          - generic [ref=f2e451]:
+            - generic [ref=f2e452]: En cours
+            - button "Supprimer" [ref=f2e453] [cursor=pointer]
+            - button "Ouvrir" [ref=f2e457] [cursor=pointer]

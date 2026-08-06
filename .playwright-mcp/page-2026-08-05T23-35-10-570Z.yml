@@ -1,0 +1,63 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e5] [cursor=pointer]:
+      - generic [ref=f2e7]:
+        - img "DM" [ref=f2e13]
+        - generic [ref=f2e14]: TVA
+      - generic [ref=f2e15]: NEW_EMA DISTRIBUTION
+    - generic [ref=f2e16]:
+      - generic [ref=f2e17]:
+        - generic [ref=f2e18]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f2e19] [cursor=pointer]
+        - generic "Factures" [ref=f2e23] [cursor=pointer]
+      - generic [ref=f2e28]:
+        - generic [ref=f2e29]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f2e30] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f2e36] [cursor=pointer]
+    - generic [ref=f2e42]:
+      - generic [ref=f2e43]: Admin Admin
+      - button "Déconnexion" [ref=f2e44] [cursor=pointer]
+  - main [ref=f2e49]:
+    - generic [ref=f2e460]:
+      - generic [ref=f2e462]:
+        - button "Déclarations" [active] [ref=f2e463] [cursor=pointer]
+        - button "Sélection / Contrôle" [ref=f2e464] [cursor=pointer]
+        - button "Conventions" [ref=f2e465] [cursor=pointer]
+      - generic [ref=f2e544]:
+        - generic [ref=f2e545]:
+          - generic [ref=f2e551]:
+            - heading "Déclarations délai de paiement" [level=2] [ref=f2e552]
+            - generic [ref=f2e553]: Délai de Paiement Maroc — CDC §3.1/§6
+          - generic [ref=f2e554]:
+            - button "Date de mise en route" [ref=f2e555] [cursor=pointer]
+            - button "Nouvelle déclaration" [ref=f2e559] [cursor=pointer]
+            - button "Colonnes" [ref=f2e562] [cursor=pointer]
+        - generic [ref=f2e567]:
+          - text: "Déclarations :"
+          - strong [ref=f2e568]: "1"
+          - text: / 1
+        - generic [ref=f2e570]:
+          - generic [ref=f2e571]:
+            - generic [ref=f2e572]: N° déclaration
+            - generic [ref=f2e573]:
+              - text: Période
+              - button "Filtrer" [ref=f2e575] [cursor=pointer]
+            - generic [ref=f2e578]: Dates
+            - generic [ref=f2e579]:
+              - text: Statut
+              - button "Filtrer" [ref=f2e581] [cursor=pointer]
+            - generic [ref=f2e584]: Lignes
+            - generic [ref=f2e585]: Fichier
+            - generic [ref=f2e586]: Dépôt
+            - generic [ref=f2e587]: Libellé
+            - generic [ref=f2e588]: Actions
+          - generic [ref=f2e589]:
+            - button "DDP26080001" [ref=f2e591] [cursor=pointer]
+            - generic [ref=f2e592]: Annuelle 2026
+            - generic [ref=f2e593]: 01/01/2026 → 31/12/2026
+            - generic [ref=f2e594]: Clôturée
+            - generic [ref=f2e596]: "1125"
+            - generic [ref=f2e597]: —
+            - generic [ref=f2e599]: —
+            - generic [ref=f2e601]: —
+            - button "Ouvrir" [ref=f2e605] [cursor=pointer]

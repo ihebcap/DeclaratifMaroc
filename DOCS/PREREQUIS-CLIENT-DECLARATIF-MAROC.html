@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Prérequis techniques — Déclaratif Maroc</title>
+<style>
+  :root {
+    --accent: #1a5f7a;
+    --accent-light: #e8f2f5;
+    --text: #1f2937;
+    --text-secondary: #5b6472;
+    --border: #d8dee3;
+    --bg: #ffffff;
+    --bg-alt: #f7f9fa;
+    --warn-bg: #fff7e6;
+    --warn-border: #f0b429;
+    --warn-text: #7a4d00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Calibri, Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    margin: 0;
+    line-height: 1.55;
+  }
+  .page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem 4rem;
+  }
+  header.doc-header {
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 1.25rem;
+    margin-bottom: 2rem;
+  }
+  header.doc-header h1 {
+    margin: 0 0 0.3rem;
+    font-size: 1.65rem;
+    color: var(--accent);
+  }
+  header.doc-header .subtitle {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+  }
+  h2 {
+    font-size: 1.15rem;
+    color: var(--accent);
+    border-left: 4px solid var(--accent);
+    padding-left: 0.6rem;
+    margin-top: 2.2rem;
+    margin-bottom: 0.9rem;
+  }
+  h3 {
+    font-size: 1rem;
+    margin-bottom: 0.4rem;
+    margin-top: 1.2rem;
+  }
+  p { margin: 0.5rem 0; }
+  ul, ol { padding-left: 1.4rem; margin: 0.5rem 0; }
+  li { margin-bottom: 0.35rem; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.75rem 0 1.25rem;
+    font-size: 0.92rem;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.7rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--bg-alt);
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  tr:nth-child(even) td { background: #fbfcfc; }
+  code, .mono {
+    font-family: Consolas, "Courier New", monospace;
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.05rem 0.35rem;
+    font-size: 0.9em;
+  }
+  .callout {
+    border: 1px solid var(--warn-border);
+    background: var(--warn-bg);
+    color: var(--warn-text);
+    border-radius: 6px;
+    padding: 0.85rem 1rem;
+    margin: 1rem 0;
+    font-size: 0.92rem;
+  }
+  .callout strong { display: block; margin-bottom: 0.25rem; }
+  .callout-info {
+    border: 1px solid var(--accent);
+    background: var(--accent-light);
+    color: #0d3f52;
+    border-radius: 6px;
+    padding: 0.85rem 1rem;
+    margin: 1rem 0;
+    font-size: 0.92rem;
+  }
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li {
+    padding-left: 1.7rem;
+    position: relative;
+  }
+  .checklist li::before {
+    content: "☐";
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--accent);
+    font-size: 1.05rem;
+  }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+  }
+  .placeholder { color: var(--accent); font-weight: 600; }
+
+  @media print {
+    body { font-size: 11.5pt; }
+    .page { padding: 0.5cm 0; max-width: none; }
+    h2 { break-after: avoid; }
+    table, .callout, .callout-info { break-inside: avoid; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --accent: #5fb8d6;
+      --accent-light: #10313c;
+      --text: #e6e9ec;
+      --text-secondary: #a3adb8;
+      --border: #333c45;
+      --bg: #14181c;
+      --bg-alt: #1b2126;
+      --warn-bg: #2b2410;
+      --warn-border: #b5860a;
+      --warn-text: #f0c96a;
+    }
+    tr:nth-child(even) td { background: #171d22; }
+    .callout-info { color: #cfeaf3; }
+  }
+  :root[data-theme="dark"] {
+    --accent: #5fb8d6;
+    --accent-light: #10313c;
+    --text: #e6e9ec;
+    --text-secondary: #a3adb8;
+    --border: #333c45;
+    --bg: #14181c;
+    --bg-alt: #1b2126;
+    --warn-bg: #2b2410;
+    --warn-border: #b5860a;
+    --warn-text: #f0c96a;
+  }
+  :root[data-theme="light"] {
+    --accent: #1a5f7a;
+    --accent-light: #e8f2f5;
+    --text: #1f2937;
+    --text-secondary: #5b6472;
+    --border: #d8dee3;
+    --bg: #ffffff;
+    --bg-alt: #f7f9fa;
+    --warn-bg: #fff7e6;
+    --warn-border: #f0b429;
+    --warn-text: #7a4d00;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <h1>Déclaratif Maroc — Prérequis techniques d'installation</h1>
+    <div class="subtitle">Document à destination du service informatique du client · à valider avant l'installation</div>
+  </header>
+
+  <p>
+    Ce document liste les prérequis techniques nécessaires à l'installation de l'application
+    <strong>Déclaratif Maroc</strong> (déclaration TVA / Délai de Paiement Maroc) sur le poste ou serveur
+    désigné, ainsi que la configuration réseau à prévoir pour un accès depuis les postes du réseau local.
+  </p>
+
+  <h2>1. Poste / serveur d'installation</h2>
+  <table>
+    <tr><th>Élément</th><th>Prérequis</th></tr>
+    <tr><td>Système d'exploitation</td><td>Windows (poste ou serveur), avec droits <strong>administrateur</strong> pour l'installation (mise en place d'un service Windows)</td></tr>
+    <tr><td>.NET Framework</td><td>Version <strong>4.8</strong> — nécessaire uniquement pour le composant qui dialogue avec les objets métier Sage. Si absent, le programme d'installation propose de l'installer automatiquement (un redémarrage de Windows peut être nécessaire)</td></tr>
+    <tr><td>.NET 8 / ASP.NET Core</td><td><strong>Aucune installation requise</strong> — le serveur applicatif est livré « autonome » (runtime embarqué dans l'exécutable), rien à installer séparément pour cette partie</td></tr>
+    <tr><td>Sage 100</td><td>Une version compatible doit être installée sur ce même poste : <strong>v7, v9, v10/v11 ou v12</strong> (la version v8 n'est pas prise en charge)</td></tr>
+    <tr><td>Espace disque</td><td>Quelques centaines de Mo pour l'application (hors bases de données)</td></tr>
+  </table>
+
+  <div class="callout-info">
+    <strong>Cas particulier — client sans objets métier Sage</strong>
+    Si le client ne gère pas ses factures via Sage (saisie 100&nbsp;% manuelle dans l'application), les
+    objets métier Sage ne sont pas sollicités pour ces pièces. Un accès SQL à la base Sage reste
+    cependant nécessaire pour la lecture des taux de TVA (table de référence des taxes).
+  </div>
+
+  <h3>Téléchargement — .NET Framework 4.8</h3>
+  <p>
+    Le programme d'installation propose d'installer automatiquement le .NET Framework 4.8 s'il est
+    absent. En cas de besoin d'une installation manuelle préalable (poste sans accès Internet au moment
+    de l'installation, par exemple), le lien officiel Microsoft est :
+  </p>
+  <table>
+    <tr><th>Composant</th><th>Lien de téléchargement</th></tr>
+    <tr>
+      <td>.NET Framework 4.8 — Runtime (à installer sur le poste/serveur cible)</td>
+      <td><a href="https://dotnet.microsoft.com/en-us/download/dotnet-framework/net48" target="_blank" rel="noopener">dotnet.microsoft.com/download/dotnet-framework/net48</a>
+        <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.2rem;">Choisir « Runtime » (pas « Developer Pack », réservé aux développeurs).</div>
+      </td>
+    </tr>
+    <tr>
+      <td>.NET 8 / ASP.NET Core Runtime <em>(facultatif — déjà inclus dans l'application livrée, uniquement si le client préfère l'installer lui-même séparément)</em></td>
+      <td><a href="https://dotnet.microsoft.com/en-us/download/dotnet/8.0" target="_blank" rel="noopener">dotnet.microsoft.com/download/dotnet/8.0</a>
+        <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.2rem;">Choisir « ASP.NET Core Runtime », Windows, x64.</div>
+      </td>
+    </tr>
+  </table>
+
+  <h2>2. Accès base de données</h2>
+  <ul>
+    <li>Un serveur <strong>SQL Server</strong> accessible depuis le poste d'installation, hébergeant la base de données GRF de la société.</li>
+    <li>Un compte SQL (ou Windows) disposant des droits de lecture/écriture sur cette base.</li>
+    <li>Le même serveur héberge généralement aussi la base Sage associée (lue automatiquement par société, aucune saisie séparée nécessaire).</li>
+  </ul>
+
+  <h2>3. Réseau — port à ouvrir pour l'accès local</h2>
+  <p>
+    L'application fonctionne comme un petit serveur web installé sur un poste ou serveur du réseau : les
+    utilisateurs y accèdent depuis leur navigateur, à l'adresse
+    <code>http://&lt;adresse-ip-du-serveur&gt;:&lt;port&gt;</code>.
+  </p>
+  <p>
+    Le <strong>port d'écoute est choisi lors de l'installation</strong> (une valeur par défaut est proposée,
+    modifiable si elle est déjà utilisée par une autre application sur ce poste).
+  </p>
+  <div class="callout">
+    <strong>Action requise côté réseau/pare-feu</strong>
+    Le pare-feu Windows du poste/serveur d'installation doit autoriser les connexions <strong>entrantes</strong>
+    sur ce port TCP, afin que les autres postes du réseau local puissent y accéder. Sans cette ouverture,
+    seul le poste d'installation lui-même pourra utiliser l'application (via <code>localhost</code>).
+  </div>
+  <p>Concrètement, à faire une fois le port choisi et l'installation terminée :</p>
+  <ul class="checklist">
+    <li>Créer une règle de pare-feu entrante (TCP) autorisant le port choisi à l'installation.</li>
+    <li>Vérifier depuis un autre poste du réseau que <code>http://&lt;adresse-ip-du-serveur&gt;:&lt;port&gt;</code> répond bien.</li>
+    <li>Si un pare-feu ou antivirus tiers est également en place (au-delà du pare-feu Windows), y ajouter la même autorisation.</li>
+  </ul>
+
+  <h2>4. Licence</h2>
+  <p>
+    L'application nécessite une licence active, vérifiée au démarrage du service. Les informations de
+    connexion au serveur de licence sont renseignées lors de l'installation (valeurs par défaut fournies,
+    modifiables si nécessaire).
+  </p>
+
+  <h2>5. Résumé — ce qu'il faut avoir prêt avant l'installation</h2>
+  <ul class="checklist">
+    <li>Accès administrateur au poste/serveur cible</li>
+    <li>Sage 100 installé (version v7/v9/v10-v11/v12)</li>
+    <li>Adresse et identifiants du serveur SQL Server hébergeant la base GRF</li>
+    <li>Un port TCP disponible sur ce poste (par défaut proposé à l'installation), à ouvrir dans le pare-feu une fois choisi</li>
+  </ul>
+
+  <footer>
+    <p>
+      Document générique — les valeurs spécifiques (adresse serveur, port réellement configuré, identifiants)
+      sont à compléter au moment de l'installation avec l'équipe technique.
+    </p>
+    <p style="margin-top:0.75rem;">© APBS - Groupe. Tous droits réservés.</p>
+  </footer>
+
+</div>
+</body>
+</html>

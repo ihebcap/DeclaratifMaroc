@@ -1,0 +1,16 @@
+- generic [ref=f4e99]:
+  - heading "Déclaratif Maroc" [level=1] [ref=f4e100]
+  - paragraph [ref=f4e101]: Accès sécurisé à l'espace de gestion
+  - generic [ref=f4e102]:
+    - generic [ref=f4e103]:
+      - generic [ref=f4e104]: Nom d'utilisateur
+      - textbox [ref=f4e105]: Admin
+    - generic [ref=f4e106]:
+      - generic [ref=f4e107]: Mot de passe
+      - textbox [ref=f4e108]: Admin
+    - generic [ref=f4e109]:
+      - generic [ref=f4e110]: Société
+      - combobox [ref=f4e111]:
+        - option "-- Choisir une société --"
+        - option "NEW_EMA DISTRIBUTION" [selected]
+    - button "Se Connecter" [ref=f4e112] [cursor=pointer]

@@ -27,7 +27,7 @@ public interface IDeclarationRepository
     /// valorisées réellement déclarables) — Exclue/Reportee/Ecartee portent TVA=0 (jamais
     /// valorisées), les inclure fausserait le nombre de lignes affiché.
     /// </summary>
-    Task<Dictionary<Guid, (int NbLignes, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds);
+    Task<Dictionary<Guid, (int NbLignes, int NbFactures, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds);
 
     /// <summary>
     /// TASK-079 (garde-fou défensif §4) : nombre d'affectations RT_AFFECTATION déjà tamponnées

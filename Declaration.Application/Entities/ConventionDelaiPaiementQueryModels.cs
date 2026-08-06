@@ -22,6 +22,7 @@ public sealed class ConventionDelaiPaiementListItem
     public int SocieteId { get; set; }
     public int TiersNo { get; set; }
     public string TiersCode { get; set; } = string.Empty;
+    public string TiersIntitule { get; set; } = string.Empty;
     public DateTime Date { get; set; }
     public string Numero { get; set; } = string.Empty;
     public DateTime? DateDebut { get; set; }

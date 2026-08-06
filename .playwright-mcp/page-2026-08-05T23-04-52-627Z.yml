@@ -1,0 +1,88 @@
+- generic [ref=f5e2124]:
+  - complementary [ref=f5e2125]:
+    - generic [ref=f5e2126] [cursor=pointer]:
+      - generic [ref=f5e2128]:
+        - img "DM" [ref=f5e2134]
+        - generic [ref=f5e2135]: TVA
+      - generic [ref=f5e2136]: NEW_EMA DISTRIBUTION
+    - generic [ref=f5e2137]:
+      - generic [ref=f5e2138]:
+        - generic [ref=f5e2139]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f5e2140] [cursor=pointer]
+        - generic "Factures" [ref=f5e2144] [cursor=pointer]
+      - generic [ref=f5e2149]:
+        - generic [ref=f5e2150]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f5e2151] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f5e2157] [cursor=pointer]
+    - generic [ref=f5e2163]:
+      - generic [ref=f5e2164]: Admin Admin
+      - button "Déconnexion" [ref=f5e2165] [cursor=pointer]
+  - main [ref=f5e2170]:
+    - generic [ref=f5e2219]:
+      - generic [ref=f5e2220]:
+        - generic [ref=f5e2221]:
+          - button "Retour" [ref=f5e2222] [cursor=pointer]
+          - generic [ref=f5e2225]: TVA1-2026-02
+        - generic [ref=f5e2226]:
+          - button "1. Sélection" [ref=f5e2227] [cursor=pointer]
+          - button "2. Vérifier & Intégrer" [ref=f5e2231] [cursor=pointer]
+          - button "3. Déclaration" [disabled] [ref=f5e2235]
+        - generic [ref=f5e2240]:
+          - generic [ref=f5e2241]: Période 01/02/2026 → 28/02/2026
+          - generic [ref=f5e2242]: En cours
+      - generic [ref=f5e2767]:
+        - generic [ref=f5e3281]:
+          - heading "Étape 2 — Vérifier & Intégrer" [level=2] [ref=f5e3282]
+          - generic [ref=f5e3283]: Vérifiez les calculs par taux TVA, contrôlez les anomalies puis confirmez l'intégration
+        - generic [ref=f5e3284]:
+          - button "TVA Déductible (Achats)" [ref=f5e3285] [cursor=pointer]
+          - button "TVA Collectée (Ventes)" [ref=f5e3286] [cursor=pointer]
+        - generic [ref=f5e3287]:
+          - generic [ref=f5e3288]: ❌ Intégration bloquée — 2 anomalies bloquantes dans l'onglet « TVA Collectée (Ventes) ». Cet onglet-ci est en ordre, mais la déclaration ne peut pas être intégrée tant que l'autre ne l'est pas.
+          - button "Sous-totaux par taux TVA (5 taux) ▼ Déplier" [ref=f5e3294] [cursor=pointer]:
+            - text: Sous-totaux par taux TVA (5 taux)
+            - generic [ref=f5e3297]: ▼ Déplier
+          - generic [ref=f5e3298]:
+            - generic [ref=f5e3299]: Récapitulatif de l'intégration — TVA déductible (achats) uniquement
+            - generic [ref=f5e3304]:
+              - generic [ref=f5e3305]:
+                - generic [ref=f5e3306]: Règlements sélectionnés
+                - generic [ref=f5e3307]: 66règlement(s)
+              - generic [ref=f5e3308]:
+                - generic [ref=f5e3309]: Lignes valorisées
+                - generic [ref=f5e3310]: 174ligne(s)
+              - generic [ref=f5e3311]:
+                - generic [ref=f5e3312]: Total TVA à intégrer
+                - generic [ref=f5e3313]: 135 465,53 MAD
+              - generic [ref=f5e3314]:
+                - generic [ref=f5e3315]: Lignes déjà figées en base
+                - generic [ref=f5e3316]: 0ligne(s)
+          - generic [ref=f5e3317]:
+            - generic [ref=f5e3318]: Contrôles pré-intégration
+            - generic [ref=f5e3321]:
+              - generic [ref=f5e3322]:
+                - generic [ref=f5e3326]:
+                  - generic [ref=f5e3327]: Affectations valides
+                  - generic [ref=f5e3328]: 174 affectation(s) en attente ou intégrée(s)
+                - generic [ref=f5e3329]: OK
+              - generic [ref=f5e3330]:
+                - generic [ref=f5e3335]:
+                  - generic [ref=f5e3336]: Cohérence des totaux déclarés
+                  - generic [ref=f5e3337]: "Écart détecté : -26 122,84 MAD"
+                  - generic [ref=f5e3338]: "Écart expliqué : la ou les 2 ligne(s) incohérente(s) (TTC ≠ HT+TVA) se trouvent dans l'onglet « TVA Collectée (Ventes) ». Basculez sur cet onglet pour en voir le détail."
+                - generic [ref=f5e3339]: ÉCART
+              - generic [ref=f5e3340]:
+                - generic [ref=f5e3344]:
+                  - generic [ref=f5e3345]: Absence d'anomalies bloquantes
+                  - generic [ref=f5e3346]: Aucune anomalie bloquante détectée
+                - generic [ref=f5e3347]: OK
+            - button "11 avertissements (non bloquants) ▼ Déplier" [ref=f5e3349] [cursor=pointer]:
+              - text: 11 avertissements (non bloquants)
+              - generic [ref=f5e3352]: ▼ Déplier
+        - generic [ref=f5e3353]:
+          - generic [ref=f5e3354]: 2 contrôles bloquants dans « TVA Collectée (Ventes) » — intégration impossible
+          - generic [ref=f5e3360]:
+            - button "Export de contrôle (Excel)" [ref=f5e3361] [cursor=pointer]
+            - button "Codes activité" [ref=f5e3365] [cursor=pointer]
+            - button "Toutes les lignes / Resynchroniser" [ref=f5e3366] [cursor=pointer]
+            - button "Confirmer intégration" [disabled] [ref=f5e3372]

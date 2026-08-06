@@ -126,26 +126,33 @@ public class DeclarationRepository : IDeclarationRepository
     {
         public string DeclarationId { get; set; } = "";
         public int NbLignes { get; set; }
+        public int NbFactures { get; set; }
         public decimal MontantTva { get; set; }
     }
 
-    /// <summary>TASK-079 : agrégats Lignes/Montant TVA (lignes Proposee/Integree uniquement) pour l'écran liste.</summary>
-    public async Task<Dictionary<Guid, (int NbLignes, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds)
+    /// <summary>
+    /// TASK-079 : agrégats Lignes/Montant TVA (lignes Proposee/Integree uniquement) pour l'écran liste.
+    /// NbFactures = nombre de factures DISTINCTES (NumeroFacture) — une facture peut porter plusieurs
+    /// lignes DM_LGTVA (taux/code activité différents) ; NULL (frais bancaires, etc., sans NumeroFacture)
+    /// n'est jamais compté par COUNT(DISTINCT), donc n'est jamais inclus dans NbFactures (comportement
+    /// voulu : ce n'est pas une facture).
+    /// </summary>
+    public async Task<Dictionary<Guid, (int NbLignes, int NbFactures, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds)
     {
         var ids = declarationIds.Select(id => id.ToString()).Distinct().ToList();
-        var result = new Dictionary<Guid, (int NbLignes, decimal MontantTva)>();
+        var result = new Dictionary<Guid, (int NbLignes, int NbFactures, decimal MontantTva)>();
         if (ids.Count == 0) return result;
 
         using var connection = _connectionFactory.CreatePersistenceConnection();
         var rows = await connection.QueryAsync<AgregatRow>(
-            @"SELECT DeclarationId, COUNT(*) AS NbLignes, SUM(TVA) AS MontantTva
+            @"SELECT DeclarationId, COUNT(*) AS NbLignes, COUNT(DISTINCT NumeroFacture) AS NbFactures, SUM(TVA) AS MontantTva
               FROM DM_LGTVA
               WHERE DeclarationId IN @Ids AND Etat IN @EtatsDeclarables
               GROUP BY DeclarationId",
             new { Ids = ids, EtatsDeclarables = new[] { (int)EtatLigne.Proposee, (int)EtatLigne.Integree } });
 
         foreach (var r in rows)
-            result[Guid.Parse(r.DeclarationId)] = (r.NbLignes, r.MontantTva);
+            result[Guid.Parse(r.DeclarationId)] = (r.NbLignes, r.NbFactures, r.MontantTva);
         return result;
     }
 
@@ -172,10 +179,10 @@ public class DeclarationRepository : IDeclarationRepository
         using var connection = _connectionFactory.CreatePersistenceConnection();
         var sql = @"INSERT INTO DM_LGTVA
                     (Id, DeclarationId, Etat, Domaine, MotifRejet, NumeroFacture, Reference, NumeroRapprochement, TiersNom,
-                     TiersIdentifiantFiscal, TiersICE, HT, Taux, TVA, TTC, Prorata, MontantAffecte, ModePaiement, DatePaiement, DateFacture, Source, EcType, EC_Id, MV_Id,
+                     TiersIdentifiantFiscal, TiersICE, HT, Taux, CodeTaxe, TVA, TTC, Prorata, MontantAffecte, ModePaiement, DatePaiement, DateFacture, Source, EcType, EC_Id, MV_Id,
                      CodeActivite, CodeActiviteModifieManuellement, CodeActiviteModifiePar, CodeActiviteModifieLe)
                     VALUES (@Id, @DeclarationId, @Etat, @Domaine, @MotifRejet, @NumeroFacture, @Reference, @NumeroRapprochement, @TiersNom,
-                     @TiersIdentifiantFiscal, @TiersICE, @HT, @Taux, @TVA, @TTC, @Prorata, @MontantAffecte, @ModePaiement, @DatePaiement, @DateFacture, @Source, @EcType, @EC_Id, @MV_Id,
+                     @TiersIdentifiantFiscal, @TiersICE, @HT, @Taux, @CodeTaxe, @TVA, @TTC, @Prorata, @MontantAffecte, @ModePaiement, @DatePaiement, @DateFacture, @Source, @EcType, @EC_Id, @MV_Id,
                      @CodeActivite, @CodeActiviteModifieManuellement, @CodeActiviteModifiePar, @CodeActiviteModifieLe)";
         foreach (var l in lignes)
         {
@@ -193,6 +200,7 @@ public class DeclarationRepository : IDeclarationRepository
                 l.TiersICE,
                 l.HT,
                 l.Taux,
+                l.CodeTaxe,
                 l.TVA,
                 l.TTC,
                 l.Prorata,
@@ -669,6 +677,8 @@ public class DeclarationRepository : IDeclarationRepository
         ) A ON A.MV_Id = M.MV_Id
         WHERE M.SO_Id = @so
           AND M.MV_Domaine IN (0, 1) -- 0=encaissement, 1=décaissement : vrais règlements uniquement (exclut bordereaux de remise, virements, alim. caisse ; les frais bancaires MV_Domaine=6 sont dans une autre table)
+          -- TASK-196 : CT_Type = 0 (GrfEnums.CtType_Client) si MV_Domaine = 0, CT_Type = 1 (GrfEnums.CtType_Fournisseur) si MV_Domaine = 1
+          AND ((M.MV_Domaine = 0 AND M.CT_Type = 0) OR (M.MV_Domaine = 1 AND M.CT_Type = 1))
           -- Période située par la DATE DE RÉFÉRENCE (TASK-062, source unique RegleDatePeriode) :
           -- rapproché → MV_PointDate ; espèce & non-rapproché → MV_Date. Corrige RF26060064 (rapproché
           -- en janvier via MV_PointDate mais MV_Date en juin).
@@ -968,7 +978,9 @@ public class DeclarationRepository : IDeclarationRepository
         var modes = await connection.QueryAsync<int>(@"
             SELECT DISTINCT M.MV_Type
             FROM RT_MOUVEMENT M
-            WHERE M.SO_Id = @so AND M.MV_Domaine IN (0, 1) AND M.MV_Date >= @debut AND M.MV_Date < @finExclude
+            WHERE M.SO_Id = @so AND M.MV_Domaine IN (0, 1)
+              AND ((M.MV_Domaine = 0 AND M.CT_Type = 0) OR (M.MV_Domaine = 1 AND M.CT_Type = 1))
+              AND M.MV_Date >= @debut AND M.MV_Date < @finExclude
             ORDER BY M.MV_Type", p);
 
         var origines = await connection.QueryAsync<int>(@"
@@ -976,7 +988,9 @@ public class DeclarationRepository : IDeclarationRepository
             FROM RT_MOUVEMENT M
             JOIN RT_AFFECTATION AF ON AF.MV_Id = M.MV_Id
             JOIN RT_ECHEANCE E ON AF.EC_Id = E.EC_Id
-            WHERE M.SO_Id = @so AND M.MV_Domaine IN (0, 1) AND M.MV_Date >= @debut AND M.MV_Date < @finExclude
+            WHERE M.SO_Id = @so AND M.MV_Domaine IN (0, 1)
+              AND ((M.MV_Domaine = 0 AND M.CT_Type = 0) OR (M.MV_Domaine = 1 AND M.CT_Type = 1))
+              AND M.MV_Date >= @debut AND M.MV_Date < @finExclude
             ORDER BY E.EC_Type", p);
 
         // TASK-067B — colonnes identifiantes (n° règlement, n° extrait, code banque) passées en
@@ -1585,7 +1599,7 @@ public class DeclarationRepository : IDeclarationRepository
         if (ecId <= 0) return Array.Empty<CacheBucketRow>();
         using var connection = _connectionFactory.CreatePersistenceConnection();
         var rows = await connection.QueryAsync<CacheBucketRow>(
-            @"SELECT Taux, BaseHT AS HT, MontantTva AS Tva, TTC
+            @"SELECT Taux, BaseHT AS HT, MontantTva AS Tva, TTC, CodeTaxe
               FROM DM_VENTILATION_SAGE_CACHE
               WHERE SO_Id = @soId AND EC_Id = @ecId AND CodeTaxe <> 'ERREUR'
               ORDER BY Taux",

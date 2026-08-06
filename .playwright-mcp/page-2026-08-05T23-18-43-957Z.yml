@@ -1,0 +1,163 @@
+- generic [ref=f9e7]:
+  - complementary [ref=f9e8]:
+    - generic [ref=f9e9] [cursor=pointer]:
+      - generic [ref=f9e11]:
+        - img "DM" [ref=f9e17]
+        - generic [ref=f9e18]: TVA
+      - generic [ref=f9e19]: NEW_EMA DISTRIBUTION
+    - generic [ref=f9e20]:
+      - generic [ref=f9e21]:
+        - generic [ref=f9e22]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f9e23] [cursor=pointer]
+        - generic "Factures" [ref=f9e27] [cursor=pointer]
+      - generic [ref=f9e32]:
+        - generic [ref=f9e33]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f9e34] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f9e40] [cursor=pointer]
+    - generic [ref=f9e46]:
+      - generic [ref=f9e47]: Admin Admin
+      - button "Déconnexion" [ref=f9e48] [cursor=pointer]
+  - main [ref=f9e53]:
+    - generic [ref=f9e54]:
+      - generic [ref=f9e55]:
+        - heading "Déclarations TVA" [level=2] [ref=f9e56]
+        - button "Créer une déclaration" [active] [ref=f9e57] [cursor=pointer]
+      - generic [ref=f9e59]:
+        - generic [ref=f9e60]:
+          - generic [ref=f9e61]:
+            - heading "TVA1-2026-03" [level=3] [ref=f9e62]
+            - generic [ref=f9e63]:
+              - generic [ref=f9e64]:
+                - text: "Période:"
+                - strong [ref=f9e65]: Mars 2026
+              - generic [ref=f9e66]:
+                - text: "Déclaration:"
+                - strong [ref=f9e67]: Mensuelle
+              - generic [ref=f9e68]:
+                - text: "Lignes:"
+                - strong [ref=f9e69]: "558"
+              - generic [ref=f9e70]:
+                - text: "Montant TVA:"
+                - strong [ref=f9e71]: 236 847,34 MAD
+          - generic [ref=f9e72]:
+            - generic [ref=f9e73]: En cours
+            - button "Supprimer" [ref=f9e74] [cursor=pointer]
+            - button "Ouvrir" [ref=f9e78] [cursor=pointer]
+        - generic [ref=f9e81]:
+          - generic [ref=f9e82]:
+            - heading "TVA1-2026-04" [level=3] [ref=f9e83]
+            - generic [ref=f9e84]:
+              - generic [ref=f9e85]:
+                - text: "Période:"
+                - strong [ref=f9e86]: Avril 2026
+              - generic [ref=f9e87]:
+                - text: "Déclaration:"
+                - strong [ref=f9e88]: Mensuelle
+              - generic [ref=f9e89]:
+                - text: "Lignes:"
+                - strong [ref=f9e90]: "1023"
+              - generic [ref=f9e91]:
+                - text: "Montant TVA:"
+                - strong [ref=f9e92]: 328 483,15 MAD
+          - generic [ref=f9e93]:
+            - generic [ref=f9e94]: En cours
+            - button "Supprimer" [ref=f9e95] [cursor=pointer]
+            - button "Ouvrir" [ref=f9e99] [cursor=pointer]
+        - generic [ref=f9e102]:
+          - generic [ref=f9e103]:
+            - heading "TVA1-2026-05" [level=3] [ref=f9e104]
+            - generic [ref=f9e105]:
+              - generic [ref=f9e106]:
+                - text: "Période:"
+                - strong [ref=f9e107]: Mai 2026
+              - generic [ref=f9e108]:
+                - text: "Déclaration:"
+                - strong [ref=f9e109]: Mensuelle
+              - generic [ref=f9e110]:
+                - text: "Lignes:"
+                - strong [ref=f9e111]: "735"
+              - generic [ref=f9e112]:
+                - text: "Montant TVA:"
+                - strong [ref=f9e113]: 276 975,36 MAD
+          - generic [ref=f9e114]:
+            - generic [ref=f9e115]: Clôturée
+            - button "Réouvrir" [ref=f9e116] [cursor=pointer]
+            - button "Ouvrir" [ref=f9e120] [cursor=pointer]
+        - generic [ref=f9e123]:
+          - generic [ref=f9e124]:
+            - heading "TVA1-2026-01" [level=3] [ref=f9e125]
+            - generic [ref=f9e126]:
+              - generic [ref=f9e127]:
+                - text: "Période:"
+                - strong [ref=f9e128]: Janvier 2026
+              - generic [ref=f9e129]:
+                - text: "Déclaration:"
+                - strong [ref=f9e130]: Mensuelle
+              - generic [ref=f9e131]:
+                - text: "Lignes:"
+                - strong [ref=f9e132]: "1162"
+              - generic [ref=f9e133]:
+                - text: "Montant TVA:"
+                - strong [ref=f9e134]: 341 224,17 MAD
+          - generic [ref=f9e135]:
+            - generic [ref=f9e136]: En cours
+            - button "Supprimer" [ref=f9e137] [cursor=pointer]
+            - button "Ouvrir" [ref=f9e141] [cursor=pointer]
+        - generic [ref=f9e144]:
+          - generic [ref=f9e145]:
+            - heading "TVA1-2026-02" [level=3] [ref=f9e146]
+            - generic [ref=f9e147]:
+              - generic [ref=f9e148]:
+                - text: "Période:"
+                - strong [ref=f9e149]: Février 2026
+              - generic [ref=f9e150]:
+                - text: "Déclaration:"
+                - strong [ref=f9e151]: Mensuelle
+              - generic [ref=f9e152]:
+                - text: "Lignes:"
+                - strong [ref=f9e153]: "750"
+              - generic [ref=f9e154]:
+                - text: "Montant TVA:"
+                - strong [ref=f9e155]: 274 708,84 MAD
+          - generic [ref=f9e156]:
+            - generic [ref=f9e157]: En cours
+            - button "Supprimer" [ref=f9e158] [cursor=pointer]
+            - button "Ouvrir" [ref=f9e162] [cursor=pointer]
+  - generic [ref=f9e166]:
+    - generic [ref=f9e167]:
+      - heading "Nouvelle Déclaration" [level=3] [ref=f9e168]
+      - button [ref=f9e169] [cursor=pointer]
+    - generic [ref=f9e173]:
+      - generic [ref=f9e174]:
+        - generic [ref=f9e175]: Société
+        - textbox [disabled] [ref=f9e176]: NEW_EMA DISTRIBUTION
+      - generic [ref=f9e177]:
+        - generic [ref=f9e178]:
+          - generic [ref=f9e179]: Exercice
+          - spinbutton [ref=f9e180]: "2026"
+        - generic [ref=f9e181]:
+          - generic [ref=f9e182]: Type
+          - combobox [ref=f9e183]:
+            - option "Mensuel" [selected]
+            - option "Trimestriel"
+      - generic [ref=f9e184]:
+        - generic [ref=f9e185]: Période
+        - combobox [ref=f9e186]:
+          - option "Janvier (01)"
+          - option "Février (02)"
+          - option "Mars (03)"
+          - option "Avril (04)"
+          - option "Mai (05)"
+          - option "Juin (06)" [selected]
+          - option "Juillet (07)"
+          - option "Août (08)"
+          - option "Septembre (09)"
+          - option "Octobre (10)"
+          - option "Novembre (11)"
+          - option "Décembre (12)"
+      - generic [ref=f9e187]:
+        - text: "Numéro généré :"
+        - strong [ref=f9e188]: TVA1-2026-06
+      - generic [ref=f9e189]:
+        - button "Annuler" [ref=f9e190] [cursor=pointer]
+        - button "Créer" [ref=f9e191] [cursor=pointer]

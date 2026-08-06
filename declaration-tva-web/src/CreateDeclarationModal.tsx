@@ -40,7 +40,13 @@ export function CreateDeclarationModal({
         }
     };
 
-    const numeroApercu = `TVA${societeName}-${exercice}-${periode}`;
+    // Aperçu ALIGNÉ sur la règle réelle du back (DeclarationWorkflowService : `TVA{societeId}-
+    // {exercice}-{periode:D2}{suffixeType}`, suffixe "-T" en trimestriel). L'aperçu affichait
+    // auparavant le NOM de société (« TVANEW_EMA DISTRIBUTION-2026-01ance ») alors que la
+    // déclaration créée s'appelait « TVA1-2026-01 » : deux numéros différents pour la même pièce.
+    const isMensuelApercu = type === 'Mensuel';
+    const periodeApercu = String(Number(periode.replace('T', ''))).padStart(2, '0');
+    const numeroApercu = `TVA${societeId}-${exercice}-${periodeApercu}${isMensuelApercu ? '' : '-T'}`;
 
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', animation: 'fade-in 0.2s ease-out' }}>

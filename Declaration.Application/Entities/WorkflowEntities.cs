@@ -41,6 +41,40 @@ public class DeclarationEntete
     /// <see cref="LigneCandidate.EC_Id"/>/<see cref="LigneCandidate.MV_Id"/> ci-dessus).
     /// </remarks>
     public int? DT_Id { get; set; }
+
+    /// <summary>
+    /// TASK-195 — Calcule les bornes de dates [DateDebut, DateFin] pour une période de déclaration donnée (Mensuelle ou Trimestrielle).
+    /// </summary>
+    public static (DateTime DateDebut, DateTime DateFin) CalculerIntervalleDates(int exercice, int periode, TypePeriode type)
+    {
+        if (type == TypePeriode.Trimestrielle)
+        {
+            if (periode < 1 || periode > 4)
+            {
+                throw new ArgumentOutOfRangeException(nameof(periode), $"Trimestre invalide : {periode}. Doit être entre 1 et 4.");
+            }
+            int moisDebut = (periode - 1) * 3 + 1;
+            var dateDebut = new DateTime(exercice, moisDebut, 1);
+            var dateFin = dateDebut.AddMonths(3).AddDays(-1);
+            return (dateDebut, dateFin);
+        }
+        else
+        {
+            if (periode < 1 || periode > 12)
+            {
+                throw new ArgumentOutOfRangeException(nameof(periode), $"Mois invalide : {periode}. Doit être entre 1 et 12.");
+            }
+            var dateDebut = new DateTime(exercice, periode, 1);
+            var dateFin = dateDebut.AddMonths(1).AddDays(-1);
+            return (dateDebut, dateFin);
+        }
+    }
+
+    /// <summary>
+    /// TASK-195 — Calcule les bornes de dates [DateDebut, DateFin] pour cette entête de déclaration.
+    /// </summary>
+    public (DateTime DateDebut, DateTime DateFin) ObtenirIntervalleDates()
+        => CalculerIntervalleDates(Exercice, Periode, Type);
 }
 
 public enum EtatLigne
@@ -72,6 +106,8 @@ public class LigneCandidate
     public string TiersICE { get; set; } = "";
     public decimal HT { get; set; }
     public decimal Taux { get; set; }
+    // TASK-198 : code taxe Sage (F_TAXE.TA_Code)
+    public string CodeTaxe { get; set; } = "";
     public decimal TVA { get; set; }
     public decimal TTC { get; set; }
 

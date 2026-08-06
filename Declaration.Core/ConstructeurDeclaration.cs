@@ -32,13 +32,18 @@ namespace Declaration.Core
                     continue; 
                 }
 
-                if (affectation.EC_Type == 4)
+                // Solde initial (EC_Type=4) SANS saisie manuelle : montant connu en TTC seul, aucun
+                // détail taux/TVA dans Sage — jamais de calcul deviné. Alerte ACTIONNABLE (le
+                // comptable doit saisir taux + montant de TVA) plutôt que la ligne éliminée sans
+                // recours (décision PO — remplace TASK-025 « non géré »). Avec saisie : flux normal
+                // ci-dessous via resoudreFacture (qui construit un DocumentTaxesInfo synthétique).
+                if (affectation.EC_Type == 4 && affectation.SoldeInitialTva == null)
                 {
                     modele.Alertes.Add(new Alerte
                     {
                         Niveau = NiveauAlerte.Warning,
-                        Code = "SOLDE_INITIAL_NON_GERE",
-                        Message = "TVA solde initial non gérée (TASK-025)",
+                        Code = "SOLDE_INITIAL_SAISIE_REQUISE",
+                        Message = "Solde initial : taux et montant de TVA à saisir manuellement pour intégrer cette ligne à la déclaration (montant connu en TTC seul).",
                         RefLigne = $"Facture: {affectation.NumeroFacture}"
                     });
                     continue;
@@ -79,7 +84,9 @@ namespace Declaration.Core
                     {
                         Niveau = NiveauAlerte.Error,
                         Code = "FACTURE_INTROUVABLE",
-                        Message = "Facture introuvable (DTO non fourni).",
+                        // Message lu tel quel par le comptable dans « Vérifier & Intégrer » :
+                        // « DTO non fourni » est du jargon développeur, il ne dit pas quoi faire.
+                        Message = "Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ».",
                         RefLigne = $"Facture: {affectation.NumeroFacture}"
                     });
                     continue; // Pas de ventilation possible
@@ -142,6 +149,10 @@ namespace Declaration.Core
                         }
                     }
 
+                    var codeTaxe = string.IsNullOrWhiteSpace(affectation.ValorisationDirecteCodeTaxe) 
+                        ? (ligne.CodeTaxe ?? "") 
+                        : affectation.ValorisationDirecteCodeTaxe;
+
                     var enrichie = new LigneDeclarationEnrichie
                     {
                         NumeroFacture = affectation.NumeroFacture,
@@ -151,6 +162,7 @@ namespace Declaration.Core
                         CodeActivite = codeAct,
                         HT = ligne.Assiette,
                         Taux = ligne.Taux,
+                        CodeTaxe = codeTaxe,
                         Tva = ligne.Tva,
                         Ttc = ligne.Ttc,
                         Prorata = ligne.Prorata,
@@ -176,13 +188,13 @@ namespace Declaration.Core
                     TotalTtc = g.Sum(x => x.Ttc)
                 }).ToList();
 
-            // TASK-180 : clivage Collecté (Source == Encaissement) / Déductible (autre source),
-            // même critère que RecapParSource (GroupBy(l => l.Source) ci-dessus).
+            // TASK-180 / TASK-198 : clivage Collecté / Déductible + regrouper par (Taux, CodeTaxe).
             modele.RecapsParTaux = lignesPourRecap
-                .GroupBy(l => new { l.Taux, Collecte = l.Source == SourceAffectation.Encaissement })
+                .GroupBy(l => new { l.Taux, CodeTaxe = l.CodeTaxe ?? "", Collecte = l.Source == SourceAffectation.Encaissement })
                 .Select(g => new RecapParTaux
                 {
                     Taux = g.Key.Taux,
+                    CodeTaxe = g.Key.CodeTaxe,
                     Collecte = g.Key.Collecte,
                     TotalHT = g.Sum(x => x.HT),
                     TotalTva = g.Sum(x => x.Tva),

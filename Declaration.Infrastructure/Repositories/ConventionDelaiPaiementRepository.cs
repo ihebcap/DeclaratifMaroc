@@ -222,6 +222,9 @@ public sealed class ConventionDelaiPaiementRepository :
                 c.SO_Id             AS SocieteId,
                 c.CT_No             AS TiersNo,
                 c.CT_Code           AS TiersCode,
+                -- RT_CONVENTIONTIERS ne porte pas l'intitulé (propriété GRF, aucune migration) : résolu
+                -- depuis RT_ECHEANCE, même source dénormalisée que SearchTiersAsync ci-dessous.
+                (SELECT TOP 1 CT_Intitule FROM RT_ECHEANCE re WHERE re.SO_Id = c.SO_Id AND re.CT_No = c.CT_No) AS TiersIntitule,
                 c.CP_Date           AS Date,
                 c.CP_Numero         AS Numero,
                 c.CP_DateDebut      AS DateDebut,

@@ -1,0 +1,63 @@
+- generic [ref=e18]:
+  - complementary [ref=e19]:
+    - generic [ref=e20] [cursor=pointer]:
+      - generic [ref=e22]:
+        - img "DM" [ref=e28]
+        - generic [ref=e29]: TVA
+      - generic [ref=e30]: NEW_EMA DISTRIBUTION
+    - generic [ref=e31]:
+      - generic [ref=e32]:
+        - generic [ref=e33]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=e34] [cursor=pointer]
+        - generic "Factures" [ref=e38] [cursor=pointer]
+      - generic [ref=e43]:
+        - generic [ref=e44]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=e45] [cursor=pointer]
+        - generic "Délai de paiement" [ref=e51] [cursor=pointer]
+    - generic [ref=e57]:
+      - generic [ref=e58]: Admin Admin
+      - button "Déconnexion" [ref=e59] [cursor=pointer]
+  - main [ref=e64]:
+    - generic [ref=e197]:
+      - generic [ref=e199]:
+        - button "Déclarations" [ref=e200] [cursor=pointer]
+        - button "Sélection / Contrôle" [ref=e201] [cursor=pointer]
+        - button "Conventions" [ref=e202] [cursor=pointer]
+      - generic [ref=e272]:
+        - generic [ref=e273]:
+          - generic [ref=e279]:
+            - heading "Déclarations délai de paiement" [level=2] [ref=e280]
+            - generic [ref=e281]: Délai de Paiement Maroc — CDC §3.1/§6
+          - generic [ref=e282]:
+            - button "Date de mise en route" [ref=e283] [cursor=pointer]
+            - button "Nouvelle déclaration" [ref=e287] [cursor=pointer]
+            - button "Colonnes" [ref=e290] [cursor=pointer]
+        - generic [ref=e295]:
+          - text: "Déclarations :"
+          - strong [ref=e296]: "1"
+          - text: / 1
+        - generic [ref=e298]:
+          - generic [ref=e299]:
+            - generic [ref=e300]: N° déclaration
+            - generic [ref=e301]:
+              - text: Période
+              - button "Filtrer" [ref=e303] [cursor=pointer]
+            - generic [ref=e306]: Dates
+            - generic [ref=e307]:
+              - text: Statut
+              - button "Filtrer" [ref=e309] [cursor=pointer]
+            - generic [ref=e312]: Lignes
+            - generic [ref=e313]: Fichier
+            - generic [ref=e314]: Dépôt
+            - generic [ref=e315]: Libellé
+            - generic [ref=e316]: Actions
+          - generic [ref=e317]:
+            - button "DDP26080001" [ref=e319] [cursor=pointer]
+            - generic [ref=e320]: Annuelle 2026
+            - generic [ref=e321]: 01/01/2026 → 31/12/2026
+            - generic [ref=e322]: Clôturée
+            - generic [ref=e324]: "1125"
+            - generic [ref=e325]: —
+            - generic [ref=e327]: —
+            - generic [ref=e329]: —
+            - button "Ouvrir" [ref=e333] [cursor=pointer]

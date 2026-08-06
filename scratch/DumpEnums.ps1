@@ -1,4 +1,4 @@
-Add-Type -Path 'D:\_vibe\GRF\GRFWinform\Tresorerie.Core.dll'
+﻿Add-Type -Path 'D:\_vibe\GRF\GRFWinform\Tresorerie.Core.dll'
 $assemblies = [System.AppDomain]::CurrentDomain.GetAssemblies()
 $tresorerieAsm = $assemblies | Where-Object { $_.ManifestModule.Name -eq 'Tresorerie.Core.dll' }
 if ($tresorerieAsm) {

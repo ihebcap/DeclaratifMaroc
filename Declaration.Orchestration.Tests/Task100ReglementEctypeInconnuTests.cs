@@ -265,7 +265,7 @@ namespace Declaration.Orchestration.Tests
             public Task ReinitialiserValidationIncoherenceAsync(Guid declarationId, int ecId) => Task.CompletedTask;
 
             public Task DeleteAsync(Guid declarationId) => throw new NotImplementedException();
-            public Task<Dictionary<Guid, (int NbLignes, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds) => throw new NotImplementedException();
+            public Task<Dictionary<Guid, (int NbLignes, int NbFactures, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds) => throw new NotImplementedException();
 
             public Task<int> CountAffectationsTamponneesAsync(IEnumerable<string> numerosRapprochement) => Task.FromResult(0);
 

@@ -10,6 +10,11 @@ namespace Declaration.Selection.Tests
     public class IntegrationRegressionTests
     {
         private readonly string _connectionString = "Server=.;Database=GR_EMA_DISTRIBUTION;Integrated Security=True;TrustServerCertificate=True";
+        // TASK-031 : Sage n'est PAS co-localisée dans GR_EMA_DISTRIBUTION sur ce poste (F_COMPTET/
+        // F_TAXE absentes de cette base) — le commentaire TASK-154 ci-dessous ne tenait que parce
+        // qu'aucun test n'avait encore de tiers/taxe à résoudre (garde vide silencieuse). Base Sage
+        // réelle co-localisée sur ce serveur : "NEW_EMA DISTRIBUTION" (cf. connections.json).
+        private readonly string _sageConnectionString = "Server=.;Database=NEW_EMA DISTRIBUTION;Integrated Security=True;TrustServerCertificate=True";
 
         /// <summary>
         /// TASK-050 — Non-régression MV_DECAISSE supprimé.
@@ -35,9 +40,7 @@ namespace Declaration.Selection.Tests
 
             // Let it fail if db is not available
             var oldResult = (await oldService.SelectionnerAffectationsAsync(soId, dateDebut, dateFin, _connectionString)).ToList();
-            // TASK-154 : GR_EMA_DISTRIBUTION contient déjà GRF + Sage co-localisés — la même
-            // chaîne de connexion sert donc pour les deux paramètres sans casser ce test.
-            var newResultSurensemble = (await newService.SelectionnerExpliqueeAsync(soId, dateDebut, dateFin, _connectionString, _connectionString, null)).ToList();
+            var newResultSurensemble = (await newService.SelectionnerExpliqueeAsync(soId, dateDebut, dateFin, _connectionString, _sageConnectionString, null)).ToList();
             
             var newResultEligibles = newResultSurensemble.Where(x => x.EstEligible).Select(x => x.Affectation).ToList();
 

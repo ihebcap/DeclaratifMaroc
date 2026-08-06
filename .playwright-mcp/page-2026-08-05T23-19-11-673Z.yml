@@ -1,0 +1,31 @@
+- generic [ref=f9e7]:
+  - complementary [ref=f9e8]:
+    - generic [ref=f9e9] [cursor=pointer]:
+      - generic [ref=f9e11]:
+        - img "DM" [ref=f9e17]
+        - generic [ref=f9e18]: TVA
+      - generic [ref=f9e19]: NEW_EMA DISTRIBUTION
+    - generic [ref=f9e20]:
+      - generic [ref=f9e21]:
+        - generic [ref=f9e22]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f9e23] [cursor=pointer]
+        - generic "Factures" [ref=f9e27] [cursor=pointer]
+      - generic [ref=f9e32]:
+        - generic [ref=f9e33]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f9e34] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f9e40] [cursor=pointer]
+    - generic [ref=f9e46]:
+      - generic [ref=f9e47]: Admin Admin
+      - button "Déconnexion" [ref=f9e48] [cursor=pointer]
+  - main [ref=f9e53]:
+    - generic [ref=f9e740]:
+      - generic [ref=f9e741]:
+        - button "Retour" [ref=f9e742] [cursor=pointer]
+        - generic [ref=f9e745]: TVA1-2026-06
+      - generic [ref=f9e746]:
+        - button "1. Sélection" [ref=f9e747] [cursor=pointer]
+        - button "2. Vérifier & Intégrer" [ref=f9e751] [cursor=pointer]
+        - button "3. Déclaration" [disabled] [ref=f9e755]
+      - generic [ref=f9e760]:
+        - generic [ref=f9e761]: Période 01/06/2026 → 30/06/2026
+        - generic [ref=f9e762]: En cours

@@ -25,6 +25,19 @@ public static class DiagnosticMotifMetier
         var m = motif.ToLowerInvariant();
         var cache = (motifErreurCache ?? "").Trim();
 
+        // SOLDE_INITIAL_SAISIE_REQUISE (TASK-025 — décision PO) : le solde initial (EC_Type=4) n'a
+        // aucun détail HT/TVA/taux côté Sage (montant connu en TTC seul) — jamais un motif figé
+        // « non géré » : le comptable peut le résoudre lui-même via une saisie manuelle, distincte
+        // d'une relecture Sage (qui ne changerait rien ici, aucune donnée Sage à relire).
+        if (m.StartsWith("solde initial"))
+        {
+            return new Traduction(
+                "SOLDE_INITIAL_SAISIE_REQUISE",
+                motif,
+                "Saisissez le taux et le montant de TVA de ce solde initial ci-dessous pour l'intégrer à la déclaration "
+                + "(le HT sera déduit automatiquement : TTC − TVA saisie).");
+        }
+
         // FACTURE_ILLISIBLE_OM — la lecture Objets Métier Sage a échoué sur la pièce. Le motif
         // exact vient soit du message de la ligne, soit (plus fiable) du cache DM_VENTILATION_SAGE_CACHE.
         if (m.Contains("lecture om") || m.Contains("illisible") || m.Contains("valeur invalide")

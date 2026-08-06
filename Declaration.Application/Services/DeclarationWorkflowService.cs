@@ -262,8 +262,7 @@ public class DeclarationWorkflowService
         // bouton Rafraîchir). Partage le MÊME verrou par soId — voir _valorisationLocks.
         return ExecuterAvecVerrouOMAsync(declaration.SocieteId, async () =>
         {
-            var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
-            var dateFin = dateDebut.AddMonths(1).AddDays(-1);
+            var (dateDebut, dateFin) = declaration.ObtenirIntervalleDates();
 
             var grfConnectionString = _connectionFactory.GetGrfConnectionString();
             // TASK-154 : connexion Sage résolue par SO_Id AVANT l'appel — F_COMPTET (table Sage) n'est
@@ -272,24 +271,33 @@ public class DeclarationWorkflowService
             var candidatesList = await _selectionService.SelectionnerExpliqueeAsync(
                 declaration.SocieteId, dateDebut, dateFin, grfConnectionString, sageInfo.ConnectionString);
 
+            // TASK-193 : FraisBancaire rattaché au domaine selon son Sens (Achat -> Decaissement, Vente -> Encaissement)
             if (domaine == "Decaissement")
             {
                 candidatesList = candidatesList.Where(c => c.Affectation.Source == SourceAffectation.Decaissement
                                                         || c.Affectation.Source == SourceAffectation.Espece
-                                                        || c.Affectation.Source == SourceAffectation.Depense).ToList();
+                                                        || c.Affectation.Source == SourceAffectation.Depense
+                                                        || (c.Affectation.Source == SourceAffectation.FraisBancaire && c.Affectation.Sens == SensAffectation.Achat)).ToList();
             }
             else if (domaine == "Encaissement")
             {
-                candidatesList = candidatesList.Where(c => c.Affectation.Source == SourceAffectation.Encaissement).ToList();
+                candidatesList = candidatesList.Where(c => c.Affectation.Source == SourceAffectation.Encaissement
+                                                        || (c.Affectation.Source == SourceAffectation.FraisBancaire && c.Affectation.Sens == SensAffectation.Vente)).ToList();
             }
 
             // TASK-097 : Filtre sur le périmètre réel des règlements sélectionnés — toujours appliqué,
             // y compris quand aucune sélection n'a encore été persistée (selection vide/null), auquel
             // cas le résultat est ZÉRO candidat et jamais "tous les candidats" (invariance serveur,
             // cf. réserve bloquante VERIFY TASK-097).
+            // TASK-197 : Exemption pour Depense et FraisBancaire — ces 2 sources sont auto-incluses sans geste
+            // de sélection manuelle dans l'IHM (exclues de GET /rapprochement). Elles ne sont donc jamais dans
+            // selectionSet et ne doivent pas être éliminées par le filtre de sélection.
             var selection = await _repository.GetSelectionReglementsAsync(declarationId);
             var selectionSet = new HashSet<string>(selection ?? Enumerable.Empty<string>());
-            candidatesList = candidatesList.Where(c => selectionSet.Contains(c.Affectation.NumeroRapprochement)).ToList();
+            candidatesList = candidatesList.Where(c =>
+                c.Affectation.Source == SourceAffectation.Depense
+                || c.Affectation.Source == SourceAffectation.FraisBancaire
+                || selectionSet.Contains(c.Affectation.NumeroRapprochement)).ToList();
 
             var candidates = candidatesList.ToList();
 
@@ -412,8 +420,7 @@ public class DeclarationWorkflowService
                 var declaration = declarationPourReintegration;
                 if (declaration != null && declaration.Exercice > 0 && declaration.Periode > 0)
                 {
-                    var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
-                    var dateFin = dateDebut.AddMonths(1).AddDays(-1);
+                    var (dateDebut, dateFin) = declaration.ObtenirIntervalleDates();
                     var grfConnectionString = _connectionFactory.GetGrfConnectionString();
                     // TASK-154 : connexion Sage résolue par SO_Id AVANT l'appel (F_COMPTET est Sage).
                     var sageInfo = await _connectionFactory.GetSageConnectionInfoAsync(declaration.SocieteId);
@@ -537,23 +544,25 @@ public class DeclarationWorkflowService
                 .Select(l => (l.NumeroFacture, l.NumeroRapprochement))
                 .ToHashSet();
 
-            var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
-            var dateFin = dateDebut.AddMonths(1).AddDays(-1);
+            var (dateDebut, dateFin) = declaration.ObtenirIntervalleDates();
             var grfConnectionString = _connectionFactory.GetGrfConnectionString();
             // TASK-154 : connexion Sage résolue par SO_Id AVANT l'appel (F_COMPTET est Sage).
             var sageInfo = await _connectionFactory.GetSageConnectionInfoAsync(declaration.SocieteId);
             var candidatsList = await _selectionService.SelectionnerExpliqueeAsync(
                 declaration.SocieteId, dateDebut, dateFin, grfConnectionString, sageInfo.ConnectionString);
 
+            // TASK-193 : FraisBancaire rattaché au domaine selon son Sens (Achat -> Decaissement, Vente -> Encaissement)
             if (domaine == "Decaissement")
             {
                 candidatsList = candidatsList.Where(c => c.Affectation.Source == SourceAffectation.Decaissement
                                                         || c.Affectation.Source == SourceAffectation.Espece
-                                                        || c.Affectation.Source == SourceAffectation.Depense).ToList();
+                                                        || c.Affectation.Source == SourceAffectation.Depense
+                                                        || (c.Affectation.Source == SourceAffectation.FraisBancaire && c.Affectation.Sens == SensAffectation.Achat)).ToList();
             }
             else if (domaine == "Encaissement")
             {
-                candidatsList = candidatsList.Where(c => c.Affectation.Source == SourceAffectation.Encaissement).ToList();
+                candidatsList = candidatsList.Where(c => c.Affectation.Source == SourceAffectation.Encaissement
+                                                        || (c.Affectation.Source == SourceAffectation.FraisBancaire && c.Affectation.Sens == SensAffectation.Vente)).ToList();
             }
             var candidats = candidatsList.ToList();
 
@@ -692,6 +701,84 @@ public class DeclarationWorkflowService
     }
 
     /// <summary>
+    /// TASK-025 (solde initial, EC_Type=4 — décision PO) : enregistre la saisie manuelle du
+    /// comptable (taux + montant de TVA, le solde n'étant connu qu'en TTC côté Sage) puis
+    /// resynchronise immédiatement la ligne pour qu'elle sorte de l'état « à saisir » et soit
+    /// intégrée à la déclaration (même pipeline que <see cref="ResynchroniserLigneAsync"/>, aucune
+    /// règle dupliquée). Le taux/montant peuvent être corrigés en rappelant cette méthode avant
+    /// clôture — nouvelle resynchronisation à chaque appel.
+    /// </summary>
+    public async Task<(bool Trouvee, bool Resolue)> EnregistrerSaisieSoldeInitialAsync(
+        Guid declarationId, int ecId, decimal taux, decimal montantTva, string utilisateur)
+    {
+        if (ecId <= 0) throw new ArgumentException("'ecId' est obligatoire et doit être positif.", nameof(ecId));
+        if (montantTva < 0) throw new ArgumentException("Le montant de TVA ne peut pas être négatif.", nameof(montantTva));
+
+        var declaration = await _repository.GetByIdAsync(declarationId);
+        if (declaration == null) throw new ArgumentException("Déclaration introuvable");
+        if (declaration.Statut == StatutDeclaration.Cloturee)
+            throw new InvalidOperationException("La saisie du solde initial ne peut plus être modifiée après clôture de la déclaration.");
+
+        var lignesDec = await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var lignesEnc = await _repository.GetLignesAsync(declarationId, "Encaissement", 1, int.MaxValue, null, null);
+        var lignes = lignesDec.Concat(lignesEnc).Where(l => l.EC_Id == ecId).ToList();
+        if (lignes.Count == 0) return (false, false);
+        var reference = lignes[0];
+
+        if (montantTva > reference.MontantAffecte)
+            throw new ArgumentException($"Le montant de TVA ({montantTva}) ne peut pas dépasser le montant du solde ({reference.MontantAffecte}).", nameof(montantTva));
+
+        var persistenceCs = _configuration.GetConnectionString("PersistenceConnection") ?? "";
+        new Declaration.Orchestration.SoldeInitialTvaRepository()
+            .EnregistrerSaisie(declaration.SocieteId, ecId, taux, montantTva, utilisateur, persistenceCs);
+
+        // TASK-025 : reconstruction DIRECTE de la ligne — même pattern que RecalculerLigneDepuisCacheAsync
+        // (colonnes non financières conservées à l'identique, seuls HT/Taux/TVA/TTC/Etat/MotifRejet
+        // changent), mais SANS passer par le cache de ventilation Sage (DM_VENTILATION_SAGE_CACHE) :
+        // un solde initial n'est jamais lu par l'OM/FGR, ResynchroniserLigneAsync (qui ne fait que
+        // rejouer ce cache) n'a donc aucun effet observable pour ce cas — la saisie manuelle EST la
+        // source de vérité ici, HT = TTC (solde) − TVA saisie.
+        var ht = reference.MontantAffecte - montantTva;
+        var nouvelleLigne = new LigneCandidate
+        {
+            Id = Guid.NewGuid(),
+            DeclarationId = declarationId,
+            Etat = EtatLigne.Proposee,
+            Domaine = reference.Domaine,
+            MotifRejet = "",
+            NumeroFacture = reference.NumeroFacture,
+            Reference = reference.Reference,
+            NumeroRapprochement = reference.NumeroRapprochement,
+            TiersNom = reference.TiersNom,
+            TiersIdentifiantFiscal = reference.TiersIdentifiantFiscal,
+            TiersICE = reference.TiersICE,
+            HT = ht,
+            Taux = taux,
+            CodeTaxe = "",
+            TVA = montantTva,
+            TTC = reference.MontantAffecte,
+            Prorata = 0,
+            MontantAffecte = reference.MontantAffecte,
+            ModePaiement = reference.ModePaiement,
+            DatePaiement = reference.DatePaiement,
+            DateFacture = reference.DateFacture,
+            Source = reference.Source,
+            EcType = reference.EcType,
+            EC_Id = reference.EC_Id,
+            MV_Id = reference.MV_Id,
+            CodeActivite = reference.CodeActivite,
+            CodeActiviteModifieManuellement = reference.CodeActiviteModifieManuellement,
+            CodeActiviteModifiePar = reference.CodeActiviteModifiePar,
+            CodeActiviteModifieLe = reference.CodeActiviteModifieLe,
+        };
+
+        await _repository.SupprimerLignesParEcIdAsync(declarationId, ecId);
+        await _repository.SaveLignesCandidatesAsync(new[] { nouvelleLigne });
+
+        return (true, true);
+    }
+
+    /// <summary>
     /// TASK-078 : resynchronise UNE pièce (EC_Id) après correction côté Sage — relit
     /// explicitement l'OM pour cette seule facture (effet de bord : réécrit
     /// DM_VENTILATION_SAGE_CACHE via l'orchestrateur, même pipeline que TASK-072/076/077,
@@ -725,14 +812,28 @@ public class DeclarationWorkflowService
             var persistenceCs = _configuration.GetConnectionString("PersistenceConnection") ?? "";
             new VentilationSageCacheRepository().SupprimerEntrees(declaration.SocieteId, ecId, persistenceCs);
 
+            // MontantAffecte/Tiers manquaient ici jusqu'ici (sans effet observable pour les pièces
+            // EC_Type=0/111 : leur résolution OM/FGR ne dépend que de NumeroFacture/EC_Id, et le
+            // « Resolue » retourné plus bas vient du cache, jamais de ce montant). Les repeupler
+            // devient nécessaire pour EC_Type=4 (TASK-025, solde initial) : la ventilation
+            // synthétique HT=TTC−TVA a besoin du VRAI TTC (le solde), jamais 0.
             var affectation = new AffectationADeclarer
             {
                 NumeroFacture = ligne.NumeroFacture,
                 NumeroRapprochement = ligne.NumeroRapprochement,
                 Sens = ligne.Domaine == "Encaissement" ? SensAffectation.Vente : SensAffectation.Achat,
+                Source = Enum.TryParse<SourceAffectation>(ligne.Source, out var src) ? src : (ligne.Domaine == "Encaissement" ? SourceAffectation.Encaissement : SourceAffectation.Decaissement),
                 EC_Type = ligne.EcType,
                 EC_Id = ligne.EC_Id,
                 MV_Id = ligne.MV_Id,
+                MontantAffecte = ligne.MontantAffecte,
+                Tiers = new TiersInfo
+                {
+                    Nom = ligne.TiersNom,
+                    IdentifiantFiscal = ligne.TiersIdentifiantFiscal,
+                    Ice = ligne.TiersICE,
+                    CodeActivite = ligne.CodeActivite,
+                },
             };
 
             // Effet de bord voulu : relit Sage pour cette pièce (cache désormais vide, donc traité
@@ -1020,6 +1121,7 @@ public class DeclarationWorkflowService
                             TiersICE = c.Affectation.Tiers.Ice,
                             HT = tl.HT,
                             Taux = tl.Taux,
+                            CodeTaxe = tl.CodeTaxe ?? "",
                             TVA = tl.Tva,
                             TTC = tl.Ttc,
                             Prorata = tl.Prorata,
@@ -1113,55 +1215,90 @@ public class DeclarationWorkflowService
             });
         }
 
-        // Alerte explicite pour les règlements sélectionnés mais exclus du calcul (non éligibles)
-        var selection = await _repository.GetSelectionReglementsAsync(declarationId);
-        if (selection != null && selection.Count > 0)
+        // Alerte explicite pour les règlements sélectionnés ou auto-inclus (Depense/FraisBancaire) mais exclus du calcul (non éligibles)
+        if (_connectionFactory != null && _selectionService != null)
         {
-            var selectionSet = new HashSet<string>(selection);
-            var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
-            var dateFin = dateDebut.AddMonths(1).AddDays(-1);
+            var selection = await _repository.GetSelectionReglementsAsync(declarationId);
+            var selectionSet = new HashSet<string>(selection ?? Enumerable.Empty<string>());
+            var (dateDebut, dateFin) = declaration.ObtenirIntervalleDates();
             var grfConnectionString = _connectionFactory.GetGrfConnectionString();
             // TASK-154 : connexion Sage résolue par SO_Id AVANT l'appel (F_COMPTET est Sage).
             var sageInfo = await _connectionFactory.GetSageConnectionInfoAsync(declaration.SocieteId);
-            var candidates = await _selectionService.SelectionnerExpliqueeAsync(
-                declaration.SocieteId, dateDebut, dateFin, grfConnectionString, sageInfo.ConnectionString);
-            var candidatesList = candidates.ToList();
-
-            await AppliquerExclusiviteInterDeclarationAsync(candidatesList, declaration.SocieteId, declarationId);
-
-            var selectedCandidates = candidatesList
-                .Where(c => selectionSet.Contains(c.Affectation.NumeroRapprochement))
-                .ToList();
-
-            foreach (var c in selectedCandidates)
+            if (sageInfo != null)
             {
-                if (!c.EstEligible && (
-                    c.Motif == MotifRejet.EcTypeHorsPerimetre ||
-                    c.Motif == MotifRejet.Impaye ||
-                    c.Motif == MotifRejet.Annule ||
-                    c.Motif == MotifRejet.NonComptabilise ||
-                    c.Motif == MotifRejet.NonAffecte))
-                {
-                    string message = c.Motif switch
-                    {
-                        MotifRejet.EcTypeHorsPerimetre => c.Affectation.EC_Type == 1
-                            ? $"Règlement impayé — non déclarable (à traiter phase 2) : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)"
-                            : $"Règlement hors périmètre ({ReglementRapprochementRow.LibelleEcType(c.Affectation.EC_Type)}) — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
-                        MotifRejet.Impaye => $"Règlement impayé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
-                        MotifRejet.Annule => $"Règlement annulé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
-                        MotifRejet.NonComptabilise => $"Règlement non comptabilisé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
-                        MotifRejet.NonAffecte => $"Règlement non affecté — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
-                        _ => $"Règlement exclu ({c.MotifLibelle}) — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)"
-                    };
+                var candidates = await _selectionService.SelectionnerExpliqueeAsync(
+                    declaration.SocieteId, dateDebut, dateFin, grfConnectionString, sageInfo.ConnectionString);
+                var candidatesList = candidates.ToList();
 
-                    model.Alertes.Add(new Alerte
+                await AppliquerExclusiviteInterDeclarationAsync(candidatesList, declaration.SocieteId, declarationId);
+
+                // TASK-197 : Exemption pour Depense et FraisBancaire
+                var selectedCandidates = candidatesList
+                    .Where(c => c.Affectation.Source == SourceAffectation.Depense
+                             || c.Affectation.Source == SourceAffectation.FraisBancaire
+                             || selectionSet.Contains(c.Affectation.NumeroRapprochement))
+                    .ToList();
+
+                foreach (var c in selectedCandidates)
+                {
+                    if (!c.EstEligible && (
+                        c.Motif == MotifRejet.EcTypeHorsPerimetre ||
+                        c.Motif == MotifRejet.Impaye ||
+                        c.Motif == MotifRejet.Annule ||
+                        c.Motif == MotifRejet.NonComptabilise ||
+                        c.Motif == MotifRejet.NonAffecte))
                     {
-                        Niveau = NiveauAlerte.Warning,
-                        Code = "REGLEMENT_EXCLU",
-                        Message = message,
-                        RefLigne = c.Affectation.NumeroFacture ?? "Global"
-                    });
+                        string message = c.Motif switch
+                        {
+                            MotifRejet.EcTypeHorsPerimetre => c.Affectation.EC_Type == 1
+                                ? $"Règlement impayé — non déclarable (à traiter phase 2) : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)"
+                                : $"Règlement hors périmètre ({ReglementRapprochementRow.LibelleEcType(c.Affectation.EC_Type)}) — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
+                            MotifRejet.Impaye => $"Règlement impayé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
+                            MotifRejet.Annule => $"Règlement annulé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
+                            MotifRejet.NonComptabilise => $"Règlement non comptabilisé — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
+                            MotifRejet.NonAffecte => $"Règlement non affecté — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)",
+                            _ => $"Règlement exclu ({c.MotifLibelle}) — non déclarable : {c.Affectation.NumeroRapprochement} (tiers {c.Affectation.Tiers.Nom}, {FormatMontantMessage(c.Affectation.MontantAffecte)} MAD)"
+                        };
+
+                        model.Alertes.Add(new Alerte
+                        {
+                            Niveau = NiveauAlerte.Warning,
+                            Code = "REGLEMENT_EXCLU",
+                            Message = message,
+                            RefLigne = c.Affectation.NumeroFacture ?? "Global"
+                        });
+                    }
                 }
+            }
+        }
+
+        // CONTRÔLE MÉTIER : date de paiement hors période déclarée.
+        // La DatePaiement de chaque ligne est celle EXPORTÉE dans <dpai> du relevé de déductions
+        // Simpl-TVA. En régime encaissement, la DGI attend une date de paiement comprise dans la
+        // période déclarée : un relevé de mai contenant des dpai de juin est rejeté en bloc.
+        // Constaté sur TVA1-2026-05 : 157 lignes sur 157 avec dpai en 2026-06 — aucun contrôle
+        // ne le signalait, ni à l'écran ni à la génération.
+        {
+            var (debutPeriode, finPeriode) = declaration.ObtenirIntervalleDates();
+            var horsPeriode = integrees
+                .Where(l => l.DatePaiement.HasValue
+                            && (l.DatePaiement.Value.Date < debutPeriode.Date || l.DatePaiement.Value.Date > finPeriode.Date))
+                .ToList();
+            if (horsPeriode.Count > 0)
+            {
+                var exemples = string.Join(", ", horsPeriode.Take(3)
+                    .Select(l => $"{l.NumeroFacture} payée le {l.DatePaiement!.Value:dd/MM/yyyy}"));
+                model.Alertes.Add(new Alerte
+                {
+                    Niveau = NiveauAlerte.Warning,
+                    Code = "DATE_PAIEMENT_HORS_PERIODE",
+                    Message = $"{horsPeriode.Count} ligne(s) portent une date de paiement hors de la période déclarée "
+                              + $"({debutPeriode:dd/MM/yyyy} → {finPeriode:dd/MM/yyyy}) : {exemples}"
+                              + (horsPeriode.Count > 3 ? "…" : "")
+                              + ". Cette date est celle exportée dans le relevé de déductions (balise dpai) ; "
+                              + "un relevé dont les dates de paiement sortent de la période est refusé par la DGI.",
+                    RefLigne = "Global"
+                });
             }
         }
 
@@ -1185,9 +1322,12 @@ public class DeclarationWorkflowService
         // cette alerte Error est supprimée pour la ligne validée.
         foreach (var l in integrees.Where(l => !string.IsNullOrEmpty(l.MotifRejet) && !l.IncoherenceValidee))
         {
+            // « Ligne en anomalie de recalcul » ne veut rien dire pour un comptable : ce qu'il doit
+            // comprendre, c'est que la TVA de cette facture n'a pas pu être calculée et qu'elle ne
+            // sera donc PAS déclarée tant que le motif n'est pas levé.
             var message = string.IsNullOrWhiteSpace(l.NumeroRapprochement)
-                ? $"Ligne en anomalie de recalcul : {l.MotifRejet}"
-                : $"Ligne en anomalie de recalcul (facture {l.NumeroFacture}, règlement {l.NumeroRapprochement}) : {l.MotifRejet}";
+                ? $"TVA non calculée, facture exclue de la déclaration : {l.MotifRejet}"
+                : $"TVA non calculée pour la facture {l.NumeroFacture} (règlement {l.NumeroRapprochement}) — elle ne sera pas déclarée : {l.MotifRejet}";
 
             model.Alertes.Add(new Alerte
             {
@@ -1280,6 +1420,7 @@ public class DeclarationWorkflowService
                 CodeActivite = l.CodeActivite ?? "",
                 HT = l.HT,
                 Taux = l.Taux,
+                CodeTaxe = l.CodeTaxe ?? "",
                 Tva = l.TVA,
                 Ttc = l.TTC,
                 Prorata = l.Prorata,
@@ -1332,8 +1473,7 @@ public class DeclarationWorkflowService
         if (selection.Count > 0)
         {
             var selectionSet = new HashSet<string>(selection);
-            var dateDebut = new DateTime(declaration.Exercice, declaration.Periode, 1);
-            var dateFin = dateDebut.AddMonths(1).AddDays(-1);
+            var (dateDebut, dateFin) = declaration.ObtenirIntervalleDates();
             var reglements = await _repository.GetReglementsRapprochementAsync(
                 declaration.SocieteId, dateDebut, dateFin,
                 new RapprochementFilter(), 1, int.MaxValue, null);
@@ -1385,6 +1525,7 @@ public class DeclarationWorkflowService
                 CodeActivite = l.CodeActivite ?? "",
                 HT = l.HT,
                 Taux = l.Taux,
+                CodeTaxe = l.CodeTaxe ?? "",
                 Tva = l.TVA,
                 Ttc = l.TTC,
                 Prorata = l.Prorata,
@@ -1398,22 +1539,24 @@ public class DeclarationWorkflowService
 
         // Détail TVA : totaux par taux + contrôle d'équilibre, mêmes agrégats que GetCheckupAsync
         // (recapTaux/controleEquilibre côté DeclarationsController.GetCheckup, TASK-108).
-        // TASK-180 : clivage Collecté (Source == Encaissement) / Déductible (autre source) — même
-        // critère que ConstructeurDeclaration.cs (Source string ici, snapshoté sur LigneCandidate).
+        // TASK-180 / TASK-193 / TASK-198 : clivage Collecté / Déductible + distinction par CodeTaxe.
         modele.RecapsParTaux = lignesRecap
             .GroupBy(l => new {
                 l.Taux,
-                Collecte = l.Source == nameof(SourceAffectation.Encaissement)
+                CodeTaxe = l.CodeTaxe ?? "",
+                Collecte = l.Domaine == "Encaissement" || l.Source == nameof(SourceAffectation.Encaissement)
             })
             .Select(g => new RecapParTaux
             {
                 Taux = g.Key.Taux,
+                CodeTaxe = g.Key.CodeTaxe,
                 Collecte = g.Key.Collecte,
                 TotalHT = g.Sum(x => x.HT),
                 TotalTva = g.Sum(x => x.TVA),
                 TotalTtc = g.Sum(x => x.TTC)
             })
             .OrderByDescending(r => r.Taux)
+            .ThenBy(r => r.CodeTaxe)
             .ToList();
 
         // TASK-161 : gap comblé — regroupement RÉEL par CodeActivite résolu (au lieu de l'ancien
@@ -1421,7 +1564,7 @@ public class DeclarationWorkflowService
         // TASK-161 point 3) pour toute ligne dont la cascade n'a rien résolu — jamais masqué,
         // simplement un groupe parmi d'autres désormais.
         modele.RecapsParActivite = lignesRecap
-            .GroupBy(l => new { CodeActivite = l.CodeActivite ?? "", Collecte = l.Source == nameof(SourceAffectation.Encaissement) })
+            .GroupBy(l => new { CodeActivite = l.CodeActivite ?? "", Collecte = l.Domaine == "Encaissement" || l.Source == nameof(SourceAffectation.Encaissement) })
             .Select(g => new RecapParActivite
             {
                 CodeActivite = g.Key.CodeActivite,
@@ -1693,6 +1836,7 @@ public class DeclarationWorkflowService
             TiersICE = reference.TiersICE,
             HT = b.HT,
             Taux = b.Taux,
+            CodeTaxe = b.CodeTaxe ?? "",
             TVA = b.Tva,
             TTC = b.TTC,
             Prorata = 0,

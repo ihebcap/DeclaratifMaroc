@@ -62,7 +62,7 @@ public class DeclarationsController : ControllerBase
 
         return Ok(declarations.Select(d =>
         {
-            var a = agregats.TryGetValue(d.Id, out var ag) ? ag : (NbLignes: 0, MontantTva: 0m);
+            var a = agregats.TryGetValue(d.Id, out var ag) ? ag : (NbLignes: 0, NbFactures: 0, MontantTva: 0m);
             return new
             {
                 d.Id,
@@ -75,6 +75,7 @@ public class DeclarationsController : ControllerBase
                 d.DateCreation,
                 d.DateCloture,
                 NbLignes = a.NbLignes,
+                NbFactures = a.NbFactures,
                 MontantTva = a.MontantTva
             };
         }));
@@ -302,6 +303,36 @@ public class DeclarationsController : ControllerBase
     }
 
     /// <summary>
+    /// TASK-025 (solde initial, EC_Type=4 — décision PO) : enregistre la saisie manuelle du
+    /// comptable (taux + montant de TVA) pour une ligne solde initial, puis resynchronise
+    /// immédiatement la ligne (même retour que <see cref="Resynchroniser"/>).
+    /// </summary>
+    [HttpPost("{id}/lignes/solde-initial-tva")]
+    public async Task<IActionResult> EnregistrerSaisieSoldeInitial(Guid id, [FromBody] SaisieSoldeInitialRequest request)
+    {
+        if (request.EcId <= 0)
+            return BadRequest(new { Message = "'ecId' est obligatoire." });
+        if (request.MontantTva < 0)
+            return BadRequest(new { Message = "Le montant de TVA ne peut pas être négatif." });
+        var utilisateur = User.Identity?.Name ?? "inconnu";
+        try
+        {
+            var (trouvee, resolue) = await _workflowService.EnregistrerSaisieSoldeInitialAsync(id, request.EcId, request.Taux, request.MontantTva, utilisateur);
+            if (!trouvee)
+                return NotFound(new { Message = $"Aucune ligne trouvée pour EC_Id={request.EcId} sur cette déclaration." });
+            return Ok(new { Resolue = resolue });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { Message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// TASK-176 : resynchronise EN MASSE toutes les pièces Sage d'une sélection — même contrat de
     /// sélection que <see cref="UpdateLignesBulk"/>/<see cref="UpdateCodeActiviteBulk"/> (liste de
     /// LigneIds OU Domaine[+Filter]). Réutilise strictement le pipeline unitaire
@@ -445,10 +476,11 @@ public class DeclarationsController : ControllerBase
                 .ToList();
 
             var recapTaux = lignesRecap
-                .GroupBy(l => new { l.Taux, l.Domaine })
+                .GroupBy(l => new { l.Taux, CodeTaxe = l.CodeTaxe ?? "", l.Domaine })
                 .Select(g => new
                 {
                     taux = g.Key.Taux,
+                    codeTaxe = g.Key.CodeTaxe,
                     domaine = g.Key.Domaine,
                     ht = g.Sum(x => x.HT),
                     tva = g.Sum(x => x.TVA),
@@ -456,6 +488,7 @@ public class DeclarationsController : ControllerBase
                     nbLignes = g.Count()
                 })
                 .OrderByDescending(x => x.taux)
+                .ThenBy(x => x.codeTaxe)
                 .ToList();
 
             // Équilibre : dérivé du contrôle back (TotalDeclareTtc vs HT + TVA), les trois
@@ -863,6 +896,14 @@ public class BulkResynchroniserRequest
 public class ValiderIncoherenceRequest
 {
     public int EcId { get; set; }
+}
+
+/// <summary>TASK-025 — corps de la saisie manuelle taux+montant TVA d'une ligne solde initial.</summary>
+public class SaisieSoldeInitialRequest
+{
+    public int EcId { get; set; }
+    public decimal Taux { get; set; }
+    public decimal MontantTva { get; set; }
 }
 
 /// <summary>TASK-161 — corps de la surcharge manuelle de code activité par ligne.</summary>

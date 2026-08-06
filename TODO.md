@@ -1,5 +1,63 @@
 # TODO — Module Déclaration TVA (GRF)
 
+## 🆕 TASK-204 — Migrer toutes les grilles vers AG Grid Community (PO 07/08/2026, précède TASK-201/202)
+Remplacer les grilles maison (`ExcelFilter`, `ColumnSelector`, virtualisation `@tanstack/react-virtual`)
+par AG Grid Community sur les 10 écrans qui les utilisent (`DomainGrid`, `ReglementsSelection`,
+`RapprochementInterrogation`, `AffectationsDrill`, `ControlGrid`, `DeclarationList`,
+`FactureInterrogation` + 3 écrans Délai de Paiement). Décisions : Community uniquement (pas
+d'Enterprise), migration des 10 écrans en une fois, export Excel client mutualisé via wrapper
+`xlsx` (déjà une dépendance). **Remplace TASK-201** (bug d'en-tête résolu nativement par AG Grid).
+**Précède TASK-202** (l'écran ② Factures à déclarer doit être construit directement en AG Grid,
+pas par extension de l'ancien `DomainGrid.tsx`). Package npm partagé (`@apbs/ui-grid`) discuté mais
+**hors périmètre** de cette TASK — décision transverse à formaliser séparément si confirmée. Voir
+`TASKS/TASK-204-migration-ag-grid-community.md`.
+
+## 🆕 TASK-203 — Intitulé taxe (`F_TAXE.TA_Intitule`) au récap et à l'export (PO 06/08/2026, suite TASK-198)
+TASK-198 (terminée) a propagé le code taxe (`TA_Code`) partout où le taux seul ne suffisait pas, mais
+jamais son intitulé. Le PO demande d'ajouter l'intitulé taxe (table `F_TAXE`) à côté du code, sur
+l'écran récap (colonne « Intitulé taxe ») et dans l'export Excel de contrôle/dépôt (colonnes distinctes
+`Ta_Code`/`Ta_Intitule` au lieu de la concaténation texte actuelle `Taux (CodeTaxe)`). Clé de
+regroupement inchangée : (taux, code taxe). Voir `TASKS/TASK-203-intitule-taxe-f-taxe-recap-export.md`.
+
+## 🆕 TASK-202 — Refonte navigation TVA : 4 écrans à responsabilité unique (PO 06/08/2026, remplace TASK-178)
+Le PO trouve l'écran ② « Vérifier & Intégrer » redondant et truffé d'écrans cachés (« Codes activité »
+et « Toutes les lignes / Resynchroniser » remplacent tout l'écran par `DomainGrid`, jamais visible par
+défaut). Cadrage arbitré en 2 rounds (06/08/2026) : ① Sélection inchangé ; ② nouvel écran persistant
+« Factures à déclarer » (actions en ligne fusionnées : resync, code activité, saisie TVA — statut de
+ligne devenu binaire Proposée/Intégrée, « Exclure »/« Reporter » retirés car redondants avec le fait de
+ne pas cocher le règlement en écran ①) ; ex-écran récap scindé en **③ Vérifier** (contrôles/anomalies,
+consultatif) et **④ Confirmer** (récap chiffré dédupliqué + bouton), le PO ayant jugé un seul écran
+« très compliqué » même sans doublons. **Remplace TASK-178**. Maquette détaillée (littérale, pas
+illustrative) : `TASKS/assets/TASK-202-maquette.html`. Voir
+`TASKS/TASK-202-refonte-navigation-ecran-factures-recap.md`.
+
+## 🆕 TASK-201 — En-têtes de grille (écran ① Sélection + Rapprochement) : autoriser le retour à la ligne (PO 06/08/2026)
+Signalement PO (capture d'écran) : libellés d'en-tête forcés sur une seule ligne (`whiteSpace:
+'nowrap'`), se chevauchent avec les icônes de tri/filtre sur colonne étroite. Cause identifiée :
+`ReglementsSelection.tsx:571` et `RapprochementInterrogation.tsx:390`. Voir
+`TASKS/TASK-201-entete-grille-retour-a-la-ligne.md`.
+
+## 🆕 TASK-200 — Écran ① Sélection : liste vide par défaut + bouton « Intégrer » (PO 06/08/2026)
+Demande PO : l'écran ① Sélection (`ReglementsSelection.tsx`) charge et pré-coche automatiquement tous
+les règlements éligibles à l'ouverture ; le PO veut un écran vide par défaut, un bouton « Intégrer »
+déclenchant le calcul (filtré sur la période de la déclaration en cours, modifiable par l'utilisateur),
+puis une sélection 100 % manuelle — uniquement pour une déclaration **sans sélection déjà sauvegardée**.
+Décision PO confirmée : une déclaration existante avec des lignes déjà intégrées continue de s'afficher
+automatiquement (comportement actuel conservé, pas de bouton requis dans ce cas). Ajout/retrait de
+règlements après intégration restent inchangés (déjà possibles tant que non clôturée). Voir
+`TASKS/TASK-200-ecran-selection-vide-par-defaut-bouton-integrer.md`.
+
+## 🗺️ ROADMAP — Afficher les Frais bancaires (et Dépenses) dans l'onglet Sélection (PO 05/08/2026, pas une TASK prête)
+Constat suite au diagnostic TASK-193/196/197 (frais bancaires) : l'onglet Sélection
+(`ReglementsSelection.tsx` → `GET /rapprochement` → `DeclarationRepository.GetReglementsRapprochementAsync`)
+ne lit que `RT_MOUVEMENT` (règlements client/fournisseur) — il ne connaît pas `RT_PREVISIONNELLE`
+(frais bancaires). Depuis TASK-197, Frais bancaire et Dépense sont **auto-inclus** dans le calcul
+sans passer par une sélection manuelle (par conception, TASK-080) — ils ne sont donc visibles
+qu'après « Passer au calcul » (lignes figées / export Excel), jamais dans l'onglet Sélection lui-même.
+Le PO a exprimé l'envie, pour une évolution **future**, de voir apparaître un type « Frais bancaire »
+(et Dépense) directement dans cet onglet, pour la traçabilité avant calcul — pas urgent, à
+transformer en TASK complète (périmètre UI + requête à étendre) quand le PO voudra la prioriser.
+
 ## 🐞 « Date Facture » erronée dans la Déclaration (grilles + export Excel) — signalée via un test comptable sur factures 2025 (PO 27/07/2026)
 Signalement PO, déclenché par un retour comptable : « il manque les factures de 2025 » sur la
 Déclaration. Diagnostic architecte (lecture code + vérification base réelle `GR_EMA_DISTRIBUTION`,
@@ -901,10 +959,11 @@ Jalons **planifiés pour plus tard** (à cadrer en TASKS le moment venu, **pas m
 ### ⏸️ Backlog différé — domaines non gérés par le client (PO 09/07/2026)
 | # | Task | Objet | État |
 |---|---|---|---|
-| 1 | [TASK-031](TASKS/TASK-031-domaine-operation-bancaire-tva.md) | **Opération bancaire (frais bancaire) avec TVA** : domaine de déduction entièrement absent de notre code (legacy `GetDeclarationCommissionBancaire`, `<mp><id>=3`) → sélection + valorisation directe + intégration workflow/exports | ⏸️ **différé** — le client ne gère pas ce cas aujourd'hui ; hors chemin critique. |
-| 2 | [TASK-032](TASKS/TASK-032-revue-depense-avec-tva.md) | **Revue dépense avec TVA** : (a) absence de filtre `WithTva` dans `GetDepenseSql`, (b) divergence de calcul (notre ventilation/prorata vs legacy direct `depense.MontantTva`) → vérifier + aligner sur base réelle | ⏸️ **différé** — à traiter avec TASK-031. |
+| 1 | [TASK-031](DONE_DETAIL/TASK-031-domaine-operation-bancaire-tva.md) | **Opération bancaire (frais bancaire) avec TVA** : domaine de déduction entièrement absent de notre code (legacy `GetDeclarationCommissionBancaire`, `<mp><id>=3`) → sélection + valorisation directe + intégration workflow/exports | ✅ **livrée** (sélection+valorisation+anti-double-déclaration+export Excel/XML, vérifiés base réelle dont `GR_HM_PHARMA`). ⛔ Écran Rapprochement ① volontairement non modifié (décision PO 04/08/2026 — ni Dépense ni Frais bancaire n'y figurent, assumé). Export réel bloquera tant que `RT_INFOCBANQ` (IF/ICE banque) n'est pas configuré côté client (prérequis données, pas du code). |
+| 2 | [TASK-032](DONE_DETAIL/TASK-032-revue-depense-avec-tva.md) | **Revue dépense avec TVA** : (a) absence de filtre `WithTva` dans `GetDepenseSql`, (b) divergence de calcul (notre ventilation/prorata vs legacy direct `depense.MontantTva`) → vérifier + aligner sur base réelle | ✅ **approuvée** (03/08/2026) — filtre `MV_Tva=1` livré et vérifié base réelle ; méthode de valorisation (ventilation) non touchée, décision PO limitée au filtre. |
 
-> **Origine** : analyse d'écart ancien GRF ↔ notre code (09/07/2026). Le legacy a 3 sources de déduction (décaissement, dépense, **frais bancaire**) ; notre module en couvre 2 (frais bancaire absent) et traite la dépense différemment. Différé car non prioritaire pour le client.
+> **Origine** : analyse d'écart ancien GRF ↔ notre code (09/07/2026). Le legacy a 3 sources de déduction (décaissement, dépense, **frais bancaire**) ; notre module en couvre 2 (frais bancaire absent) et traite la dépense différemment. Différé initialement car non prioritaire pour le client ; **différé levé par le PO le 03/08/2026** — rapport `RAPPORT-CODE-ACTIVITE-TVA.md` (apbs-gr_winform) consulté en amont mais jugé non pertinent pour ces 2 TASK (il traite la résolution du code activité, mécanisme déjà réglé différemment côté GRF via `CodeActiviteResolver.cs`, pas la sélection/valorisation opération bancaire/dépense).
+> ⚠️ **Note process (03/08/2026)** : les deux TASK ont été codées directement par Claude à la demande explicite du PO (dérogation ponctuelle au rôle architecte/reviewer défini par `CLAUDE.md` — pas de revue par un 2ᵉ agent indépendant). Cadrage réalisé sur données réelles ajoutées par le PO en cours de session (`RT_PREVISIONNELLE` : FRAIS/COMMLEASING/agio ; `RT_MOUVEMENT` : dépense-test avec TVA) — a permis de détecter et corriger une fausse piste dans la cartographie initiale de TASK-031 (`MV_Domaine=6` n'est pas frais bancaire, c'est Dépense).
 
 ### 🚧 Blocage valorisation famille B (Sage OM) — isolé par la traçabilité (10/07/2026)
 | # | Task | Objet | État |

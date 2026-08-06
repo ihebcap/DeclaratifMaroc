@@ -1,0 +1,165 @@
+- generic [ref=f12e3]:
+  - complementary [ref=f12e4]:
+    - generic [ref=f12e5] [cursor=pointer]:
+      - generic [ref=f12e7]:
+        - img "DM" [ref=f12e13]
+        - generic [ref=f12e14]: TVA
+      - generic [ref=f12e15]: NEW_EMA DISTRIBUTION
+    - generic [ref=f12e16]:
+      - generic [ref=f12e17]:
+        - generic [ref=f12e18]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f12e19] [cursor=pointer]
+        - generic "Factures" [ref=f12e23] [cursor=pointer]
+      - generic [ref=f12e28]:
+        - generic [ref=f12e29]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f12e30] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f12e36] [cursor=pointer]
+    - generic [ref=f12e42]:
+      - generic [ref=f12e43]: Admin Admin
+      - button "Déconnexion" [ref=f12e44] [cursor=pointer]
+  - main [ref=f12e49]:
+    - generic [ref=f12e56]:
+      - generic [ref=f12e57]:
+        - generic [ref=f12e58]:
+          - button "Retour" [ref=f12e59] [cursor=pointer]
+          - generic [ref=f12e62]: TVA1-2026-01
+        - generic [ref=f12e63]:
+          - button "1. Sélection" [ref=f12e64] [cursor=pointer]
+          - button "2. Vérifier & Intégrer" [ref=f12e68] [cursor=pointer]
+          - button "3. Déclaration" [disabled] [ref=f12e72]
+        - generic [ref=f12e77]:
+          - generic [ref=f12e78]: Période 01/01/2026 → 31/01/2026
+          - generic [ref=f12e79]: En cours
+      - generic [ref=f12e604]:
+        - generic [ref=f12e605]:
+          - generic [ref=f12e610]:
+            - heading "Étape 2 — Vérifier & Intégrer" [level=2] [ref=f12e611]
+            - generic [ref=f12e612]: Vérifiez les calculs par taux TVA, contrôlez les anomalies puis confirmez l'intégration
+          - generic [ref=f12e613]: 3 lignes non valorisées
+        - generic [ref=f12e617]:
+          - button "TVA Déductible (Achats)" [ref=f12e618] [cursor=pointer]
+          - button "TVA Collectée (Ventes)" [ref=f12e619] [cursor=pointer]
+        - generic [ref=f12e620]:
+          - generic [ref=f12e621]: ❌ Bloqué — 3 anomalies bloquantes, voir ci-dessous
+          - button "Sous-totaux par taux TVA (4 taux) ▼ Déplier" [ref=f12e627] [cursor=pointer]:
+            - text: Sous-totaux par taux TVA (4 taux)
+            - generic [ref=f12e630]: ▼ Déplier
+          - generic [ref=f12e631]:
+            - generic [ref=f12e632]: Récapitulatif de l'intégration — TVA déductible (achats) uniquement
+            - generic [ref=f12e637]:
+              - generic [ref=f12e638]:
+                - generic [ref=f12e639]: Règlements sélectionnés
+                - generic [ref=f12e640]: 67règlement(s)
+              - generic [ref=f12e641]:
+                - generic [ref=f12e642]: Lignes valorisées
+                - generic [ref=f12e643]: 239ligne(s)
+              - generic [ref=f12e644]:
+                - generic [ref=f12e645]: Total TVA à intégrer
+                - generic [ref=f12e646]: 141 960,75 MAD
+              - generic [ref=f12e647]:
+                - generic [ref=f12e648]: Lignes déjà figées en base
+                - generic [ref=f12e649]: 0ligne(s)
+          - generic [ref=f12e650]:
+            - generic [ref=f12e651]: Contrôles pré-intégration
+            - generic [ref=f12e654]:
+              - generic [ref=f12e655]:
+                - generic [ref=f12e659]:
+                  - generic [ref=f12e660]: Affectations valides
+                  - generic [ref=f12e661]: 242 affectation(s) en attente ou intégrée(s)
+                - generic [ref=f12e662]: OK
+              - generic [ref=f12e663]:
+                - generic [ref=f12e668]:
+                  - generic [ref=f12e669]: Cohérence des totaux déclarés
+                  - generic [ref=f12e670]: "Écart détecté : -86 406,49 MAD (somme des TTC − somme des HT+TVA)"
+                  - table [ref=f12e672]:
+                    - rowgroup [ref=f12e673]:
+                      - row [ref=f12e674]:
+                        - columnheader "Montants des lignes à l'origine de l'écart" [ref=f12e675]
+                        - columnheader "HT" [ref=f12e676]
+                        - columnheader "TVA" [ref=f12e677]
+                        - columnheader "TTC" [ref=f12e678]
+                    - rowgroup [ref=f12e679]:
+                      - row [ref=f12e680] [cursor=pointer]:
+                        - cell "Lignes incohérentes (TTC ≠ HT+TVA)" [ref=f12e681]
+                        - cell "26 105,22 MAD" [ref=f12e682]
+                        - cell "0,00 MAD" [ref=f12e683]
+                        - cell "0,00 MAD" [ref=f12e684]
+                    - rowgroup [ref=f12e685]:
+                      - row [ref=f12e686]:
+                        - cell "Total" [ref=f12e687]
+                        - cell "26 105,22 MAD" [ref=f12e688]
+                        - cell "0,00 MAD" [ref=f12e689]
+                        - cell "0,00 MAD" [ref=f12e690]
+                - generic [ref=f12e691]: ÉCART
+              - generic [ref=f12e692]:
+                - generic [ref=f12e697]:
+                  - generic [ref=f12e698]: Absence d'anomalies bloquantes
+                  - generic [ref=f12e699]: 3 anomalies bloquantes — intégration impossible
+                - generic [ref=f12e700]: BLOQUANT
+            - generic [ref=f12e701]:
+              - generic [ref=f12e702]: 3 lignes non valorisées — détail
+              - table [ref=f12e705]:
+                - rowgroup [ref=f12e706]:
+                  - row [ref=f12e707]:
+                    - columnheader "Facture" [ref=f12e708]
+                    - columnheader "Tiers" [ref=f12e709]
+                    - columnheader "Statut ligne" [ref=f12e710]
+                    - columnheader "Motif" [ref=f12e711]
+                    - columnheader [ref=f12e712]
+                - rowgroup [ref=f12e713]:
+                  - row [ref=f12e714]:
+                    - cell "FC2501667" [ref=f12e715]
+                    - cell "ATLANTIC FOODS" [ref=f12e716]
+                    - cell "Proposée" [ref=f12e717]
+                    - 'cell "Incohérence Sage : Σ(HT net+TVA+Parafiscale)=3960,00 ≠ TTC=3762,00 (écart -198,00) — pièce FC2501667 exclue de la valorisation." [ref=f12e719]'
+                    - cell [ref=f12e720]:
+                      - button "Diagnostiquer" [ref=f12e721] [cursor=pointer]
+                  - row [ref=f12e725]:
+                    - cell "FC2501717" [ref=f12e726]
+                    - cell "GHALI WHEELS LOGITRANS" [ref=f12e727]
+                    - cell "Proposée" [ref=f12e728]
+                    - 'cell "Incohérence Sage : Σ(HT net+TVA+Parafiscale)=2064301,44 ≠ TTC=20700,00 (écart -2043601,44) — pièce FC2501717 exclue de la valorisation." [ref=f12e730]'
+                    - cell [ref=f12e731]:
+                      - button "Diagnostiquer" [ref=f12e732] [cursor=pointer]
+                  - row [ref=f12e736]:
+                    - cell "FC2600035" [ref=f12e737]
+                    - cell "MAXI LV" [ref=f12e738]
+                    - cell "Proposée" [ref=f12e739]
+                    - cell "Facture introuvable (DTO non fourni)." [ref=f12e741]
+                    - cell [ref=f12e742]:
+                      - button "Diagnostiquer" [ref=f12e743] [cursor=pointer]
+            - generic [ref=f12e747]:
+              - generic [ref=f12e748]: Anomalies bloquantes
+              - generic [ref=f12e753]:
+                - generic [ref=f12e754]: "• TVA non calculée pour la facture FC2600035 (règlement RF26060064) — elle ne sera pas déclarée : Facture introuvable (DTO non fourni). (FC2600035)"
+                - button "Voir lignes" [ref=f12e755] [cursor=pointer]
+              - generic [ref=f12e760]:
+                - generic [ref=f12e761]: "• TVA non calculée pour la facture FC2501717 (règlement RF26040040) — elle ne sera pas déclarée : Incohérence Sage : Σ(HT net+TVA+Parafiscale)=2064301,44 ≠ TTC=20700,00 (écart -2043601,44) — pièce FC2501717 exclue de la valorisation. (FC2501717)"
+                - button "Voir lignes" [ref=f12e762] [cursor=pointer]
+              - generic [ref=f12e767]:
+                - generic [ref=f12e768]: "• TVA non calculée pour la facture FC2501667 (règlement RF26030075) — elle ne sera pas déclarée : Incohérence Sage : Σ(HT net+TVA+Parafiscale)=3960,00 ≠ TTC=3762,00 (écart -198,00) — pièce FC2501667 exclue de la valorisation. (FC2501667)"
+                - button "Voir lignes" [ref=f12e769] [cursor=pointer]
+            - generic [ref=f12e774]:
+              - button "9 avertissements (non bloquants) ▲ Replier" [active] [ref=f12e802] [cursor=pointer]:
+                - text: 9 avertissements (non bloquants)
+                - generic [ref=f12e778]: ▲ Replier
+              - generic [ref=f12e803]: "• Règlement non affecté — non déclarable : DP26080002 (tiers , 0,00 MAD)"
+              - generic [ref=f12e805]: "• Règlement hors périmètre (Autre (90)) — non déclarable : RC26040017 (tiers FAMOYO, 0,01 MAD) (RC26040017)"
+              - generic [ref=f12e807]: "• Règlement hors périmètre (Autre (90)) — non déclarable : RC26040046 (tiers LA BUVETTE DU MAROC, 63,80 MAD) (RC26040046)"
+              - generic [ref=f12e809]: "• Règlement hors périmètre (Autre (90)) — non déclarable : RC26040067 (tiers GCH HOSPITALITY (DOMO HOTEL), 0,01 MAD) (RC26040067)"
+              - generic [ref=f12e811]: "• Règlement hors périmètre (Autre (90)) — non déclarable : RC26040149 (tiers MJ ASSOCIES SARL, 0,22 MAD) (RC26040149)"
+              - generic [ref=f12e813]: "• Règlement hors périmètre (Autre (90)) — non déclarable : RC26040129 (tiers MJ ASSOCIES SARL, 0,42 MAD) (RC26040129)"
+              - generic [ref=f12e815]: "• 1026 ligne(s) portent une date de paiement hors de la période déclarée (01/01/2026 → 31/01/2026) : FC2600122 payée le 12/06/2026, FC2600110 payée le 12/06/2026, FF260010 payée le 12/06/2026…. Cette date est celle exportée dans le relevé de déductions (balise dpai) ; un relevé dont les dates de paiement sortent de la période est refusé par la DGI. (Global)"
+              - generic [ref=f12e817]:
+                - generic [ref=f12e818]: "• Ligne déjà figée (facture FC2501717, EC_Id=21473) : incohérence Sage HT/TVA/TTC détectée APRÈS le figeage — vérification manuelle requise avant clôture. Ligne et totaux inchangés (aucun recalcul automatique). (FC2501717)"
+                - button "Voir lignes" [ref=f12e819] [cursor=pointer]
+              - generic [ref=f12e824]:
+                - generic [ref=f12e825]: "• Ligne déjà figée (facture FC2501667, EC_Id=20650) : incohérence Sage HT/TVA/TTC détectée APRÈS le figeage — vérification manuelle requise avant clôture. Ligne et totaux inchangés (aucun recalcul automatique). (FC2501667)"
+                - button "Voir lignes" [ref=f12e826] [cursor=pointer]
+        - generic [ref=f12e779]:
+          - generic [ref=f12e780]: 3 contrôles bloquants — intégration impossible
+          - generic [ref=f12e786]:
+            - button "Export de contrôle (Excel)" [ref=f12e787] [cursor=pointer]
+            - button "Codes activité" [ref=f12e791] [cursor=pointer]
+            - button "Toutes les lignes / Resynchroniser" [ref=f12e792] [cursor=pointer]
+            - button "Confirmer intégration" [disabled] [ref=f12e798]

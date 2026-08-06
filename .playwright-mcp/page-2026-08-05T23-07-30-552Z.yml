@@ -1,0 +1,188 @@
+- generic [ref=f5e6]:
+  - generic [ref=f5e2124]:
+    - complementary [ref=f5e2125]:
+      - generic [ref=f5e2126] [cursor=pointer]:
+        - generic [ref=f5e2128]:
+          - img "DM" [ref=f5e2134]
+          - generic [ref=f5e2135]: TVA
+        - generic [ref=f5e2136]: NEW_EMA DISTRIBUTION
+      - generic [ref=f5e2137]:
+        - generic [ref=f5e2138]:
+          - generic [ref=f5e2139]: INTERROGATION
+          - generic "Rapprochement bancaire" [ref=f5e2140] [cursor=pointer]
+          - generic "Factures" [ref=f5e2144] [cursor=pointer]
+        - generic [ref=f5e2149]:
+          - generic [ref=f5e2150]: DÉCLARATION
+          - generic "Déclaration TVA" [ref=f5e2151] [cursor=pointer]
+          - generic "Délai de paiement" [ref=f5e2157] [cursor=pointer]
+      - generic [ref=f5e2163]:
+        - generic [ref=f5e2164]: Admin Admin
+        - button "Déconnexion" [ref=f5e2165] [cursor=pointer]
+    - main [ref=f5e2170]:
+      - generic [ref=f5e5097]:
+        - generic [ref=f5e5646]:
+          - generic [ref=f5e5647]:
+            - button "Retour" [ref=f5e5648] [cursor=pointer]
+            - generic [ref=f5e5651]: TVA1-2026-05
+          - generic [ref=f5e5652]:
+            - button "1. Sélection" [ref=f5e5653] [cursor=pointer]
+            - button "2. Vérifier & Intégrer" [ref=f5e5657] [cursor=pointer]
+            - button "3. Déclaration" [ref=f5e5661] [cursor=pointer]
+          - generic [ref=f5e5666]:
+            - generic [ref=f5e5667]: Période 01/05/2026 → 31/05/2026
+            - generic [ref=f5e5668]: Clôturée — lecture seule
+        - generic [ref=f5e5778]:
+          - generic [ref=f5e5779]:
+            - generic [ref=f5e5783]:
+              - heading "④ Déclaration" [level=2] [ref=f5e5784]
+              - generic [ref=f5e5785]: Contrôle de cohérence · anomalies · export Excel et XML Simpl-TVA
+            - generic [ref=f5e5786]:
+              - generic [ref=f5e5787]: Verrou posé
+              - generic [ref=f5e5791]: Aucun bloquant
+              - generic [ref=f5e5795]: 1 avert.
+          - generic [ref=f5e5798]:
+            - button "TVA Déductible (Achats)" [ref=f5e5799] [cursor=pointer]
+            - button "TVA Collectée (Ventes)" [ref=f5e5800] [cursor=pointer]
+          - generic [ref=f5e5801]:
+            - generic [ref=f5e5802]:
+              - generic [ref=f5e5803]:
+                - generic [ref=f5e5804]: Lignes intégrées
+                - generic [ref=f5e5805]: "157"
+              - generic [ref=f5e5806]:
+                - generic [ref=f5e5807]: TVA totale
+                - generic [ref=f5e5808]: 109 187,17 MAD
+              - generic [ref=f5e5809]:
+                - generic [ref=f5e5810]: Total HT
+                - generic [ref=f5e5811]: 724 593,09 MAD
+              - generic [ref=f5e5812]:
+                - generic [ref=f5e5813]: Total TTC
+                - generic [ref=f5e5814]: 833 780,26 MAD
+              - generic [ref=f5e5815]:
+                - generic [ref=f5e5816]: Écart équilibre
+                - generic [ref=f5e5817]: 0,00 MAD
+            - generic [ref=f5e5818]:
+              - button "Répartition par source 1 ✔ Équilibre OK" [ref=f5e5819] [cursor=pointer]:
+                - generic [ref=f5e5823]: Répartition par source
+                - generic [ref=f5e5824]: "1"
+                - generic [ref=f5e5825]: ✔ Équilibre OK
+              - table [ref=f5e5828]:
+                - rowgroup [ref=f5e5829]:
+                  - row [ref=f5e5830]:
+                    - columnheader "Source" [ref=f5e5831]
+                    - columnheader "HT" [ref=f5e5832]
+                    - columnheader "TVA" [ref=f5e5833]
+                    - columnheader "TTC" [ref=f5e5834]
+                - rowgroup [ref=f5e5835]:
+                  - row [ref=f5e5836]:
+                    - cell "Decaissement" [ref=f5e5837]
+                    - cell "724 593,09 MAD" [ref=f5e5838]
+                    - cell "109 187,17 MAD" [ref=f5e5839]
+                    - cell "833 780,26 MAD" [ref=f5e5840]
+                - rowgroup [ref=f5e5841]:
+                  - row [ref=f5e5842]:
+                    - cell "Total" [ref=f5e5843]
+                    - cell "724 593,09 MAD" [ref=f5e5844]
+                    - cell "109 187,17 MAD" [ref=f5e5845]
+                    - cell "833 780,26 MAD" [ref=f5e5846]
+            - generic [ref=f5e5847]:
+              - button "Vue par taux TVA 4" [ref=f5e5848] [cursor=pointer]:
+                - generic [ref=f5e5855]: Vue par taux TVA
+                - generic [ref=f5e5856]: "4"
+              - table [ref=f5e5859]:
+                - rowgroup [ref=f5e5860]:
+                  - row [ref=f5e5861]:
+                    - columnheader "Taux" [ref=f5e5862]
+                    - columnheader "Code taxe" [ref=f5e5863]
+                    - columnheader "HT" [ref=f5e5864]
+                    - columnheader "TVA" [ref=f5e5865]
+                    - columnheader "TTC" [ref=f5e5866]
+                - rowgroup [ref=f5e5867]:
+                  - row [ref=f5e5868]:
+                    - cell "20%" [ref=f5e5869]
+                    - cell "D20" [ref=f5e5871]
+                    - cell "491 494,32 MAD" [ref=f5e5872]
+                    - cell "98 298,82 MAD" [ref=f5e5873]
+                    - cell "589 793,14 MAD" [ref=f5e5874]
+                  - row [ref=f5e5875]:
+                    - cell "10%" [ref=f5e5876]
+                    - cell "D10" [ref=f5e5878]
+                    - cell "108 624,39 MAD" [ref=f5e5879]
+                    - cell "10 862,43 MAD" [ref=f5e5880]
+                    - cell "119 486,82 MAD" [ref=f5e5881]
+                  - row [ref=f5e5882]:
+                    - cell "9%" [ref=f5e5883]
+                    - cell "D09" [ref=f5e5885]
+                    - cell "288,00 MAD" [ref=f5e5886]
+                    - cell "25,92 MAD" [ref=f5e5887]
+                    - cell "313,92 MAD" [ref=f5e5888]
+                  - row [ref=f5e5889]:
+                    - cell "0%" [ref=f5e5890]
+                    - cell "D0" [ref=f5e5892]
+                    - cell "124 186,38 MAD" [ref=f5e5893]
+                    - cell "0,00 MAD" [ref=f5e5894]
+                    - cell "124 186,38 MAD" [ref=f5e5895]
+            - generic [ref=f5e5896]:
+              - button "Récap par code activité 2" [ref=f5e5897] [cursor=pointer]:
+                - generic [ref=f5e5901]: Récap par code activité
+                - generic [ref=f5e5902]: "2"
+              - generic [ref=f5e5905]:
+                - generic [ref=f5e5906]:
+                  - generic [ref=f5e5907]: Collecté (Encaissement)
+                  - table [ref=f5e5908]:
+                    - rowgroup [ref=f5e5909]:
+                      - row [ref=f5e5910]:
+                        - columnheader "Code activité" [ref=f5e5911]
+                        - columnheader "HT" [ref=f5e5912]
+                        - columnheader "TVA" [ref=f5e5913]
+                        - columnheader "TTC" [ref=f5e5914]
+                    - rowgroup [ref=f5e5915]:
+                      - row [ref=f5e5916]:
+                        - cell "—" [ref=f5e5917]
+                        - cell "1 092 733,48 MAD" [ref=f5e5918]
+                        - cell "167 788,19 MAD" [ref=f5e5919]
+                        - cell "1 260 521,67 MAD" [ref=f5e5920]
+                    - rowgroup [ref=f5e5921]:
+                      - row [ref=f5e5922]:
+                        - cell "Total" [ref=f5e5923]
+                        - cell "1 092 733,48 MAD" [ref=f5e5924]
+                        - cell "167 788,19 MAD" [ref=f5e5925]
+                        - cell "1 260 521,67 MAD" [ref=f5e5926]
+                - generic [ref=f5e5927]:
+                  - generic [ref=f5e5928]: Déductible (Décaissement)
+                  - table [ref=f5e5929]:
+                    - rowgroup [ref=f5e5930]:
+                      - row [ref=f5e5931]:
+                        - columnheader "Code activité" [ref=f5e5932]
+                        - columnheader "HT" [ref=f5e5933]
+                        - columnheader "TVA" [ref=f5e5934]
+                        - columnheader "TTC" [ref=f5e5935]
+                    - rowgroup [ref=f5e5936]:
+                      - row [ref=f5e5937]:
+                        - cell "—" [ref=f5e5938]
+                        - cell "724 593,09 MAD" [ref=f5e5939]
+                        - cell "109 187,17 MAD" [ref=f5e5940]
+                        - cell "833 780,26 MAD" [ref=f5e5941]
+                    - rowgroup [ref=f5e5942]:
+                      - row [ref=f5e5943]:
+                        - cell "Total" [ref=f5e5944]
+                        - cell "724 593,09 MAD" [ref=f5e5945]
+                        - cell "109 187,17 MAD" [ref=f5e5946]
+                        - cell "833 780,26 MAD" [ref=f5e5947]
+            - generic [ref=f5e5948]:
+              - button "Anomalies bloquantes 🔴" [ref=f5e5949] [cursor=pointer]
+              - generic [ref=f5e5959]: Aucune anomalie bloquante ✔
+            - generic [ref=f5e5960]:
+              - button "Avertissements 🟠 1" [ref=f5e5961] [cursor=pointer]:
+                - generic [ref=f5e5966]: Avertissements 🟠
+                - generic [ref=f5e5967]: "1"
+              - generic [ref=f5e5970]: "Règlement non affecté — non déclarable : DP26080002 (tiers , 0,00 MAD)"
+            - button "Récap lignes 735 intégrées · 0 écartées · 0 proposées · 0 exclues 735" [ref=f5e5978] [cursor=pointer]:
+              - generic [ref=f5e5984]: Récap lignes
+              - generic [ref=f5e5985]: 735 intégrées · 0 écartées · 0 proposées · 0 exclues
+              - generic [ref=f5e5986]: "735"
+          - generic [ref=f5e5989]:
+            - button "Retour aux déclarations" [ref=f5e5990] [cursor=pointer]
+            - generic [ref=f5e5993]:
+              - button "Export Excel" [ref=f5e5994] [cursor=pointer]
+              - button "Générer XML" [ref=f5e5998] [cursor=pointer]
+  - generic [ref=f5e6004]: Déclaration intégrée avec succès — tampon DT_Id posé

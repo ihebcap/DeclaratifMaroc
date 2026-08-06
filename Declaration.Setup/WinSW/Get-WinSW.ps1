@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     TASK-115 : recupere le binaire officiel WinSW-x64.exe (licence MIT, projet winsw/winsw)
     dans le dossier courant, plutot que de le committer en dur dans le depot (cf. reserve

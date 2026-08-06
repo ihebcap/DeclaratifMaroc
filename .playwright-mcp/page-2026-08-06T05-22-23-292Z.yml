@@ -1,0 +1,100 @@
+- generic [ref=e18]:
+  - complementary [ref=e19]:
+    - generic [ref=e20] [cursor=pointer]:
+      - generic [ref=e22]:
+        - img "DM" [ref=e28]
+        - generic [ref=e29]: TVA
+      - generic [ref=e30]: NEW_EMA DISTRIBUTION
+    - generic [ref=e31]:
+      - generic [ref=e32]:
+        - generic [ref=e33]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=e34] [cursor=pointer]
+        - generic "Factures" [ref=e38] [cursor=pointer]
+      - generic [ref=e43]:
+        - generic [ref=e44]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=e45] [cursor=pointer]
+        - generic "Délai de paiement" [ref=e51] [cursor=pointer]
+    - generic [ref=e57]:
+      - generic [ref=e58]: Admin Admin
+      - button "Déconnexion" [ref=e59] [cursor=pointer]
+  - main [ref=e64]:
+    - generic [ref=e65]:
+      - generic [ref=e66]:
+        - generic [ref=e71]:
+          - heading "Déclarations TVA" [level=2] [ref=e72]
+          - generic [ref=e73]: Déclaration TVA Maroc — modèle SIMPL-TVA
+        - generic [ref=e74]:
+          - button "Créer une déclaration" [ref=e75] [cursor=pointer]
+          - button "Colonnes" [ref=e78] [cursor=pointer]
+      - generic [ref=e83]:
+        - text: "Déclarations :"
+        - strong [ref=e84]: "6"
+        - text: / 6
+      - generic [ref=e86]:
+        - generic [ref=e87]:
+          - generic [ref=e88]: N° déclaration
+          - generic [ref=e89]:
+            - text: Période
+            - button "Filtrer" [ref=e91] [cursor=pointer]
+          - generic [ref=e94]:
+            - text: Déclaration
+            - button "Filtrer" [ref=e96] [cursor=pointer]
+          - generic [ref=e99]: Nombre de factures
+          - generic [ref=e100]:
+            - text: Statut
+            - button "Filtrer" [ref=e102] [cursor=pointer]
+          - generic [ref=e105]: Actions
+        - generic [ref=e106]:
+          - button "TVA1-2026-06" [ref=e108] [cursor=pointer]
+          - generic [ref=e109]: Juin 2026
+          - generic [ref=e110]: Mensuelle
+          - generic [ref=e111]: "498"
+          - generic [ref=e112]: En cours
+          - generic [ref=e115]:
+            - button "Ouvrir" [ref=e116] [cursor=pointer]
+            - button "Supprimer" [ref=e117] [cursor=pointer]
+        - generic [ref=e121]:
+          - button "TVA1-2026-05" [ref=e123] [cursor=pointer]
+          - generic [ref=e124]: Mai 2026
+          - generic [ref=e125]: Mensuelle
+          - generic [ref=e126]: "338"
+          - generic [ref=e127]: Clôturée
+          - generic [ref=e130]:
+            - button "Ouvrir" [ref=e131] [cursor=pointer]
+            - button "Réouvrir" [ref=e132] [cursor=pointer]
+        - generic [ref=e136]:
+          - button "TVA1-2026-04" [ref=e138] [cursor=pointer]
+          - generic [ref=e139]: Avril 2026
+          - generic [ref=e140]: Mensuelle
+          - generic [ref=e141]: "457"
+          - generic [ref=e142]: En cours
+          - generic [ref=e145]:
+            - button "Ouvrir" [ref=e146] [cursor=pointer]
+            - button "Supprimer" [ref=e147] [cursor=pointer]
+        - generic [ref=e151]:
+          - button "TVA1-2026-03" [ref=e153] [cursor=pointer]
+          - generic [ref=e154]: Mars 2026
+          - generic [ref=e155]: Mensuelle
+          - generic [ref=e156]: "288"
+          - generic [ref=e157]: En cours
+          - generic [ref=e160]:
+            - button "Ouvrir" [ref=e161] [cursor=pointer]
+            - button "Supprimer" [ref=e162] [cursor=pointer]
+        - generic [ref=e166]:
+          - button "TVA1-2026-02" [ref=e168] [cursor=pointer]
+          - generic [ref=e169]: Février 2026
+          - generic [ref=e170]: Mensuelle
+          - generic [ref=e171]: "359"
+          - generic [ref=e172]: En cours
+          - generic [ref=e175]:
+            - button "Ouvrir" [ref=e176] [cursor=pointer]
+            - button "Supprimer" [ref=e177] [cursor=pointer]
+        - generic [ref=e181]:
+          - button "TVA1-2026-01" [ref=e183] [cursor=pointer]
+          - generic [ref=e184]: Janvier 2026
+          - generic [ref=e185]: Mensuelle
+          - generic [ref=e186]: "541"
+          - generic [ref=e187]: En cours
+          - generic [ref=e190]:
+            - button "Ouvrir" [ref=e191] [cursor=pointer]
+            - button "Supprimer" [ref=e192] [cursor=pointer]

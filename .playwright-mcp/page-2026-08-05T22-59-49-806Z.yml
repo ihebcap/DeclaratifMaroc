@@ -1,0 +1,138 @@
+- generic [ref=f5e7]:
+  - complementary [ref=f5e8]:
+    - generic [ref=f5e9] [cursor=pointer]:
+      - generic [ref=f5e11]:
+        - img "DM" [ref=f5e17]
+        - generic [ref=f5e18]: TVA
+      - generic [ref=f5e19]: NEW_EMA DISTRIBUTION
+    - generic [ref=f5e20]:
+      - generic [ref=f5e21]:
+        - generic [ref=f5e22]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f5e23] [cursor=pointer]
+        - generic "Factures" [ref=f5e27] [cursor=pointer]
+      - generic [ref=f5e32]:
+        - generic [ref=f5e33]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f5e34] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f5e40] [cursor=pointer]
+    - generic [ref=f5e46]:
+      - generic [ref=f5e47]: Admin Admin
+      - button "Déconnexion" [ref=f5e48] [cursor=pointer]
+  - main [ref=f5e53]:
+    - generic [ref=f5e102]:
+      - generic [ref=f5e103]:
+        - generic [ref=f5e104]:
+          - button "Retour" [ref=f5e105] [cursor=pointer]
+          - generic [ref=f5e108]: TVA1-2026-02
+        - generic [ref=f5e109]:
+          - button "1. Sélection" [ref=f5e110] [cursor=pointer]
+          - button "2. Vérifier & Intégrer" [ref=f5e114] [cursor=pointer]
+          - button "3. Déclaration" [disabled] [ref=f5e118]
+        - generic [ref=f5e123]:
+          - generic [ref=f5e124]: Période 01/02/2026 → 28/02/2026
+          - generic [ref=f5e125]: En cours
+      - generic [ref=f5e650]:
+        - generic [ref=f5e651]:
+          - generic [ref=f5e656]:
+            - heading "Étape 2 — Vérifier & Intégrer" [level=2] [ref=f5e657]
+            - generic [ref=f5e658]: Vérifiez les calculs par taux TVA, contrôlez les anomalies puis confirmez l'intégration
+          - generic [ref=f5e751]: 2 lignes non valorisées
+        - generic [ref=f5e659]:
+          - button "TVA Déductible (Achats)" [ref=f5e660] [cursor=pointer]
+          - button "TVA Collectée (Ventes)" [active] [ref=f5e661] [cursor=pointer]
+        - generic [ref=f5e662]:
+          - generic [ref=f5e663]: ❌ Bloqué — 2 anomalies bloquantes, voir ci-dessous
+          - button "Sous-totaux par taux TVA (4 taux) ▼ Déplier" [ref=f5e755] [cursor=pointer]:
+            - text: Sous-totaux par taux TVA (4 taux)
+            - generic [ref=f5e672]: ▼ Déplier
+          - generic [ref=f5e673]:
+            - generic [ref=f5e674]: Récapitulatif de l'intégration — TVA collectée (ventes) uniquement
+            - generic [ref=f5e679]:
+              - generic [ref=f5e680]:
+                - generic [ref=f5e681]: Règlements sélectionnés
+                - generic [ref=f5e682]: 60règlement(s)
+              - generic [ref=f5e683]:
+                - generic [ref=f5e684]: Lignes valorisées
+                - generic [ref=f5e685]: 487ligne(s)
+              - generic [ref=f5e686]:
+                - generic [ref=f5e687]: Total TVA à intégrer
+                - generic [ref=f5e688]: 139 243,31 MAD
+              - generic [ref=f5e689]:
+                - generic [ref=f5e690]: Lignes déjà figées en base
+                - generic [ref=f5e691]: 0ligne(s)
+          - generic [ref=f5e692]:
+            - generic [ref=f5e693]: Contrôles pré-intégration
+            - generic [ref=f5e696]:
+              - generic [ref=f5e697]:
+                - generic [ref=f5e701]:
+                  - generic [ref=f5e702]: Affectations valides
+                  - generic [ref=f5e703]: 489 affectation(s) en attente ou intégrée(s)
+                - generic [ref=f5e704]: OK
+              - generic [ref=f5e705]:
+                - generic [ref=f5e710]:
+                  - generic [ref=f5e711]: Cohérence des totaux déclarés
+                  - generic [ref=f5e712]: "Écart détecté : -26 122,84 MAD"
+                  - table [ref=f5e756]:
+                    - rowgroup [ref=f5e757]:
+                      - row [ref=f5e758]:
+                        - columnheader "Écart" [ref=f5e759]
+                        - columnheader "HT" [ref=f5e760]
+                        - columnheader "TVA" [ref=f5e761]
+                        - columnheader "TTC" [ref=f5e762]
+                    - rowgroup [ref=f5e763]:
+                      - row [ref=f5e764] [cursor=pointer]:
+                        - cell "Lignes incohérentes (TTC ≠ HT+TVA)" [ref=f5e765]
+                        - cell "26 122,84 MAD" [ref=f5e766]
+                        - cell "0,00 MAD" [ref=f5e767]
+                        - cell "0,00 MAD" [ref=f5e768]
+                    - rowgroup [ref=f5e769]:
+                      - row [ref=f5e770]:
+                        - cell "Total" [ref=f5e771]
+                        - cell "26 122,84 MAD" [ref=f5e772]
+                        - cell "0,00 MAD" [ref=f5e773]
+                        - cell "0,00 MAD" [ref=f5e774]
+                - generic [ref=f5e714]: ÉCART
+              - generic [ref=f5e715]:
+                - generic [ref=f5e719]:
+                  - generic [ref=f5e720]: Absence d'anomalies bloquantes
+                  - generic [ref=f5e721]: 2 anomalies bloquantes — intégration impossible
+                - generic [ref=f5e722]: BLOQUANT
+            - generic [ref=f5e779]:
+              - generic [ref=f5e780]: 2 lignes non valorisées — détail
+              - table [ref=f5e783]:
+                - rowgroup [ref=f5e784]:
+                  - row [ref=f5e785]:
+                    - columnheader "Facture" [ref=f5e786]
+                    - columnheader "Tiers" [ref=f5e787]
+                    - columnheader "Statut ligne" [ref=f5e788]
+                    - columnheader "Motif" [ref=f5e789]
+                    - columnheader [ref=f5e790]
+                - rowgroup [ref=f5e791]:
+                  - row [ref=f5e792]:
+                    - cell "FA2502507" [ref=f5e793]
+                    - cell "NEOM EVENT" [ref=f5e794]
+                    - cell "Proposée" [ref=f5e795]
+                    - cell "Facture introuvable (DTO non fourni)." [ref=f5e797]
+                    - cell [ref=f5e798]:
+                      - button "Diagnostiquer" [ref=f5e799] [cursor=pointer]
+                  - row [ref=f5e803]:
+                    - cell "FA2600106" [ref=f5e804]
+                    - cell "LA BUVETTE DU MAROC" [ref=f5e805]
+                    - cell "Proposée" [ref=f5e806]
+                    - cell "Facture introuvable (DTO non fourni)." [ref=f5e808]
+                    - cell [ref=f5e809]:
+                      - button "Diagnostiquer" [ref=f5e810] [cursor=pointer]
+            - generic [ref=f5e814]:
+              - generic [ref=f5e815]: Anomalies bloquantes
+              - generic [ref=f5e820]:
+                - generic [ref=f5e821]: "• TVA non calculée pour la facture FA2600106 (règlement RC26040198) — elle ne sera pas déclarée : Facture introuvable (DTO non fourni). (FA2600106)"
+                - button "Voir lignes" [ref=f5e822] [cursor=pointer]
+              - generic [ref=f5e827]:
+                - generic [ref=f5e828]: "• TVA non calculée pour la facture FA2502507 (règlement RC26040103) — elle ne sera pas déclarée : Facture introuvable (DTO non fourni). (FA2502507)"
+                - button "Voir lignes" [ref=f5e829] [cursor=pointer]
+        - generic [ref=f5e728]:
+          - generic [ref=f5e729]: 2 contrôles bloquants — intégration impossible
+          - generic [ref=f5e735]:
+            - button "Export de contrôle (Excel)" [ref=f5e736] [cursor=pointer]
+            - button "Codes activité" [ref=f5e740] [cursor=pointer]
+            - button "Toutes les lignes / Resynchroniser" [ref=f5e741] [cursor=pointer]
+            - button "Confirmer intégration" [disabled] [ref=f5e747]

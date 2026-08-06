@@ -1,0 +1,93 @@
+- generic [ref=f3e18]:
+  - complementary [ref=f3e19]:
+    - generic [ref=f3e20] [cursor=pointer]:
+      - generic [ref=f3e22]:
+        - img "DM" [ref=f3e28]
+        - generic [ref=f3e29]: TVA
+      - generic [ref=f3e30]: NEW_EMA DISTRIBUTION
+    - generic [ref=f3e31]:
+      - generic [ref=f3e32]:
+        - generic [ref=f3e33]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f3e34] [cursor=pointer]
+        - generic "Factures" [ref=f3e38] [cursor=pointer]
+      - generic [ref=f3e43]:
+        - generic [ref=f3e44]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f3e45] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f3e51] [cursor=pointer]
+    - generic [ref=f3e57]:
+      - generic [ref=f3e58]: Admin Admin
+      - button "Déconnexion" [ref=f3e59] [cursor=pointer]
+  - main [ref=f3e64]:
+    - generic [ref=f3e121]:
+      - generic [ref=f3e122]:
+        - generic [ref=f3e123]:
+          - button "Retour" [ref=f3e124] [cursor=pointer]
+          - generic [ref=f3e127]: TVA1-2026-07
+        - generic [ref=f3e128]:
+          - button "1. Sélection" [active] [ref=f3e129] [cursor=pointer]
+          - button "2. Vérifier & Intégrer" [ref=f3e133] [cursor=pointer]
+          - button "3. Déclaration" [disabled] [ref=f3e137]
+        - generic [ref=f3e142]:
+          - generic [ref=f3e143]: Période 01/07/2026 → 31/07/2026
+          - generic [ref=f3e144]: En cours
+      - generic [ref=f3e145]:
+        - generic [ref=f3e261]:
+          - generic [ref=f3e264]:
+            - checkbox "Sélectionner toutes les lignes visibles (éligibles/à contrôler)" [ref=f3e266]
+            - generic [ref=f3e267]:
+              - text: N° Règlement
+              - button "Filtrer" [ref=f3e270] [cursor=pointer]
+            - generic [ref=f3e273] [cursor=pointer]:
+              - text: Date règlement
+              - generic [ref=f3e274]: ▼
+              - button "Filtrer" [ref=f3e277]
+            - generic [ref=f3e280]:
+              - text: Échéance
+              - button "Filtrer" [ref=f3e283] [cursor=pointer]
+            - generic [ref=f3e286]:
+              - text: Mode
+              - button "Filtrer" [ref=f3e289] [cursor=pointer]
+            - generic [ref=f3e292]:
+              - text: Date règlement (espèces)
+              - button "Filtrer" [ref=f3e295] [cursor=pointer]
+            - generic [ref=f3e298]:
+              - text: Domaine
+              - button "Filtrer" [ref=f3e301] [cursor=pointer]
+            - generic [ref=f3e304]:
+              - text: Code tiers
+              - button "Filtrer" [ref=f3e307] [cursor=pointer]
+            - generic [ref=f3e310]:
+              - text: Intitulé tiers
+              - button "Filtrer" [ref=f3e313] [cursor=pointer]
+            - generic [ref=f3e316] [cursor=pointer]:
+              - text: Montant
+              - button "Filtrer" [ref=f3e319]
+            - generic [ref=f3e322]:
+              - text: Affecté
+              - button "Filtrer" [ref=f3e325] [cursor=pointer]
+            - generic [ref=f3e328]:
+              - text: Rappr. banque
+              - button "Filtrer" [ref=f3e331] [cursor=pointer]
+            - generic [ref=f3e334]:
+              - text: Date rapprochement
+              - button "Filtrer" [ref=f3e337] [cursor=pointer]
+            - generic [ref=f3e340]:
+              - text: Statut
+              - button "Filtrer" [ref=f3e343] [cursor=pointer]
+          - generic [ref=f3e346]:
+            - generic [ref=f3e347]:
+              - generic [ref=f3e350]:
+                - text: "Règlements :"
+                - strong [ref=f3e351]: "0"
+              - generic [ref=f3e352]:
+                - text: "Sélectionnés :"
+                - strong [ref=f3e353]: "0"
+            - generic [ref=f3e354]:
+              - generic [ref=f3e355]: "Total sélectionné : 0,00 MAD"
+              - button "Export de contrôle (Excel)" [ref=f3e356] [cursor=pointer]
+              - button "Colonnes" [ref=f3e361] [cursor=pointer]
+        - generic [ref=f3e364]:
+          - generic [ref=f3e365]: Sélectionnez au moins un règlement pour continuer
+          - generic [ref=f3e366]:
+            - button "Détail des lignes" [disabled] [ref=f3e367]
+            - button "Passer au calcul" [disabled] [ref=f3e368] [cursor=pointer]

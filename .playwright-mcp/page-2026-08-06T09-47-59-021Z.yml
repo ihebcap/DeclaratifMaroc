@@ -1,0 +1,15 @@
+- generic [ref=f1e4]:
+  - heading "Déclaratif Maroc" [level=1] [ref=f1e5]
+  - paragraph [ref=f1e6]: Accès sécurisé à l'espace de gestion
+  - generic [ref=f1e7]:
+    - generic [ref=f1e8]:
+      - generic [ref=f1e9]: Nom d'utilisateur
+      - textbox [ref=f1e10]: Admin
+    - generic [ref=f1e11]:
+      - generic [ref=f1e12]: Mot de passe
+      - textbox [ref=f1e13]: Admin
+    - generic [ref=f1e14]:
+      - generic [ref=f1e15]: Société
+      - combobox [ref=f1e16]:
+        - option "-- Choisir une société --" [selected]
+    - button "Se Connecter" [disabled] [ref=f1e17] [cursor=pointer]

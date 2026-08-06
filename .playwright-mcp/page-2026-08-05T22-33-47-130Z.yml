@@ -1,0 +1,25 @@
+- generic [ref=e19]:
+  - complementary [ref=e20]:
+    - generic [ref=e21] [cursor=pointer]:
+      - generic [ref=e23]:
+        - img "DM" [ref=e29]
+        - generic [ref=e30]: TVA
+      - generic [ref=e31]: NEW_EMA DISTRIBUTION
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=e35] [cursor=pointer]
+        - generic "Factures" [ref=e39] [cursor=pointer]
+      - generic [ref=e44]:
+        - generic [ref=e45]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=e46] [cursor=pointer]
+        - generic "Délai de paiement" [ref=e52] [cursor=pointer]
+    - generic [ref=e58]:
+      - generic [ref=e59]: Admin Admin
+      - button "Déconnexion" [ref=e60] [cursor=pointer]
+  - main [ref=e65]:
+    - generic [ref=e66]:
+      - generic [ref=e67]:
+        - heading "Déclarations TVA" [level=2] [ref=e68]
+        - button "Créer une déclaration" [ref=e69] [cursor=pointer]
+      - paragraph [ref=e76]: Aucune déclaration existante pour cette société.

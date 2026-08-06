@@ -1,0 +1,487 @@
+<title>TVA — Refonte navigation TASK-202 (spec détaillée)</title>
+<style>
+  :root {
+    --bg: #f3f6f7;
+    --surface: #ffffff;
+    --surface-2: #eaf0f1;
+    --surface-3: #dcebe9;
+    --border: #d7e0e2;
+    --text-primary: #17262a;
+    --text-secondary: #58717a;
+    --text-tertiary: #8a9ea5;
+    --accent: #0f5c66;
+    --accent-strong: #0a444c;
+    --accent-soft: #e3f0ee;
+    --ok: #1a7f5a;
+    --ok-soft: #e8f5ef;
+    --warning: #a86400;
+    --warning-soft: #fff2df;
+    --critical: #af2a20;
+    --critical-soft: #fdeae7;
+    --annot: #7a3fb0;
+    --annot-soft: #f2e9fb;
+    --shadow: 0 1px 2px rgba(15, 35, 40, 0.06), 0 8px 24px rgba(15, 35, 40, 0.05);
+  }
+  :root[data-theme="dark"] {
+    --bg: #10181a; --surface: #182326; --surface-2: #1f2d30; --surface-3: #24373a;
+    --border: #2a3a3e; --text-primary: #e7eef0; --text-secondary: #9bb2b8; --text-tertiary: #6c8288;
+    --accent: #45a99f; --accent-strong: #6bc3ba; --accent-soft: #1e3532;
+    --ok: #4cbd8c; --ok-soft: #1a332a; --warning: #dba653; --warning-soft: #372c1a;
+    --critical: #e2827a; --critical-soft: #3a2320; --annot: #c9a3ec; --annot-soft: #2e2338;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px rgba(0,0,0,0.35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10181a; --surface: #182326; --surface-2: #1f2d30; --surface-3: #24373a;
+      --border: #2a3a3e; --text-primary: #e7eef0; --text-secondary: #9bb2b8; --text-tertiary: #6c8288;
+      --accent: #45a99f; --accent-strong: #6bc3ba; --accent-soft: #1e3532;
+      --ok: #4cbd8c; --ok-soft: #1a332a; --warning: #dba653; --warning-soft: #372c1a;
+      --critical: #e2827a; --critical-soft: #3a2320; --annot: #c9a3ec; --annot-soft: #2e2338;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f3f6f7; --surface: #ffffff; --surface-2: #eaf0f1; --surface-3: #dcebe9;
+    --border: #d7e0e2; --text-primary: #17262a; --text-secondary: #58717a; --text-tertiary: #8a9ea5;
+    --accent: #0f5c66; --accent-strong: #0a444c; --accent-soft: #e3f0ee;
+    --ok: #1a7f5a; --ok-soft: #e8f5ef; --warning: #a86400; --warning-soft: #fff2df;
+    --critical: #af2a20; --critical-soft: #fdeae7; --annot: #7a3fb0; --annot-soft: #f2e9fb;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text-primary);
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1280px; margin: 0 auto; padding: 2.75rem 1.5rem 5rem; display: flex; flex-direction: column; gap: 3rem; }
+
+  .masthead { display: flex; flex-direction: column; gap: 0.85rem; }
+  .eyebrow { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--accent); }
+  h1 { margin: 0; font-size: clamp(1.5rem, 2.6vw, 2rem); line-height: 1.2; letter-spacing: -0.01em; text-wrap: balance; max-width: 34ch; }
+  .lede { margin: 0; max-width: 74ch; color: var(--text-secondary); font-size: 1rem; line-height: 1.6; }
+  .lede strong { color: var(--text-primary); }
+  .legend { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-secondary); }
+  .legend .sw { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .legend .sw i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  section { display: flex; flex-direction: column; gap: 0.9rem; }
+  .section-head { display: flex; flex-direction: column; gap: 0.3rem; }
+  .section-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+  h2 { margin: 0; font-size: 1.2rem; letter-spacing: -0.005em; }
+  .section-note { margin: 0; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.55; max-width: 76ch; }
+
+  .scroller { overflow-x: auto; padding-bottom: 0.3rem; }
+
+  /* ── App chrome shared by every screen ─────────────────── */
+  .app {
+    min-width: 1080px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    font-size: 0.78rem;
+  }
+  .stepper {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.6rem 1rem; background: var(--surface-2); border-bottom: 1px solid var(--border);
+  }
+  .stepper .crumb { font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary); padding: 0.2rem 0.55rem; border-radius: 5px; }
+  .stepper .crumb.on { background: var(--accent); color: #fff; }
+  .stepper .crumb.new { background: var(--accent-soft); color: var(--accent-strong); outline: 1.5px dashed var(--accent); outline-offset: -1px; }
+  .stepper .sep { color: var(--text-tertiary); font-size: 0.7rem; }
+  .stepper .period { margin-left: auto; font-size: 0.72rem; color: var(--text-tertiary); }
+
+  .titlebar { padding: 0.75rem 1.1rem 0.5rem; }
+  .titlebar h3 { margin: 0; font-size: 0.95rem; font-weight: 700; }
+  .titlebar p { margin: 0.15rem 0 0; font-size: 0.76rem; color: var(--text-secondary); }
+
+  .tabs { display: flex; gap: 0.35rem; padding: 0 1.1rem; margin-top: 0.4rem; }
+  .tabs span { font-size: 0.74rem; font-weight: 600; padding: 0.35rem 0.7rem; border-radius: 6px 6px 0 0; color: var(--text-secondary); background: var(--surface-2); border: 1px solid var(--border); border-bottom: none; }
+  .tabs span.on { color: var(--accent-strong); background: var(--surface); border-color: var(--accent); border-bottom: 2px solid var(--surface); margin-bottom: -1px; }
+
+  .empty-state {
+    margin: 1rem 1.1rem 1.2rem; padding: 2.1rem 1rem; text-align: center;
+    border: 1.5px dashed var(--border); border-radius: 8px; color: var(--text-tertiary); font-size: 0.8rem;
+  }
+  .empty-state .cta { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.75rem; font-size: 0.78rem; font-weight: 700; color: #fff; background: var(--accent); padding: 0.5rem 1.1rem; border-radius: 6px; }
+
+  /* metrics row */
+  .metrics { display: flex; padding: 0 1.1rem; margin: 0.6rem 0; }
+  .metric { flex: 1; padding: 0.55rem 1rem; border-left: 1px solid var(--border); }
+  .metric:first-child { border-left: none; padding-left: 0; }
+  .metric .lbl { font-size: 0.68rem; color: var(--text-secondary); }
+  .metric .val { font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 0.1rem; }
+  .metric .val.accent { color: var(--accent-strong); }
+  .metric .unit { font-size: 0.66rem; font-weight: 500; color: var(--text-tertiary); margin-left: 0.25rem; }
+
+  /* toolbar */
+  .toolbar { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 1.1rem; background: var(--surface-2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); gap: 1rem; flex-wrap: wrap; }
+  .toolbar .grp { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .btn-mini { font-size: 0.68rem; font-weight: 700; padding: 0.28rem 0.6rem; border-radius: 5px; border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); white-space: nowrap; }
+  .btn-mini.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+  .btn-mini.crit { background: var(--critical-soft); color: var(--critical); border-color: transparent; }
+  .btn-mini.warn { background: var(--warning-soft); color: var(--warning); border-color: transparent; }
+  .btn-mini.accent { border-color: var(--accent); color: var(--accent-strong); }
+  .toolbar .divider { width: 1px; height: 18px; background: var(--border); }
+  .toolbar select.fake { font-size: 0.68rem; padding: 0.25rem 0.4rem; border-radius: 5px; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); }
+  .toolbar .stat { font-size: 0.72rem; color: var(--text-secondary); }
+  .toolbar .stat b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+  /* grid */
+  .grid-wrap { overflow-x: auto; }
+  table.datagrid { width: 100%; border-collapse: collapse; font-size: 0.7rem; min-width: 1040px; }
+  table.datagrid th { text-align: left; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text-tertiary); padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); background: var(--surface-2); white-space: nowrap; }
+  table.datagrid td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); white-space: nowrap; }
+  table.datagrid td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.datagrid tr.hl td { background: var(--accent-soft); }
+  .chip { font-size: 0.6rem; font-weight: 700; padding: 0.08rem 0.45rem; border-radius: 99px; display: inline-block; }
+  .chip.ok { background: var(--ok-soft); color: var(--ok); } .chip.warn { background: var(--warning-soft); color: var(--warning); } .chip.crit { background: var(--critical-soft); color: var(--critical); } .chip.muted { background: var(--surface-2); color: var(--text-tertiary); }
+  .cell-edit { border: 1px dashed var(--accent); border-radius: 4px; padding: 0.1rem 0.35rem; color: var(--accent-strong); font-weight: 600; background: var(--accent-soft); }
+  .row-action { font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 4px; background: var(--accent-soft); color: var(--accent-strong); margin-right: 0.25rem; white-space: nowrap; }
+
+  /* checklist / controls */
+  .controls { display: flex; flex-direction: column; margin: 0 1.1rem 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .control-item { display: flex; gap: 0.55rem; align-items: flex-start; padding: 0.55rem 0.85rem; border-top: 1px solid var(--border); background: var(--surface); }
+  .control-item:first-child { border-top: none; }
+  .control-item .dot { width: 8px; height: 8px; border-radius: 99px; margin-top: 0.3rem; flex-shrink: 0; }
+  .dot.ok { background: var(--ok); } .dot.warn { background: var(--warning); } .dot.crit { background: var(--critical); }
+  .control-item .lbl { font-size: 0.78rem; font-weight: 700; }
+  .control-item .desc { font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.1rem; }
+  .control-item.crit-bg { background: var(--critical-soft); }
+
+  .subtable { margin: 0.5rem 0.85rem 0.7rem; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .subtable table { width: 100%; border-collapse: collapse; font-size: 0.68rem; }
+  .subtable th { background: var(--warning-soft); color: var(--warning); font-weight: 700; text-align: right; padding: 0.3rem 0.55rem; }
+  .subtable th:first-child { text-align: left; }
+  .subtable td { padding: 0.3rem 0.55rem; text-align: right; color: var(--text-secondary); border-top: 1px solid var(--border); }
+  .subtable td:first-child { text-align: left; }
+
+  .anomlist { margin: 0 1.1rem 0.9rem; padding: 0.6rem 0.85rem; background: var(--critical-soft); border-radius: 8px; }
+  .anomlist .hd { font-size: 0.72rem; font-weight: 700; color: var(--critical); margin-bottom: 0.4rem; }
+  .anomlist .row { display: flex; justify-content: space-between; gap: 0.6rem; font-size: 0.72rem; color: var(--critical); padding: 0.18rem 0; }
+  .anomlist .row span:first-child { flex: 1; }
+  .anomlist .row .link { font-size: 0.62rem; font-weight: 700; color: var(--accent-strong); background: var(--accent-soft); padding: 0.08rem 0.4rem; border-radius: 4px; white-space: nowrap; }
+  .anomlist .more { font-size: 0.68rem; color: var(--text-tertiary); margin-top: 0.3rem; }
+
+  .footer { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1.1rem; border-top: 1px solid var(--border); background: var(--surface-2); gap: 1rem; flex-wrap: wrap; margin-top: auto; }
+  .footer .verdict { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; font-weight: 700; color: var(--critical); }
+  .footer .btns { display: flex; gap: 0.5rem; }
+  .btn { font-size: 0.72rem; font-weight: 700; padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); }
+  .btn.primary { background: var(--text-tertiary); color: var(--surface); border: none; opacity: 0.55; }
+
+  /* annotation callouts */
+  .annot { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0 1.1rem 0.9rem; padding: 0.55rem 0.8rem; background: var(--annot-soft); border: 1px solid var(--annot); border-radius: 7px; font-size: 0.74rem; color: var(--text-primary); line-height: 1.5; }
+  .annot b { color: var(--annot); }
+  .annot-tag { flex-shrink: 0; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: #fff; background: var(--annot); border-radius: 4px; padding: 0.12rem 0.4rem; }
+
+  .colnote { margin: 0 1.1rem 0.5rem; font-size: 0.72rem; color: var(--text-tertiary); }
+  .colnote code { background: var(--surface-2); border-radius: 4px; padding: 0.05rem 0.35rem; font-size: 0.68rem; }
+
+  .decisions { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem; }
+  .decision-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.95rem 1.05rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  .decision-card .tag { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
+  .decision-card p { margin: 0; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; }
+  .decision-card p strong { color: var(--text-primary); }
+
+  .footnote { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.9rem 1.05rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text-secondary); font-size: 0.82rem; line-height: 1.55; }
+  .footnote .mark { color: var(--accent); font-weight: 700; }
+  .footnote code { background: var(--surface-2); border-radius: 4px; padding: 0.05rem 0.35rem; }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <span class="eyebrow">TASK-202 · Déclaration TVA — GRF · spec littérale, pas une illustration · 4 écrans (2ᵉ round)</span>
+    <h1>Écran par écran : ce qui doit exister, tel qu'il doit exister</h1>
+    <p class="lede">
+      Chaque libellé de colonne, de bouton et de statut ci-dessous est <strong>repris tel quel du code
+      actuel</strong> (<code>VerifierIntegrerPanel.tsx</code>, <code>DomainGrid.tsx</code>,
+      <code>ReglementsSelection.tsx</code>) — rien n'est un exemple inventé. Les encadrés violets
+      marquent les seuls points qui changent réellement. L'ex-écran unique « Vérifier &amp; Intégrer »
+      est désormais scindé en <strong>③ Vérifier</strong> (consultatif) et <strong>④ Confirmer</strong>
+      (synthèse + validation) — le PO l'a jugé trop compliqué même une fois les doublons retirés.
+    </p>
+    <div class="legend">
+      <span class="sw"><i style="background:var(--annot)"></i> ce qui change (fusion, suppression de doublon, déplacement)</span>
+      <span class="sw"><i style="background:var(--ok)"></i> statut OK</span>
+      <span class="sw"><i style="background:var(--warning)"></i> avertissement / à contrôler</span>
+      <span class="sw"><i style="background:var(--critical)"></i> bloquant</span>
+    </div>
+  </header>
+
+  <!-- ═══════════════════ ÉCRAN 1 ═══════════════════ -->
+  <section>
+    <div class="section-head">
+      <span class="section-label">Écran ① — Sélection</span>
+      <h2>Intégration des règlements</h2>
+      <p class="section-note">Inchangé par TASK-202. Le passage à un écran vide + bouton « Intégrer » avant chargement est traité séparément par <strong>TASK-200</strong> — non redécrit ici.</p>
+    </div>
+    <div class="scroller">
+      <div class="app">
+        <div class="stepper">
+          <span class="crumb on">① Sélection</span><span class="sep">→</span>
+          <span class="crumb">② Factures à déclarer</span><span class="sep">→</span>
+          <span class="crumb">③ Vérifier</span><span class="sep">→</span>
+          <span class="crumb">④ Confirmer</span>
+          <span class="period">Période 01/01/2026 → 31/01/2026</span>
+        </div>
+        <div class="grid-wrap">
+          <table class="datagrid">
+            <thead><tr>
+              <th></th><th>N° Règlement</th><th>Date règlement</th><th>Échéance</th><th>Mode</th>
+              <th>Date règlement (espèces)</th><th>Domaine</th><th>Code tiers</th><th>Intitulé tiers</th>
+              <th>Montant</th><th>Affecté</th><th>Rappr. banque</th><th>Date rapprochement</th><th>Statut</th>
+            </tr></thead>
+            <tbody>
+              <tr><td>☑</td><td>RC26040006</td><td>27/01/2026</td><td>27/01/2026</td><td>Chèque</td><td>—</td><td><span class="chip ok">Encaissement</span></td><td>3421HAMRIMAR</td><td>STE HAMRI MARBRE</td><td class="num">400 000,00 MAD</td><td>1 facture</td><td>Oui</td><td>27/01/2026</td><td><span class="chip ok">Éligible</span></td></tr>
+              <tr><td>☑</td><td>RF26020007</td><td>19/01/2026</td><td>19/01/2026</td><td>Chèque</td><td>—</td><td><span class="chip muted">Décaissement</span></td><td>4411SEFAMAR</td><td>SEFAMAR S.A</td><td class="num">85 850,00 MAD</td><td>2 factures</td><td>Oui</td><td>19/01/2026</td><td><span class="chip ok">Éligible</span></td></tr>
+              <tr><td>☐</td><td>RF26020001</td><td>27/01/2026</td><td>27/01/2026</td><td>Virement</td><td>—</td><td><span class="chip muted">Décaissement</span></td><td>4411CL</td><td>CAM LEASING</td><td class="num">61 864,57 MAD</td><td>—</td><td>Non</td><td>—</td><td><span class="chip warn">À contrôler</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="footer"><span class="toolbar-stat">Règlements : <b>35</b> · Sélectionnés : <b>35</b></span><span class="toolbar-stat">Total sélectionné : 561 578,68 MAD</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ ÉCRAN 2 ═══════════════════ -->
+  <section>
+    <div class="section-head">
+      <span class="section-label">Écran ② — nouveau, persistant</span>
+      <h2>Factures à déclarer</h2>
+      <p class="section-note">
+        Fusion de deux vues aujourd'hui séparées et cachées derrière des boutons : le drill
+        <code>kind: 'codeActivite'</code> (colonnes <code>codeActiviteColumns</code>, code activité éditable)
+        et le drill <code>kind: 'toutes'</code> (<code>showResynchroniserAction</code>, colonne Actions).
+        Même composant <code>DomainGrid</code>, un seul jeu de colonnes, affiché en permanence.
+      </p>
+    </div>
+    <div class="scroller">
+      <div class="app">
+        <div class="stepper">
+          <span class="crumb">① Sélection</span><span class="sep">→</span>
+          <span class="crumb new">② Factures à déclarer</span><span class="sep">→</span>
+          <span class="crumb">③ Vérifier</span><span class="sep">→</span>
+          <span class="crumb">④ Confirmer</span>
+          <span class="period">Période 01/01/2026 → 31/01/2026</span>
+        </div>
+        <div class="tabs"><span class="on">TVA Déductible (Achats)</span><span>TVA Collective (Ventes)</span></div>
+
+        <div class="annot">
+          <span class="annot-tag">Fusion</span>
+          <span>Colonnes réunies : <b>N° Facture, Tiers, Origine, Montant HT, Taux TVA, Montant TTC, Source, Code activité (éditable), Statut, Motif Écartement</b> + colonne <b>Actions</b> (Resynchroniser / Saisir TVA). Toutes optionnelles via le sélecteur de colonnes existant (<code>ColumnSelector</code>) — ne pas forcer leur affichage simultanée si ça surcharge, mais ne retirer aucune colonne de la liste disponible.</span>
+        </div>
+
+        <div class="annot">
+          <span class="annot-tag">Statut binaire</span>
+          <span>« Exclure » et « Reporter » <b>retirés</b> — ce n'est pas une nouvelle règle métier : le contrôle existe déjà en écran ①. Pour reporter ou écarter une facture, il suffit de <b>ne pas cocher son règlement</b> sur l'écran ① Sélection ; la ligne n'apparaît alors jamais comme candidate ici. Statut restant : <code>Proposée</code> (candidate) ou <code>Intégrée</code> uniquement.</span>
+        </div>
+
+        <div class="toolbar">
+          <div class="grp">
+            <span class="stat">Sélectionnées : <b>3</b></span>
+            <div class="divider"></div>
+            <button class="btn-mini ok">☑ Intégrer</button>
+            <button class="btn-mini">Réinitialiser</button>
+            <button class="btn-mini accent">↻ Resynchroniser la sélection</button>
+            <div class="divider"></div>
+            <select class="fake"><option>Affecter un code activité…</option></select>
+            <button class="btn-mini">Affecter</button>
+          </div>
+          <div class="grp">
+            <span class="stat">Total résultats : <b>412</b></span>
+            <span class="stat" style="text-decoration:underline;color:var(--accent)">Effacer filtres</span>
+            <button class="btn-mini">⚙ Colonnes</button>
+          </div>
+        </div>
+
+        <div class="grid-wrap">
+          <table class="datagrid">
+            <thead><tr>
+              <th></th><th>N° Facture</th><th>Tiers</th><th>Origine</th><th class="num">Montant HT</th><th>Taux TVA</th><th class="num">Montant TTC</th><th>Source</th><th>Code activité</th><th>Statut</th><th>Motif Écartement</th><th>Actions</th>
+            </tr></thead>
+            <tbody>
+              <tr class="hl"><td>☑</td><td>65126</td><td>BOUZIDI HLG</td><td>Sage / OM</td><td class="num">12 400,00</td><td>20 %</td><td class="num">14 880,00</td><td>Sage</td><td><span class="cell-edit">— sélectionner —</span></td><td><span class="chip crit">Proposée</span></td><td>Tiers sans ICE.</td><td><span class="row-action">Resynchroniser</span></td></tr>
+              <tr><td>☐</td><td>8226</td><td>ADILOS RENT CAR</td><td>Sage / OM</td><td class="num">6 500,00</td><td>20 %</td><td class="num">7 800,00</td><td>Sage</td><td><span class="cell-edit">— sélectionner —</span></td><td><span class="chip crit">Proposée</span></td><td>Tiers sans ICE.</td><td><span class="row-action">Resynchroniser</span></td></tr>
+              <tr><td>☐</td><td>SI-441WNXO</td><td>RELENTLESS TRANSPORT</td><td>Solde initial</td><td class="num">—</td><td>—</td><td class="num">18 200,00</td><td>Solde initial</td><td>710 — Transport</td><td><span class="chip crit">Proposée</span></td><td>Solde initial : taux et montant de TVA à saisir manuellement pour intégrer cette ligne à la déclaration (montant connu en TTC seul).</td><td><span class="row-action">Saisir TVA</span></td></tr>
+              <tr><td>☑</td><td>2626ABC39</td><td>SEFAMAR S.A</td><td>FGR</td><td class="num">71 500,00</td><td>10 %</td><td class="num">78 650,00</td><td>FGR</td><td>410 — Négoce</td><td><span class="chip ok">Intégrée</span></td><td>—</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="footer"><span class="stat">412 lignes · 3 sélectionnées · filtres actifs sur aucune colonne</span></div>
+      </div>
+    </div>
+    <div class="colnote"><code>statutLigne</code> devient binaire : <code>Proposée</code> (candidate, son règlement est cochée en écran ①) ou <code>Intégrée</code>. <code>Exclue</code>/<code>Reportée</code> retirés partout — plus de granularité de décision en dessous du règlement.</div>
+  </section>
+
+  <!-- ═══════════════════ ÉCRAN 3 ═══════════════════ -->
+  <section>
+    <div class="section-head">
+      <span class="section-label">Écran ③ — nouveau, scindé de l'ancien écran ②</span>
+      <h2>Vérifier</h2>
+      <p class="section-note">
+        Contrôles, anomalies, diagnostic — <b>purement consultatif</b>. Ajouté en 2ᵉ round d'arbitrage
+        (06/08/2026) : le PO a jugé qu'un seul écran mêlant contrôles + récap + confirmation restait
+        « très compliqué » même sans doublons — mieux vaut une étape de plus que la surcharger.
+        Aucun bouton de confirmation ici.
+      </p>
+    </div>
+    <div class="scroller">
+      <div class="app">
+        <div class="stepper">
+          <span class="crumb">① Sélection</span><span class="sep">→</span>
+          <span class="crumb">② Factures à déclarer</span><span class="sep">→</span>
+          <span class="crumb new">③ Vérifier</span><span class="sep">→</span>
+          <span class="crumb">④ Confirmer</span>
+          <span class="period">Période 01/01/2026 → 31/01/2026</span>
+        </div>
+        <div class="tabs"><span class="on">TVA Déductible (Achats)</span><span>TVA Collective (Ventes)</span></div>
+
+        <div class="titlebar">
+          <h3>Étape 3 — Vérifier</h3>
+          <p>Contrôler les anomalies et l'équilibre des totaux avant de passer à la confirmation.</p>
+        </div>
+
+        <div class="annot">
+          <span class="annot-tag">Contenu de ③</span>
+          <span>Tout ce qui est <b>contrôle/diagnostic</b> : <code>ChecklistCard</code>, <code>RecapSourceTable</code>, lignes non valorisées, anomalies bloquantes, avertissements. <b>Aucune des 4 cellules RecapCard ici</b> — ce sont des chiffres de synthèse, pas des contrôles, ils vivent en ④.</span>
+        </div>
+        <div style="margin:0 1.1rem;padding:0.55rem 0.85rem;background:var(--critical-soft);border-radius:7px;font-size:0.82rem;font-weight:700;color:var(--critical)">✕ Bloqué — 25 anomalies bloquantes, voir ci-dessous</div>
+
+        <div class="controls">
+          <div class="control-item"><span class="dot ok"></span><div><div class="lbl">Affectations valides</div><div class="desc">15 affectation(s) en attente ou intégrée(s)</div></div></div>
+          <div class="control-item crit-bg"><span class="dot crit"></span><div><div class="lbl">Cohérence des totaux déclarés</div><div class="desc">Écart détecté : -3 541 304,26 MAD (somme des TTC − somme des HT+TVA)</div></div></div>
+          <div class="control-item crit-bg"><span class="dot crit"></span><div><div class="lbl">Absence d'anomalies bloquantes</div><div class="desc" style="text-decoration:underline">voir bandeau ci-dessus — plus de recomptage ici</div></div></div>
+        </div>
+
+        <div class="subtable">
+          <table>
+            <thead><tr><th>Montants des lignes à l'origine de l'écart</th><th>HT</th><th>TVA</th><th>TTC</th></tr></thead>
+            <tbody><tr><td>Lignes incohérentes (TTC ≠ HT+TVA)</td><td>576 673,57</td><td>0,00</td><td>0,00</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="colnote">8 ligne(s) non valorisée(s) — détail (colonnes réelles : <code>Facture</code>, <code>Tiers</code>, <code>Statut ligne</code>, <code>Motif</code>, action <code>Diagnostiquer</code>) :</div>
+        <div class="grid-wrap" style="margin:0 1.1rem 0.9rem">
+          <table class="datagrid">
+            <thead><tr><th>Facture</th><th>Tiers</th><th>Statut ligne</th><th>Motif</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>65126</td><td>BOUZIDI HLG</td><td><span class="chip crit">Proposée</span></td><td>Tiers sans ICE.</td><td><span class="row-action">🔍 Diagnostiquer</span></td></tr>
+              <tr><td>SI-441WNXO</td><td>RELENTLESS TRANSPORT</td><td><span class="chip crit">Proposée</span></td><td>Solde initial : taux et montant de TVA à saisir manuellement…</td><td><span class="row-action">🔍 Diagnostiquer</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="anomlist">
+          <div class="hd">✕ Anomalies bloquantes</div>
+          <div class="row"><span>• Ligne intégrée avec tiers sans ICE. (65126)</span><span class="link">↗ Voir lignes</span></div>
+          <div class="row"><span>• TVA non calculée pour la facture 8226 (règlement RF260070) — elle ne sera pas déclarée : Tiers sans ICE. (8226)</span><span class="link">↗ Voir lignes</span></div>
+          <div class="more">23 autres anomalies bloquantes — même format, mêmes deux colonnes (message + « Voir lignes »).</div>
+        </div>
+
+        <div class="annot">
+          <span class="annot-tag">Navigation changée</span>
+          <span>« Voir lignes » et le clic sur une ligne du tableau d'écart <b>naviguent vers l'écran ②</b> avec le filtre de l'anomalie déjà appliqué — ils ne remplacent plus cet écran sur place (fin du mécanisme <code>drillFiltre</code> qui faisait disparaître tout le récap).</span>
+        </div>
+
+        <div class="footer">
+          <span class="verdict">✕ 25 contrôle(s) bloquant(s) — corrigez avant l'étape ④</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ ÉCRAN 4 ═══════════════════ -->
+  <section>
+    <div class="section-head">
+      <span class="section-label">Écran ④ — nouveau, scindé de l'ancien écran ②</span>
+      <h2>Confirmer</h2>
+      <p class="section-note">
+        Récap chiffré final + bouton de confirmation. Court et propre : c'est la dernière chose que
+        le comptable voit avant de figer la déclaration, il ne doit pas revoir la liste des anomalies
+        en détail ici — juste savoir si c'est bon ou pas, et où aller si ça ne l'est pas.
+      </p>
+    </div>
+    <div class="scroller">
+      <div class="app">
+        <div class="stepper">
+          <span class="crumb">① Sélection</span><span class="sep">→</span>
+          <span class="crumb">② Factures à déclarer</span><span class="sep">→</span>
+          <span class="crumb">③ Vérifier</span><span class="sep">→</span>
+          <span class="crumb new on">④ Confirmer</span>
+          <span class="period">Période 01/01/2026 → 31/01/2026</span>
+        </div>
+        <div class="tabs"><span class="on">TVA Déductible (Achats)</span><span>TVA Collective (Ventes)</span></div>
+
+        <div class="titlebar">
+          <h3>Étape 4 — Confirmer</h3>
+          <p>Vérifier les totaux par taux TVA puis confirmer l'intégration.</p>
+        </div>
+
+        <div class="annot">
+          <span class="annot-tag">Blocage renvoyé vers ③, pas re-détaillé ici</span>
+          <span>Si l'étape ③ signale des anomalies bloquantes, le bouton « Confirmer intégration » reste désactivé et un lien renvoie vers ③ — <b>aucune liste d'anomalies n'est répétée sur cet écran</b>.</span>
+        </div>
+        <div style="margin:0 1.1rem;padding:0.55rem 0.85rem;background:var(--critical-soft);border-radius:7px;font-size:0.82rem;font-weight:700;color:var(--critical);display:flex;justify-content:space-between;align-items:center;gap:0.6rem">
+          <span>✕ Bloqué par l'étape ③ — 25 anomalie(s) à corriger</span>
+          <span class="row-action">↗ Aller à l'étape ③</span>
+        </div>
+
+        <div class="metrics">
+          <div class="metric"><div class="lbl">Règlements sélectionnés</div><div class="val">7 <span class="unit">règlement(s)</span></div></div>
+          <div class="metric"><div class="lbl">Lignes valorisées</div><div class="val">7 <span class="unit">ligne(s)</span></div></div>
+          <div class="metric"><div class="lbl">Total TVA à intégrer</div><div class="val accent">52 078,14 MAD</div></div>
+          <div class="metric"><div class="lbl">Lignes déjà figées en base</div><div class="val">0 <span class="unit">ligne(s)</span></div></div>
+        </div>
+
+        <div class="annot">
+          <span class="annot-tag">Suppression doublon</span>
+          <span>Tableau « Sous-totaux par taux TVA » (repliable) : garder les lignes par taux, <b>retirer la ligne « Σ Total »</b> — ce total est déjà la cellule « Total TVA à intégrer » ci-dessus.</span>
+        </div>
+        <div class="subtable">
+          <table>
+            <thead><tr><th>Taux</th><th>Base HT</th><th>TVA</th></tr></thead>
+            <tbody>
+              <tr><td>20 %</td><td>19 300,00</td><td>3 860,00</td></tr>
+              <tr><td>10 %</td><td>481 890,70</td><td>48 218,14</td></tr>
+              <tr style="opacity:0.35;text-decoration:line-through"><td>Σ Total (retiré — doublon)</td><td>501 190,70</td><td>52 078,14</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="annot">
+          <span class="annot-tag">Boutons retirés d'ici</span>
+          <span>« Codes activité » et « Toutes les lignes / Resynchroniser » ne reviennent pas sur cet écran — leur contenu vit en permanence sur l'écran ②. Ne restent ici que : Export, Confirmer.</span>
+        </div>
+        <div class="footer">
+          <span class="verdict">✕ 25 contrôle(s) bloquant(s) — intégration impossible</span>
+          <div class="btns">
+            <button class="btn">⬇ Export de contrôle (Excel)</button>
+            <button class="btn primary">🔒 Confirmer intégration</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="section-label">Récapitulatif</span>
+      <h2>Ce qui bouge, ce qui ne bouge pas</h2>
+    </div>
+    <div class="decisions">
+      <div class="decision-card"><span class="tag">Écran ①</span><p>Aucun changement dans cette TASK (le passage à vide + bouton « Intégrer » est TASK-200).</p></div>
+      <div class="decision-card"><span class="tag">Écran ②</span><p><strong>Nouveau, persistant.</strong> Fusion des colonnes <code>codeActiviteColumns</code> + <code>showResynchroniserAction</code> en une seule grille. Statut de ligne binaire (<code>Proposée</code>/<code>Intégrée</code>) — « Exclure »/« Reporter » retirés, redondants avec le fait de ne pas cocher le règlement en écran ①.</p></div>
+      <div class="decision-card"><span class="tag">Écran ③ (nouveau)</span><p><strong>Vérifier — consultatif uniquement.</strong> Contrôles, anomalies, diagnostic. Aucun bouton de confirmation. Ajouté au 2ᵉ round d'arbitrage pour ne pas surcharger un seul écran.</p></div>
+      <div class="decision-card"><span class="tag">Écran ④ (nouveau)</span><p><strong>Confirmer — synthèse uniquement.</strong> 4 chiffres dédupliqués + export + bouton Confirmer, désactivé avec renvoi explicite vers ③ en cas de blocage.</p></div>
+    </div>
+  </section>
+
+  <div class="footnote">
+    <span class="mark">→</span>
+    <span>Spec de référence pour le développement : <code>TASKS/TASK-202-refonte-navigation-ecran-factures-recap.md</code>. Toute colonne, statut ou libellé non présent dans cette maquette n'existe pas dans le périmètre de TASK-202 — signaler au PO plutôt que d'inventer.</span>
+  </div>
+
+</div>

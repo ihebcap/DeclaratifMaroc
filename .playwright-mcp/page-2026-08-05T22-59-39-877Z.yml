@@ -1,0 +1,370 @@
+- generic [ref=f5e7]:
+  - complementary [ref=f5e8]:
+    - generic [ref=f5e9] [cursor=pointer]:
+      - generic [ref=f5e11]:
+        - img "DM" [ref=f5e17]
+        - generic [ref=f5e18]: TVA
+      - generic [ref=f5e19]: NEW_EMA DISTRIBUTION
+    - generic [ref=f5e20]:
+      - generic [ref=f5e21]:
+        - generic [ref=f5e22]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f5e23] [cursor=pointer]
+        - generic "Factures" [ref=f5e27] [cursor=pointer]
+      - generic [ref=f5e32]:
+        - generic [ref=f5e33]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f5e34] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f5e40] [cursor=pointer]
+    - generic [ref=f5e46]:
+      - generic [ref=f5e47]: Admin Admin
+      - button "Déconnexion" [ref=f5e48] [cursor=pointer]
+  - main [ref=f5e53]:
+    - generic [ref=f5e102]:
+      - generic [ref=f5e103]:
+        - generic [ref=f5e104]:
+          - button "Retour" [ref=f5e105] [cursor=pointer]
+          - generic [ref=f5e108]: TVA1-2026-02
+        - generic [ref=f5e109]:
+          - button "1. Sélection" [ref=f5e110] [cursor=pointer]
+          - button "2. Vérifier & Intégrer" [ref=f5e114] [cursor=pointer]
+          - button "3. Déclaration" [disabled] [ref=f5e118]
+        - generic [ref=f5e123]:
+          - generic [ref=f5e124]: Période 01/02/2026 → 28/02/2026
+          - generic [ref=f5e125]: En cours
+      - generic [ref=f5e126]:
+        - generic [ref=f5e128]:
+          - generic [ref=f5e130]:
+            - generic [ref=f5e131]:
+              - checkbox "Sélectionner toutes les lignes visibles (éligibles/à contrôler)" [checked] [ref=f5e133]
+              - generic [ref=f5e134]:
+                - text: N° Règlement
+                - button "Filtrer" [ref=f5e137] [cursor=pointer]
+              - generic [ref=f5e140] [cursor=pointer]:
+                - text: Date
+                - generic [ref=f5e141]: ▼
+              - generic [ref=f5e142]:
+                - text: Échéance
+                - button "Filtrer" [ref=f5e145] [cursor=pointer]
+              - generic [ref=f5e148]:
+                - text: Mode
+                - button "Filtrer" [ref=f5e151] [cursor=pointer]
+              - generic [ref=f5e154]:
+                - text: Domaine
+                - button "Filtrer" [ref=f5e157] [cursor=pointer]
+              - generic [ref=f5e160]:
+                - text: Tiers
+                - button "Filtrer" [ref=f5e163] [cursor=pointer]
+              - generic [ref=f5e166] [cursor=pointer]: Montant
+              - generic [ref=f5e167]: Affecté
+              - generic [ref=f5e168]:
+                - text: Rappr. banque
+                - button "Filtrer" [ref=f5e171] [cursor=pointer]
+              - generic [ref=f5e174]:
+                - text: Date rappro
+                - button "Filtrer" [ref=f5e177] [cursor=pointer]
+              - generic [ref=f5e180]:
+                - text: Statut
+                - button "Filtrer" [ref=f5e183] [cursor=pointer]
+            - generic [ref=f5e186]:
+              - generic [ref=f5e187] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e189]
+                - generic [ref=f5e190]: RF26020040
+                - generic [ref=f5e191]: 30/06/2026
+                - generic [ref=f5e192]: 16/02/2026
+                - generic [ref=f5e193]: Chèque
+                - generic [ref=f5e194]: Décaissement
+                - generic [ref=f5e196]: TEMPO FOODS
+                - generic [ref=f5e197]: 8 826,55 MAD
+                - generic [ref=f5e198]: 1 facture
+                - generic [ref=f5e199]: Oui
+                - generic [ref=f5e201]: 28/02/2026
+                - generic [ref=f5e202]: Éligible
+              - generic [ref=f5e207] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e209]
+                - generic [ref=f5e210]: RF26020002
+                - generic [ref=f5e211]: 12/06/2026
+                - generic [ref=f5e212]: 02/02/2026
+                - generic [ref=f5e213]: Chèque
+                - generic [ref=f5e214]: Décaissement
+                - generic [ref=f5e216]: SOCALIM SARL
+                - generic [ref=f5e217]: 1 280,00 MAD
+                - generic [ref=f5e218]: 1 facture
+                - generic [ref=f5e219]: Oui
+                - generic [ref=f5e221]: 28/02/2026
+                - generic [ref=f5e222]: Éligible
+              - generic [ref=f5e227] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e229]
+                - generic [ref=f5e230]: RF26020003
+                - generic [ref=f5e231]: 12/06/2026
+                - generic [ref=f5e232]: 02/02/2026
+                - generic [ref=f5e233]: Virement
+                - generic [ref=f5e234]: Décaissement
+                - generic [ref=f5e236]: MARJANE
+                - generic [ref=f5e237]: 1 514,45 MAD
+                - generic [ref=f5e238]: 1 facture
+                - generic [ref=f5e239]: Oui
+                - generic [ref=f5e241]: 28/02/2026
+                - generic [ref=f5e242]: Éligible
+              - generic [ref=f5e247] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e249]
+                - generic [ref=f5e250]: RF26020005
+                - generic [ref=f5e251]: 12/06/2026
+                - generic [ref=f5e252]: 30/01/2026
+                - generic [ref=f5e253]: Virement
+                - generic [ref=f5e254]: Décaissement
+                - generic [ref=f5e256]: MARJANE
+                - generic [ref=f5e257]: 180,00 MAD
+                - generic [ref=f5e258]: 1 facture
+                - generic [ref=f5e259]: Oui
+                - generic [ref=f5e261]: 28/02/2026
+                - generic [ref=f5e262]: Éligible
+              - generic [ref=f5e267] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e269]
+                - generic [ref=f5e270]: RF26020008
+                - generic [ref=f5e271]: 12/06/2026
+                - generic [ref=f5e272]: 05/02/2026
+                - generic [ref=f5e273]: Virement
+                - generic [ref=f5e274]: Décaissement
+                - generic [ref=f5e276]: MARJANE
+                - generic [ref=f5e277]: 707,05 MAD
+                - generic [ref=f5e278]: 1 facture
+                - generic [ref=f5e279]: Oui
+                - generic [ref=f5e281]: 28/02/2026
+                - generic [ref=f5e282]: Éligible
+              - generic [ref=f5e287] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e289]
+                - generic [ref=f5e290]: RF26020009
+                - generic [ref=f5e291]: 12/06/2026
+                - generic [ref=f5e292]: 07/02/2026
+                - generic [ref=f5e293]: Virement
+                - generic [ref=f5e294]: Décaissement
+                - generic [ref=f5e296]: BIM STORES
+                - generic [ref=f5e297]: 239,60 MAD
+                - generic [ref=f5e298]: 1 facture
+                - generic [ref=f5e299]: Oui
+                - generic [ref=f5e301]: 28/02/2026
+                - generic [ref=f5e302]: Éligible
+              - generic [ref=f5e307] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e309]
+                - generic [ref=f5e310]: RF26020011
+                - generic [ref=f5e311]: 12/06/2026
+                - generic [ref=f5e312]: 10/02/2026
+                - generic [ref=f5e313]: Virement
+                - generic [ref=f5e314]: Décaissement
+                - generic [ref=f5e316]: MARJANE
+                - generic [ref=f5e317]: 495,40 MAD
+                - generic [ref=f5e318]: 1 facture
+                - generic [ref=f5e319]: Oui
+                - generic [ref=f5e321]: 28/02/2026
+                - generic [ref=f5e322]: Éligible
+              - generic [ref=f5e327] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e329]
+                - generic [ref=f5e330]: RF26020012
+                - generic [ref=f5e331]: 12/06/2026
+                - generic [ref=f5e332]: 10/02/2026
+                - generic [ref=f5e333]: Virement
+                - generic [ref=f5e334]: Décaissement
+                - generic [ref=f5e336]: SRM-CS
+                - generic [ref=f5e337]: 1 084,17 MAD
+                - generic [ref=f5e338]: 2 factures
+                - generic [ref=f5e339]: Oui
+                - generic [ref=f5e341]: 28/02/2026
+                - generic [ref=f5e342]: Éligible
+              - generic [ref=f5e347] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e349]
+                - generic [ref=f5e350]: RF26020013
+                - generic [ref=f5e351]: 12/06/2026
+                - generic [ref=f5e352]: 23/02/2026
+                - generic [ref=f5e353]: Chèque
+                - generic [ref=f5e354]: Décaissement
+                - generic [ref=f5e356]: BEST FOOD DISTRIBUTION
+                - generic [ref=f5e357]: 9 600,00 MAD
+                - generic [ref=f5e358]: 1 facture
+                - generic [ref=f5e359]: Oui
+                - generic [ref=f5e361]: 28/02/2026
+                - generic [ref=f5e362]: Éligible
+              - generic [ref=f5e367] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e369]
+                - generic [ref=f5e370]: RF26020015
+                - generic [ref=f5e371]: 12/06/2026
+                - generic [ref=f5e372]: 20/02/2026
+                - generic [ref=f5e373]: Chèque
+                - generic [ref=f5e374]: Décaissement
+                - generic [ref=f5e376]: TEMPO FOODS
+                - generic [ref=f5e377]: 16 552,00 MAD
+                - generic [ref=f5e378]: 1 facture
+                - generic [ref=f5e379]: Oui
+                - generic [ref=f5e381]: 28/02/2026
+                - generic [ref=f5e382]: Éligible
+              - generic [ref=f5e387] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e389]
+                - generic [ref=f5e390]: RF26020018
+                - generic [ref=f5e391]: 12/06/2026
+                - generic [ref=f5e392]: 17/02/2026
+                - generic [ref=f5e393]: Chèque
+                - generic [ref=f5e394]: Décaissement
+                - generic [ref=f5e396]: LES EAUX MINERA D OULMES
+                - generic [ref=f5e397]: 14 638,21 MAD
+                - generic [ref=f5e398]: 1 facture
+                - generic [ref=f5e399]: Oui
+                - generic [ref=f5e401]: 28/02/2026
+                - generic [ref=f5e402]: Éligible
+              - generic [ref=f5e407] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e409]
+                - generic [ref=f5e410]: RF26020019
+                - generic [ref=f5e411]: 12/06/2026
+                - generic [ref=f5e412]: 17/02/2026
+                - generic [ref=f5e413]: Chèque
+                - generic [ref=f5e414]: Décaissement
+                - generic [ref=f5e416]: DISTRA S.A
+                - generic [ref=f5e417]: 3 321,00 MAD
+                - generic [ref=f5e418]: 1 facture
+                - generic [ref=f5e419]: Oui
+                - generic [ref=f5e421]: 28/02/2026
+                - generic [ref=f5e422]: Éligible
+              - generic [ref=f5e427] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e429]
+                - generic [ref=f5e430]: RF26020022
+                - generic [ref=f5e431]: 12/06/2026
+                - generic [ref=f5e432]: 20/02/2026
+                - generic [ref=f5e433]: Chèque
+                - generic [ref=f5e434]: Décaissement
+                - generic [ref=f5e436]: HOUSSAM OUNASSI SARL
+                - generic [ref=f5e437]: 16 620,00 MAD
+                - generic [ref=f5e438]: 2 factures
+                - generic [ref=f5e439]: Oui
+                - generic [ref=f5e441]: 28/02/2026
+                - generic [ref=f5e442]: Éligible
+              - generic [ref=f5e447] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e449]
+                - generic [ref=f5e450]: RF26020023
+                - generic [ref=f5e451]: 12/06/2026
+                - generic [ref=f5e452]: 27/02/2026
+                - generic [ref=f5e453]: Chèque
+                - generic [ref=f5e454]: Décaissement
+                - generic [ref=f5e456]: DISLOG GROUP
+                - generic [ref=f5e457]: 10 114,14 MAD
+                - generic [ref=f5e458]: 1 facture
+                - generic [ref=f5e459]: Oui
+                - generic [ref=f5e461]: 28/02/2026
+                - generic [ref=f5e462]: Éligible
+              - generic [ref=f5e467] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e469]
+                - generic [ref=f5e470]: RF26020024
+                - generic [ref=f5e471]: 12/06/2026
+                - generic [ref=f5e472]: 13/02/2026
+                - generic [ref=f5e473]: Chèque
+                - generic [ref=f5e474]: Décaissement
+                - generic [ref=f5e476]: H&R COMPANY
+                - generic [ref=f5e477]: 9 495,00 MAD
+                - generic [ref=f5e478]: 1 facture
+                - generic [ref=f5e479]: Oui
+                - generic [ref=f5e481]: 28/02/2026
+                - generic [ref=f5e482]: Éligible
+              - generic [ref=f5e487] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e489]
+                - generic [ref=f5e490]: RF26020025
+                - generic [ref=f5e491]: 12/06/2026
+                - generic [ref=f5e492]: 10/02/2026
+                - generic [ref=f5e493]: Virement
+                - generic [ref=f5e494]: Décaissement
+                - generic [ref=f5e496]: INWI
+                - generic [ref=f5e497]: 200,40 MAD
+                - generic [ref=f5e498]: 1 facture
+                - generic [ref=f5e499]: Oui
+                - generic [ref=f5e501]: 28/02/2026
+                - generic [ref=f5e502]: Éligible
+              - generic [ref=f5e507] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e509]
+                - generic [ref=f5e510]: RF26020026
+                - generic [ref=f5e511]: 12/06/2026
+                - generic [ref=f5e512]: 10/02/2026
+                - generic [ref=f5e513]: Virement
+                - generic [ref=f5e514]: Décaissement
+                - generic [ref=f5e516]: INWI
+                - generic [ref=f5e517]: 646,32 MAD
+                - generic [ref=f5e518]: 1 facture
+                - generic [ref=f5e519]: Oui
+                - generic [ref=f5e521]: 28/02/2026
+                - generic [ref=f5e522]: Éligible
+              - generic [ref=f5e527] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e529]
+                - generic [ref=f5e530]: RF26020027
+                - generic [ref=f5e531]: 12/06/2026
+                - generic [ref=f5e532]: 10/02/2026
+                - generic [ref=f5e533]: Virement
+                - generic [ref=f5e534]: Décaissement
+                - generic [ref=f5e536]: INWI
+                - generic [ref=f5e537]: 451,80 MAD
+                - generic [ref=f5e538]: 1 facture
+                - generic [ref=f5e539]: Oui
+                - generic [ref=f5e541]: 28/02/2026
+                - generic [ref=f5e542]: Éligible
+              - generic [ref=f5e547] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e549]
+                - generic [ref=f5e550]: RF26020028
+                - generic [ref=f5e551]: 12/06/2026
+                - generic [ref=f5e552]: 12/02/2026
+                - generic [ref=f5e553]: Virement
+                - generic [ref=f5e554]: Décaissement
+                - generic [ref=f5e556]: MARJANE
+                - generic [ref=f5e557]: 664,70 MAD
+                - generic [ref=f5e558]: 1 facture
+                - generic [ref=f5e559]: Oui
+                - generic [ref=f5e561]: 28/02/2026
+                - generic [ref=f5e562]: Éligible
+              - generic [ref=f5e567] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e569]
+                - generic [ref=f5e570]: RF26020029
+                - generic [ref=f5e571]: 12/06/2026
+                - generic [ref=f5e572]: 13/02/2026
+                - generic [ref=f5e573]: Virement
+                - generic [ref=f5e574]: Décaissement
+                - generic [ref=f5e576]: MARJANE
+                - generic [ref=f5e577]: 525,80 MAD
+                - generic [ref=f5e578]: 1 facture
+                - generic [ref=f5e579]: Oui
+                - generic [ref=f5e581]: 28/02/2026
+                - generic [ref=f5e582]: Éligible
+              - generic [ref=f5e587] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e589]
+                - generic [ref=f5e590]: RF26020034
+                - generic [ref=f5e591]: 12/06/2026
+                - generic [ref=f5e592]: 17/02/2026
+                - generic [ref=f5e593]: Chèque
+                - generic [ref=f5e594]: Décaissement
+                - generic [ref=f5e596]: OVOTEC
+                - generic [ref=f5e597]: 1 010,49 MAD
+                - generic [ref=f5e598]: 4 factures
+                - generic [ref=f5e599]: Oui
+                - generic [ref=f5e601]: 28/02/2026
+                - generic [ref=f5e602]: Éligible
+              - generic [ref=f5e607] [cursor=pointer]:
+                - checkbox [checked] [ref=f5e609]
+                - generic [ref=f5e610]: RF26020036
+                - generic [ref=f5e611]: 12/06/2026
+                - generic [ref=f5e612]: 30/01/2026
+                - generic [ref=f5e613]: Chèque
+                - generic [ref=f5e614]: Décaissement
+                - generic [ref=f5e616]: GASTRO MIXTE
+                - generic [ref=f5e617]: 27 723,67 MAD
+                - generic [ref=f5e618]: 3 factures
+                - generic [ref=f5e619]: Oui
+                - generic [ref=f5e621]: 28/02/2026
+                - generic [ref=f5e622]: Éligible
+          - generic [ref=f5e627]:
+            - generic [ref=f5e628]:
+              - generic [ref=f5e629]:
+                - text: "Règlements :"
+                - strong [ref=f5e630]: "127"
+              - generic [ref=f5e631]:
+                - text: "Sélectionnés :"
+                - strong [ref=f5e632]: "126"
+            - generic [ref=f5e633]:
+              - generic [ref=f5e634]: "Total sélectionné : 2 098 391,45 MAD"
+              - button "Export de contrôle (Excel)" [ref=f5e635] [cursor=pointer]
+              - button "Colonnes" [ref=f5e640] [cursor=pointer]
+        - generic [ref=f5e643]:
+          - generic [ref=f5e644]: 126 règlements sélectionnés · Total 2 098 391,45 MAD
+          - generic [ref=f5e645]:
+            - button "Détail des lignes" [ref=f5e646] [cursor=pointer]
+            - button "Passer au calcul" [ref=f5e647] [cursor=pointer]

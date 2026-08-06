@@ -1,4 +1,4 @@
-# Publie une variante de SageTaxReader.Console par version Sage supportée (TASK-101).
+﻿# Publie une variante de SageTaxReader.Console par version Sage supportée (TASK-101).
 # Chaque variante référence son propre Interop.Objets100cLib.dll (SageTaxReader\libs\<version>\,
 # via la propriété MSBuild SageInteropVersion) et produit un exécutable distinct dans
 # deploy\workers\<version>\ — un déploiement client ne copie que le dossier de SA version.

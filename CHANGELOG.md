@@ -1,5 +1,78 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-08-05 (revue architecte — code taxe TA_Code & référence frais bancaire)
+
+### TASK-199 — Frais bancaire : colonne Référence vide, utiliser RT_PREVISIONNELLE.MV_PieceBq (APPROUVÉE)
+- **Module :** back (`Declaration.Selection/SelectionExpliqueeService.cs`, `Declaration.Orchestration.Tests/Task199FraisBancairesReferenceTests.cs`)
+- **Impact :** la colonne Référence des lignes Frais bancaire restait vide, `MV_PieceBq` n'étant ni sélectionné en SQL ni mappé sur `AffectationADeclarer.Reference`.
+- **Correctif :** `P.MV_PieceBq` ajouté au `SELECT` de `GetFraisBancaireSql`, mappé sur `Reference` (`""` si NULL). Logique de mapping extraite dans `SelectionExpliqueeService.MapFraisBancaireRows` (`internal static`) pour être testable sans connexion SQL.
+- **Réserve levée en cours de revue :** le premier test soumis construisait l'objet attendu à la main et ne testait rien de réel (rejeté) ; réécrit pour appeler le vrai chemin de mapping production.
+- **Vérifié :** `Declaration.Orchestration.Tests` 257/257 passés.
+
+### TASK-198 — Distinguer les taux de TVA par code (TA_Code), pas seulement par pourcentage (APPROUVÉE)
+- **Module :** back (`Declaration.Core/Model.cs`, `Declaration.Application/Entities/WorkflowEntities.cs`, `Declaration.Application/Services/DeclarationWorkflowService.cs`, `Declaration.Orchestration.Tests/Task198CodeTaxeGroupingTests.cs`)
+- **Impact :** deux lignes Sage au même taux (ex. 20%) mais `TA_Code` différent (achat courant vs immobilisation) étaient fusionnées dans le même bucket `RecapsParTaux`, perdant la distinction métier demandée par le PO.
+- **Correctif :** `CodeTaxe`/`ValorisationDirecteCodeTaxe` propagés de bout en bout, regroupement `RecapsParTaux` par `(Taux, CodeTaxe, Collecte)`.
+- **Décision PO :** périmètre interne uniquement — `DeclarationXmlExporter.cs` non touché (le dépôt légal Simpl-TVA n'expose que le taux, pas le code).
+- **Vérifié :** test exerçant le vrai `ConstructeurDeclaration.ConstruireDeclaration` (2 buckets distincts, totaux HT/TVA corrects), `Declaration.Orchestration.Tests` 257/257 passés.
+
+## 2026-08-05 (revue architecte — transparence écran Factures, fix trimestriel & filtre CT_Type Rapprochement)
+
+### TASK-196 — Filtre CT_Type manquant sur l'écran « Rapprochement bancaire » (APPROUVÉE)
+- **Module :** back (`Declaration.Infrastructure/Repositories/DeclarationRepository.cs`, `Declaration.Orchestration.Tests/Task196RapprochementCtTypeFilteringTests.cs`)
+- **Impact :** Des règlements `CT_Type=2` (« type autre ») restaient visibles sur l'écran Rapprochement bancaire car `RapprochementFromWhere` et les requêtes distinctes ne filtraient que `MV_Domaine IN (0, 1)`.
+- **Correctif :** Ajout du filtre `AND ((M.MV_Domaine = 0 AND M.CT_Type = 0) OR (M.MV_Domaine = 1 AND M.CT_Type = 1))` dans `RapprochementFromWhere` et `GetReglementsRapprochementDistinctsAsync`.
+- **Vérifié :** `Declaration.Orchestration.Tests` 253/253 passés (dont `Task196RapprochementCtTypeFilteringTests`).
+
+### TASK-195 — Déclaration trimestrielle calculée sur le mauvais intervalle de dates (APPROUVÉE)
+- **Module :** back (`Declaration.Application/Entities/WorkflowEntities.cs`, `Declaration.Application/Services/DeclarationWorkflowService.cs`, `Declaration.Orchestration.Tests/Task195DeclarationTrimestrielleDatesTests.cs`)
+- **Impact :** `DeclarationEntete.Periode` était réinterprété comme un numéro de mois (1–12) sans regarder `Type`, faussant le calcul de dates de toutes les déclarations trimestrielles (ex. T3 scannait mars au lieu de juillet–septembre).
+- **Correctif :** Centralisation du calcul d'intervalle dans `DeclarationEntete.CalculerIntervalleDates` / `ObtenirIntervalleDates()`. Remplacement des 5 occurrences dans `DeclarationWorkflowService.cs`.
+- **Vérifié :** `Declaration.Orchestration.Tests` 245/245 passés (dont `Task195DeclarationTrimestrielleDatesTests`).
+
+### TASK-192 — Motif « Règlement non comptabilisé » visible sans survol (APPROUVÉE)
+- **Module :** front (`declaration-tva-web/src/FactureInterrogation.tsx`, `CelluleB`)
+- **Impact :** le motif exact de non-valorisation (`row.motifValorisation`) est désormais affiché
+  directement à côté du badge « non valorisé » sous forme de libellé court (helper
+  `formatMotifCourt` : « non comptabilisé », « non rapproché », « hors période », « non affecté »,
+  etc.), sans nécessiter de survol. Le `title` conserve le motif complet. Origine : cas client réel
+  (factures MAROC TELECOM FF260005/FF260006, rapprochées mais non comptabilisées Sage) où le motif
+  restait de fait invisible sur un volume important de factures.
+- **Garde-fous :** aucun changement de règle métier (`NonComptabilise` reste bloquant,
+  `SelectionExpliqueeEvaluator.cs:70` inchangé), `EstValorisable` inchangé, branche `brutValue != null`
+  (TASK-076) préservée sans régression.
+- **Vérifié par l'architecte :** code relu (`FactureInterrogation.tsx:106-162`) ↔ VERIFY, `npx tsc
+  --noEmit` rejoué indépendamment (0 erreur).
+
+## 2026-08-03 (dérogation ponctuelle — Claude codé directement, pas de revue par 2ᵉ agent)
+
+### TASK-032 — Revue « dépense avec TVA » : filtre + méthode de calcul (APPROUVÉE)
+- **Module :** back (`Declaration.Selection/SelectionExpliqueeService.cs`, `GrfEnums.Tva_Avec`)
+- **Impact :** la sélection dépense n'excluait pas les dépenses sans TVA du bon filtre, divergeant du
+  legacy GRFN sur ce point précis.
+- **Correctif :** ajout du filtre `M.MV_Tva = 1` à `GetSurensembleDepenseSql`. Méthode de valorisation
+  (ventilation/prorata) **non touchée** — périmètre limité à la décision PO (filtre uniquement) ;
+  le comparateur legacy mort `SelectionnerAffectationsService.cs` non modifié.
+- **Vérifié :** base réelle `GR_EMA_DISTRIBUTION` — 122 dépenses existantes (0 avec TVA) exclues,
+  1 dépense de test (`DP26080001`, `MV_Tva=1`) correctement incluse ; build solution 0 erreur.
+- **Note process :** codée directement par Claude à la demande explicite du PO — dérogation
+  ponctuelle au rôle architecte/reviewer défini par `CLAUDE.md`, pas de revue par un 2ᵉ agent
+  indépendant.
+
+### TASK-031 — Opération bancaire (frais bancaire) avec TVA — domaine absent (APPROUVÉE)
+- **Module :** back (sélection + valorisation + intégration workflow/exports)
+- **Impact :** le domaine « frais bancaire » (TVA sur opérations bancaires) était entièrement absent
+  du code, alors que le legacy le couvrait (`GetDeclarationCommissionBancaire`).
+- **Correctif :** source identifiée comme `RT_PREVISIONNELLE.PT_Domaine=6` (cartographie initiale
+  corrigée en cours de route — `RT_MOUVEMENT.MV_Domaine=6` est en réalité le domaine Dépense, pas
+  frais bancaire). Taux résolu via `P_TYPEOPBANQUE.TO_ErpTaxeNo → F_TAXE.TA_No` (connexion Sage
+  séparée, jamais cross-base, TASK-154).
+- **Vérifié :** base réelle — 2 frais bancaires avec TVA (FRAIS 10%, COMMLEASING 14%) correctement
+  valorisés (assiette/TVA/TTC exacts), 1 opération sans TVA (agio) correctement exclue ; build
+  solution + 3 suites de tests rejouées (Core 218/218, Selection 60/60, Orchestration 228/228).
+  Écran Rapprochement ① volontairement non modifié (décision PO 04/08/2026).
+- **Note process :** même dérogation ponctuelle que TASK-032 ci-dessus.
+
 ## 2026-07-28 (revue architecte — DDP, levée de dette CDC §4.2/§4.3/§5.A-4)
 
 ### TASK-191 — Câblage réel natureMarchandise/dateLivraisonMarchandise export DDP (APPROUVÉE)

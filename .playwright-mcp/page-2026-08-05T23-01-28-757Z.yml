@@ -1,0 +1,1342 @@
+- generic [ref=f5e7]:
+  - complementary [ref=f5e8]:
+    - generic [ref=f5e9] [cursor=pointer]:
+      - generic [ref=f5e11]:
+        - img "DM" [ref=f5e17]
+        - generic [ref=f5e18]: TVA
+      - generic [ref=f5e19]: NEW_EMA DISTRIBUTION
+    - generic [ref=f5e20]:
+      - generic [ref=f5e21]:
+        - generic [ref=f5e22]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f5e23] [cursor=pointer]
+        - generic "Factures" [ref=f5e27] [cursor=pointer]
+      - generic [ref=f5e32]:
+        - generic [ref=f5e33]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f5e34] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f5e40] [cursor=pointer]
+    - generic [ref=f5e46]:
+      - generic [ref=f5e47]: Admin Admin
+      - button "Déconnexion" [ref=f5e48] [cursor=pointer]
+  - main [ref=f5e53]:
+    - generic [ref=f5e946]:
+      - generic [ref=f5e1495]:
+        - generic [ref=f5e1496]:
+          - button "Retour" [ref=f5e1497] [cursor=pointer]
+          - generic [ref=f5e1500]: TVA1-2026-02
+        - generic [ref=f5e1501]:
+          - button "1. Sélection" [ref=f5e1502] [cursor=pointer]
+          - button "2. Vérifier & Intégrer" [ref=f5e1506] [cursor=pointer]
+          - button "3. Déclaration" [disabled] [ref=f5e1510]
+        - generic [ref=f5e1515]:
+          - generic [ref=f5e1516]: Période 01/02/2026 → 28/02/2026
+          - generic [ref=f5e1517]: En cours
+      - generic [ref=f5e1520]:
+        - generic [ref=f5e1697]:
+          - button "← Retour au contrôle" [ref=f5e1698] [cursor=pointer]
+          - generic [ref=f5e1699]: "Codes activité :"
+          - generic [ref=f5e1700]: TVA Collectée (Ventes)
+          - generic [ref=f5e1701]:
+            - button "TVA Déductible (Achats)" [ref=f5e1702] [cursor=pointer]
+            - button "TVA Collectée (Ventes)" [ref=f5e1703] [cursor=pointer]
+        - generic [ref=f5e1704]:
+          - generic [ref=f5e1705]:
+            - generic [ref=f5e1706]: "Sélectionnées : 0"
+            - generic [ref=f5e1708]:
+              - generic [ref=f5e1709]:
+                - text: "Total résultats :"
+                - strong [ref=f5e1710]: "576"
+              - button "Colonnes" [ref=f5e1712] [cursor=pointer]
+          - table [ref=f5e1716]:
+            - row [ref=f5e1717]:
+              - columnheader [ref=f5e1718]:
+                - checkbox [ref=f5e1719]
+              - columnheader "N° Facture Filtrer" [ref=f5e1720] [cursor=pointer]:
+                - generic [ref=f5e1721]: N° Facture
+                - button "Filtrer" [ref=f5e1724]
+              - columnheader "Tiers Filtrer" [ref=f5e1727] [cursor=pointer]:
+                - generic [ref=f5e1728]: Tiers
+                - button "Filtrer" [ref=f5e1731]
+              - columnheader "Origine Filtrer" [ref=f5e1734] [cursor=pointer]:
+                - generic [ref=f5e1735]: Origine
+                - button "Filtrer" [ref=f5e1738]
+              - columnheader "Montant HT Filtrer" [ref=f5e1741] [cursor=pointer]:
+                - generic [ref=f5e1742]: Montant HT
+                - button "Filtrer" [ref=f5e1745]
+              - columnheader "Taux TVA Filtrer" [ref=f5e1748] [cursor=pointer]:
+                - generic [ref=f5e1749]: Taux TVA
+                - button "Filtrer" [ref=f5e1752]
+              - columnheader "Montant TTC Filtrer" [ref=f5e1755] [cursor=pointer]:
+                - generic [ref=f5e1756]: Montant TTC
+                - button "Filtrer" [ref=f5e1759]
+              - columnheader "Code activité Filtrer" [ref=f5e1762] [cursor=pointer]:
+                - generic [ref=f5e1763]: Code activité
+                - button "Filtrer" [ref=f5e1766]
+              - columnheader "Statut Filtrer" [ref=f5e1769] [cursor=pointer]:
+                - generic [ref=f5e1770]: Statut
+                - button "Filtrer" [ref=f5e1773]
+            - rowgroup [ref=f5e1776]:
+              - row [ref=f5e1777]:
+                - cell [ref=f5e1778]:
+                  - checkbox [ref=f5e1779]
+                - cell "FA2600474" [ref=f5e1780]
+                - cell "AZUR FOOD" [ref=f5e1782]
+                - cell "Sage" [ref=f5e1784]
+                - cell "63,94 MAD" [ref=f5e1786]
+                - cell "10%" [ref=f5e1788]
+                - cell "70,33 MAD" [ref=f5e1790]
+                - cell "(sans activité)" [ref=f5e1792]:
+                  - combobox [ref=f5e1793]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e1794]
+              - row [ref=f5e1796]:
+                - cell [ref=f5e1797]:
+                  - checkbox [ref=f5e1798]
+                - cell "FA2600474" [ref=f5e1799]
+                - cell "AZUR FOOD" [ref=f5e1801]
+                - cell "Sage" [ref=f5e1803]
+                - cell "694,63 MAD" [ref=f5e1805]
+                - cell "20%" [ref=f5e1807]
+                - cell "833,56 MAD" [ref=f5e1809]
+                - cell "(sans activité)" [ref=f5e1811]:
+                  - combobox [ref=f5e1812]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e1813]
+              - row [ref=f5e1815]:
+                - cell [ref=f5e1816]:
+                  - checkbox [ref=f5e1817]
+                - cell "FA2600474" [ref=f5e1818]
+                - cell "AZUR FOOD" [ref=f5e1820]
+                - cell "Sage" [ref=f5e1822]
+                - cell "30,96 MAD" [ref=f5e1824]
+                - cell "0%" [ref=f5e1826]
+                - cell "30,96 MAD" [ref=f5e1828]
+                - cell "(sans activité)" [ref=f5e1830]:
+                  - combobox [ref=f5e1831]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e1832]
+              - row [ref=f5e1834]:
+                - cell [ref=f5e1835]:
+                  - checkbox [ref=f5e1836]
+                - cell "FA2600429" [ref=f5e1837]
+                - cell "AZUR FOOD" [ref=f5e1839]
+                - cell "Sage" [ref=f5e1841]
+                - cell "208,00 MAD" [ref=f5e1843]
+                - cell "20%" [ref=f5e1845]
+                - cell "249,60 MAD" [ref=f5e1847]
+                - cell "(sans activité)" [ref=f5e1849]:
+                  - combobox [ref=f5e1850]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e1851]
+              - row [ref=f5e1853]:
+                - cell [ref=f5e1854]:
+                  - checkbox [ref=f5e1855]
+                - cell "FR2600047" [ref=f5e1856]
+                - cell "RESTOLAB SARL" [ref=f5e1858]
+                - cell "Sage" [ref=f5e1860]
+                - cell "-204,00 MAD" [ref=f5e1862]
+                - cell "0%" [ref=f5e1864]
+                - cell "-204,00 MAD" [ref=f5e1866]
+                - cell "(sans activité)" [ref=f5e1868]:
+                  - combobox [ref=f5e1869]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e1870]
+              - row [ref=f5e1872]:
+                - cell [ref=f5e1873]:
+                  - checkbox [ref=f5e1874]
+                - cell "FA2600330" [ref=f5e1875]
+                - cell "RAHAF DELICES" [ref=f5e1877]
+                - cell "Sage" [ref=f5e1879]
+                - cell "9 180,00 MAD" [ref=f5e1881]
+                - cell "0%" [ref=f5e1883]
+                - cell "9 180,00 MAD" [ref=f5e1885]
+                - cell "(sans activité)" [ref=f5e1887]:
+                  - combobox [ref=f5e1888]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e1889]
+              - row [ref=f5e1891]:
+                - cell [ref=f5e1892]:
+                  - checkbox [ref=f5e1893]
+                - cell "FA2600267" [ref=f5e1894]
+                - cell "LES 2 RESTO" [ref=f5e1896]
+                - cell "Sage" [ref=f5e1898]
+                - cell "754,00 MAD" [ref=f5e1900]
+                - cell "0%" [ref=f5e1902]
+                - cell "754,00 MAD" [ref=f5e1904]
+                - cell "(sans activité)" [ref=f5e1906]:
+                  - combobox [ref=f5e1907]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e1908]
+              - row [ref=f5e1910]:
+                - cell [ref=f5e1911]:
+                  - checkbox [ref=f5e1912]
+                - cell "FA2600267" [ref=f5e1913]
+                - cell "LES 2 RESTO" [ref=f5e1915]
+                - cell "Sage" [ref=f5e1917]
+                - cell "1 907,64 MAD" [ref=f5e1919]
+                - cell "10%" [ref=f5e1921]
+                - cell "2 098,40 MAD" [ref=f5e1923]
+                - cell "(sans activité)" [ref=f5e1925]:
+                  - combobox [ref=f5e1926]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e1927]
+              - row [ref=f5e1929]:
+                - cell [ref=f5e1930]:
+                  - checkbox [ref=f5e1931]
+                - cell "FA2600267" [ref=f5e1932]
+                - cell "LES 2 RESTO" [ref=f5e1934]
+                - cell "Sage" [ref=f5e1936]
+                - cell "6 595,00 MAD" [ref=f5e1938]
+                - cell "20%" [ref=f5e1940]
+                - cell "7 914,00 MAD" [ref=f5e1942]
+                - cell "(sans activité)" [ref=f5e1944]:
+                  - combobox [ref=f5e1945]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e1946]
+              - row [ref=f5e1948]:
+                - cell [ref=f5e1949]:
+                  - checkbox [ref=f5e1950]
+                - cell "FA2600253" [ref=f5e1951]
+                - cell "LES 2 RESTO" [ref=f5e1953]
+                - cell "Sage" [ref=f5e1955]
+                - cell "152,00 MAD" [ref=f5e1957]
+                - cell "10%" [ref=f5e1959]
+                - cell "167,20 MAD" [ref=f5e1961]
+                - cell "(sans activité)" [ref=f5e1963]:
+                  - combobox [ref=f5e1964]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e1965]
+              - row [ref=f5e1967]:
+                - cell [ref=f5e1968]:
+                  - checkbox [ref=f5e1969]
+                - cell "FA2600257" [ref=f5e1970]
+                - cell "YAMS DELIGHT" [ref=f5e1972]
+                - cell "Sage" [ref=f5e1974]
+                - cell "5 437,74 MAD" [ref=f5e1976]
+                - cell "20%" [ref=f5e1978]
+                - cell "6 525,29 MAD" [ref=f5e1980]
+                - cell "(sans activité)" [ref=f5e1982]:
+                  - combobox [ref=f5e1983]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e1984]
+              - row [ref=f5e1986]:
+                - cell [ref=f5e1987]:
+                  - checkbox [ref=f5e1988]
+                - cell "FA2600257" [ref=f5e1989]
+                - cell "YAMS DELIGHT" [ref=f5e1991]
+                - cell "Sage" [ref=f5e1993]
+                - cell "1 195,00 MAD" [ref=f5e1995]
+                - cell "0%" [ref=f5e1997]
+                - cell "1 195,00 MAD" [ref=f5e1999]
+                - cell "(sans activité)" [ref=f5e2001]:
+                  - combobox [ref=f5e2002]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e2003]
+              - row [ref=f5e2005]:
+                - cell [ref=f5e2006]:
+                  - checkbox [ref=f5e2007]
+                - cell "FA2600253" [ref=f5e2008]
+                - cell "LES 2 RESTO" [ref=f5e2010]
+                - cell "Sage" [ref=f5e2012]
+                - cell "340,00 MAD" [ref=f5e2014]
+                - cell "20%" [ref=f5e2016]
+                - cell "408,00 MAD" [ref=f5e2018]
+                - cell "(sans activité)" [ref=f5e2020]:
+                  - combobox [ref=f5e2021]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e2022]
+              - row [ref=f5e2024]:
+                - cell [ref=f5e2025]:
+                  - checkbox [ref=f5e2026]
+                - cell "FA2600257" [ref=f5e2027]
+                - cell "YAMS DELIGHT" [ref=f5e2029]
+                - cell "Sage" [ref=f5e2031]
+                - cell "2 319,56 MAD" [ref=f5e2033]
+                - cell "10%" [ref=f5e2035]
+                - cell "2 551,52 MAD" [ref=f5e2037]
+                - cell "(sans activité)" [ref=f5e2039]:
+                  - combobox [ref=f5e2040]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e2041]
+              - row [ref=f5e2043]:
+                - cell [ref=f5e2044]:
+                  - checkbox [ref=f5e2045]
+                - cell "FA2600238" [ref=f5e2046]
+                - cell "LES 2 RESTO" [ref=f5e2048]
+                - cell "Sage" [ref=f5e2050]
+                - cell "887,00 MAD" [ref=f5e2052]
+                - cell "10%" [ref=f5e2054]
+                - cell "975,70 MAD" [ref=f5e2056]
+                - cell "(sans activité)" [ref=f5e2058]:
+                  - combobox [ref=f5e2059]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e2060]
+              - row [ref=f5e2062]:
+                - cell [ref=f5e2063]:
+                  - checkbox [ref=f5e2064]
+                - cell "FA2600238" [ref=f5e2065]
+                - cell "LES 2 RESTO" [ref=f5e2067]
+                - cell "Sage" [ref=f5e2069]
+                - cell "9 542,92 MAD" [ref=f5e2071]
+                - cell "20%" [ref=f5e2073]
+                - cell "11 451,50 MAD" [ref=f5e2075]
+                - cell "(sans activité)" [ref=f5e2077]:
+                  - combobox [ref=f5e2078]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e2079]
+              - row [ref=f5e2081]:
+                - cell [ref=f5e2082]:
+                  - checkbox [ref=f5e2083]
+                - cell "FA2600238" [ref=f5e2084]
+                - cell "LES 2 RESTO" [ref=f5e2086]
+                - cell "Sage" [ref=f5e2088]
+                - cell "1 362,80 MAD" [ref=f5e2090]
+                - cell "0%" [ref=f5e2092]
+                - cell "1 362,80 MAD" [ref=f5e2094]
+                - cell "(sans activité)" [ref=f5e2096]:
+                  - combobox [ref=f5e2097]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e2098]
+              - row [ref=f5e2100]:
+                - cell [ref=f5e2101]:
+                  - checkbox [ref=f5e2102]
+                - cell "FA2600231" [ref=f5e2103]
+                - cell "SOY VENTURES" [ref=f5e2105]
+                - cell "Sage" [ref=f5e2107]
+                - cell "3 639,60 MAD" [ref=f5e2109]
+                - cell "0%" [ref=f5e2111]
+                - cell "3 639,60 MAD" [ref=f5e2113]
+                - cell "(sans activité)" [ref=f5e2115]:
+                  - combobox [ref=f5e2116]:
+                    - option "(sans activité)" [selected]
+                    - option "100 — Les opérations de banque et de crédit et les commissions de change"
+                    - option "101 — Les transactions portant sur les actions et parts sociales"
+                    - option "102 — Autre"
+                    - option "103 — Les opérations de vente et de livraison des oeuvres et objets d'art"
+                    - option "104 — Autres"
+                    - option "105 — Les opérations des avocats.interprètes.notaires.adoul.huissiers de justice et vétérinaires"
+                    - option "106 — L'eau livrée aux réseau de distribution publique et les prestations d'assainissement"
+                    - option "107 — Location de compteurs d'eau et d'électricité"
+                    - option "108 — Gaz de petrole et autres hydrocarbures gazeux"
+                    - option "109 — Huiles de pétrole ou de schiste.brutes ou raffinées"
+                    - option "110 — Produits pharmacetiques.matières premières et produits entrant dans leur composition ainsi que les emballages non récupérables de ces produits et matières"
+                    - option "111 — Les fournitures scolaires.produits et matières entrant dans leur composition"
+                    - option "112 — Opération de vente des billets d'entrée aux musées,cinéma et théâtre"
+                    - option "113 — Sucre raffiné ou aggloméré"
+                    - option "114 — Les conserves de sardines"
+                    - option "115 — Lait en poudre"
+                    - option "116 — Savon de ménage"
+                    - option "117 — Voiture économique et produit et matière entrant dans sa fabrication"
+                    - option "118 — Autres"
+                    - option "119 — Autres"
+                    - option "120 — Reversement de la TVA à différents titres(sessation,régularisation,...)"
+                    - option "121 — Retenue à la source sur le montant des commission allouées par les sociétés d'assurance à leurs courtiers"
+                    - option "122 — Retenue à la source sur les intérêts servis par les établissements de crédit"
+                    - option "123 — Retenue à la source sur les produites résultant des opérations de titrisation"
+                    - option "124 — Retenue à la source sur les opérations effectuées par les non résidents au profit des clients marocains exclus du champ d'application de la TVA (Art 117-III)"
+                    - option "127 — Régime particulier d auto-liquidation visé à l article 125 quinquies"
+                    - option "128 — Redevances et droits de licence visés à l article 91-XI"
+                    - option "129 — Opération réalisées avec des contribuable non résidents"
+                    - option "63 — Pâte alimentaires"
+                    - option "65 — Opérations de transport urbain et de transport routier de voyageur et de marchandises"
+                    - option "73 — Location de compteurs d eau à usage non domestique"
+                    - option "74 — Location de compteurs d électricité"
+                    - option "75 — Opérations de vente effectuées par les producteurs de l énergie électrique produite à partir des énergies renouvelables"
+                    - option "76 — Panneaux photovoltaiques"
+                    - option "77 — Chauffe-eaux solaires"
+                    - option "78 — Les aliments destinés à l'alimentation du bétail et des animaux de basse-cour ainsi que les tourteaux servant à leur fabrication à l'exclusion des autres aliments simples"
+                    - option "79 — Les équipements à usage exclusivement agricole"
+                    - option "80 — Opérations de production et de distribution"
+                    - option "81 — Prestations de services"
+                    - option "82 — Professions libérales visées à l'article 89-I-12-b du CGI"
+                    - option "83 — Opérations de crédit bail"
+                    - option "84 — Beurre à l'exclusion du beurre de fabrication artisanale visé à l'article 91(IA. 2°)."
+                    - option "85 — Les bois en grumes, écorcés ou simplement équarris, le liège à l'état naturel, les bois de feu en fagots ou sciés à petite longueur et le charbon de bois."
+                    - option "86 — les engins et filets de pêche destinés aux professionnels de la pêche maritime."
+                    - option "87 — Opérations d'entreprises de travaux immobiliers"
+                    - option "88 — Opérations de transport de voyageurs et de marchandises"
+                    - option "89 — Opération d'hébergement et de restauration ainsi que les prestation fournies par les cafés."
+                    - option "90 — Energie électrique"
+                    - option "91 — Les prestations de services rendues par tout agent démarcheur ou courtier d'assurance à raison à raison des contrats apportées par lui à une entreprise d'assurance"
+                    - option "92 — Les opérations de location d'immeubles à usage dans les hôtels"
+                    - option "93 — Opérations de vente et de livraison de bien meubles d'occasion"
+                    - option "94 — Opérations de livraison à soi-même de constructions"
+                    - option "95 — Régime de marge visé aux articles 125 bis et 125 quarter du CGI"
+                    - option "96 — Le sel de cuisine(gemme ou marin)"
+                    - option "97 — Le riz usiné.les pâtes alimentaires"
+                    - option "98 — Les huiles fluides alimentaires à l'exclusion de l'huile de palme"
+                    - option "99 — Les transactions relatives aux valeurs mobilières"
+                - cell "Proposée" [ref=f5e2117]
+          - generic [ref=f5e2119]:
+            - generic [ref=f5e2120]: Page 1 sur 6
+            - generic [ref=f5e2121]:
+              - button "Précédent" [disabled] [ref=f5e2122]
+              - button "Suivant" [ref=f5e2123] [cursor=pointer]

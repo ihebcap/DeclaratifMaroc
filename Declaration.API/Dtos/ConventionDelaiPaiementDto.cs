@@ -14,6 +14,7 @@ public sealed class ConventionDelaiPaiementDto
     public int CpId { get; init; }
     public int TiersNo { get; init; }
     public string TiersCode { get; init; } = string.Empty;
+    public string TiersIntitule { get; init; } = string.Empty;
     public DateTime Date { get; init; }
     public string Numero { get; init; } = string.Empty;
     public DateTime? DateDebut { get; init; }
@@ -43,6 +44,7 @@ public sealed class ConventionDelaiPaiementDto
             CpId = item.CpId,
             TiersNo = item.TiersNo,
             TiersCode = item.TiersCode,
+            TiersIntitule = item.TiersIntitule,
             Date = item.Date,
             Numero = item.Numero,
             DateDebut = item.DateDebut,

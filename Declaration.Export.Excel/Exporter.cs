@@ -173,7 +173,11 @@ namespace Declaration.Export.Excel
             decimal sommeHT = 0, sommeTva = 0, sommeTtc = 0;
             foreach (var recap in recaps)
             {
-                ws.Cell(row, 1).Value = recap.Taux;
+                if (string.IsNullOrWhiteSpace(recap.CodeTaxe))
+                    ws.Cell(row, 1).Value = recap.Taux;
+                else
+                    ws.Cell(row, 1).Value = $"{recap.Taux:G} ({recap.CodeTaxe})";
+
                 ws.Cell(row, 2).Value = recap.TotalHT;
                 ws.Cell(row, 3).Value = recap.TotalTva;
                 ws.Cell(row, 4).Value = recap.TotalTtc;
@@ -323,7 +327,7 @@ namespace Declaration.Export.Excel
             // reste inchangé via la valeur par défaut du paramètre.
             row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Collecté", modele.RecapsParTaux.Where(r => r.Collecte), libelleTotal: "Total Collecté");
             row++;
-            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Déductible", modele.RecapsParTaux.Where(r => !r.Collecte), libelleTotal: "Total Deductible");
+            row = EcrireBlocRecapParTaux(ws, row, "Totaux par taux — Déductible", modele.RecapsParTaux.Where(r => !r.Collecte), libelleTotal: "Total Déductible");
             row++;
 
             row = EcrireBlocRecapParActivite(ws, row, "Totaux par code activité — Collecté", modele.RecapsParActivite.Where(r => r.Collecte));

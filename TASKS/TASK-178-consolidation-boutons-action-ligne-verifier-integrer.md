@@ -1,6 +1,17 @@
 # TASK-178 — Consolidation des boutons d'action sur une ligne (écran ③ Vérifier & Intégrer / écran ② Affectations)
 
-Status: 🆕 à faire — **DÉCISION DE CONCEPTION À TRANCHER PAR LE PO avant tout développement** (§Objectif)
+Status: ❌ **REMPLACÉE PAR TASK-202** (arbitrage PO 06/08/2026) — ne pas développer.
+
+> **Raison du remplacement :** cette TASK partait de l'hypothèse que l'écran ② Vérifier & Intégrer
+> devait devenir le **point d'entrée unique** pour l'action sur une ligne (§Objectif point 1
+> ci-dessous). Le PO a demandé le 06/08/2026 l'inverse : **séparer** l'affichage/action sur les lignes
+> (« Codes activité » / « Toutes les lignes / Resynchroniser », aujourd'hui des vues plein-écran cachées
+> derrière ces boutons) dans un **écran 2 distinct** du récap. Les deux architectures sont
+> contradictoires — TASK-202 reprend le sous-problème réel documenté ici (4 chemins vers l'action
+> resynchroniser, redondance Diagnostiquer/DomainGrid/AffectationsDrill) dans le nouveau cadrage à
+> 3 écrans. Conservée ici pour trace, non développée.
+
+Status (historique, avant remplacement) : 🆕 à faire — **DÉCISION DE CONCEPTION À TRANCHER PAR LE PO avant tout développement** (§Objectif)
 Priority: LOW (confort/lisibilité, aucun bug — ne pas prioriser devant TASK-175/176/177)
 Risk: MEDIUM à développer (petit volume de code, mais retest complet requis sur un écran d'usage
 quotidien du PO) — pas de risque à NE PAS la faire, c'est une dette de clarté, pas une dette

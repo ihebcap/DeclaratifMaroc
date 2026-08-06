@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Pipeline complet de déploiement : build front + API + workers Sage + Declaration.Setup,
     puis empaquette le résultat dans installer\ (dossier autonome, un seul exe à lancer en admin).

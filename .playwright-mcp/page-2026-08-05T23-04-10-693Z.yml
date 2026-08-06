@@ -1,0 +1,967 @@
+- generic [ref=f5e2124]:
+  - complementary [ref=f5e2125]:
+    - generic [ref=f5e2126] [cursor=pointer]:
+      - generic [ref=f5e2128]:
+        - img "DM" [ref=f5e2134]
+        - generic [ref=f5e2135]: TVA
+      - generic [ref=f5e2136]: NEW_EMA DISTRIBUTION
+    - generic [ref=f5e2137]:
+      - generic [ref=f5e2138]:
+        - generic [ref=f5e2139]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f5e2140] [cursor=pointer]
+        - generic "Factures" [ref=f5e2144] [cursor=pointer]
+      - generic [ref=f5e2149]:
+        - generic [ref=f5e2150]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f5e2151] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f5e2157] [cursor=pointer]
+    - generic [ref=f5e2163]:
+      - generic [ref=f5e2164]: Admin Admin
+      - button "Déconnexion" [ref=f5e2165] [cursor=pointer]
+  - main [ref=f5e2170]:
+    - generic [ref=f5e2219]:
+      - generic [ref=f5e2220]:
+        - generic [ref=f5e2221]:
+          - button "Retour" [ref=f5e2222] [cursor=pointer]
+          - generic [ref=f5e2225]: TVA1-2026-02
+        - generic [ref=f5e2226]:
+          - button "1. Sélection" [ref=f5e2227] [cursor=pointer]
+          - button "2. Vérifier & Intégrer" [ref=f5e2231] [cursor=pointer]
+          - button "3. Déclaration" [disabled] [ref=f5e2235]
+        - generic [ref=f5e2240]:
+          - generic [ref=f5e2241]: Période 01/02/2026 → 28/02/2026
+          - generic [ref=f5e2242]: En cours
+      - generic [ref=f5e2767]:
+        - generic [ref=f5e2868]:
+          - button "← Retour au contrôle" [ref=f5e2869] [cursor=pointer]
+          - generic [ref=f5e2870]: "Codes activité :"
+          - generic [ref=f5e2871]: TVA Déductible (Achats)
+          - generic [ref=f5e2872]:
+            - button "TVA Déductible (Achats)" [ref=f5e2873] [cursor=pointer]
+            - button "TVA Collectée (Ventes)" [ref=f5e2874] [cursor=pointer]
+        - generic [ref=f5e2875]:
+          - generic [ref=f5e2876]:
+            - generic [ref=f5e2877]: "Sélectionnées : 0"
+            - generic [ref=f5e2879]:
+              - generic [ref=f5e2880]:
+                - text: "Total résultats :"
+                - strong [ref=f5e2881]: "174"
+              - button "Colonnes" [ref=f5e2883] [cursor=pointer]
+          - generic [ref=f5e2886]: ⚠ 100 ligne(s) sans code activité sur cette page — le relevé de déductions exige une désignation pour chaque ligne. Sélectionnez les lignes puis utilisez l'affectation groupée.
+          - table [ref=f5e2888]:
+            - row [ref=f5e2889]:
+              - columnheader [ref=f5e2890]:
+                - checkbox [ref=f5e2891]
+              - columnheader "N° Facture Filtrer" [ref=f5e2892] [cursor=pointer]:
+                - generic [ref=f5e2893]: N° Facture
+                - button "Filtrer" [ref=f5e2896]
+              - columnheader "Tiers Filtrer" [ref=f5e2899] [cursor=pointer]:
+                - generic [ref=f5e2900]: Tiers
+                - button "Filtrer" [ref=f5e2903]
+              - columnheader "Origine Filtrer" [ref=f5e2906] [cursor=pointer]:
+                - generic [ref=f5e2907]: Origine
+                - button "Filtrer" [ref=f5e2910]
+              - columnheader "Montant HT Filtrer" [ref=f5e2913] [cursor=pointer]:
+                - generic [ref=f5e2914]: Montant HT
+                - button "Filtrer" [ref=f5e2917]
+              - columnheader "Taux TVA Filtrer" [ref=f5e2920] [cursor=pointer]:
+                - generic [ref=f5e2921]: Taux TVA
+                - button "Filtrer" [ref=f5e2924]
+              - columnheader "Montant TTC Filtrer" [ref=f5e2927] [cursor=pointer]:
+                - generic [ref=f5e2928]: Montant TTC
+                - button "Filtrer" [ref=f5e2931]
+              - columnheader "Code activité Filtrer" [ref=f5e2934] [cursor=pointer]:
+                - generic [ref=f5e2935]: Code activité
+                - button "Filtrer" [ref=f5e2938]
+              - columnheader "Statut Filtrer" [ref=f5e2941] [cursor=pointer]:
+                - generic [ref=f5e2942]: Statut
+                - button "Filtrer" [ref=f5e2945]
+            - rowgroup [ref=f5e2948]:
+              - row [ref=f5e2949]:
+                - cell [ref=f5e2950]:
+                  - checkbox [ref=f5e2951]
+                - cell "FC2600251" [ref=f5e2952]
+                - cell "MARJANE" [ref=f5e2954]
+                - cell "Sage" [ref=f5e2956]
+                - cell "281,00 MAD" [ref=f5e2958]
+                - cell "0%" [ref=f5e2960]
+                - cell "281,00 MAD" [ref=f5e2962]
+                - cell "(sans activité)" [ref=f5e2964]:
+                  - combobox [ref=f5e2965]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e2966]
+              - row [ref=f5e2968]:
+                - cell [ref=f5e2969]:
+                  - checkbox [ref=f5e2970]
+                - cell "FC2600251" [ref=f5e2971]
+                - cell "MARJANE" [ref=f5e2973]
+                - cell "Sage" [ref=f5e2975]
+                - cell "201,78 MAD" [ref=f5e2977]
+                - cell "20%" [ref=f5e2979]
+                - cell "242,14 MAD" [ref=f5e2981]
+                - cell "(sans activité)" [ref=f5e2983]:
+                  - combobox [ref=f5e2984]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e2985]
+              - row [ref=f5e2987]:
+                - cell [ref=f5e2988]:
+                  - checkbox [ref=f5e2989]
+                - cell "FC2600250" [ref=f5e2990]
+                - cell "MARJANE" [ref=f5e2992]
+                - cell "Sage" [ref=f5e2994]
+                - cell "646,42 MAD" [ref=f5e2996]
+                - cell "20%" [ref=f5e2998]
+                - cell "775,70 MAD" [ref=f5e3000]
+                - cell "(sans activité)" [ref=f5e3002]:
+                  - combobox [ref=f5e3003]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3004]
+              - row [ref=f5e3006]:
+                - cell [ref=f5e3007]:
+                  - checkbox [ref=f5e3008]
+                - cell "FC2600250" [ref=f5e3009]
+                - cell "MARJANE" [ref=f5e3011]
+                - cell "Sage" [ref=f5e3013]
+                - cell "318,00 MAD" [ref=f5e3015]
+                - cell "0%" [ref=f5e3017]
+                - cell "318,00 MAD" [ref=f5e3019]
+                - cell "(sans activité)" [ref=f5e3021]:
+                  - combobox [ref=f5e3022]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3023]
+              - row [ref=f5e3025]:
+                - cell [ref=f5e3026]:
+                  - checkbox [ref=f5e3027]
+                - cell "FC2600247" [ref=f5e3028]
+                - cell "MARJANE" [ref=f5e3030]
+                - cell "Sage" [ref=f5e3032]
+                - cell "673,16 MAD" [ref=f5e3034]
+                - cell "20%" [ref=f5e3036]
+                - cell "807,79 MAD" [ref=f5e3038]
+                - cell "(sans activité)" [ref=f5e3040]:
+                  - combobox [ref=f5e3041]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3042]
+              - row [ref=f5e3044]:
+                - cell [ref=f5e3045]:
+                  - checkbox [ref=f5e3046]
+                - cell "FC2600247" [ref=f5e3047]
+                - cell "MARJANE" [ref=f5e3049]
+                - cell "Sage" [ref=f5e3051]
+                - cell "37,50 MAD" [ref=f5e3053]
+                - cell "0%" [ref=f5e3055]
+                - cell "37,50 MAD" [ref=f5e3057]
+                - cell "(sans activité)" [ref=f5e3059]:
+                  - combobox [ref=f5e3060]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3061]
+              - row [ref=f5e3063]:
+                - cell [ref=f5e3064]:
+                  - checkbox [ref=f5e3065]
+                - cell "FF260045" [ref=f5e3066]
+                - cell "FOUBREL" [ref=f5e3068]
+                - cell "FGR" [ref=f5e3070]
+                - cell "9 000,00 MAD" [ref=f5e3072]
+                - cell "20%" [ref=f5e3074]
+                - cell "10 800,00 MAD" [ref=f5e3076]
+                - cell "(sans activité)" [ref=f5e3078]:
+                  - combobox [ref=f5e3079]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3080]
+              - row [ref=f5e3082]:
+                - cell [ref=f5e3083]:
+                  - checkbox [ref=f5e3084]
+                - cell "FC2600236" [ref=f5e3085]
+                - cell "MARJANE" [ref=f5e3087]
+                - cell "Sage" [ref=f5e3089]
+                - cell "269,28 MAD" [ref=f5e3091]
+                - cell "20%" [ref=f5e3093]
+                - cell "323,14 MAD" [ref=f5e3095]
+                - cell "(sans activité)" [ref=f5e3097]:
+                  - combobox [ref=f5e3098]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3099]
+              - row [ref=f5e3101]:
+                - cell [ref=f5e3102]:
+                  - checkbox [ref=f5e3103]
+                - cell "FC2600237" [ref=f5e3104]
+                - cell "MARJANE" [ref=f5e3106]
+                - cell "Sage" [ref=f5e3108]
+                - cell "157,63 MAD" [ref=f5e3110]
+                - cell "20%" [ref=f5e3112]
+                - cell "189,16 MAD" [ref=f5e3114]
+                - cell "(sans activité)" [ref=f5e3116]:
+                  - combobox [ref=f5e3117]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3118]
+              - row [ref=f5e3120]:
+                - cell [ref=f5e3121]:
+                  - checkbox [ref=f5e3122]
+                - cell "FC2600303" [ref=f5e3123]
+                - cell "CARREFOUR" [ref=f5e3125]
+                - cell "Sage" [ref=f5e3127]
+                - cell "668,35 MAD" [ref=f5e3129]
+                - cell "20%" [ref=f5e3131]
+                - cell "802,02 MAD" [ref=f5e3133]
+                - cell "(sans activité)" [ref=f5e3135]:
+                  - combobox [ref=f5e3136]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3137]
+              - row [ref=f5e3139]:
+                - cell [ref=f5e3140]:
+                  - checkbox [ref=f5e3141]
+                - cell "FF260019" [ref=f5e3142]
+                - cell "OCEANIC AUTO" [ref=f5e3144]
+                - cell "FGR" [ref=f5e3146]
+                - cell "4 400,00 MAD" [ref=f5e3148]
+                - cell "20%" [ref=f5e3150]
+                - cell "5 280,00 MAD" [ref=f5e3152]
+                - cell "(sans activité)" [ref=f5e3154]:
+                  - combobox [ref=f5e3155]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3156]
+              - row [ref=f5e3158]:
+                - cell [ref=f5e3159]:
+                  - checkbox [ref=f5e3160]
+                - cell "FC2600217" [ref=f5e3161]
+                - cell "MARJANE" [ref=f5e3163]
+                - cell "Sage" [ref=f5e3165]
+                - cell "109,70 MAD" [ref=f5e3167]
+                - cell "20%" [ref=f5e3169]
+                - cell "131,64 MAD" [ref=f5e3171]
+                - cell "(sans activité)" [ref=f5e3173]:
+                  - combobox [ref=f5e3174]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3175]
+              - row [ref=f5e3177]:
+                - cell [ref=f5e3178]:
+                  - checkbox [ref=f5e3179]
+                - cell "FC2600217" [ref=f5e3180]
+                - cell "MARJANE" [ref=f5e3182]
+                - cell "Sage" [ref=f5e3184]
+                - cell "331,88 MAD" [ref=f5e3186]
+                - cell "10%" [ref=f5e3188]
+                - cell "365,07 MAD" [ref=f5e3190]
+                - cell "(sans activité)" [ref=f5e3192]:
+                  - combobox [ref=f5e3193]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3194]
+              - row [ref=f5e3196]:
+                - cell [ref=f5e3197]:
+                  - checkbox [ref=f5e3198]
+                - cell "FC2600211" [ref=f5e3199]
+                - cell "MARJANE" [ref=f5e3201]
+                - cell "Sage" [ref=f5e3203]
+                - cell "438,16 MAD" [ref=f5e3205]
+                - cell "20%" [ref=f5e3207]
+                - cell "525,79 MAD" [ref=f5e3209]
+                - cell "(sans activité)" [ref=f5e3211]:
+                  - combobox [ref=f5e3212]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3213]
+              - row [ref=f5e3215]:
+                - cell [ref=f5e3216]:
+                  - checkbox [ref=f5e3217]
+                - cell "FC2600197" [ref=f5e3218]
+                - cell "MARJANE" [ref=f5e3220]
+                - cell "Sage" [ref=f5e3222]
+                - cell "1 424,14 MAD" [ref=f5e3224]
+                - cell "20%" [ref=f5e3226]
+                - cell "1 708,97 MAD" [ref=f5e3228]
+                - cell "(sans activité)" [ref=f5e3230]:
+                  - combobox [ref=f5e3231]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3232]
+              - row [ref=f5e3234]:
+                - cell [ref=f5e3235]:
+                  - checkbox [ref=f5e3236]
+                - cell "FC2600197" [ref=f5e3237]
+                - cell "MARJANE" [ref=f5e3239]
+                - cell "Sage" [ref=f5e3241]
+                - cell "84,45 MAD" [ref=f5e3243]
+                - cell "0%" [ref=f5e3245]
+                - cell "84,45 MAD" [ref=f5e3247]
+                - cell "(sans activité)" [ref=f5e3249]:
+                  - combobox [ref=f5e3250]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3251]
+              - row [ref=f5e3253]:
+                - cell [ref=f5e3254]:
+                  - checkbox [ref=f5e3255]
+                - cell "FC2600212" [ref=f5e3256]
+                - cell "H&R COMPANY" [ref=f5e3258]
+                - cell "Sage" [ref=f5e3260]
+                - cell "7 912,52 MAD" [ref=f5e3262]
+                - cell "20%" [ref=f5e3264]
+                - cell "9 495,02 MAD" [ref=f5e3266]
+                - cell "(sans activité)" [ref=f5e3268]:
+                  - combobox [ref=f5e3269]:
+                    - option "(sans activité)" [selected]
+                    - option "133 — Autres prestations de services"
+                    - option "134 — Autres achats"
+                    - option "135 — Autres achats"
+                    - option "136 — Autres achats"
+                    - option "137 — Autres achats"
+                    - option "138 — Autres achats"
+                    - option "139 — Autres achats"
+                    - option "140 — Prestation de service"
+                    - option "141 — Transport"
+                    - option "142 — Opération de banque"
+                    - option "143 — Hôtels de voyageurs et ensembles immobiliers à destination touristique"
+                    - option "144 — Les opérations des avocats.interprétes.notaires.adul.huissiers de justice et"
+                    - option "145 — Achat à l'importation"
+                    - option "146 — Achat à l'intérieur"
+                    - option "147 — Achat à l'importation"
+                    - option "148 — Achat à l'intérieur"
+                    - option "149 — Achat à l'importation"
+                    - option "150 — Achat à l'intérieur"
+                    - option "151 — Achat à l'importation"
+                    - option "152 — Achat à l'intérieur"
+                    - option "153 — Autres prestations de services"
+                    - option "155 — Travaux à façon"
+                    - option "156 — Sous - traitance(travaux immobiliers)"
+                    - option "158 — TVA non apparente (article 125 ter du CGI)"
+                    - option "160 — Autres Immobilisations"
+                    - option "162 — Achat à l'importation"
+                    - option "163 — Achat à l'intérieur"
+                    - option "164 — Livraison à soi même autre que les constructions"
+                    - option "165 — Installation et pose"
+                    - option "166 — Constructions"
+                    - option "167 — Livraison à soi même de constructions"
+                    - option "168 — Autres Immobilisations"
+                    - option "169 — Autres Immobilisations"
+                    - option "173 — TVA déduite dans le cadre du régime particulier d auto-liquidation (article 125 quinquies)"
+                    - option "180 — Déduction complémentaire de la régularisation du prorata"
+                    - option "181 — Fraction du crédit de taxe cumulé"
+                    - option "185 — Montant du crédit annulé,demeurant imputable,n'ayant pas donné lieu au remboursement au titre des bien d'investissement(3)"
+                    - option "186 — Montant demandé au remboursement au trittre des biens d'investissement (article 103 bis CGI.)"
+                    - option "187 — Montant du remboursement ordonnancé (article 103 du CGI)"
+                - cell "Proposée" [ref=f5e3270]
+          - generic [ref=f5e3272]:
+            - generic [ref=f5e3273]: Page 1 sur 2
+            - generic [ref=f5e3274]:
+              - button "Précédent" [disabled] [ref=f5e3275]
+              - button "Suivant" [ref=f5e3276] [cursor=pointer]

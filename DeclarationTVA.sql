@@ -8,8 +8,8 @@
 -- (racine DeclarationTVA.sql + Declaration.Infrastructure/SQL/*.sql) :
 --   1. Tables de persistance : DM_ENTTVA, DM_LGTVA, DM_SELECTION_REGLEMENT,
 --      DM_VENTILATION_SAGE_CACHE, DM_PARAM_DELAIPAIEMENT_SOCIETE,
---      DM_REPRISE_DELAIPAIEMENT + toutes les migrations historiques
---      (TASK-055/057/064/065/066/072/076/077/078/094/097/118/128).
+--      DM_REPRISE_DELAIPAIEMENT, DM_SOLDE_INITIAL_TVA + toutes les migrations historiques
+--      (TASK-025/055/057/064/065/066/072/076/077/078/094/097/118/128/161/189/198).
 --   2. Trigger d'immuabilite (TASK-064) sur les tables ERP existantes
 --      RT_AFFECTATION / RT_MOUVEMENT.
 --   3. Login + droits SQL du compte applicatif (TASK-114, moindre privilege)
@@ -252,6 +252,13 @@ GO
 -- convention que NumeroFacture/TiersNom ci-dessus.
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DM_LGTVA') AND name = 'Reference')
     ALTER TABLE dbo.DM_LGTVA ADD Reference NVARCHAR(200) NULL;
+GO
+
+-- TASK-198 (gap comble, cf. 012_DM_LGTVA_CodeTaxe.sql) : CodeTaxe (F_TAXE.TA_Code) propagee jusqu'au
+-- modele/DTOs/Excel/front mais jamais persistee sur DM_LGTVA -- SaveLignesCandidatesAsync ne l'ecrivait
+-- pas, donc GetLignesAsync (SELECT *) la relisait toujours vide.
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DM_LGTVA') AND name = 'CodeTaxe')
+    ALTER TABLE dbo.DM_LGTVA ADD CodeTaxe NVARCHAR(50) NULL;
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_DM_LGTVA_DeclarationId_Domaine')
@@ -558,6 +565,28 @@ BEGIN
 END;
 GO
 
+-- ---------------------------------------------------------------------
+-- 1j. Solde initial GRF (RT_ECHEANCE.EC_Type = 4, cf. DONE_DETAIL/TASK-025) : le montant du
+--     solde n'a aucun detail HT/TVA/taux cote Sage (connu en TTC seul). Decision PO : integrer
+--     ces lignes a la declaration TVA moyennant une saisie MANUELLE du comptable (taux + montant
+--     de TVA), plutot que les eliminer silencieusement comme auparavant. Cette table persiste
+--     cette saisie, par societe et par echeance (EC_Id) -- l'orchestrateur la recharge en batch
+--     avant de construire la declaration (OrchestrateurDeclaration.Traiter).
+-- ---------------------------------------------------------------------
+IF OBJECT_ID('dbo.DM_SOLDE_INITIAL_TVA', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.DM_SOLDE_INITIAL_TVA (
+        SO_Id       INT             NOT NULL,
+        EC_Id       INT             NOT NULL,
+        Taux        DECIMAL(18,6)   NOT NULL,
+        MontantTva  DECIMAL(18,6)   NOT NULL,
+        SaisiPar    NVARCHAR(200)   NULL,
+        SaisiLe     DATETIME        NOT NULL,
+        CONSTRAINT PK_DM_SOLDE_INITIAL_TVA PRIMARY KEY (SO_Id, EC_Id)
+    );
+END;
+GO
+
 -- =====================================================================
 -- 2. Trigger d'immuabilite TOTALE d'une affectation declaree (TASK-064)
 --    Cible : tables ERP existantes RT_AFFECTATION / RT_MOUVEMENT (base GRF).
@@ -815,6 +844,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.DM_PARAM_DELAIPAIEMENT_SOCIETE TO de
 GO
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.DM_REPRISE_DELAIPAIEMENT TO decl_tva_app;
+GO
+
+-- TASK-025 : saisie manuelle solde initial (section 1j ci-dessus).
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.DM_SOLDE_INITIAL_TVA TO decl_tva_app;
 GO
 
 -- Moindre privilege : autorisation d'ecriture limitee a la colonne DT_Id (pas

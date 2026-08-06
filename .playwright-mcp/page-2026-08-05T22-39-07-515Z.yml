@@ -1,0 +1,67 @@
+- generic [ref=e2]:
+  - generic [ref=e19]:
+    - complementary [ref=e20]:
+      - generic [ref=e32]:
+        - generic [ref=e33]:
+          - generic "Rapprochement bancaire" [ref=e35] [cursor=pointer]
+          - generic "Factures" [ref=e39] [cursor=pointer]
+        - generic [ref=e44]:
+          - generic "Déclaration TVA" [ref=e46] [cursor=pointer]
+          - generic "Délai de paiement" [ref=e52] [cursor=pointer]
+      - button "Déconnexion" [ref=e761] [cursor=pointer]
+    - main [ref=e65]:
+      - generic [ref=e104]:
+        - generic [ref=e1594]:
+          - button "Retour à la sélection" [ref=e1595] [cursor=pointer]
+          - generic [ref=e1598]: Détail des affectations — TVA1-2026-01
+        - generic [ref=e1600]:
+          - generic [ref=e1601]:
+            - generic [ref=e1607]:
+              - heading "② Affectations" [level=2] [ref=e1608]
+              - generic [ref=e1609]: 151 règlements · payé ÷ TTC = % puis TVA × % = TVA déclarée
+            - generic [ref=e1610]:
+              - generic [ref=e1611]: "Total TVA (tous règlements) : 0,00 MAD"
+              - button "Colonnes" [ref=e1613] [cursor=pointer]
+          - generic [ref=e1617]:
+            - strong [ref=e1618]: "0"
+            - text: ligne
+          - generic [ref=e1619]:
+            - generic [ref=e1621]:
+              - generic [ref=e1622]:
+                - text: Règlement
+                - button "Filtrer" [ref=e1624] [cursor=pointer]
+              - generic [ref=e1627]:
+                - text: Facture
+                - button "Filtrer" [ref=e1629] [cursor=pointer]
+              - generic [ref=e1632]:
+                - text: Tiers
+                - button "Filtrer" [ref=e1634] [cursor=pointer]
+              - generic [ref=e1637]:
+                - text: Orig.
+                - button "Filtrer" [ref=e1639] [cursor=pointer]
+              - generic [ref=e1642]:
+                - text: Conf.
+                - button "Filtrer" [ref=e1644] [cursor=pointer]
+              - generic [ref=e1647]:
+                - text: Incoh.
+                - button "Filtrer" [ref=e1649] [cursor=pointer]
+              - generic [ref=e1652]:
+                - text: Taux
+                - button "Filtrer" [ref=e1654] [cursor=pointer]
+              - generic [ref=e1657]:
+                - text: Payé
+                - button "Filtrer" [ref=e1659] [cursor=pointer]
+              - generic [ref=e1662]:
+                - text: TTC
+                - button "Filtrer" [ref=e1664] [cursor=pointer]
+              - generic [ref=e1667]:
+                - text: Prorata
+                - button "Filtrer" [ref=e1669] [cursor=pointer]
+              - generic [ref=e1672]:
+                - text: Base TVA
+                - button "Filtrer" [ref=e1674] [cursor=pointer]
+              - generic [ref=e1677]:
+                - text: TVA déclarée
+                - button "Filtrer" [ref=e1679] [cursor=pointer]
+            - generic [ref=e1682]: Aucune affectation trouvée pour les règlements sélectionnés.
+  - generic [ref=e1683]: "Échec du chargement pour 151 règlement(s) : RF26020126, RF26060064, RF26010001, RF26010002, RF26010003, RF26010004, RF26010006, RF26010007, RF26020004, RF26020006… (+141 autre(s))"

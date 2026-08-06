@@ -1,0 +1,74 @@
+- generic [ref=e2]:
+  - generic [ref=e19]:
+    - complementary [ref=e20]:
+      - generic [ref=e32]:
+        - generic [ref=e33]:
+          - generic "Rapprochement bancaire" [ref=e35] [cursor=pointer]
+          - generic "Factures" [ref=e39] [cursor=pointer]
+        - generic [ref=e44]:
+          - generic "Déclaration TVA" [ref=e46] [cursor=pointer]
+          - generic "Délai de paiement" [ref=e52] [cursor=pointer]
+      - button "Déconnexion" [ref=e761] [cursor=pointer]
+    - main [ref=e65]:
+      - generic [ref=e104]:
+        - generic [ref=e2230]:
+          - generic [ref=e2231]:
+            - button "Retour" [ref=e2232] [cursor=pointer]
+            - generic [ref=e2235]: TVA1-2026-01
+          - generic [ref=e2236]:
+            - button "1. Sélection" [ref=e2237] [cursor=pointer]
+            - button "2. Vérifier & Intégrer" [ref=e2241] [cursor=pointer]
+            - button "3. Déclaration" [disabled] [ref=e2245]
+          - generic [ref=e2250]:
+            - generic [ref=e2251]: Période 01/01/2026 → 31/01/2026
+            - generic [ref=e2252]: En cours
+        - generic [ref=e2255]:
+          - generic [ref=e2371]:
+            - button "← Retour au contrôle" [ref=e2372] [cursor=pointer]
+            - generic [ref=e2373]: "Toutes les lignes :"
+            - generic [ref=e2374]: TVA Déductible (Achats)
+          - generic [ref=e2375]:
+            - generic [ref=e2377]:
+              - generic [ref=e2378]:
+                - text: "Total résultats :"
+                - strong [ref=e2379]: "0"
+              - button "Colonnes" [ref=e2381] [cursor=pointer]
+            - generic [ref=e2384]:
+              - table [ref=e2385]:
+                - row [ref=e2386]:
+                  - columnheader "N° Facture Filtrer" [ref=e2387] [cursor=pointer]:
+                    - generic [ref=e2388]: N° Facture
+                    - button "Filtrer" [ref=e2391]
+                  - columnheader "Tiers Filtrer" [ref=e2394] [cursor=pointer]:
+                    - generic [ref=e2395]: Tiers
+                    - button "Filtrer" [ref=e2398]
+                  - columnheader "Origine Filtrer" [ref=e2401] [cursor=pointer]:
+                    - generic [ref=e2402]: Origine
+                    - button "Filtrer" [ref=e2405]
+                  - columnheader "Montant HT Filtrer" [ref=e2408] [cursor=pointer]:
+                    - generic [ref=e2409]: Montant HT
+                    - button "Filtrer" [ref=e2412]
+                  - columnheader "Taux TVA Filtrer" [ref=e2415] [cursor=pointer]:
+                    - generic [ref=e2416]: Taux TVA
+                    - button "Filtrer" [ref=e2419]
+                  - columnheader "Montant TTC Filtrer" [ref=e2422] [cursor=pointer]:
+                    - generic [ref=e2423]: Montant TTC
+                    - button "Filtrer" [ref=e2426]
+                  - columnheader "Source Filtrer" [ref=e2429] [cursor=pointer]:
+                    - generic [ref=e2430]: Source
+                    - button "Filtrer" [ref=e2433]
+                  - columnheader "Statut Filtrer" [ref=e2436] [cursor=pointer]:
+                    - generic [ref=e2437]: Statut
+                    - button "Filtrer" [ref=e2440]
+                  - columnheader "Motif Écartement Filtrer" [ref=e2443] [cursor=pointer]:
+                    - generic [ref=e2444]: Motif Écartement
+                    - button "Filtrer" [ref=e2447]
+                  - columnheader "Actions" [ref=e2450]
+                - rowgroup
+              - generic [ref=e2451]: Aucune ligne trouvée.
+            - generic [ref=e2452]:
+              - generic [ref=e2453]: Page 1 sur 1
+              - generic [ref=e2454]:
+                - button "Précédent" [disabled] [ref=e2455]
+                - button "Suivant" [disabled] [ref=e2456]
+  - generic [ref=e2457]: Erreur lors du chargement des données

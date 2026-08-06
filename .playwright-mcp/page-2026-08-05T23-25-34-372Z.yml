@@ -1,0 +1,30 @@
+- generic [ref=e2]:
+  - generic [ref=e18]:
+    - complementary [ref=e19]:
+      - generic [ref=e20] [cursor=pointer]:
+        - generic [ref=e22]:
+          - img "DM" [ref=e28]
+          - generic [ref=e29]: TVA
+        - generic [ref=e30]: NEW_EMA DISTRIBUTION
+      - generic [ref=e31]:
+        - generic [ref=e32]:
+          - generic [ref=e33]: INTERROGATION
+          - generic "Rapprochement bancaire" [ref=e34] [cursor=pointer]
+          - generic "Factures" [ref=e38] [cursor=pointer]
+        - generic [ref=e43]:
+          - generic [ref=e44]: DÉCLARATION
+          - generic "Déclaration TVA" [ref=e45] [cursor=pointer]
+          - generic "Délai de paiement" [ref=e51] [cursor=pointer]
+      - generic [ref=e57]:
+        - generic [ref=e58]: Admin Admin
+        - button "Déconnexion" [ref=e59] [cursor=pointer]
+    - main [ref=e64]:
+      - generic [ref=e197]:
+        - generic [ref=e199]:
+          - button "Déclarations" [ref=e200] [cursor=pointer]
+          - button "Sélection / Contrôle" [ref=e201] [cursor=pointer]
+          - button "Conventions" [ref=e202] [cursor=pointer]
+        - generic [ref=e266]:
+          - button "Retour" [ref=e267] [cursor=pointer]
+          - paragraph [ref=e270]: Déclaration introuvable.
+  - generic [ref=e271]: Erreur lors du chargement de la déclaration

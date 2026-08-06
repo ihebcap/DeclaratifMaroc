@@ -1,13 +1,75 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ExcelFilter } from './ExcelFilter';
-import { ColumnSelector } from './ColumnSelector';
-import { useColumnPrefs } from './useColumnPrefs';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import type { ColDef, GridApi, GridReadyEvent } from 'ag-grid-community';
+import { ApbsGrid } from './grid/ApbsGrid';
+import { CustomListFilter } from './grid/CustomListFilter';
 import { formatMoney } from './utils';
 import api from './api';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { Loader2, CheckSquare, XSquare, Clock, RefreshCw } from 'lucide-react';
+import { Loader2, CheckSquare, XSquare, Clock, RefreshCw, Calculator, X } from 'lucide-react';
 import type { DomaineTVA } from './DeclarationStepper';
-import { relireDepuisSage, resynchroniserLignesBulk } from './api';
+import { relireDepuisSage, resynchroniserLignesBulk, enregistrerSaisieSoldeInitial } from './api';
+
+const estSoldeInitialASaisir = (motif: unknown) => typeof motif === 'string' && motif.startsWith('Solde initial :');
+
+function SaisieSoldeInitialModal({ row, declarationId, onClose, onSaved, showToast }: {
+    row: any,
+    declarationId: string,
+    onClose: () => void,
+    onSaved: () => void,
+    showToast: (m: string, t?: 'success' | 'error' | 'warning') => void,
+}) {
+    const [taux, setTaux] = useState<number | ''>('');
+    const [montantTva, setMontantTva] = useState<number | ''>('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (montantTva === '' || Number(montantTva) < 0) { showToast('Le montant de TVA est obligatoire (≥ 0).', 'error'); return; }
+        setSubmitting(true);
+        try {
+            const { resolue } = await enregistrerSaisieSoldeInitial(declarationId, row.ecId, Number(taux || 0), Number(montantTva));
+            showToast(resolue ? 'Solde initial intégré à la déclaration.' : 'Saisie enregistrée, mais la ligne reste en anomalie.', resolue ? 'success' : 'warning');
+            onSaved();
+        } catch (e: any) {
+            showToast(e?.response?.data?.Message || e?.response?.data?.message || 'Échec de l\'enregistrement de la saisie.', 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div style={{ background: 'white', borderRadius: '8px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Solde initial — saisie TVA</h3>
+                    <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
+                </div>
+                <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        Facture <strong>{row.factureNumero || row.ecId}</strong> — montant du solde (TTC) : <strong>{formatMoney(row.ttc ?? row.montantTTC ?? 0)}</strong>.
+                        Ce solde initial n'a aucun détail de TVA côté Sage : saisissez le taux et le montant de TVA pour l'intégrer à la déclaration (le HT sera déduit : TTC − TVA).
+                    </p>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1 }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 500 }}>Taux de TVA (%)</label>
+                            <input type="number" step="0.01" min={0} className="form-input" value={taux} onChange={e => setTaux(e.target.value === '' ? '' : Number(e.target.value))} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1 }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 500 }}>Montant de TVA</label>
+                            <input type="number" step="0.01" min={0} className="form-input" value={montantTva} onChange={e => setMontantTva(e.target.value === '' ? '' : Number(e.target.value))} required />
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '0.5rem' }}>
+                        <button type="button" onClick={onClose} disabled={submitting} className="btn" style={{ background: 'transparent', border: '1px solid var(--border-color)', padding: '0.5rem 1rem', borderRadius: '4px' }}>Annuler</button>
+                        <button type="submit" disabled={submitting} className="btn btn-primary" style={{ background: 'var(--accent-primary)', color: 'white', border: 'none', padding: '0.5rem 1.5rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {submitting && <Loader2 size={16} className="animate-spin" />}
+                            Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
 
 export function DomainGrid({ 
     declarationId, 
@@ -18,7 +80,7 @@ export function DomainGrid({
     readonly = false,
     onRowClick,
     columns,
-    colsStorageKey,
+    colsStorageKey: _colsStorageKey,
     codeActiviteOptions,
     showResynchroniserAction
 }: {
@@ -30,65 +92,32 @@ export function DomainGrid({
     readonly?: boolean,
     onRowClick?: (row: any) => void,
     columns?: { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date', width?: string, derived?: boolean, editable?: boolean }[],
-    // TASK-142 : clé de persistance des colonnes visibles. Un jeu de colonnes non-standard (ex. drill
-    // incohérence avec Montant TVA + Écart) DOIT utiliser sa propre clé, sinon il hérite des préférences
-    // enregistrées pour la grille par défaut (qui ne connaît pas ces colonnes) → elles seraient masquées.
     colsStorageKey?: string,
-    // TASK-161 : options de la liste déroulante pour toute colonne `editable` de clé 'codeActivite'
-    // (référentiel P_DECTVAACTIVITE). Non fourni = colonne affichée en lecture seule même si
-    // `editable` est posé (garde-fou : jamais un select vide silencieux).
     codeActiviteOptions?: { value: string, label: string }[],
-    // TASK-170 : colonne « Actions » optionnelle avec un bouton « Resynchroniser » (relecture Sage
-    // réelle, réutilise `ResynchroniserLigneAsync` déjà livré par TASK-167 via `relireDepuisSage`).
-    // Opt-in explicite par écran appelant — jamais affichée par défaut, pour ne pas la faire
-    // apparaître sur les 5 autres écrans partageant ce composant (① Sélection, Workstation,
-    // ProofModal, DeclarationFinalePanel, drill incohérence).
     showResynchroniserAction?: boolean
 }) {
     const [data, setData] = useState<any[]>([]);
     const [total, setTotal] = useState(0);
     const [distincts, setDistincts] = useState<Record<string, string[]>>({});
     const [loading, setLoading] = useState(false);
-    
-    // Server state
+    const [gridApi, setGridApi] = useState<GridApi | null>(null);
+
     const [page, setPage] = useState(1);
     const [filters, setFilters] = useState<Record<string, string | string[]>>({});
-    const [sortConfig, setSortConfig] = useState<{ key: string, desc: boolean } | null>(null);
-    
-    // Selection state
+    const [sortConfig, _setSortConfig] = useState<{ key: string, desc: boolean } | null>(null);
+
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [selectAllFilters, setSelectAllFilters] = useState(false);
 
-    const size = 100; // items per page
-    const parentRef = useRef<HTMLDivElement>(null);
-
-    // TASK-142 : `derived` = colonne purement calculée en rendu à partir de champs déjà chargés
-    // (ex. « Écart » = montantHT+montantTVA−montantTTC). Aucune clé correspondante côté API → on ne
-    // doit ni la trier ni la filtrer (sinon on enverrait une clé inconnue au back, cf. garde-fou).
-    type ColumnDef = { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date', width?: string, derived?: boolean, editable?: boolean };
-    // TASK-110 : largeur bornée par colonne (pattern AffectationsDrill.tsx GridCell/colStyle) —
-    // évite qu'un motif d'écartement long étire toute la ligne ; défaut 200px sinon spécifié.
-    const DEFAULT_COL_WIDTH = '200px';
-    const colMaxWidth = (col: ColumnDef) => col.width || DEFAULT_COL_WIDTH;
-    // TASK-138 : source UNIQUE de largeur de colonne, partagée par l'en-tête ET par chaque ligne
-    // (pattern colStyle de AffectationsDrill.tsx). Toutes les colonnes de DomainGrid ont une largeur
-    // fixe (colMaxWidth défaut 200px) → flex non extensible « 0 0 width » : l'en-tête et le corps ne
-    // peuvent plus diverger, contrairement au calcul de layout d'un <table> + <tr position:absolute>
-    // (cause des deux échecs TASK-113 v1/v2).
-    const colStyle = (col: ColumnDef): React.CSSProperties => ({
-        flex: `0 0 ${colMaxWidth(col)}`,
-        width: colMaxWidth(col),
-    });
-    const CHECKBOX_W = '40px';
-    const isNumericCol = (key: string) => ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA', 'ecart'].includes(key);
-    // TASK-142 : écart d'équilibre par ligne, dérivé en pur affichage (aucun appel/recalcul serveur).
+    const size = 100;
     const ligneEcart = (row: any) => Number(row?.montantHT || 0) + Number(row?.montantTVA || 0) - Number(row?.montantTTC || 0);
+
+    type ColumnDef = { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date', width?: string, derived?: boolean, editable?: boolean };
+
     const defaultColumns: ColumnDef[] = [
         { key: 'factureNumero', label: 'N° Facture', filterType: 'text' },
-        // TASK-034 : colonne « Désignation » retirée — aucune source dans LigneCandidate
-        // (décision PO par défaut : ne rien inventer, pas de colonne vide muette).
         { key: 'tiers', label: 'Tiers', filterType: 'text' },
-        { key: 'origine', label: 'Origine', filterType: 'list' }, // TASK-038 : origine EC_Type (Sage/OM · FGR · Solde initial)
+        { key: 'origine', label: 'Origine', filterType: 'list' },
         { key: 'montantHT', label: 'Montant HT', filterType: 'number' },
         { key: 'tauxTVA', label: 'Taux TVA', filterType: 'list' },
         { key: 'montantTTC', label: 'Montant TTC', filterType: 'number' },
@@ -97,15 +126,10 @@ export function DomainGrid({
         { key: 'motif', label: 'Motif Écartement', filterType: 'text', width: '280px' }
     ];
     const gridColumns: ColumnDef[] = columns || defaultColumns;
-    const { visibleColumns, visibleKeys, toggle: toggleColumn, reset: resetColumns } = useColumnPrefs(colsStorageKey || 'grf.cols.domain', gridColumns);
 
     const fetchPage = useCallback(async () => {
         setLoading(true);
         try {
-            // TASK-067B : le back (BuildLigneFilterWhere) applique désormais numeroRapprochement/
-            // source/tauxTVA/origine en MULTI-SÉLECTION RÉELLE (IN), fin de la troncature à la 1re
-            // valeur cochée (l'ancien `v[0]` ignorait silencieusement les autres cases — filtre
-            // menteur, cf. TASK-063 pour le même bug côté Rapprochement).
             const backendFilters: any = {};
             for (const [k, v] of Object.entries(filters)) {
                 const outK = k === 'statutLigne' ? 'etat' : k;
@@ -131,62 +155,21 @@ export function DomainGrid({
         } finally {
             setLoading(false);
         }
-    }, [declarationId, domaine, page, filters, sortConfig]);
+    }, [declarationId, domaine, page, filters, sortConfig, showToast]);
 
     useEffect(() => {
-        // Reset page to 1 when filters or sort change, but not on initial mount
         setPage(1);
     }, [filters, sortConfig, domaine]);
 
     useEffect(() => {
         fetchPage();
-        setSelectedIds(new Set()); // Clear selection on data change
+        setSelectedIds(new Set());
         setSelectAllFilters(false);
     }, [fetchPage]);
 
     useEffect(() => {
         if (initialFilters) setFilters(initialFilters);
     }, [initialFilters, domaine]);
-
-    const handleFilterChange = (key: string, val: any) => {
-        setFilters(prev => {
-            const next = { ...prev };
-            if (val === '' || (Array.isArray(val) && val.length === 0)) {
-                delete next[key];
-            } else {
-                next[key] = val;
-            }
-            return next;
-        });
-    };
-
-    const handleSort = (key: string) => {
-        setSortConfig(prev => {
-            if (prev?.key === key) {
-                if (prev.desc) return null;
-                return { key, desc: true };
-            }
-            return { key, desc: false };
-        });
-    };
-
-    const handleToggleAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.checked) {
-            setSelectedIds(new Set(data.map(d => d.id)));
-        } else {
-            setSelectedIds(new Set());
-            setSelectAllFilters(false);
-        }
-    };
-
-    const handleToggleOne = (id: string) => {
-        setSelectedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-        });
-    };
 
     const doBulkAction = async (statut: 'Intégrée' | 'Exclue' | 'Reportée' | 'Proposée') => {
         if (selectedIds.size === 0 && !selectAllFilters) return;
@@ -208,10 +191,6 @@ export function DomainGrid({
         }
     };
 
-    // TASK-173 : affectation en masse du code activité — même sélection (IDs ou domaine+filtre)
-    // que doBulkAction ci-dessus, réutilise le mécanisme :bulk existant (TASK-012) côté back.
-    // N'est proposée que si `codeActiviteOptions` est fourni par l'écran appelant (drill « Codes
-    // activité » de VerifierIntegrerPanel) — jamais sur les 5 autres écrans partageant DomainGrid.
     const [codeActiviteMasse, setCodeActiviteMasse] = useState('');
     const [affectationEnCours, setAffectationEnCours] = useState(false);
     const doBulkCodeActivite = async () => {
@@ -238,12 +217,6 @@ export function DomainGrid({
         }
     };
 
-    // TASK-176 : resynchronisation EN MASSE de la sélection — même mécanique de sélection (IDs ou
-    // domaine+filtre) que doBulkAction/doBulkCodeActivite, mais côté back chaque pièce est relue
-    // SÉQUENTIELLEMENT sous le verrou soId (TASK-156). Réutilise l'appel API factorisé (api.ts),
-    // pas de duplication du pipeline unitaire relireDepuisSage. Confirmation au-delà d'un seuil (le
-    // volume d'appels OM/Sage successifs peut prendre du temps) et indicateur d'activité pendant
-    // l'exécution (le back reste synchrone : un seul retour agrégé à la fin).
     const SEUIL_CONFIRMATION_RESYNC = 20;
     const [resynchroMasseEnCours, setResynchroMasseEnCours] = useState(false);
     const doBulkResynchroniser = async () => {
@@ -280,8 +253,6 @@ export function DomainGrid({
             fetchPage();
             onActionDone();
         } catch (e: any) {
-            // 409 : un autre traitement OM tenait déjà le verrou soId avant la première pièce
-            // (rien fait) — message serveur explicite (TASK-156). Autres cas : message générique.
             const message = e?.response?.data?.Message || e?.response?.data?.message || 'Échec de la resynchronisation en masse.';
             showToast(message, 'error');
         } finally {
@@ -289,10 +260,6 @@ export function DomainGrid({
         }
     };
 
-    // TASK-161 : surcharge manuelle du code activité d'une ligne (colonne `editable`, jamais en
-    // lecture seule) — PATCH ciblé par ligne (Id = DM_LGTVA.Id), jamais par EC_Id (une même
-    // facture peut porter deux lignes de taux différents avec deux activités différentes, cas
-    // confirmé PO). Mise à jour optimiste de la ligne locale après succès, pas de refetch complet.
     const handleCodeActiviteChange = async (row: any, nouveauCode: string) => {
         try {
             await api.patch(`/declarations/${declarationId}/lignes/${row.id}/code-activite`, { codeActivite: nouveauCode });
@@ -304,11 +271,8 @@ export function DomainGrid({
         }
     };
 
-    // TASK-170 : relecture Sage réelle depuis la colonne « Actions », visible sur chaque ligne
-    // sans dépendre d'un statut d'anomalie (contrairement à DiagnosticModal.tsx/AffectationsDrill.tsx
-    // qui la conditionnent chacun à leur propre critère). Réutilisation stricte de `relireDepuisSage`
-    // (même appel que DiagnosticModal.tsx, TASK-167) — aucun second endpoint.
     const [resynchronisant, setResynchronisant] = useState<Set<string>>(new Set());
+    const [soldeInitialTarget, setSoldeInitialTarget] = useState<any | null>(null);
     const handleResynchroniser = async (row: any) => {
         if (!row.ecId || row.ecId <= 0) return;
         setResynchronisant(prev => new Set(prev).add(row.id));
@@ -319,32 +283,31 @@ export function DomainGrid({
                 fetchPage();
                 onActionDone();
             } else {
-                // TASK-167 §3 (garde-fou) : le motif réel reste affiché, bloquant — jamais de
-                // montant fabriqué. On informe simplement que la relecture n'a rien résolu.
                 showToast(`Relecture Sage effectuée pour ${row.factureNumero || row.ecId} — la ligne reste en anomalie (motif inchangé).`, 'warning');
             }
         } catch (e: any) {
-            // TASK-156 : un rejet 409 signifie qu'un verrou soId partagé est déjà pris par un
-            // autre traitement OM pour cette société — message serveur explicite.
             const message = e?.response?.data?.Message || e?.response?.data?.message || 'Échec de la relecture Sage.';
             showToast(message, 'error');
         } finally {
             setResynchronisant(prev => { const next = new Set(prev); next.delete(row.id); return next; });
         }
     };
-    const ACTIONS_COL_W = '140px';
 
-    // Virtualization setup
-    const rowVirtualizer = useVirtualizer({
-        count: data.length,
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => 40,
-        overscan: 5,
-    });
+    const handleSelectionChanged = useCallback(() => {
+        if (!gridApi) return;
+        const selectedNodes = gridApi.getSelectedNodes();
+        const ids = new Set<string>();
+        selectedNodes.forEach((n) => {
+            if (n.data?.id) ids.add(n.data.id);
+        });
+        setSelectedIds(ids);
+    }, [gridApi]);
+
+    const onGridReady = useCallback((params: GridReadyEvent) => {
+        setGridApi(params.api);
+    }, []);
 
     const renderCell = (key: string, val: any) => {
-        // TASK-142 : montantTVA (2ᵉ opérande de l'égalité isolée par le drill) + ecart (dérivé) manquaient
-        // à la liste des colonnes monétaires → ils s'affichaient en brut. Ajoutés ici.
         if (['ht', 'tva', 'ttc', 'montantHT', 'montantTVA', 'montantTTC', 'ecart'].includes(key)) return formatMoney(val);
         if (key === 'taux' || key === 'tauxTVA') return `${val}%`;
         if (key === 'etat' || key === 'statutLigne') {
@@ -366,22 +329,134 @@ export function DomainGrid({
         return val;
     };
 
-    const totalPages = Math.ceil(total / size);
+    const columnDefs: ColDef[] = useMemo(() => {
+        const defs: ColDef[] = [];
+        if (!readonly) {
+            defs.push({
+                headerCheckboxSelection: true,
+                checkboxSelection: true,
+                width: 50,
+                pinned: 'left',
+                suppressHeaderMenuButton: true,
+                resizable: false,
+            });
+        }
 
-    // TASK-138 : largeur totale de la grille = somme des largeurs fixes (+ colonne case à cocher),
-    // bornée à 1000px minimum (reprise du minWidth de l'ancien <table>). Sert de minWidth au wrapper
-    // interne afin que l'en-tête et les lignes virtualisées (width:100% du wrapper) partagent
-    // exactement la même largeur — condition de l'alignement strict.
-    const gridMinWidth = Math.max(
-        1000,
-        (readonly ? 0 : parseInt(CHECKBOX_W, 10)) +
-            (showResynchroniserAction ? parseInt(ACTIONS_COL_W, 10) : 0) +
-            visibleColumns.reduce((sum: number, col: ColumnDef) => sum + parseInt(colMaxWidth(col), 10), 0)
-    );
+        gridColumns.forEach((col) => {
+            const isNumeric = ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA', 'ecart'].includes(col.key);
+            const w = col.width ? parseInt(col.width, 10) : 180;
+            const isEditableCodeAct = col.key === 'codeActivite' && col.editable && !readonly && codeActiviteOptions;
+
+            const colDef: ColDef = {
+                field: col.key,
+                headerName: col.label,
+                width: w,
+                type: isNumeric ? 'numericColumn' : undefined,
+                filter: col.derived ? false : CustomListFilter,
+                filterParams: {
+                    options: (distincts[col.key] || []).map(v => ({ label: v, value: v }))
+                },
+                cellRenderer: (p: any) => {
+                    const row = p.data;
+                    if (!row) return null;
+                    const cellVal = col.key === 'ecart' ? ligneEcart(row) : row[col.key];
+                    const ecartAnormal = col.key === 'ecart' && Math.abs(cellVal) > 0.005;
+
+                    if (isEditableCodeAct) {
+                        return (
+                            <select
+                                value={cellVal || ''}
+                                onChange={(e) => handleCodeActiviteChange(row, e.target.value)}
+                                style={{ width: '100%', fontSize: '0.8125rem', padding: '0.15rem' }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <option value="">(sans activité)</option>
+                                {codeActiviteOptions!.map(o => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                            </select>
+                        );
+                    }
+
+                    return (
+                        <div
+                            style={{
+                                background: ecartAnormal ? 'var(--status-blocking-bg)' : undefined,
+                                color: ecartAnormal ? 'var(--status-blocking-text)' : undefined,
+                                fontWeight: ecartAnormal ? 700 : undefined,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                width: '100%',
+                            }}
+                            title={typeof cellVal === 'string' ? cellVal : undefined}
+                        >
+                            {renderCell(col.key, cellVal)}
+                        </div>
+                    );
+                }
+            };
+            defs.push(colDef);
+        });
+
+        if (showResynchroniserAction) {
+            defs.push({
+                headerName: 'Actions',
+                width: 250,
+                pinned: 'right',
+                suppressHeaderMenuButton: true,
+                cellRenderer: (p: any) => {
+                    const row = p.data;
+                    if (!row) return null;
+                    return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', height: '100%' }} onClick={(e) => e.stopPropagation()}>
+                            {row.ecId > 0 && estSoldeInitialASaisir(row.motif) && (
+                                <button
+                                    onClick={() => setSoldeInitialTarget(row)}
+                                    title="Saisir le taux et le montant de TVA pour intégrer ce solde initial à la déclaration"
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                        padding: '2px 9px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600,
+                                        cursor: 'pointer', background: 'var(--accent-primary)', border: '1px solid var(--accent-primary)',
+                                        color: 'white', whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    <Calculator size={12} />
+                                    Saisir TVA
+                                </button>
+                            )}
+                            {row.ecId > 0 && (
+                                <button
+                                    onClick={() => handleResynchroniser(row)}
+                                    disabled={resynchronisant.has(row.id)}
+                                    title="Relire cette ligne depuis Sage (ex. après correction d'un montant sur Sage)"
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                        padding: '2px 9px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600,
+                                        cursor: resynchronisant.has(row.id) ? 'default' : 'pointer',
+                                        background: resynchronisant.has(row.id) ? 'var(--bg-secondary)' : 'white',
+                                        border: '1px solid var(--border-color)', color: 'var(--text-primary)', whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    <RefreshCw size={12} className={resynchronisant.has(row.id) ? 'animate-spin' : undefined} />
+                                    Resynchroniser
+                                </button>
+                            )}
+                        </div>
+                    );
+                }
+            });
+        }
+
+        return defs;
+    }, [gridColumns, readonly, codeActiviteOptions, distincts, showResynchroniserAction, resynchronisant]);
+
+    const totalPages = Math.ceil(total / size);
+    const nbSansCodeActivitePage = data.filter(r => !((r as unknown as Record<string, string>).codeActivite ?? '').trim()).length;
 
     return (
         <div style={{ background: 'white', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-            
+
             {/* Toolbar */}
             <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -392,20 +467,15 @@ export function DomainGrid({
                             </span>
                             {(selectedIds.size > 0 || selectAllFilters) && (
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <button onClick={() => doBulkAction('Intégrée')} className="btn" style={{ background: 'var(--status-ok-bg)', color: 'var(--status-ok-text)', border: '1px solid #bbf7d0', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><CheckSquare size={14}/> Intégrer</button>
-                                    <button onClick={() => doBulkAction('Exclue')} className="btn" style={{ background: 'var(--status-blocking-bg)', color: 'var(--status-blocking-text)', border: '1px solid #fecaca', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><XSquare size={14}/> Exclure</button>
-                                    <button onClick={() => doBulkAction('Reportée')} className="btn" style={{ background: '#fef3c7', color: 'var(--status-warning-text-alt)', border: '1px solid var(--status-warning-border)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><Clock size={14}/> Reporter</button>
-                                    <button onClick={() => doBulkAction('Proposée')} className="btn" style={{ background: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>Réinitialiser</button>
-                                    {/* TASK-176 : resynchronisation en masse — visible uniquement sur l'écran
-                                        Vérifier & Intégrer (même flag que le bouton par ligne TASK-170), jamais
-                                        sur les autres écrans partageant DomainGrid. */}
+                                    <button title="Ces lignes seront COMPTÉES dans la TVA de cette déclaration." onClick={() => doBulkAction('Intégrée')} className="btn" style={{ background: 'var(--status-ok-bg)', color: 'var(--status-ok-text)', border: '1px solid #bbf7d0', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><CheckSquare size={14}/> Intégrer</button>
+                                    <button title="Ces lignes NE SERONT PAS déclarées, ni sur cette période ni sur une autre (exclusion définitive)." onClick={() => doBulkAction('Exclue')} className="btn" style={{ background: 'var(--status-blocking-bg)', color: 'var(--status-blocking-text)', border: '1px solid #fecaca', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><XSquare size={14}/> Exclure</button>
+                                    <button title="Ces lignes ne sont pas déclarées ce mois-ci ; elles restent disponibles pour une déclaration ultérieure." onClick={() => doBulkAction('Reportée')} className="btn" style={{ background: '#fef3c7', color: 'var(--status-warning-text-alt)', border: '1px solid var(--status-warning-border)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><Clock size={14}/> Reporter</button>
+                                    <button title="Annule la décision manuelle : ces lignes repassent à l'état proposé par l'application." onClick={() => doBulkAction('Proposée')} className="btn" style={{ background: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>Réinitialiser</button>
                                     {showResynchroniserAction && (
                                         <button onClick={doBulkResynchroniser} disabled={resynchroMasseEnCours} className="btn" style={{ background: 'white', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><RefreshCw size={14} className={resynchroMasseEnCours ? 'animate-spin' : ''}/> {resynchroMasseEnCours ? 'Resynchronisation…' : 'Resynchroniser la sélection'}</button>
                                     )}
                                 </div>
                             )}
-                            {/* TASK-173 : affectation en masse du code activité — visible uniquement quand
-                                l'écran appelant fournit codeActiviteOptions (drill « Codes activité »). */}
                             {codeActiviteOptions && (selectedIds.size > 0 || selectAllFilters) && (
                                 <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', borderLeft: '1px solid var(--border-color)', paddingLeft: '0.75rem' }}>
                                     <select
@@ -431,7 +501,7 @@ export function DomainGrid({
                         </>
                     )}
                 </div>
-                
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem' }}>
                     {loading && <Loader2 size={16} className="animate-spin text-primary" />}
                     <span>Total résultats : <strong>{total}</strong></span>
@@ -440,11 +510,16 @@ export function DomainGrid({
                             Effacer filtres
                         </button>
                     )}
-                    <ColumnSelector columns={gridColumns} visibleKeys={visibleKeys} onToggle={toggleColumn} onReset={resetColumns} />
                 </div>
             </div>
 
-            {/* Select All Banner */}
+            {codeActiviteOptions && !readonly && nbSansCodeActivitePage > 0 && (
+                <div style={{ padding: '0.5rem 1rem', background: '#fffbeb', color: 'var(--status-warning-text-alt, #92400e)', borderBottom: '1px solid var(--status-warning-border, #fde68a)', fontSize: '0.8rem', fontWeight: 600 }}>
+                    ⚠ {nbSansCodeActivitePage} ligne(s) sans code activité sur cette page — le relevé de déductions
+                    exige une désignation pour chaque ligne. Sélectionnez les lignes puis utilisez l'affectation groupée.
+                </div>
+            )}
+
             {selectedIds.size === data.length && data.length > 0 && total > data.length && !selectAllFilters && (
                 <div style={{ padding: '0.5rem', background: '#eff6ff', color: '#1d4ed8', textAlign: 'center', borderBottom: '1px solid #bfdbfe', fontSize: '0.875rem' }}>
                     Toutes les <strong>{data.length}</strong> lignes de cette page sont sélectionnées. 
@@ -463,152 +538,19 @@ export function DomainGrid({
             )}
 
             {/* Grid Container */}
-            {/* TASK-138 : rendu flexbox <div> (pattern AffectationsDrill.tsx) en remplacement du
-                <table> + <colgroup> + <tr position:absolute> virtualisés — les deux itérations
-                TASK-113 (v1 tableLayout:fixed+colgroup, v2 + width explicite) n'ont pas corrigé le
-                désalignement en test réel. Ici l'en-tête et les lignes utilisent la MÊME fonction de
-                largeur (colStyle), et le wrapper interne impose une largeur commune (gridMinWidth) :
-                l'alignement est garanti par construction, sans dépendre du calcul de layout d'un
-                tableau. Virtualisation @tanstack/react-virtual conservée (lignes = <div>
-                position:absolute). Rôles ARIA posés pour compenser l'abandon du <table> sémantique. */}
-            <div ref={parentRef} style={{ flexGrow: 1, overflow: 'auto', position: 'relative' }}>
-                <div role="table" style={{ minWidth: `${gridMinWidth}px`, fontSize: '0.8125rem' }}>
-                    {/* En-tête collant */}
-                    <div role="row" style={{ display: 'flex', position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderBottom: '1px solid var(--border-color)' }}>
-                        {!readonly && (
-                            <div role="columnheader" style={{ flex: `0 0 ${CHECKBOX_W}`, width: CHECKBOX_W, padding: '0.5rem 1rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center' }}>
-                                <input type="checkbox" checked={selectAllFilters || (selectedIds.size > 0 && selectedIds.size === data.length)} onChange={handleToggleAll} />
-                            </div>
-                        )}
-                        {visibleColumns.map((col: ColumnDef) => (
-                            <div
-                                key={col.key}
-                                role="columnheader"
-                                onClick={col.derived ? undefined : () => handleSort(col.key)}
-                                style={{ ...colStyle(col), padding: '0.5rem 1rem', borderRight: '1px solid var(--border-color)', cursor: col.derived ? 'default' : 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: isNumericCol(col.key) ? 'flex-end' : 'flex-start', gap: '0.25rem' }}
-                            >
-                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{col.label}</span>
-                                {/* TASK-142 : colonne dérivée (Écart) non triable/non filtrable — aucune clé
-                                    envoyée au back (garde-fou : ne pas transmettre de clé inexistante côté API). */}
-                                {!col.derived && sortConfig?.key === col.key && (
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{sortConfig?.desc ? '▼' : '▲'}</span>
-                                )}
-                                {!col.derived && (
-                                    <span onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center' }}>
-                                        <ExcelFilter
-                                            filterType={col.filterType}
-                                            options={(distincts[col.key] || []).map(v => ({label: v, value: v}))}
-                                            selectedValues={Array.isArray(filters[col.key]) ? filters[col.key] as string[] : []}
-                                            textValue={typeof filters[col.key] === 'string' ? filters[col.key] as string : ''}
-                                            onChange={(val) => handleFilterChange(col.key, val)}
-                                        />
-                                    </span>
-                                )}
-                            </div>
-                        ))}
-                        {showResynchroniserAction && (
-                            <div role="columnheader" style={{ flex: `0 0 ${ACTIONS_COL_W}`, width: ACTIONS_COL_W, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', fontWeight: 600 }}>
-                                Actions
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Corps virtualisé */}
-                    <div role="rowgroup" style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-                        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                            const row = data[virtualRow.index];
-                            if (!row) return null;
-                            const isSelected = selectedIds.has(row.id);
-
-                            return (
-                                <div
-                                    key={row.id}
-                                    role="row"
-                                    onClick={() => onRowClick && onRowClick(row)}
-                                    style={{
-                                        display: 'flex',
-                                        position: 'absolute', top: 0, left: 0, width: '100%',
-                                        transform: `translateY(${virtualRow.start}px)`,
-                                        height: `${virtualRow.size}px`,
-                                        borderBottom: '1px solid var(--border-color)',
-                                        backgroundColor: isSelected ? 'var(--bg-secondary)' : 'white',
-                                        cursor: onRowClick ? 'pointer' : 'default'
-                                    }}
-                                >
-                                    {!readonly && (
-                                        <div role="cell" style={{ flex: `0 0 ${CHECKBOX_W}`, width: CHECKBOX_W, padding: '0.5rem 1rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-                                            <input type="checkbox" checked={isSelected || selectAllFilters} onChange={() => handleToggleOne(row.id)} disabled={selectAllFilters} />
-                                        </div>
-                                    )}
-                                    {visibleColumns.map((col: ColumnDef) => {
-                                        // TASK-142 : valeur de la colonne « Écart » calculée en rendu ; toutes les
-                                        // autres colonnes lisent la donnée API telle quelle (row[col.key]).
-                                        const cellVal = col.key === 'ecart' ? ligneEcart(row) : row[col.key];
-                                        // Mise en évidence de la ligne fautive (HT+TVA ≠ TTC), tolérance 0,005
-                                        // pour absorber les arrondis d'affichage.
-                                        const ecartAnormal = col.key === 'ecart' && Math.abs(cellVal) > 0.005;
-                                        // TASK-161 : cellule éditable UNIQUEMENT si la colonne le demande
-                                        // explicitement (`editable`), la grille n'est pas en lecture seule, et
-                                        // des options ont été fournies — jamais un select vide silencieux.
-                                        const editableCodeActivite = col.key === 'codeActivite' && col.editable && !readonly && codeActiviteOptions;
-                                        return (
-                                        <div
-                                            key={col.key}
-                                            role="cell"
-                                            style={{ ...colStyle(col), padding: '0.5rem 1rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: isNumericCol(col.key) ? 'flex-end' : 'flex-start', overflow: 'hidden', background: ecartAnormal ? 'var(--status-blocking-bg)' : undefined, color: ecartAnormal ? 'var(--status-blocking-text)' : undefined, fontWeight: ecartAnormal ? 700 : undefined }}
-                                            title={typeof row[col.key] === 'string' ? row[col.key] : undefined}
-                                            onClick={editableCodeActivite ? (e) => e.stopPropagation() : undefined}
-                                        >
-                                            {editableCodeActivite ? (
-                                                <select
-                                                    value={cellVal || ''}
-                                                    onChange={(e) => handleCodeActiviteChange(row, e.target.value)}
-                                                    style={{ width: '100%', fontSize: '0.8125rem', padding: '0.15rem' }}
-                                                >
-                                                    <option value="">(sans activité)</option>
-                                                    {codeActiviteOptions!.map(o => (
-                                                        <option key={o.value} value={o.value}>{o.label}</option>
-                                                    ))}
-                                                </select>
-                                            ) : (
-                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {renderCell(col.key, cellVal)}
-                                                </span>
-                                            )}
-                                        </div>
-                                        );
-                                    })}
-                                    {showResynchroniserAction && (
-                                        <div role="cell" style={{ flex: `0 0 ${ACTIONS_COL_W}`, width: ACTIONS_COL_W, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-                                            {row.ecId > 0 && (
-                                                <button
-                                                    onClick={() => handleResynchroniser(row)}
-                                                    disabled={resynchronisant.has(row.id)}
-                                                    title="Relire cette ligne depuis Sage (ex. après correction d'un montant sur Sage)"
-                                                    style={{
-                                                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                                                        padding: '2px 9px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600,
-                                                        cursor: resynchronisant.has(row.id) ? 'default' : 'pointer',
-                                                        background: resynchronisant.has(row.id) ? 'var(--bg-secondary)' : 'white',
-                                                        border: '1px solid var(--border-color)', color: 'var(--text-primary)', whiteSpace: 'nowrap',
-                                                    }}
-                                                >
-                                                    <RefreshCw size={12} className={resynchronisant.has(row.id) ? 'animate-spin' : undefined} />
-                                                    Resynchroniser
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-                {data.length === 0 && !loading && (
-                    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                        Aucune ligne trouvée.
-                    </div>
-                )}
+            <div style={{ flexGrow: 1, position: 'relative' }}>
+                <ApbsGrid
+                    rowData={data}
+                    columnDefs={columnDefs}
+                    getRowId={(params) => params.data.id}
+                    onSelectionChanged={handleSelectionChanged}
+                    onRowClicked={(params) => onRowClick && onRowClick(params.data)}
+                    onGridReady={onGridReady}
+                    height="100%"
+                    showColumnSelector={true}
+                    showExportButton={true}
+                    exportFileName="domain_export.xlsx"
+                />
             </div>
 
             {/* Pagination */}
@@ -633,6 +575,16 @@ export function DomainGrid({
                     </button>
                 </div>
             </div>
+
+            {soldeInitialTarget && (
+                <SaisieSoldeInitialModal
+                    row={soldeInitialTarget}
+                    declarationId={declarationId}
+                    onClose={() => setSoldeInitialTarget(null)}
+                    onSaved={() => { setSoldeInitialTarget(null); fetchPage(); onActionDone(); }}
+                    showToast={showToast}
+                />
+            )}
         </div>
     );
 }

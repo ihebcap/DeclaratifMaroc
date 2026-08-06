@@ -34,6 +34,7 @@ interface CheckupAlerte {
 interface RecapLigne {
     source?: string;
     taux?: number;
+    codeTaxe?: string;
     ht: number;
     tva: number;
     ttc: number;
@@ -173,6 +174,17 @@ export function DeclarationFinalePanel({
         return filteredRecapSource.reduce((s: number, r: RecapLigne) => s + (r.nbLignes ?? 0), 0);
     }, [filteredRecapSource]);
 
+    // Totaux TOUS DOMAINES (indépendants de l'onglet) pour le résultat de la période.
+    const tvaCollecteeTotale = useMemo(
+        () => (data?.recapSource ?? []).filter(r => sourceBelongsToDomain(r.source, 'Encaissement')).reduce((s, r) => s + r.tva, 0),
+        [data?.recapSource],
+    );
+    const tvaDeductibleTotale = useMemo(
+        () => (data?.recapSource ?? []).filter(r => sourceBelongsToDomain(r.source, 'Decaissement')).reduce((s, r) => s + r.tva, 0),
+        [data?.recapSource],
+    );
+    const tvaDueTotale = tvaCollecteeTotale - tvaDeductibleTotale;
+
     const totalSource = useMemo(() => filteredRecapSource.reduce((s: number, r: RecapLigne) => s + r.tva, 0), [filteredRecapSource]);
     const totalHT = useMemo(() => filteredRecapSource.reduce((s: number, r: RecapLigne) => s + r.ht, 0), [filteredRecapSource]);
     const totalTTC = useMemo(() => filteredRecapSource.reduce((s: number, r: RecapLigne) => s + r.ttc, 0), [filteredRecapSource]);
@@ -198,8 +210,23 @@ export function DeclarationFinalePanel({
         try {
             let f = fichiers;
             if (!f) {
-                const res = await api.post(`/declarations/${declarationId}/generation`);
-                f = res.data.fichiers as Fichiers;
+                try {
+                    const res = await api.post(`/declarations/${declarationId}/generation`);
+                    f = res.data.fichiers as Fichiers;
+                } catch (err: any) {
+                    // 409 « Le fichier … existe déjà » : la génération A DÉJÀ eu lieu (typiquement
+                    // dans une session précédente). Refuser le téléchargement dans ce cas était une
+                    // impasse — le comptable ne pouvait plus jamais récupérer son fichier de dépôt.
+                    // Les URL de téléchargement sont déterministes côté API, on les reconstruit.
+                    if (err?.response?.status === 409) {
+                        f = {
+                            xmlDecaissement: `/declarations/${declarationId}/fichiers/xml`,
+                            excelCheckup: `/declarations/${declarationId}/fichiers/excel`,
+                        };
+                    } else {
+                        throw err;
+                    }
+                }
                 setFichiers(f);
             }
             const url = type === 'excel' ? f?.excelCheckup : f?.xmlDecaissement;
@@ -296,7 +323,7 @@ export function DeclarationFinalePanel({
             }}>
                 <ShieldCheck size={18} style={{ color: hasBloquant ? 'var(--danger)' : 'var(--success)' }} />
                 <div>
-                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>④ Déclaration</h2>
+                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Étape 3 — Déclaration</h2>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
                         Contrôle de cohérence · anomalies · export Excel et XML Simpl-TVA
                     </div>
@@ -412,10 +439,32 @@ export function DeclarationFinalePanel({
             {/* Corps scrollable dense */}
             <div style={{ flex: 1, overflow: 'auto', padding: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
 
+                {/* Résultat de la déclaration — le seul chiffre que le comptable cherche vraiment sur
+                    cet écran, et qui n'était affiché NULLE PART : TVA due = collectée − déductible.
+                    Il devait le calculer de tête en additionnant deux onglets. Toujours affiché
+                    « tous domaines », indépendamment de l'onglet actif. */}
+                <div style={{
+                    display: 'flex', alignItems: 'baseline', gap: '1.5rem', flexWrap: 'wrap',
+                    background: 'white', border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)', padding: '0.6rem 0.9rem',
+                }}>
+                    <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                        Résultat de la période
+                    </span>
+                    <span style={{ fontSize: '0.85rem' }}>TVA collectée <strong>{formatMoney(tvaCollecteeTotale)}</strong></span>
+                    <span style={{ fontSize: '0.85rem' }}>− TVA déductible <strong>{formatMoney(tvaDeductibleTotale)}</strong></span>
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: tvaDueTotale >= 0 ? 'var(--accent-primary)' : 'var(--status-ok-text)' }}>
+                        = {tvaDueTotale >= 0 ? 'TVA due' : 'Crédit de TVA'} {formatMoney(Math.abs(tvaDueTotale))}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                        (hors crédit de TVA reporté de la période précédente et hors régularisations)
+                    </span>
+                </div>
+
                 {/* Bandeau synthèse dense */}
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <Stat label="Lignes intégrées" value={String(displayNbLignes)} />
-                    <Stat label="TVA totale" value={formatMoney(totalSource)} accent />
+                    <Stat label={`Lignes intégrées (${selectedTab === 'Decaissement' ? 'achats' : 'ventes'})`} value={String(displayNbLignes)} />
+                    <Stat label={`TVA ${selectedTab === 'Decaissement' ? 'déductible' : 'collectée'}`} value={formatMoney(totalSource)} accent />
                     <Stat label="Total HT" value={formatMoney(totalHT)} />
                     <Stat label="Total TTC" value={formatMoney(totalTTC)} />
                     {data.equilibre && (
@@ -457,6 +506,7 @@ export function DeclarationFinalePanel({
                         <thead>
                             <tr style={{ background: 'var(--bg-tertiary)' }}>
                                 <Th>Taux</Th>
+                                <Th>Code taxe</Th>
                                 <Th right>HT</Th>
                                 <Th right>TVA</Th>
                                 <Th right>TTC</Th>
@@ -465,9 +515,9 @@ export function DeclarationFinalePanel({
                         <tbody>
                             {filteredRecapTaux
                                 .slice()
-                                .sort((a: any, b: any) => (b.taux ?? 0) - (a.taux ?? 0))
+                                .sort((a: any, b: any) => (b.taux ?? 0) - (a.taux ?? 0) || (a.codeTaxe ?? '').localeCompare(b.codeTaxe ?? ''))
                                 .map((r: any) => (
-                                    <tr key={`${r.taux}_${r.domaine}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                    <tr key={`${r.taux}_${r.codeTaxe ?? ''}_${r.domaine}`} style={{ borderBottom: '1px solid var(--border-color)' }}>
                                         <Td>
                                             <span style={{
                                                 display: 'inline-block',
@@ -483,6 +533,7 @@ export function DeclarationFinalePanel({
                                                 {r.taux}%
                                             </span>
                                         </Td>
+                                        <Td>{r.codeTaxe || '—'}</Td>
                                         <Td right>{formatMoney(r.ht)}</Td>
                                         <Td right>{formatMoney(r.tva)}</Td>
                                         <Td right>{formatMoney(r.ttc)}</Td>
@@ -524,8 +575,12 @@ export function DeclarationFinalePanel({
 
                 {/* ④ Anomalies 🔴 Bloquantes */}
                 <Section
-                    icon={<XCircle size={14} style={{ color: 'var(--status-blocking-text)' }} />}
-                    title="Anomalies bloquantes 🔴"
+                    // Pastille rouge + icône rouge affichées même quand il n'y a AUCUNE anomalie :
+                    // le comptable croyait à un problème alors que la section disait « Aucune ✔ ».
+                    icon={selectedBloquants.length > 0
+                        ? <XCircle size={14} style={{ color: 'var(--status-blocking-text)' }} />
+                        : <CheckCircle2 size={14} style={{ color: 'var(--status-ok-text)' }} />}
+                    title={selectedBloquants.length > 0 ? 'Anomalies bloquantes 🔴' : 'Anomalies bloquantes'}
                     open={bloquantsOpen}
                     onToggle={() => setBloquantsOpen(!bloquantsOpen)}
                     badge={selectedBloquants.length}
@@ -552,7 +607,7 @@ export function DeclarationFinalePanel({
                 {/* ⑤ Anomalies 🟠 Avertissements */}
                 <Section
                     icon={<AlertTriangle size={14} style={{ color: '#c2410c' }} />}
-                    title="Avertissements 🟠"
+                    title={selectedAvertissements.length > 0 ? 'Avertissements 🟠' : 'Avertissements'}
                     open={avertissementsOpen}
                     onToggle={() => setAvertissementsOpen(!avertissementsOpen)}
                     badge={selectedAvertissements.length}
@@ -623,7 +678,7 @@ export function DeclarationFinalePanel({
                             title={hasBloquant ? 'Corrigez les anomalies 🔴 avant l’export' : 'Générer le XML Simpl-TVA'}
                             style={secondaryBtnStyle(exportDisabled)}
                         >
-                            {generating ? <Loader2 size={15} className="animate-spin" /> : <FileCode2 size={15} />} Générer XML
+                            {generating ? <Loader2 size={15} className="animate-spin" /> : <FileCode2 size={15} />} Générer le fichier SIMPL-TVA (XML)
                         </button>
                     )}
                 </div>
@@ -723,6 +778,12 @@ function Section({
             border: '1px solid var(--border-color)',
             borderRadius: 'var(--radius-md)',
             overflow: 'hidden',
+            // Le conteneur parent est un `display:flex; flex-direction:column`. Sans flexShrink:0,
+            // chaque section était COMPRIMÉE pour tenir dans la hauteur visible : les lignes de
+            // « Vue par taux TVA » / « Répartition par source » étaient coupées en plein milieu et
+            // le conteneur ne défilait pas. Sur l'écran final de la déclaration, cela masquait les
+            // montants que le comptable doit lire avant de déposer.
+            flexShrink: 0,
         }}>
             <button
                 onClick={onToggle}

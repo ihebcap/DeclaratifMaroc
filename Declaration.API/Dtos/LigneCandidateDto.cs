@@ -42,6 +42,8 @@ public sealed record LigneCandidateDto
         // exposés en lecture seule (aucune valeur ni total recalculé).
         EcId = l.EC_Id;
         IncoherenceValidee = l.IncoherenceValidee;
+        // TASK-198 : code taxe Sage (F_TAXE.TA_Code)
+        CodeTaxe = l.CodeTaxe ?? "";
         // TASK-161 : code activité résolu en cascade, exposé en lecture + son état de surcharge
         // manuelle (même pattern qu'IncoherenceValidee ci-dessus). "" défensif si la colonne SQL
         // est NULL (ligne figée avant la migration 010).
@@ -72,6 +74,9 @@ public sealed record LigneCandidateDto
 
     [JsonPropertyName("tauxTVA")]
     public decimal TauxTVA { get; }
+
+    [JsonPropertyName("codeTaxe")]
+    public string CodeTaxe { get; }
 
     [JsonPropertyName("montantTVA")]
     public decimal MontantTVA { get; }

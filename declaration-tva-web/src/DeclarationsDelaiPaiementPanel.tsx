@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle, ArrowLeft, CalendarClock, CheckCircle2, Download, FileCog, FileX2,
-  Loader2, Lock, LockOpen, Plus, Send, Settings2, Trash2,
+  AlertTriangle, ArrowLeft, CalendarClock, CheckCircle2, ChevronLeft, Circle, Download, FileCog, FileX2,
+  Landmark, Loader2, Lock, LockOpen, Plus, Send, Settings2, ShieldCheck, Trash2,
 } from 'lucide-react';
-import { ColumnSelector } from './ColumnSelector';
-import { ExcelFilter } from './ExcelFilter';
-import { useColumnPrefs } from './useColumnPrefs';
+import type { ColDef } from 'ag-grid-community';
+import { ApbsGrid } from './grid/ApbsGrid';
+import { CustomListFilter } from './grid/CustomListFilter';
 import { formatDate, formatMoney } from './utils';
 import { MiseEnRouteDelaiPaiementModal, ModalShell, BandeauErreur, BoutonsModale } from './MiseEnRouteDelaiPaiementModal';
 import api, {
@@ -41,23 +41,7 @@ import type {
 // Hors périmètre (documenté, pas un oubli) : branchement au menu (TASK-136), écran conventions
 // (TASK-130, déjà livré), mesure du délai fournisseur (TASK-135, déjà livré).
 
-type Col = { key: string; label: string; width?: string; align?: 'left' | 'right' | 'center'; filterType?: 'list' | 'text' };
 
-const colStyle = (col: Col): React.CSSProperties =>
-  col.width ? { flex: `0 0 ${col.width}`, width: col.width } : { flex: '1 1 0', minWidth: '140px' };
-const colJustify = (col: Col) => (col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start');
-
-const LISTE_COLUMNS: Col[] = [
-  { key: 'numero', label: 'N° déclaration', width: '150px' },
-  { key: 'periode', label: 'Période', width: '210px', filterType: 'list' },
-  { key: 'dates', label: 'Dates', width: '210px' },
-  { key: 'statut', label: 'Statut', width: '150px', align: 'center', filterType: 'list' },
-  { key: 'nbLignes', label: 'Lignes', width: '90px', align: 'right' },
-  { key: 'fichier', label: 'Fichier', width: '110px', align: 'center' },
-  { key: 'depot', label: 'Dépôt', width: '110px', align: 'center' },
-  { key: 'libelle', label: 'Libellé' },
-  { key: 'actions', label: 'Actions', width: '130px' },
-];
 
 /** Libellé de période lisible — dérivé du type/trimestre renvoyés par le serveur, jamais recalculé depuis des dates. */
 function libellePeriode(d: { exercice: number, type: TypeDeclarationDdp, trimestre: number | null }): string {
@@ -124,9 +108,7 @@ function ListeDeclarationsDelaiPaiement({ societeId, showToast, onOuvrir }: {
   const [filters, setFilters] = useState<Record<string, string | string[]>>({});
   const [showCreate, setShowCreate] = useState(false);
   const [showMiseEnRoute, setShowMiseEnRoute] = useState(false);
-  const [deleteBusyId, setDeleteBusyId] = useState<number | null>(null);
-
-  const { visibleColumns, visibleKeys, toggle, reset } = useColumnPrefs('grf.cols.declarationsDelaiPaiement', LISTE_COLUMNS);
+  const [_deleteBusyId, setDeleteBusyId] = useState<number | null>(null);
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -143,14 +125,7 @@ function ListeDeclarationsDelaiPaiement({ societeId, showToast, onOuvrir }: {
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
 
-  const handleFilterChange = (key: string, val: any) => {
-    setFilters(prev => {
-      const next = { ...prev };
-      if (val === '' || (Array.isArray(val) && val.length === 0)) delete next[key];
-      else next[key] = val;
-      return next;
-    });
-  };
+
 
   const optionsPeriode = useMemo(
     () => Array.from(new Set(rows.map(libellePeriode))).sort().map(v => ({ label: v, value: v })),
@@ -183,52 +158,95 @@ function ListeDeclarationsDelaiPaiement({ societeId, showToast, onOuvrir }: {
     }
   };
 
-  const renderCell = (col: Col, row: DeclarationDdpDto) => {
-    switch (col.key) {
-      case 'numero':
+
+  const columnDefsList: ColDef[] = useMemo(() => [
+    {
+      field: 'numero',
+      headerName: 'N° déclaration',
+      width: 150,
+      cellRenderer: (p: any) => p.data ? (
+        <button
+          onClick={() => onOuvrir(p.data.ddpId)}
+          style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: '0.8125rem' }}
+        >
+          {p.data.numero}
+        </button>
+      ) : null,
+    },
+    {
+      field: 'periodeText',
+      headerName: 'Période',
+      width: 210,
+      filter: CustomListFilter,
+      filterParams: { options: optionsPeriode },
+      valueGetter: (p) => p.data ? libellePeriode(p.data) : '',
+    },
+    {
+      field: 'dates',
+      headerName: 'Dates',
+      width: 210,
+      valueGetter: (p) => p.data ? `${formatDate(p.data.dateDebut)} → ${formatDate(p.data.dateFin)}` : '',
+    },
+    {
+      field: 'statutText',
+      headerName: 'Statut',
+      width: 150,
+      filter: CustomListFilter,
+      filterParams: { options: [{ label: 'En cours', value: 'En cours' }, { label: 'Clôturée', value: 'Clôturée' }, { label: 'Déposée', value: 'Déposée' }] },
+      cellRenderer: (p: any) => p.data ? <StatutBadge d={p.data} /> : null,
+    },
+    {
+      field: 'nbLignes',
+      headerName: 'Lignes',
+      width: 90,
+      type: 'numericColumn',
+      valueGetter: (p) => p.data?.nbLignes ?? 0,
+    },
+    {
+      field: 'fichier',
+      headerName: 'Fichier',
+      width: 110,
+      cellRenderer: (p: any) => p.data?.fichierGenere ? <Badge texte="Généré" ton="ok" /> : <Badge texte="Non généré" ton="neutre" />,
+    },
+    {
+      field: 'depot',
+      headerName: 'Dépôt',
+      width: 110,
+      cellRenderer: (p: any) => p.data?.estDeposee ? <Badge texte="Déposée" ton="ok" /> : <Badge texte="Non déposée" ton="neutre" />,
+    },
+    {
+      field: 'libelle',
+      headerName: 'Libellé',
+      valueGetter: (p) => p.data?.libelle || '—',
+    },
+    {
+      headerName: 'Actions',
+      width: 130,
+      pinned: 'right',
+      suppressHeaderMenuButton: true,
+      cellRenderer: (p: any) => {
+        const row = p.data;
+        if (!row) return null;
         return (
-          <button
-            onClick={() => onOuvrir(row.ddpId)}
-            style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--accent-primary)', fontWeight: 600, textDecoration: 'underline' }}
-          >
-            {row.numero}
-          </button>
-        );
-      case 'periode':
-        return libellePeriode(row);
-      case 'dates':
-        return `${formatDate(row.dateDebut)} → ${formatDate(row.dateFin)}`;
-      case 'statut':
-        return <StatutBadge d={row} />;
-      case 'nbLignes':
-        return row.nombreLignes;
-      case 'fichier':
-        return row.fichierGenere ? <Badge texte="Généré" ton="ok" /> : <span style={{ color: 'var(--text-secondary)' }}>—</span>;
-      case 'depot':
-        return row.estDeposee ? <Badge texte="Déposée" ton="ok" /> : <span style={{ color: 'var(--text-secondary)' }}>—</span>;
-      case 'libelle':
-        return row.libelle || <span style={{ color: 'var(--text-secondary)' }}>—</span>;
-      case 'actions':
-        return (
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
-            <button className="btn" style={btnStyle} onClick={() => onOuvrir(row.ddpId)} title="Ouvrir la fiche">Ouvrir</button>
+          <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', height: '100%' }} onClick={(e) => e.stopPropagation()}>
+            <button className="btn btn-primary" style={btnStyle} onClick={() => onOuvrir(row.ddpId)}>
+              Ouvrir
+            </button>
             {row.actions.peutSupprimer && (
               <button
                 className="btn"
-                style={{ ...btnStyle, color: 'var(--status-blocking-text)' }}
+                style={{ ...btnStyle, color: 'var(--danger-color, #ef4444)' }}
                 onClick={() => handleDelete(row)}
-                disabled={deleteBusyId === row.ddpId}
-                title="Supprimer"
+                title="Supprimer la déclaration"
               >
-                {deleteBusyId === row.ddpId ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                <Trash2 size={13} />
               </button>
             )}
           </div>
         );
-      default:
-        return null;
+      }
     }
-  };
+  ], [onOuvrir, optionsPeriode, handleDelete]);
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -237,7 +255,7 @@ function ListeDeclarationsDelaiPaiement({ societeId, showToast, onOuvrir }: {
           <CalendarClock size={20} style={{ color: 'var(--accent-primary)' }} />
           <div>
             <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Déclarations délai de paiement</h2>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Délai de Paiement Maroc — CDC §3.1/§6</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Délai de Paiement Maroc</div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -248,7 +266,6 @@ function ListeDeclarationsDelaiPaiement({ societeId, showToast, onOuvrir }: {
           <button className="btn btn-primary" style={{ ...btnStyle, padding: '0.3rem 0.75rem' }} onClick={() => setShowCreate(true)}>
             <Plus size={14} /> Nouvelle déclaration
           </button>
-          <ColumnSelector columns={LISTE_COLUMNS} visibleKeys={visibleKeys} onToggle={toggle} onReset={reset} />
         </div>
       </div>
 
@@ -264,40 +281,16 @@ function ListeDeclarationsDelaiPaiement({ societeId, showToast, onOuvrir }: {
         )}
       </div>
 
-      <div style={{ flexGrow: 1, overflow: 'auto', position: 'relative', background: 'white' }}>
-        <div style={{ minWidth: '1250px', fontSize: '0.8125rem' }}>
-          <div style={{ display: 'flex', position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderBottom: '1px solid var(--border-color)' }}>
-            {visibleColumns.map(col => (
-              <div key={col.key} style={{ ...colStyle(col), padding: '0.5rem 0.75rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                {col.label}
-                {col.filterType && (
-                  <ExcelFilter
-                    filterType={col.filterType}
-                    options={col.key === 'periode' ? optionsPeriode : [{ label: 'En cours', value: 'En cours' }, { label: 'Clôturée', value: 'Clôturée' }, { label: 'Déposée', value: 'Déposée' }]}
-                    selectedValues={Array.isArray(filters[col.key]) ? filters[col.key] as string[] : []}
-                    textValue={typeof filters[col.key] === 'string' ? filters[col.key] as string : ''}
-                    onChange={(val) => handleFilterChange(col.key, val)}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-
-          {visibleRows.map(row => (
-            <div key={row.ddpId} style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'white' }}>
-              {visibleColumns.map(col => (
-                <div key={col.key} style={{ ...colStyle(col), padding: '0.4rem 0.75rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: colJustify(col), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {renderCell(col, row)}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-        {visibleRows.length === 0 && !loading && (
-          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-            Aucune déclaration délai de paiement pour cette société.
-          </div>
-        )}
+      <div style={{ flexGrow: 1, position: 'relative' }}>
+        <ApbsGrid
+          rowData={rows}
+          columnDefs={columnDefsList}
+          onRowClicked={(p) => onOuvrir(p.data.ddpId)}
+          height="100%"
+          showColumnSelector={true}
+          showExportButton={true}
+          exportFileName="declarations_ddp.xlsx"
+        />
       </div>
 
       {showCreate && (
@@ -432,16 +425,94 @@ function CreerDeclarationModal({ societeId, onClose, onSuccess }: {
 
 // ═══ Écran 2 — Fiche déclaration ═══════════════════════════════════════════════════════════════
 
-const LIGNES_COLUMNS: Col[] = [
-  { key: 'tiers', label: 'Fournisseur' },
-  { key: 'facture', label: 'Facture', width: '160px' },
-  { key: 'doDate', label: 'Date facture', width: '120px', align: 'center' },
-  { key: 'echeanceLegale', label: 'Échéance légale', width: '130px', align: 'center' },
-  { key: 'depassement', label: 'Dépassement (j)', width: '140px', align: 'right' },
-  { key: 'montant', label: 'Montant', width: '140px', align: 'right' },
-  { key: 'reglement', label: 'Règlement', width: '170px' },
-  { key: 'actions', label: '', width: '70px', align: 'center' },
+
+
+// ─── HARMONISATION AVEC LE MODULE TVA (demande PO) ─────────────────────────────────────────────
+// La fiche déclaration TVA guide le comptable par un stepper « 1. Sélection / 2. Vérifier &
+// Intégrer / 3. Déclaration », avec des titres « Étape N — … ». La fiche DDP présentait au
+// contraire une barre plate mélangeant intégration, contrôle IF/ICE, génération, dépôt et
+// déclôture — impossible de savoir dans quel ordre agir. On reprend ici EXACTEMENT les mêmes
+// conventions visuelles et le même vocabulaire d'étapes, adaptés aux 3 actes réels de la DDP.
+type EtapeDdp = 'lignes' | 'verifier' | 'declaration';
+
+const ETAPES_DDP: { id: EtapeDdp; label: string; icon: typeof Landmark }[] = [
+  { id: 'lignes', label: 'Sélection des lignes', icon: Landmark },
+  { id: 'verifier', label: 'Vérifier (IF/ICE)', icon: ShieldCheck },
+  { id: 'declaration', label: 'Déclaration', icon: FileCog },
 ];
+
+/** Étape 3 verrouillée tant qu'aucune ligne n'est intégrée — même gate que le stepper TVA. */
+function etapeDdpAccessible(id: EtapeDdp, aDesLignes: boolean) {
+  return id === 'declaration' ? aDesLignes : true;
+}
+
+function StepBarDdp({ etape, aDesLignes, onSelect, leading, trailing }: {
+  etape: EtapeDdp,
+  aDesLignes: boolean,
+  onSelect: (id: EtapeDdp) => void,
+  leading?: React.ReactNode,
+  trailing?: React.ReactNode,
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'stretch', background: 'white', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
+      {leading}
+      <div style={{ display: 'flex', flex: 1, overflowX: 'auto' }}>
+        {ETAPES_DDP.map((step, i) => {
+          const unlocked = etapeDdpAccessible(step.id, aDesLignes);
+          const isActive = etape === step.id;
+          const isDone = aDesLignes && step.id === 'lignes' && !isActive;
+          return (
+            <button
+              key={step.id}
+              onClick={() => unlocked && onSelect(step.id)}
+              disabled={!unlocked}
+              title={unlocked ? step.label : `${step.label} — nécessite au moins une ligne intégrée`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.35rem',
+                padding: '0.6rem 0.7rem',
+                background: isActive ? 'var(--bg-secondary)' : 'transparent',
+                border: 'none',
+                borderBottom: isActive ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                color: !unlocked ? '#9ca3af' : isActive ? 'var(--accent-primary)' : 'var(--text-primary)',
+                fontWeight: isActive ? 600 : 500,
+                fontSize: '0.8125rem',
+                cursor: unlocked ? 'pointer' : 'not-allowed',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+              }}
+            >
+              {isDone ? <CheckCircle2 size={15} style={{ color: '#16a34a' }} /> : !unlocked ? <Lock size={13} /> : <Circle size={13} style={{ opacity: isActive ? 1 : 0.4 }} />}
+              <span>{i + 1}. {step.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      {trailing}
+    </div>
+  );
+}
+
+/** Titre d'étape — même gabarit que « Étape 2 — Vérifier & Intégrer » côté TVA. */
+function TitreEtapeDdp({ numero, titre, sousTitre, droite }: {
+  numero: number, titre: string, sousTitre: string, droite?: React.ReactNode,
+}) {
+  return (
+    <div style={{ padding: '0.7rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+      <div>
+        <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Étape {numero} — {titre}</h2>
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{sousTitre}</div>
+      </div>
+      {droite}
+    </div>
+  );
+}
+
+/** État de règlement d'une ligne intégrée — sert de filtre et de sous-total lisibles. */
+const ETAT_REGLE = 'Réglé';
+const ETAT_NON_REGLE = 'Non réglé (solde restant)';
+function etatReglement(row: LigneIntegreeDdpDto): string {
+  return (row.reglementPiece || row.reglementNumero) ? ETAT_REGLE : ETAT_NON_REGLE;
+}
 
 function FicheDeclarationDelaiPaiement({ societeId, ddpId, showToast, onRetour }: {
   societeId: number,
@@ -459,8 +530,11 @@ function FicheDeclarationDelaiPaiement({ societeId, ddpId, showToast, onRetour }
   const [showSelection, setShowSelection] = useState(false);
   const [showLibelle, setShowLibelle] = useState(false);
   const [showMiseEnRoute, setShowMiseEnRoute] = useState(false);
-
-  const { visibleColumns, visibleKeys, toggle, reset } = useColumnPrefs('grf.cols.lignesDeclarationDelaiPaiement', LIGNES_COLUMNS);
+  const [etape, setEtape] = useState<EtapeDdp>('lignes');
+  const [filters, setFilters] = useState<Record<string, string | string[]>>({});
+  // Cause RÉELLE d'un échec de chargement : un « introuvable » affiché sur une simple coupure
+  // réseau/API envoie le comptable chercher un problème de données qui n'existe pas.
+  const [erreurChargement, setErreurChargement] = useState<string | null>(null);
 
   const recharger = useCallback(async () => {
     setLoading(true);
@@ -468,8 +542,19 @@ function FicheDeclarationDelaiPaiement({ societeId, ddpId, showToast, onRetour }
       const [d, l] = await Promise.all([getDeclarationDdp(ddpId), getLignesDeclarationDdp(ddpId)]);
       setDeclaration(d);
       setLignes(l);
-    } catch (e) {
+      setErreurChargement(null);
+    } catch (e: any) {
       console.error(e);
+      const statut = e?.response?.status;
+      setErreurChargement(
+        statut === 404
+          ? `Déclaration introuvable (elle a peut-être été supprimée depuis l'affichage de la liste).`
+          : statut === 403
+            ? "Vous n'avez pas accès à la déclaration de cette société."
+            : messageErreur(e, statut
+              ? `Le serveur a répondu une erreur ${statut} : la déclaration n'a pas pu être chargée. Réessayez, puis prévenez votre support si le problème persiste.`
+              : "L'application n'a pas pu joindre le serveur : la déclaration n'a pas pu être chargée. Vérifiez que le service est démarré, puis réessayez."),
+      );
       showToast('Erreur lors du chargement de la déclaration', 'error');
     } finally {
       setLoading(false);
@@ -536,6 +621,37 @@ function FicheDeclarationDelaiPaiement({ societeId, ddpId, showToast, onRetour }
     await executer(`ligne-${ddplId}`, () => supprimerLigneDeclarationDdp(ddpId, ddplId), 'Ligne retirée');
   };
 
+  const columnDefsLignes: ColDef[] = useMemo(() => [
+    { field: 'facture', headerName: 'N° Facture', width: 130, filter: 'agTextColumnFilter', valueGetter: (p) => p.data?.doNumero || '' },
+    { field: 'doDate', headerName: 'Date facture', width: 110, valueGetter: (p) => p.data ? formatDate(p.data.doDate) : '' },
+    { field: 'tiers', headerName: 'Fournisseur', filter: 'agTextColumnFilter', valueGetter: (p) => p.data ? `${p.data.tiersCode || ''} · ${p.data.tiersIntitule || ''}` : '' },
+    { field: 'identifiantFiscal', headerName: 'IF', width: 110, valueGetter: (p) => p.data?.tiersIdentifiantFiscal || '—' },
+    { field: 'ice', headerName: 'ICE', width: 130, valueGetter: (p) => p.data?.tiersICE || '—' },
+    { field: 'montantPart', headerName: 'Montant', width: 120, type: 'numericColumn', valueGetter: (p) => p.data ? formatMoney(p.data.montantPart) : '' },
+    { field: 'depassementJours', headerName: 'Dépassement (j)', width: 130, type: 'numericColumn', valueGetter: (p) => p.data?.depassementJours ?? 0 },
+    {
+      headerName: 'Action',
+      width: 90,
+      pinned: 'right',
+      suppressHeaderMenuButton: true,
+      cellRenderer: (p: any) => {
+        const row = p.data;
+        if (!row || !declaration?.actions?.peutIntegrerLignes) return null;
+        return (
+          <button
+            className="btn"
+            style={{ ...btnStyle, color: 'var(--danger-color, #ef4444)' }}
+            onClick={() => handleSupprimerLigne(row.ddplId)}
+            disabled={busy === `ligne-${row.ddplId}`}
+            title="Retirer cette ligne de la déclaration"
+          >
+            {busy === `ligne-${row.ddplId}` ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+          </button>
+        );
+      }
+    }
+  ], [declaration?.actions?.peutIntegrerLignes, busy, handleSupprimerLigne]);
+
   if (loading && !declaration) {
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -547,116 +663,171 @@ function FicheDeclarationDelaiPaiement({ societeId, ddpId, showToast, onRetour }
     return (
       <div style={{ flex: 1, padding: '2rem' }}>
         <button className="btn" style={btnStyle} onClick={onRetour}><ArrowLeft size={14} /> Retour</button>
-        <p style={{ marginTop: '1rem' }}>Déclaration introuvable.</p>
+        <div style={{ marginTop: '1rem', maxWidth: '760px' }}>
+          <BandeauErreur message={erreurChargement ?? "La déclaration n'a pas pu être chargée."} />
+          <button className="btn" style={{ ...btnStyle, marginTop: '0.75rem' }} onClick={recharger}>Réessayer</button>
+        </div>
       </div>
     );
   }
 
   const a = declaration.actions;
 
-  const renderCell = (col: Col, row: LigneIntegreeDdpDto) => {
-    switch (col.key) {
-      case 'tiers':
-        return <span><strong>{row.tiersCode}</strong> <span style={{ color: 'var(--text-secondary)' }}>{row.tiersIntitule}</span></span>;
-      case 'facture':
-        return row.doNumero || '—';
-      case 'doDate':
-        return formatDate(row.doDate);
-      case 'echeanceLegale':
-        return formatDate(row.echeanceLegale);
-      case 'depassement':
-        return <strong>{row.depassement}</strong>;
-      case 'montant':
-        return formatMoney(row.montantAffecte ?? row.soldeEcheance);
-      case 'reglement':
-        return row.reglementPiece || row.reglementNumero || <span style={{ color: 'var(--text-secondary)' }}>non réglé</span>;
-      case 'actions':
-        return a.peutIntegrerLignes ? (
-          <button
-            className="btn"
-            style={{ ...btnStyle, color: 'var(--status-blocking-text)' }}
-            onClick={() => handleSupprimerLigne(row.ddplId)}
-            disabled={busy === `ligne-${row.ddplId}`}
-            title="Retirer cette ligne"
-          >
-            {busy === `ligne-${row.ddplId}` ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-          </button>
-        ) : null;
-      default:
-        return null;
+  const lignesVisibles = lignes.filter(row => {
+    const fTiers = filters['tiers'];
+    if (typeof fTiers === 'string' && fTiers.trim() !== '') {
+      const needle = fTiers.trim().toLowerCase();
+      if (!`${row.tiersCode ?? ''} ${row.tiersIntitule ?? ''}`.toLowerCase().includes(needle)) return false;
     }
-  };
+    const fFacture = filters['facture'];
+    if (Array.isArray(fFacture) && fFacture.length > 0 && !fFacture.includes(row.doNumero ?? '')) return false;
+    const fReglement = filters['reglement'];
+    if (Array.isArray(fReglement) && fReglement.length > 0 && !fReglement.includes(etatReglement(row))) return false;
+    return true;
+  });
+
+  const montantLigne = (row: LigneIntegreeDdpDto) => row.montantAffecte ?? row.soldeEcheance;
+  const totalMontant = lignesVisibles.reduce((s, r) => s + (montantLigne(r) ?? 0), 0);
+  const nbNonRegle = lignesVisibles.filter(r => etatReglement(r) === ETAT_NON_REGLE).length;
+  const depassementMax = lignesVisibles.reduce((m, r) => Math.max(m, r.depassement ?? 0), 0);
+
+
+
+  const leadingStep = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 0.85rem', borderRight: '1px solid var(--border-color)', flexShrink: 0 }}>
+      <button onClick={onRetour} className="btn" title="Retour à la liste des déclarations" style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.15rem', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+        <ChevronLeft size={16} /> Retour
+      </button>
+      <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{declaration.numero}</div>
+    </div>
+  );
+
+  const trailingStep = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0 1rem', flexShrink: 0 }}>
+      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+        {libellePeriode(declaration)} · Période {formatDate(declaration.dateDebut)} → {formatDate(declaration.dateFin)}
+      </span>
+      <StatutBadge d={declaration} />
+      {declaration.fichierGenere && <Badge texte="Fichier généré" ton="ok" />}
+    </div>
+  );
+
+
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* En-tête fiche */}
-      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'white', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-        <button className="btn" style={btnStyle} onClick={onRetour}><ArrowLeft size={14} /> Liste</button>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>
-            Déclaration {declaration.numero}
-          </h2>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            {libellePeriode(declaration)} — période {formatDate(declaration.dateDebut)} → {formatDate(declaration.dateFin)}
-            {declaration.libelle ? ` — ${declaration.libelle}` : ''}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-          <StatutBadge d={declaration} />
-          {declaration.fichierGenere && <Badge texte="Fichier généré" ton="ok" />}
-        </div>
-        <div style={{ marginLeft: 'auto' }}>
-          <ColumnSelector columns={LIGNES_COLUMNS} visibleKeys={visibleKeys} onToggle={toggle} onReset={reset} />
-        </div>
-      </div>
+      {/* Stepper — mêmes conventions visuelles et même vocabulaire que la fiche TVA */}
+      <StepBarDdp
+        etape={etape}
+        aDesLignes={lignes.length > 0}
+        onSelect={setEtape}
+        leading={leadingStep}
+        trailing={trailingStep}
+      />
 
-      {/* Barre d'actions — état piloté par declaration.actions (gardes serveur TASK-132) */}
-      <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        {a.peutIntegrerLignes && (
-          <button className="btn btn-primary" style={btnStyle} onClick={() => setShowSelection(true)}>
-            <Plus size={14} /> Sélectionner des lignes hors délai
-          </button>
-        )}
-        {a.peutModifierLibelle && (
-          <button className="btn" style={btnStyle} onClick={() => setShowLibelle(true)}>Modifier le libellé</button>
-        )}
-        {a.peutCloturer && (
-          <button className="btn" style={btnStyle} disabled={busy === 'cloture'} onClick={() => executer('cloture', () => cloturerDeclarationDdp(ddpId), 'Déclaration clôturée')}>
-            {busy === 'cloture' ? <Loader2 size={13} className="animate-spin" /> : <Lock size={14} />} Clôturer
-          </button>
-        )}
-        {a.peutAnnulerCloture && (
-          <button className="btn" style={btnStyle} disabled={busy === 'decloture'} onClick={() => executer('decloture', () => decloturerDeclarationDdp(ddpId), 'Déclaration déclôturée')}>
-            {busy === 'decloture' ? <Loader2 size={13} className="animate-spin" /> : <LockOpen size={14} />} Déclôturer
-          </button>
-        )}
-        <button className="btn" style={btnStyle} disabled={busy === 'controle'} onClick={handleControlerIfIce} title="Contrôle IF/ICE des fournisseurs déclarés (informatif)">
-          {busy === 'controle' ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={14} />} Contrôler IF/ICE
-        </button>
-        {a.peutGenererFichier && (
-          <button className="btn" style={btnStyle} disabled={busy === 'generation'} onClick={() => executer('generation', async () => { await genererFichierDeclarationDdp(ddpId); }, 'Fichier XML/ZIP généré')}>
-            {busy === 'generation' ? <Loader2 size={13} className="animate-spin" /> : <FileCog size={14} />} Générer le fichier
-          </button>
-        )}
-        {a.peutAnnulerGeneration && (
-          <button className="btn" style={btnStyle} disabled={busy === 'annulGen'} onClick={() => executer('annulGen', () => annulerGenerationDeclarationDdp(ddpId), 'Génération annulée')}>
-            {busy === 'annulGen' ? <Loader2 size={13} className="animate-spin" /> : <FileX2 size={14} />} Annuler la génération
-          </button>
-        )}
-        {declaration.fichierGenere && (
-          <button className="btn" style={btnStyle} disabled={busy === 'download'} onClick={handleTelecharger}>
-            {busy === 'download' ? <Loader2 size={13} className="animate-spin" /> : <Download size={14} />} Télécharger le ZIP
-          </button>
-        )}
-        {a.peutDeposer && (
-          <button className="btn" style={btnStyle} disabled={busy === 'depot'} onClick={() => executer('depot', () => deposerDeclarationDdp(ddpId), 'Déclaration marquée déposée')}>
-            {busy === 'depot' ? <Loader2 size={13} className="animate-spin" /> : <Send size={14} />} Marquer déposée
-          </button>
-        )}
-        <span style={{ marginLeft: 'auto', fontSize: '0.8rem' }}>
-          Lignes intégrées : <strong>{lignes.length}</strong>
+      {etape === 'lignes' && (
+        <TitreEtapeDdp
+          numero={1}
+          titre="Sélection des lignes hors délai"
+          sousTitre="Choisissez les lignes à déclarer, vérifiez les montants et le dépassement de chacune"
+          droite={
+            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              {a.peutIntegrerLignes && (
+                <button className="btn btn-primary" style={btnStyle} onClick={() => setShowSelection(true)}>
+                  <Plus size={14} /> Sélectionner des lignes hors délai
+                </button>
+              )}
+              {a.peutModifierLibelle && (
+                <button className="btn" style={btnStyle} onClick={() => setShowLibelle(true)}>Modifier le libellé</button>
+              )}
+            </div>
+          }
+        />
+      )}
+
+      {etape === 'verifier' && (
+        <TitreEtapeDdp
+          numero={2}
+          titre="Vérifier (IF/ICE)"
+          sousTitre="Contrôlez l'identifiant fiscal et l'ICE de chaque fournisseur déclaré avant de générer le fichier"
+          droite={
+            <button className="btn btn-primary" style={btnStyle} disabled={busy === 'controle'} onClick={handleControlerIfIce}>
+              {busy === 'controle' ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={14} />} Lancer le contrôle IF/ICE
+            </button>
+          }
+        />
+      )}
+
+      {etape === 'declaration' && (
+        <TitreEtapeDdp
+          numero={3}
+          titre="Déclaration"
+          sousTitre="Clôturez la période, générez le fichier XML/ZIP puis marquez la déclaration comme déposée"
+          droite={
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              {a.peutCloturer && (
+                <button className="btn btn-primary" style={btnStyle} disabled={busy === 'cloture'} onClick={() => executer('cloture', () => cloturerDeclarationDdp(ddpId), 'Déclaration clôturée')}>
+                  {busy === 'cloture' ? <Loader2 size={13} className="animate-spin" /> : <Lock size={14} />} Clôturer
+                </button>
+              )}
+              {a.peutAnnulerCloture && (
+                <button className="btn" style={btnStyle} disabled={busy === 'decloture'} onClick={() => executer('decloture', () => decloturerDeclarationDdp(ddpId), 'Déclaration déclôturée')}>
+                  {busy === 'decloture' ? <Loader2 size={13} className="animate-spin" /> : <LockOpen size={14} />} Déclôturer
+                </button>
+              )}
+              {a.peutGenererFichier && (
+                <button className="btn btn-primary" style={btnStyle} disabled={busy === 'generation'} onClick={() => executer('generation', async () => { await genererFichierDeclarationDdp(ddpId); }, 'Fichier XML/ZIP généré')}>
+                  {busy === 'generation' ? <Loader2 size={13} className="animate-spin" /> : <FileCog size={14} />} Générer le fichier
+                </button>
+              )}
+              {a.peutAnnulerGeneration && (
+                <button className="btn" style={btnStyle} disabled={busy === 'annulGen'} onClick={() => executer('annulGen', () => annulerGenerationDeclarationDdp(ddpId), 'Génération annulée')}>
+                  {busy === 'annulGen' ? <Loader2 size={13} className="animate-spin" /> : <FileX2 size={14} />} Annuler la génération
+                </button>
+              )}
+              {declaration.fichierGenere && (
+                <button className="btn" style={btnStyle} disabled={busy === 'download'} onClick={handleTelecharger}>
+                  {busy === 'download' ? <Loader2 size={13} className="animate-spin" /> : <Download size={14} />} Télécharger le ZIP
+                </button>
+              )}
+              {a.peutDeposer && (
+                <button className="btn" style={btnStyle} disabled={busy === 'depot'} onClick={() => executer('depot', () => deposerDeclarationDdp(ddpId), 'Déclaration marquée déposée')}>
+                  {busy === 'depot' ? <Loader2 size={13} className="animate-spin" /> : <Send size={14} />} Marquer déposée
+                </button>
+              )}
+            </div>
+          }
+        />
+      )}
+
+      {/* Totaux — un comptable doit voir CE QU'IL DÉCLARE sans exporter le tableau.
+          Rattachés explicitement aux lignes affichées (filtres compris) pour ne jamais laisser
+          croire qu'un total filtré est le total de la déclaration. */}
+      {etape === 'lignes' && (
+      <div style={{ padding: '0.4rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'white', display: 'flex', gap: '1.25rem', flexWrap: 'wrap', alignItems: 'center', fontSize: '0.8rem' }}>
+        <span>
+          {lignesVisibles.length === lignes.length
+            ? <>Total de la déclaration ({lignes.length} ligne(s)) :</>
+            : <>Total des <strong>{lignesVisibles.length}</strong> ligne(s) affichée(s) sur {lignes.length} :</>}
+          {' '}<strong data-testid="ddp-total-montant">{formatMoney(totalMontant)}</strong>
         </span>
+        <span title="Lignes dont aucune part n'a été réglée : c'est le solde restant dû qui est déclaré.">
+          dont <strong>{nbNonRegle}</strong> ligne(s) non réglée(s)
+        </span>
+        <span title="Plus grand dépassement (en jours) parmi les lignes affichées.">
+          Dépassement le plus élevé : <strong>{depassementMax} j</strong>
+        </span>
+        {Object.keys(filters).length > 0 && (
+          <button
+            className="btn"
+            onClick={() => setFilters({})}
+            style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0, fontSize: '0.8rem', cursor: 'pointer' }}
+          >
+            Effacer filtres ({Object.keys(filters).length})
+          </button>
+        )}
       </div>
+      )}
 
       {/* Refus métier + fournisseurs fautifs IF/ICE */}
       {(erreurAction || fautifs.length > 0 || controle) && (
@@ -691,25 +862,15 @@ function FicheDeclarationDelaiPaiement({ societeId, ddpId, showToast, onRetour }
       )}
 
       {/* Lignes intégrées */}
-      <div style={{ flexGrow: 1, overflow: 'auto', background: 'white' }}>
-        <div style={{ minWidth: '1150px', fontSize: '0.8125rem' }}>
-          <div style={{ display: 'flex', position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10, borderBottom: '1px solid var(--border-color)' }}>
-            {visibleColumns.map(col => (
-              <div key={col.key} style={{ ...colStyle(col), padding: '0.5rem 0.75rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                {col.label}
-              </div>
-            ))}
-          </div>
-          {lignes.map(row => (
-            <div key={row.ddplId} style={{ display: 'flex', borderBottom: '1px solid var(--border-color)' }}>
-              {visibleColumns.map(col => (
-                <div key={col.key} style={{ ...colStyle(col), padding: '0.4rem 0.75rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: colJustify(col), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {renderCell(col, row)}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+      <div style={{ flexGrow: 1, position: 'relative' }}>
+        <ApbsGrid
+          rowData={lignes}
+          columnDefs={columnDefsLignes}
+          height="100%"
+          showColumnSelector={true}
+          showExportButton={true}
+          exportFileName="lignes_ddp.xlsx"
+        />
         {lignes.length === 0 && !loading && (
           <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
             Aucune ligne intégrée. Une déclaration sans ligne ne peut pas être clôturée.

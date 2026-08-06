@@ -13,7 +13,9 @@ namespace Declaration.Core.Model
 
     public enum SensAffectation { Achat, Vente }
 
-    public enum SourceAffectation { Decaissement, Espece, Depense, Encaissement }
+    // TASK-031 : FraisBancaire = opération bancaire avec TVA (RT_PREVISIONNELLE.PT_Domaine=6),
+    // valorisée directement (assiette=montant, TVA=montant TVA connu), jamais via OM/FGR.
+    public enum SourceAffectation { Decaissement, Espece, Depense, Encaissement, FraisBancaire }
 
     public class TiersInfo
     {
@@ -45,6 +47,22 @@ namespace Declaration.Core.Model
         // ciblée (le règlement est-il toujours pointé ?), sans avoir à rejouer toute la
         // sélection. 0 si aucun règlement rattaché (cf. AffectationCandidateRow.MV_Id).
         public int MV_Id { get; set; }
+
+        // TASK-031 : valorisation DIRECTE (Source == FraisBancaire uniquement) — pas de facture,
+        // pas de ventilation OM/FGR. Taux/TVA déjà connus à la sélection
+        // (RT_PREVISIONNELLE.PT_MontantTva + P_TYPEOPBANQUE/F_TAXE). Null pour toute autre source.
+        public decimal? ValorisationDirecteTaux { get; set; }
+        public decimal? ValorisationDirecteTva { get; set; }
+        public string? ValorisationDirecteCodeTaxe { get; set; }
+
+        // Solde initial GRF (EC_Type = 4, cf. TASK-025) : le solde n'a pas de détail HT/TVA/taux
+        // dans Sage (montant connu en TTC seul, EC_Montant/MontantAffecte). Décision PO : intégrer
+        // ces lignes plutôt que les éliminer, moyennant une SAISIE MANUELLE du comptable (taux +
+        // montant de TVA), persistée par EC_Id (DM_SOLDE_INITIAL_TVA) et rechargée ici en batch par
+        // l'orchestrateur avant résolution. Null tant que la saisie n'a pas été faite — la ligne
+        // reste alors exclue avec une alerte actionnable (jamais un calcul deviné).
+        public decimal? SoldeInitialTaux { get; set; }
+        public decimal? SoldeInitialTva { get; set; }
     }
 
     public class LigneDeclarationEnrichie
@@ -56,6 +74,8 @@ namespace Declaration.Core.Model
         public string CodeActivite { get; set; } = "";
         public decimal HT { get; set; }
         public decimal Taux { get; set; }
+        // TASK-198 : code taxe Sage (F_TAXE.TA_Code), permet d'identifier la nature de taxe (ex. Achat vs Immobilisation au même taux 20%).
+        public string CodeTaxe { get; set; } = "";
         public decimal Tva { get; set; }
         public decimal Ttc { get; set; }
         public decimal Prorata { get; set; }
@@ -78,6 +98,8 @@ namespace Declaration.Core.Model
     public class RecapParTaux
     {
         public decimal Taux { get; set; }
+        // TASK-198 : distinction par code taxe (F_TAXE.TA_Code) au lieu du seul taux numérique.
+        public string CodeTaxe { get; set; } = "";
         // TASK-180 : clivage fiscal Collecté (Source == Encaissement) / Déductible (autre source),
         // même critère que RecapParSource — permet de scinder l'affichage Excel sans recalcul TVA.
         public bool Collecte { get; set; }

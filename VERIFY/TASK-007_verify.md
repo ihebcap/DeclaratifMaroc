@@ -32,6 +32,7 @@
       "CodeActivite": "(sans activit\u00E9)",
       "HT": 500.0,
       "Taux": 20,
+      "CodeTaxe": "1",
       "Tva": 100.0,
       "Ttc": 600.0,
       "Prorata": 50.0,
@@ -56,6 +57,7 @@
       "CodeActivite": "(sans activit\u00E9)",
       "HT": 500.0,
       "Taux": 20,
+      "CodeTaxe": "1",
       "Tva": 100.0,
       "Ttc": 600.0,
       "Prorata": 50.0,
@@ -80,6 +82,7 @@
       "CodeActivite": "(sans activit\u00E9)",
       "HT": 1000,
       "Taux": 20,
+      "CodeTaxe": "1",
       "Tva": 200,
       "Ttc": 1200,
       "Prorata": 100,
@@ -102,6 +105,7 @@
   "RecapsParTaux": [
     {
       "Taux": 20,
+      "CodeTaxe": "1",
       "Collecte": false,
       "TotalHT": 2000.0,
       "TotalTva": 400.0,

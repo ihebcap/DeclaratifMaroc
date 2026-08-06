@@ -1,9 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type CSSProperties } from 'react';
 import { Loader2, X, AlertTriangle, Paperclip, Plus, Search, Trash2, CalendarClock } from 'lucide-react';
-import { ExcelFilter } from './ExcelFilter';
-import { ColumnSelector } from './ColumnSelector';
-import { useColumnPrefs } from './useColumnPrefs';
+import type { ColDef } from 'ag-grid-community';
+import { ApbsGrid } from './grid/ApbsGrid';
+import { CustomListFilter } from './grid/CustomListFilter';
 import { formatDate } from './utils';
+
+const btnStyle: CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', padding: '0.3rem 0.6rem',
+};
 import api, {
   getConventionsDelaiPaiement, searchTiersConvention, getFacturesNonPayees,
   creerConventionDelaiPaiement, terminerConventionDelaiPaiement, supprimerConventionDelaiPaiement,
@@ -32,23 +36,6 @@ import type {
 // cette constante et le back resterait couverte, le serveur rejetterait quand même en 409/400.
 const PLAFOND_JOURS = 180;
 
-type Col = { key: string; label: string; width?: string; align?: 'left' | 'right' | 'center'; filterType?: 'list' | 'text' };
-
-const COLUMNS: Col[] = [
-  { key: 'tiers', label: 'Tiers', filterType: 'text' },
-  { key: 'type', label: 'Type', filterType: 'list', width: '110px', align: 'center' },
-  { key: 'numero', label: 'N° convention', width: '150px' },
-  { key: 'periodeOuFacture', label: 'Dates / N° facture', width: '230px' },
-  { key: 'delai', label: 'Délai (j)', align: 'right', width: '90px' },
-  { key: 'valide', label: 'Statut', align: 'center', width: '110px', filterType: 'list' },
-  { key: 'piece', label: 'Pièce jointe', align: 'center', width: '120px' },
-  { key: 'actions', label: 'Actions', width: '170px' },
-];
-
-const colStyle = (col: Col): React.CSSProperties =>
-  col.width ? { flex: `0 0 ${col.width}`, width: col.width } : { flex: '1 1 0', minWidth: '160px' };
-const colJustify = (col: Col) => (col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start');
-
 function TypeBadge({ type }: { type: TypeConvention }) {
   const isConvention = type === 'Convention';
   return (
@@ -73,27 +60,26 @@ function ValideBadge({ valide }: { valide: boolean }) {
   );
 }
 
+// Conventions : uniquement les fournisseurs (achat). Le domaine « vente » (client) existe côté
+// back (SearchTiersAsync/GetFacturesNonPayeesAsync le supportent déjà) mais n'a pas d'usage métier
+// ici (demande PO) — l'écran ne propose donc plus la bascule Achat/Vente, `domaine` est figé.
+const DOMAINE: DomaineConvention = 'achat';
+
 export function ConventionsDelaiPaiementPanel({ societeId, showToast }: {
   societeId: number,
   showToast: (m: string, t?: 'success' | 'error' | 'warning') => void,
 }) {
-  const [domaine, setDomaine] = useState<DomaineConvention>('achat');
   const [rows, setRows] = useState<ConventionDelaiPaiementDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState<Record<string, string | string[]>>({});
-  const [sortConfig, setSortConfig] = useState<{ key: 'numero' | 'delai' | 'tiers', desc: boolean }>({ key: 'numero', desc: false });
-
   const [showCreate, setShowCreate] = useState(false);
   const [terminerTarget, setTerminerTarget] = useState<ConventionDelaiPaiementDto | null>(null);
   const [deleteBusyId, setDeleteBusyId] = useState<number | null>(null);
   const [downloadBusyId, setDownloadBusyId] = useState<number | null>(null);
 
-  const { visibleColumns, visibleKeys, toggle, reset } = useColumnPrefs('grf.cols.conventionsDelaiPaiement', COLUMNS);
-
   const fetchRows = useCallback(async () => {
     setLoading(true);
     try {
-      const items = await getConventionsDelaiPaiement(societeId, domaine);
+      const items = await getConventionsDelaiPaiement(societeId, DOMAINE);
       setRows(items);
     } catch (e) {
       console.error(e);
@@ -102,52 +88,9 @@ export function ConventionsDelaiPaiementPanel({ societeId, showToast }: {
     } finally {
       setLoading(false);
     }
-  }, [societeId, domaine, showToast]);
+  }, [societeId, showToast]);
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
-
-  const handleFilterChange = (key: string, val: any) => {
-    setFilters(prev => {
-      const next = { ...prev };
-      if (val === '' || (Array.isArray(val) && val.length === 0)) delete next[key];
-      else next[key] = val;
-      return next;
-    });
-  };
-
-  const filterOptionsFor = (key: string): { label: string, value: string }[] => {
-    if (key === 'type') return [{ label: 'Convention', value: 'Convention' }, { label: 'Facture', value: 'Facture' }];
-    if (key === 'valide') return [{ label: 'Valide', value: 'Valide' }, { label: 'Expirée', value: 'Expiree' }];
-    return [];
-  };
-
-  // Liste courte (pas de pagination côté back — l'écran de liste conventions ne porte pas de volume
-  // comparable aux grilles de règlements/factures), filtre/tri intégralement CLIENT.
-  const visibleRows = rows.filter(r => {
-    const tiersFilter = filters['tiers'];
-    if (typeof tiersFilter === 'string' && tiersFilter.trim() !== '') {
-      const needle = tiersFilter.trim().toLowerCase();
-      if (!r.tiersCode.toLowerCase().includes(needle)) return false;
-    }
-    const typeFilter = filters['type'];
-    if (Array.isArray(typeFilter) && typeFilter.length > 0 && !typeFilter.includes(r.type)) return false;
-    const valideFilter = filters['valide'];
-    if (Array.isArray(valideFilter) && valideFilter.length > 0) {
-      const v = r.valide ? 'Valide' : 'Expiree';
-      if (!valideFilter.includes(v)) return false;
-    }
-    return true;
-  }).sort((a, b) => {
-    let cmp = 0;
-    if (sortConfig.key === 'numero') cmp = a.numero.localeCompare(b.numero);
-    else if (sortConfig.key === 'delai') cmp = a.nombreJoursDelaisPaiement - b.nombreJoursDelaisPaiement;
-    else if (sortConfig.key === 'tiers') cmp = a.tiersCode.localeCompare(b.tiersCode);
-    return sortConfig.desc ? -cmp : cmp;
-  });
-
-  const handleSort = (key: 'numero' | 'delai' | 'tiers') => {
-    setSortConfig(prev => prev.key === key ? { key, desc: !prev.desc } : { key, desc: false });
-  };
 
   const handleDownload = async (row: ConventionDelaiPaiementDto) => {
     setDownloadBusyId(row.cpId);
@@ -186,65 +129,64 @@ export function ConventionsDelaiPaiementPanel({ societeId, showToast }: {
     }
   };
 
-  const renderCell = (col: Col, row: ConventionDelaiPaiementDto) => {
-    switch (col.key) {
-      case 'tiers':
-        return <span><strong style={{ fontWeight: 600 }}>{row.tiersCode}</strong></span>;
-      case 'type':
-        return <TypeBadge type={row.type} />;
-      case 'numero':
-        return row.numero;
-      case 'periodeOuFacture':
-        return row.type === 'Facture'
-          ? <span>Facture <strong>{row.factureNumero || row.factureNo}</strong></span>
-          : <span>{formatDate(row.dateDebut || '')} → {formatDate(row.dateFin || '')}</span>;
-      case 'delai':
-        return row.nombreJoursDelaisPaiement;
-      case 'valide':
-        return <ValideBadge valide={row.valide} />;
-      case 'piece':
-        return row.hasFile
-          ? (
-            <button
-              className="btn"
-              onClick={() => handleDownload(row)}
-              disabled={downloadBusyId === row.cpId}
-              title="Télécharger la pièce jointe"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
-            >
-              {downloadBusyId === row.cpId ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} />}
-              PDF
-            </button>
-          )
-          : <span style={{ color: 'var(--text-secondary)' }}>—</span>;
-      case 'actions':
+  const columnDefs: ColDef[] = useMemo(() => [
+    { field: 'tiersCode', headerName: 'Code fournisseur', width: 150, filter: 'agTextColumnFilter' },
+    { field: 'tiersIntitule', headerName: 'Intitulé fournisseur', filter: 'agTextColumnFilter' },
+    { field: 'type', headerName: 'Type', width: 110, filter: CustomListFilter, cellRenderer: (p: any) => p.data ? <TypeBadge type={p.data.type} /> : null },
+    { field: 'numero', headerName: 'N° convention', width: 150 },
+    { field: 'periodeOuFacture', headerName: 'Dates / N° facture', width: 230, valueGetter: (p) => p.data ? (p.data.type === 'Facture' ? (p.data.numeroFacture || '—') : `${formatDate(p.data.dateDebut)} → ${formatDate(p.data.dateFin)}`) : '' },
+    { field: 'delai', headerName: 'Délai (j)', width: 90, type: 'numericColumn', valueGetter: (p) => p.data?.delaiJours ?? 0 },
+    { field: 'valide', headerName: 'Statut', width: 110, filter: CustomListFilter, cellRenderer: (p: any) => p.data ? <ValideBadge valide={p.data.estValide} /> : null },
+    {
+      field: 'piece',
+      headerName: 'Pièce jointe',
+      width: 120,
+      cellRenderer: (p: any) => {
+        const row = p.data;
+        if (!row || !row.aPieceJointe) return <span style={{ color: 'var(--text-secondary)' }}>—</span>;
         return (
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
-            {row.type === 'Convention' && row.valide && (
-              <button
-                className="btn"
-                onClick={() => setTerminerTarget(row)}
-                title="Clôture anticipée"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
-              >
-                <CalendarClock size={13} /> Terminer
+          <button
+            onClick={() => handleDownload(row)}
+            disabled={downloadBusyId === row.cpId}
+            className="btn"
+            style={btnStyle}
+            title="Télécharger la pièce jointe"
+          >
+            {downloadBusyId === row.cpId ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} />}
+            <span>Télécharger</span>
+          </button>
+        );
+      }
+    },
+    {
+      headerName: 'Actions',
+      width: 170,
+      pinned: 'right',
+      suppressHeaderMenuButton: true,
+      cellRenderer: (p: any) => {
+        const row = p.data;
+        if (!row) return null;
+        return (
+          <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', height: '100%' }} onClick={(e) => e.stopPropagation()}>
+            {row.estValide && row.type === 'Convention' && (
+              <button className="btn" style={btnStyle} onClick={() => setTerminerTarget(row)}>
+                Terminer
               </button>
             )}
             <button
               className="btn"
+              style={{ ...btnStyle, color: 'var(--danger-color, #ef4444)' }}
               onClick={() => handleDelete(row)}
               disabled={deleteBusyId === row.cpId}
-              title="Supprimer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', padding: '0.2rem 0.5rem', color: 'var(--status-blocking-text)' }}
+              title="Supprimer la convention"
             >
               {deleteBusyId === row.cpId ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
             </button>
           </div>
         );
-      default:
-        return null;
+      }
     }
-  };
+  ], [downloadBusyId, deleteBusyId, handleDownload, handleDelete]);
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -253,25 +195,11 @@ export function ConventionsDelaiPaiementPanel({ societeId, showToast }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <CalendarClock size={20} style={{ color: 'var(--accent-primary)' }} />
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Conventions de délai de paiement</h2>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Délai de Paiement Maroc — CDC §3.2/§6, par tiers</div>
+            <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Conventions de délai de paiement fournisseurs</h2>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Délai de Paiement Maroc — par fournisseur</div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div style={{ display: 'inline-flex', border: '1px solid var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
-            <button
-              onClick={() => setDomaine('achat')}
-              style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', border: 'none', cursor: 'pointer', background: domaine === 'achat' ? 'var(--accent-primary)' : 'white', color: domaine === 'achat' ? 'white' : 'var(--text-primary)' }}
-            >
-              Achat (fournisseurs)
-            </button>
-            <button
-              onClick={() => setDomaine('vente')}
-              style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', border: 'none', cursor: 'pointer', background: domaine === 'vente' ? 'var(--accent-primary)' : 'white', color: domaine === 'vente' ? 'white' : 'var(--text-primary)' }}
-            >
-              Vente (clients)
-            </button>
-          </div>
           <button
             className="btn btn-primary"
             onClick={() => setShowCreate(true)}
@@ -279,7 +207,6 @@ export function ConventionsDelaiPaiementPanel({ societeId, showToast }: {
           >
             <Plus size={14} /> Nouvelle convention
           </button>
-          <ColumnSelector columns={COLUMNS} visibleKeys={visibleKeys} onToggle={toggle} onReset={reset} />
         </div>
       </div>
 
@@ -287,73 +214,25 @@ export function ConventionsDelaiPaiementPanel({ societeId, showToast }: {
       <div style={{ padding: '0.4rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
-          <span>Conventions : <strong>{visibleRows.length}</strong> / {rows.length}</span>
+          <span>Conventions : <strong>{rows.length}</strong></span>
         </div>
-        {Object.keys(filters).length > 0 && (
-          <button className="btn" onClick={() => setFilters({})} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0, fontSize: '0.8rem', cursor: 'pointer' }}>
-            Effacer filtres ({Object.keys(filters).length})
-          </button>
-        )}
       </div>
 
-      {/* Grille (flexbox : entête + lignes partagent les mêmes largeurs, pattern TASK-138) */}
-      <div style={{ flexGrow: 1, overflow: 'auto', position: 'relative', background: 'white' }}>
-        <div style={{ minWidth: '1200px', fontSize: '0.8125rem' }}>
-          <div style={{ display: 'flex', position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderBottom: '1px solid var(--border-color)' }}>
-            {visibleColumns.map(col => {
-              const sortKey = col.key === 'numero' || col.key === 'delai' || col.key === 'tiers' ? col.key as 'numero' | 'delai' | 'tiers' : undefined;
-              return (
-                <div
-                  key={col.key}
-                  onClick={() => sortKey && handleSort(sortKey)}
-                  style={{ ...colStyle(col), padding: '0.5rem 0.75rem', borderRight: '1px solid var(--border-color)', cursor: sortKey ? 'pointer' : 'default', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', fontWeight: 600, whiteSpace: 'nowrap' }}
-                >
-                  {col.label}
-                  {sortKey && sortConfig.key === sortKey && (
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{sortConfig.desc ? '▼' : '▲'}</span>
-                  )}
-                  {col.filterType && (
-                    <span onClick={e => e.stopPropagation()}>
-                      <ExcelFilter
-                        filterType={col.filterType}
-                        options={filterOptionsFor(col.key)}
-                        selectedValues={Array.isArray(filters[col.key]) ? filters[col.key] as string[] : []}
-                        textValue={typeof filters[col.key] === 'string' ? filters[col.key] as string : ''}
-                        onChange={(val) => handleFilterChange(col.key, val)}
-                      />
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {visibleRows.map(row => (
-            <div
-              key={row.cpId}
-              style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'white' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'white')}
-            >
-              {visibleColumns.map(col => (
-                <div key={col.key} style={{ ...colStyle(col), padding: '0.4rem 0.75rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: colJustify(col), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {renderCell(col, row)}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-        {visibleRows.length === 0 && !loading && (
-          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-            Aucune convention {domaine === 'achat' ? 'fournisseur' : 'client'} pour ces filtres.
-          </div>
-        )}
+      <div style={{ flexGrow: 1, position: 'relative' }}>
+        <ApbsGrid
+          rowData={rows}
+          columnDefs={columnDefs}
+          height="100%"
+          showColumnSelector={true}
+          showExportButton={true}
+          exportFileName="conventions_ddp.xlsx"
+        />
       </div>
 
       {showCreate && (
         <CreerConventionModal
           societeId={societeId}
-          domaine={domaine}
+          domaine={DOMAINE}
           onClose={() => setShowCreate(false)}
           onSuccess={async () => { setShowCreate(false); showToast('Convention créée', 'success'); await fetchRows(); }}
         />
@@ -397,10 +276,14 @@ function CreerConventionModal({ societeId, domaine, onClose, onSuccess }: {
   const [tiersLoading, setTiersLoading] = useState(false);
   const [tiersSelectionne, setTiersSelectionne] = useState<TiersRechercheDto | null>(null);
 
-  // Factures non payées du tiers sélectionné (type Facture uniquement).
+  // Factures non payées du tiers sélectionné (type Facture uniquement). Combobox avec recherche
+  // sur le n° de facture — même UX que la sélection du fournisseur ci-dessus, mais filtrée
+  // localement (toutes les factures non payées du tiers sont déjà chargées, pas de volume
+  // comparable à une recherche tiers globale).
   const [factures, setFactures] = useState<FactureNonPayeeDto[]>([]);
   const [facturesLoading, setFacturesLoading] = useState(false);
   const [factureSelectionnee, setFactureSelectionnee] = useState<FactureNonPayeeDto | null>(null);
+  const [factureRecherche, setFactureRecherche] = useState('');
 
   const [fichierNom, setFichierNom] = useState<string | null>(null);
   const [fichierBase64, setFichierBase64] = useState<string | null>(null);
@@ -429,7 +312,7 @@ function CreerConventionModal({ societeId, domaine, onClose, onSuccess }: {
   }, [tiersRecherche, tiersSelectionne, societeId, domaine]);
 
   useEffect(() => {
-    if (type !== 'Facture' || !tiersSelectionne) { setFactures([]); setFactureSelectionnee(null); return; }
+    if (type !== 'Facture' || !tiersSelectionne) { setFactures([]); setFactureSelectionnee(null); setFactureRecherche(''); return; }
     (async () => {
       setFacturesLoading(true);
       try {
@@ -516,7 +399,7 @@ function CreerConventionModal({ societeId, domaine, onClose, onSuccess }: {
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
       <div style={{ background: 'white', borderRadius: '8px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)' }}>
-          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 600 }}>Nouvelle convention {domaine === 'achat' ? '(fournisseur)' : '(client)'}</h3>
+          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 600 }}>Nouvelle convention fournisseur</h3>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
         </div>
 
@@ -538,7 +421,7 @@ function CreerConventionModal({ societeId, domaine, onClose, onSuccess }: {
 
           {/* Sélection tiers — obligatoire quel que soit le type */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <label style={labelStyle}>Tiers {domaine === 'achat' ? '(fournisseur)' : '(client)'}</label>
+            <label style={labelStyle}>Fournisseur</label>
             {tiersSelectionne ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.6rem', background: 'var(--bg-secondary)', borderRadius: '4px', fontSize: '0.85rem' }}>
                 <strong>{tiersSelectionne.ctCode}</strong>
@@ -625,19 +508,45 @@ function CreerConventionModal({ societeId, domaine, onClose, onSuccess }: {
                 <span style={{ fontSize: '0.78rem', color: 'var(--status-warning-text-alt)' }}>Aucune facture non payée pour ce tiers.</span>
               )}
               {tiersSelectionne && factures.length > 0 && (
-                <select
-                  className="form-input"
-                  value={factureSelectionnee?.ecId ?? ''}
-                  onChange={e => setFactureSelectionnee(factures.find(f => f.ecId === Number(e.target.value)) || null)}
-                  required
-                >
-                  <option value="" disabled>— Choisir une facture —</option>
-                  {factures.map(f => (
-                    <option key={f.ecId} value={f.ecId}>
-                      {f.doNumero} — {formatDate(f.doDate)} — solde {f.solde.toFixed(2)}
-                    </option>
-                  ))}
-                </select>
+                factureSelectionnee ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.6rem', background: 'var(--bg-secondary)', borderRadius: '4px', fontSize: '0.85rem' }}>
+                    <strong>{factureSelectionnee.doNumero}</strong>
+                    <span style={{ color: 'var(--text-secondary)' }}>{formatDate(factureSelectionnee.doDate)} — solde {factureSelectionnee.solde.toFixed(2)}</span>
+                    <button type="button" onClick={() => { setFactureSelectionnee(null); setFactureRecherche(''); }} style={{ marginLeft: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--accent-primary)', fontSize: '0.78rem' }}>Changer</button>
+                  </div>
+                ) : (
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Search size={14} style={{ color: 'var(--text-secondary)' }} />
+                      <input
+                        type="text"
+                        placeholder="N° de facture…"
+                        value={factureRecherche}
+                        onChange={e => setFactureRecherche(e.target.value)}
+                        className="form-input"
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div style={{ border: '1px solid var(--border-color)', borderRadius: '4px', marginTop: '0.3rem', maxHeight: '160px', overflowY: 'auto' }}>
+                      {factures
+                        .filter(f => f.doNumero.toLowerCase().includes(factureRecherche.trim().toLowerCase()))
+                        .map(f => (
+                          <div
+                            key={f.ecId}
+                            onClick={() => { setFactureSelectionnee(f); setFactureRecherche(''); }}
+                            style={{ padding: '0.4rem 0.6rem', fontSize: '0.82rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'white')}
+                          >
+                            <strong>{f.doNumero}</strong> — {formatDate(f.doDate)} — solde {f.solde.toFixed(2)}
+                          </div>
+                        ))}
+                      {factures.filter(f => f.doNumero.toLowerCase().includes(factureRecherche.trim().toLowerCase())).length === 0 && (
+                        <div style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Aucune facture ne correspond.</div>
+                      )}
+                    </div>
+                  </div>
+                )
               )}
             </div>
           )}

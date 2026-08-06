@@ -96,6 +96,14 @@ export async function relireDepuisSage(declarationId: string, ecId: number): Pro
   return { resolue: !!res.data?.resolue };
 }
 
+// TASK-025 (solde initial, EC_Type=4 — décision PO) : saisie manuelle du taux + montant de TVA
+// par le comptable (le solde n'a aucun détail HT/TVA côté Sage, montant connu en TTC seul).
+// Resynchronise la ligne dans le même appel côté back.
+export async function enregistrerSaisieSoldeInitial(declarationId: string, ecId: number, taux: number, montantTva: number): Promise<{ resolue: boolean }> {
+  const res = await api.post(`/declarations/${declarationId}/lignes/solde-initial-tva`, { ecId, taux, montantTva });
+  return { resolue: !!res.data?.resolue };
+}
+
 // TASK-176 : resynchronisation EN MASSE — même contrat de sélection que les autres bulks
 // (ligneIds OU domaine+filter). Réutilise strictement le pipeline unitaire côté back, traité
 // SÉQUENTIELLEMENT (verrou soId TASK-156, pas de parallélisme). Retour agrégé synthétique, pas
@@ -139,6 +147,7 @@ export interface ConventionDelaiPaiementDto {
   cpId: number;
   tiersNo: number;
   tiersCode: string;
+  tiersIntitule: string;
   date: string;
   numero: string;
   dateDebut: string | null;
@@ -290,6 +299,7 @@ export interface LigneSelectionDdpDto {
   typeReglement: string | null;
   dateReglement: string | null;
   dateRapprochement: string | null;
+  reglementNumero: string | null;
   reglementPiece: string | null;
 }
 
@@ -299,6 +309,10 @@ export interface SelectionDdpDto {
   /** null = société non configurée (TASK-128) ⇒ 0 candidate, tout en reprise manuelle requise. */
   dateMiseEnRouteSociete: string | null;
   nombreEcheancesExaminees: number;
+  /** Échéances de la période déjà portées par une déclaration antérieure (anti-double-déclaration). */
+  nombreEcheancesDejaDeclarees: number;
+  /** Borne la plus récente déjà déclarée (max DDP_DateFin) ; null si aucune. */
+  derniereBorneDejaDeclaree: string | null;
   lignes: LigneSelectionDdpDto[];
   lignesRepriseManuelleRequise: LigneSelectionDdpDto[];
 }

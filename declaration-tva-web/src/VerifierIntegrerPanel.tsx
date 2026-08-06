@@ -62,6 +62,7 @@ type LigneValorisation = {
   tiersIdentifiantFiscal: string;
   tiersICE: string;
   tauxTVA: number;
+  codeTaxe?: string;
   montantHT: number;
   montantTVA: number;
   montantTTC: number;
@@ -103,6 +104,7 @@ type RowAggr = {
   tiersIdentifiantFiscal: string;
   tiersICE: string;
   tauxTVA: number;
+  codeTaxe?: string;
   montantHT: number;    // du back, jamais recalculé
   montantTVA: number;   // du back, jamais recalculé
   nonValorise: boolean;
@@ -117,7 +119,7 @@ type RowAggr = {
 function agregParFactureTaux(lignes: LigneValorisation[]): RowAggr[] {
   const map = new Map<string, RowAggr>();
   for (const l of lignes) {
-    const key = `${l.factureNumero}__${l.tauxTVA}`;
+    const key = `${l.factureNumero}__${l.tauxTVA}__${l.codeTaxe ?? ''}`;
     const existing = map.get(key);
     if (existing) {
       if (!existing.nonValorise) {
@@ -133,6 +135,7 @@ function agregParFactureTaux(lignes: LigneValorisation[]): RowAggr[] {
         tiersIdentifiantFiscal: l.tiersIdentifiantFiscal,
         tiersICE: l.tiersICE,
         tauxTVA: l.tauxTVA,
+        codeTaxe: l.codeTaxe,
         montantHT: nonValorise ? 0 : l.montantHT,
         montantTVA: nonValorise ? 0 : l.montantTVA,
         nonValorise,
@@ -151,28 +154,31 @@ function agregParFactureTaux(lignes: LigneValorisation[]): RowAggr[] {
   });
 }
 
-// Sous-totaux par taux
+// Sous-totaux par (taux, code taxe) — TASK-198 : deux taux identiques mais codes taxe
+// différents (ex. achat courant vs immobilisation) restent des sous-totaux distincts.
 type SousTotalTaux = {
   taux: number;
+  codeTaxe?: string;
   totalHT: number;
   totalTVA: number;
   nbLignes: number;
 };
 
 function sousTotauxParTaux(rows: RowAggr[]): SousTotalTaux[] {
-  const map = new Map<number, SousTotalTaux>();
+  const map = new Map<string, SousTotalTaux>();
   for (const r of rows) {
     if (r.nonValorise) continue;
-    const existing = map.get(r.tauxTVA);
+    const key = `${r.tauxTVA}__${r.codeTaxe ?? ''}`;
+    const existing = map.get(key);
     if (existing) {
       existing.totalHT += r.montantHT;
       existing.totalTVA += r.montantTVA;
       existing.nbLignes += 1;
     } else {
-      map.set(r.tauxTVA, { taux: r.tauxTVA, totalHT: r.montantHT, totalTVA: r.montantTVA, nbLignes: 1 });
+      map.set(key, { taux: r.tauxTVA, codeTaxe: r.codeTaxe, totalHT: r.montantHT, totalTVA: r.montantTVA, nbLignes: 1 });
     }
   }
-  return [...map.values()].sort((a, b) => b.taux - a.taux);
+  return [...map.values()].sort((a, b) => b.taux - a.taux || (a.codeTaxe ?? '').localeCompare(b.codeTaxe ?? ''));
 }
 
 // TASK-175 : rejet du verrou anti-chevauchement soId (TASK-156, ExecuterAvecVerrouOMAsync) —
@@ -556,6 +562,20 @@ export function VerifierIntegrerPanel({
 
     const hasBloquant = bloquants.length > 0;
 
+    // Anomalies bloquantes présentes sur l'AUTRE onglet uniquement : l'écran affichait alors
+    // « Prêt à intégrer » + « Tous les contrôles sont passés » (deux messages verts calculés sur
+    // l'onglet actif) tout en laissant « Confirmer intégration » grisé sans aucune explication.
+    // On nomme explicitement l'onglet fautif, sinon le comptable croit à un bug de l'application.
+    const bloquantsAutreOnglet = useMemo(() => {
+        const list = checkup?.alertes.filter(isBloquant) ?? [];
+        return list.filter(a => {
+            const dom = a.domaine ? (a.domaine === 'Encaissement' ? 'Encaissement' : 'Decaissement') : 'Decaissement';
+            return dom !== selectedTab;
+        });
+    }, [checkup, selectedTab]);
+    const nomAutreOnglet = selectedTab === 'Decaissement' ? 'TVA Collectée (Ventes)' : 'TVA Déductible (Achats)';
+    const bloqueParAutreOnglet = !hasBloquant && bloquantsAutreOnglet.length > 0;
+
     const canConfirm = !integree && !confirmed && !hasAnyBloquant && !loadingCheckup && !submitting;
 
     const controls = buildControls(checkup, bloquants.length, localReconciliation);
@@ -763,7 +783,7 @@ export function VerifierIntegrerPanel({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     <Lock size={20} style={{ color: isReadOnly ? 'var(--status-ok-text)' : 'var(--accent-primary)' }} />
                     <div>
-                        <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>③ Vérifier & Intégrer</h2>
+                        <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Étape 2 — Vérifier &amp; Intégrer</h2>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
                             {isReadOnly
                                 ? 'Déclaration intégrée — tampon DT_Id posé · lignes exclues des prochaines recherches'
@@ -850,14 +870,16 @@ export function VerifierIntegrerPanel({
                         gap: '0.5rem',
                         fontSize: '0.85rem',
                         fontWeight: 700,
-                        background: loadingCheckup ? 'var(--bg-secondary)' : hasBloquant ? '#fff5f5' : '#f0fdf4',
-                        border: `1px solid ${loadingCheckup ? 'var(--border-color)' : hasBloquant ? 'var(--status-blocking-border, #fecaca)' : '#bbf7d0'}`,
-                        color: loadingCheckup ? 'var(--text-secondary)' : hasBloquant ? 'var(--status-blocking-text)' : 'var(--status-ok-text)',
+                        background: loadingCheckup ? 'var(--bg-secondary)' : (hasBloquant || bloqueParAutreOnglet) ? '#fff5f5' : '#f0fdf4',
+                        border: `1px solid ${loadingCheckup ? 'var(--border-color)' : (hasBloquant || bloqueParAutreOnglet) ? 'var(--status-blocking-border, #fecaca)' : '#bbf7d0'}`,
+                        color: loadingCheckup ? 'var(--text-secondary)' : (hasBloquant || bloqueParAutreOnglet) ? 'var(--status-blocking-text)' : 'var(--status-ok-text)',
                     }}>
                         {loadingCheckup ? (
                             <><Loader2 size={16} className="animate-spin" /> Vérification en cours…</>
                         ) : hasBloquant ? (
                             <><XCircle size={16} /> ❌ Bloqué — {bloquants.length} anomalie{bloquants.length > 1 ? 's' : ''} bloquante{bloquants.length > 1 ? 's' : ''}, voir ci-dessous</>
+                        ) : bloqueParAutreOnglet ? (
+                            <><XCircle size={16} /> ❌ Intégration bloquée — {bloquantsAutreOnglet.length} anomalie{bloquantsAutreOnglet.length > 1 ? 's' : ''} bloquante{bloquantsAutreOnglet.length > 1 ? 's' : ''} dans l'onglet « {nomAutreOnglet} ». Cet onglet-ci est en ordre, mais la déclaration ne peut pas être intégrée tant que l'autre ne l'est pas.</>
                         ) : (
                             <><CheckCircle2 size={16} /> ✅ Prêt à intégrer</>
                         )}
@@ -882,6 +904,7 @@ export function VerifierIntegrerPanel({
                             <thead>
                                 <tr style={{ background: 'var(--bg-secondary)' }}>
                                     <th style={thStyle('left')}>Taux</th>
+                                    <th style={thStyle('left')}>Code taxe</th>
                                     <th style={thStyle('right')}>Nb lignes</th>
                                     <th style={thStyle('right')}>Total HT</th>
                                     <th style={thStyle('right')}>Total TVA</th>
@@ -890,10 +913,11 @@ export function VerifierIntegrerPanel({
                             </thead>
                             <tbody>
                                 {sousTotaux.map(st => (
-                                    <tr key={st.taux} style={{ borderTop: '1px solid var(--border-color)' }}>
+                                    <tr key={`${st.taux}__${st.codeTaxe ?? ''}`} style={{ borderTop: '1px solid var(--border-color)' }}>
                                         <td style={tdStyle('left')}>
                                             <TauxBadge taux={st.taux} />
                                         </td>
+                                        <td style={tdStyle('left')}>{st.codeTaxe || '—'}</td>
                                         <td style={{ ...tdStyle('right'), color: 'var(--text-secondary)' }}>{st.nbLignes}</td>
                                         <td style={{ ...tdStyle('right'), fontVariantNumeric: 'tabular-nums' }}>{formatMoney(st.totalHT)}</td>
                                         <td style={{ ...tdStyle('right'), fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(st.totalTVA)}</td>
@@ -906,7 +930,7 @@ export function VerifierIntegrerPanel({
                                     défaut — le RecapCard reste l'unique chiffre visible en premier
                                     niveau de lecture). */}
                                 <tr style={{ borderTop: '2px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
-                                    <td style={{ ...tdStyle('left'), fontWeight: 700 }} colSpan={2}>Σ Total</td>
+                                    <td style={{ ...tdStyle('left'), fontWeight: 700 }} colSpan={3}>Σ Total</td>
                                     <td style={{ ...tdStyle('right'), fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(localTotalHT)}</td>
                                     <td style={{ ...tdStyle('right'), fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(localTotalTVA)}</td>
                                     <td style={{ ...tdStyle('right'), fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(localTotalHT + localTotalTVA)}</td>
@@ -923,6 +947,7 @@ export function VerifierIntegrerPanel({
                     nbLignes={displayNbLignes}
                     totalTVA={displayTotalTVA}
                     nbReglements={displayNbReglements}
+                    scopeLabel={selectedTab === 'Decaissement' ? 'TVA déductible (achats)' : 'TVA collectée (ventes)'}
                     reconciliation={localReconciliation}
                     isReadOnly={isReadOnly}
                 />
@@ -989,10 +1014,15 @@ export function VerifierIntegrerPanel({
                             <XCircle size={14} />
                             {bloquants.length} contrôle{bloquants.length > 1 ? 's' : ''} bloquant{bloquants.length > 1 ? 's' : ''} — intégration impossible
                         </span>
+                    ) : bloqueParAutreOnglet ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--status-blocking-text)', fontWeight: 600 }}>
+                            <XCircle size={14} />
+                            {bloquantsAutreOnglet.length} contrôle{bloquantsAutreOnglet.length > 1 ? 's' : ''} bloquant{bloquantsAutreOnglet.length > 1 ? 's' : ''} dans « {nomAutreOnglet} » — intégration impossible
+                        </span>
                     ) : !loadingCheckup ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--status-ok-text)' }}>
                             <CheckCircle2 size={14} />
-                            Tous les contrôles sont passés
+                            Tous les contrôles sont passés (achats et ventes)
                         </span>
                     ) : null}
                 </div>
@@ -1065,7 +1095,11 @@ export function VerifierIntegrerPanel({
                                 transition: 'background 0.15s, opacity 0.15s',
                                 opacity: canConfirm ? 1 : 0.65,
                             }}
-                            title={hasBloquant ? 'Des contrôles bloquants empêchent l\'intégration' : 'Confirmer et figer la déclaration'}
+                            title={hasBloquant
+                                ? 'Des contrôles bloquants empêchent l\'intégration'
+                                : bloqueParAutreOnglet
+                                    ? `Des contrôles bloquants subsistent dans l'onglet « ${nomAutreOnglet} » — corrigez-les avant d'intégrer`
+                                    : 'Confirmer et figer la déclaration'}
                         >
                             {submitting ? (
                                 <><Loader2 size={14} className="animate-spin" /> Intégration en cours…</>
@@ -1129,13 +1163,15 @@ function TauxBadge({ taux }: { taux: number }) {
 }
 
 function RecapCard({
-    nbLignes, totalTVA, nbReglements, reconciliation, isReadOnly,
+    nbLignes, totalTVA, nbReglements, reconciliation, isReadOnly, scopeLabel,
 }: {
     nbLignes: number;
     totalTVA: number;
     nbReglements: number;
     reconciliation: Reconciliation | null;
     isReadOnly: boolean;
+    /** Onglet auquel TOUS les chiffres de ce récapitulatif se rapportent (achats OU ventes). */
+    scopeLabel: string;
 }) {
     return (
         <div style={{
@@ -1152,7 +1188,10 @@ function RecapCard({
                 fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)',
                 display: 'flex', alignItems: 'center', gap: '0.4rem',
             }}>
-                <FileStack size={13} /> Récapitulatif de l'intégration
+                {/* Tous les compteurs ci-dessous sont filtrés sur l'onglet actif : afficher
+                    « Règlements sélectionnés : 66 » alors que l'étape ① en annonçait 126 laissait
+                    croire à une perte de règlements. Le périmètre est désormais écrit noir sur blanc. */}
+                <FileStack size={13} /> Récapitulatif de l'intégration — {scopeLabel} uniquement
             </div>
             <div style={{
                 display: 'grid',
@@ -1178,7 +1217,7 @@ function RecapCard({
                 />
                 {reconciliation && (
                     <RecapCell
-                        label="Lignes intégrées (back)"
+                        label="Lignes déjà figées en base"
                         value={reconciliation.integrees}
                         unit="ligne(s)"
                         accent={isReadOnly}
@@ -1260,7 +1299,10 @@ function buildControls(
             id: 'equilibre',
             label: 'Cohérence des totaux déclarés',
             description: equilibre
-                ? (equilibre.isValid ? 'Équilibre validé — aucun écart' : `Écart détecté : ${formatMoney(equilibre.ecart ?? 0)}`)
+                ? (equilibre.isValid
+                    ? 'Équilibre validé — aucun écart'
+                    // Précision indispensable : sans le sens du calcul, un écart négatif est illisible.
+                    : `Écart détecté : ${formatMoney(equilibre.ecart ?? 0)} (somme des TTC − somme des HT+TVA)`)
                 : 'Non vérifié',
             status: equilibre ? (equilibre.isValid ? 'ok' : 'error') : 'warning',
             badgeLabel: (equilibre && !equilibre.isValid) ? 'ÉCART' : undefined,
@@ -1358,7 +1400,12 @@ function ChecklistCard({
                                         <RecapSourceTable
                                             recapSource={[{ source: 'incoherente', ht: ligneIncoherente.ht, tva: ligneIncoherente.tva, ttc: ligneIncoherente.ttc }]}
                                             onRowClick={onDrillIncoherence ? () => onDrillIncoherence() : undefined}
-                                            columnLabel="Écart"
+                                            // Ce tableau ne contient PAS l'écart : il contient les montants
+                                            // HT/TVA/TTC des lignes incohérentes qui le PROVOQUENT. Intitulé
+                                            // « Écart », il se lisait comme un écart de +26 122,84 juste sous
+                                            // un « Écart détecté : -26 122,84 » — deux signes contradictoires
+                                            // pour deux grandeurs différentes.
+                                            columnLabel="Montants des lignes à l'origine de l'écart"
                                         />
                                         {ecartExplique === false && (
                                             <div style={{ padding: '0.5rem 0.65rem', fontSize: '0.75rem', color: 'var(--status-warning-text-alt)', background: 'var(--status-warning-bg)', borderTop: '1px solid var(--status-warning-border)' }}>

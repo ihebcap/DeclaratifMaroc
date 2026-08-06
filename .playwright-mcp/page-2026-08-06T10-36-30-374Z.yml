@@ -1,0 +1,55 @@
+- generic [ref=f7e7]:
+  - complementary [ref=f7e8]:
+    - generic [ref=f7e9] [cursor=pointer]:
+      - generic [ref=f7e11]:
+        - img "DM" [ref=f7e17]
+        - generic [ref=f7e18]: TVA
+      - generic [ref=f7e19]: NEW_EMA DISTRIBUTION
+    - generic [ref=f7e20]:
+      - generic [ref=f7e21]:
+        - generic "Replier" [ref=f7e22] [cursor=pointer]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f7e26] [cursor=pointer]
+        - generic "Factures" [ref=f7e30] [cursor=pointer]
+      - generic [ref=f7e35]:
+        - generic "Replier" [ref=f7e36] [cursor=pointer]: DÉCLARATION TVA
+        - generic "Déclaration TVA" [ref=f7e40] [cursor=pointer]
+      - generic "Déplier" [ref=f7e133] [cursor=pointer]: DÉLAI DE PAIEMENT
+    - generic [ref=f7e69]:
+      - generic [ref=f7e70]: Admin Admin
+      - button "Déconnexion" [ref=f7e71] [cursor=pointer]
+  - main [ref=f7e76]:
+    - generic [ref=f7e77]:
+      - generic [ref=f7e78]:
+        - generic [ref=f7e83]:
+          - heading "Déclarations TVA" [level=2] [ref=f7e84]
+          - generic [ref=f7e85]: Déclaration TVA Maroc — modèle SIMPL-TVA
+        - generic [ref=f7e86]:
+          - button "Créer une déclaration" [ref=f7e87] [cursor=pointer]
+          - button "Colonnes" [ref=f7e90] [cursor=pointer]
+      - generic [ref=f7e95]:
+        - text: "Déclarations :"
+        - strong [ref=f7e96]: "1"
+        - text: / 1
+      - generic [ref=f7e98]:
+        - generic [ref=f7e99]:
+          - generic [ref=f7e100]: N° déclaration
+          - generic [ref=f7e101]:
+            - text: Période
+            - button "Filtrer" [ref=f7e103] [cursor=pointer]
+          - generic [ref=f7e106]:
+            - text: Déclaration
+            - button "Filtrer" [ref=f7e108] [cursor=pointer]
+          - generic [ref=f7e111]: Nombre de factures
+          - generic [ref=f7e112]:
+            - text: Statut
+            - button "Filtrer" [ref=f7e114] [cursor=pointer]
+          - generic [ref=f7e117]: Actions
+        - generic [ref=f7e118]:
+          - button "TVA1-2026-07" [ref=f7e120] [cursor=pointer]
+          - generic [ref=f7e121]: Juillet 2026
+          - generic [ref=f7e122]: Mensuelle
+          - generic [ref=f7e123]: "2480"
+          - generic [ref=f7e124]: En cours
+          - generic [ref=f7e127]:
+            - button "Ouvrir" [ref=f7e128] [cursor=pointer]
+            - button "Supprimer" [ref=f7e129] [cursor=pointer]

@@ -1,0 +1,65 @@
+- generic [ref=f4e113]:
+  - complementary [ref=f4e114]:
+    - generic [ref=f4e115] [cursor=pointer]:
+      - generic [ref=f4e117]:
+        - img "DM" [ref=f4e123]
+        - generic [ref=f4e124]: TVA
+      - generic [ref=f4e125]: NEW_EMA DISTRIBUTION
+    - generic [ref=f4e126]:
+      - generic [ref=f4e127]:
+        - generic [ref=f4e128]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f4e129] [cursor=pointer]
+        - generic "Factures" [ref=f4e133] [cursor=pointer]
+      - generic [ref=f4e138]:
+        - generic [ref=f4e139]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f4e140] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f4e146] [cursor=pointer]
+    - generic [ref=f4e152]:
+      - generic [ref=f4e153]: Admin Admin
+      - button "Déconnexion" [ref=f4e154] [cursor=pointer]
+  - main [ref=f4e159]:
+    - generic [ref=f4e160]:
+      - generic [ref=f4e161]:
+        - heading "Déclarations TVA" [level=2] [ref=f4e162]
+        - button "Créer une déclaration" [ref=f4e163] [cursor=pointer]
+      - generic [ref=f4e165]:
+        - generic [ref=f4e166]:
+          - generic [ref=f4e167]:
+            - heading "TVA1-2026-02" [level=3] [ref=f4e168]
+            - generic [ref=f4e169]:
+              - generic [ref=f4e170]:
+                - text: "Période:"
+                - strong [ref=f4e171]: Février 2026
+              - generic [ref=f4e172]:
+                - text: "Déclaration:"
+                - strong [ref=f4e173]: Mensuelle
+              - generic [ref=f4e174]:
+                - text: "Lignes:"
+                - strong [ref=f4e175]: "750"
+              - generic [ref=f4e176]:
+                - text: "Montant TVA:"
+                - strong [ref=f4e177]: 274 708,84 MAD
+          - generic [ref=f4e178]:
+            - generic [ref=f4e179]: En cours
+            - button "Supprimer" [ref=f4e180] [cursor=pointer]
+            - button "Ouvrir" [ref=f4e184] [cursor=pointer]
+        - generic [ref=f4e187]:
+          - generic [ref=f4e188]:
+            - heading "TVA1-2026-01" [level=3] [ref=f4e189]
+            - generic [ref=f4e190]:
+              - generic [ref=f4e191]:
+                - text: "Période:"
+                - strong [ref=f4e192]: Janvier 2026
+              - generic [ref=f4e193]:
+                - text: "Déclaration:"
+                - strong [ref=f4e194]: Mensuelle
+              - generic [ref=f4e195]:
+                - text: "Lignes:"
+                - strong [ref=f4e196]: "1162"
+              - generic [ref=f4e197]:
+                - text: "Montant TVA:"
+                - strong [ref=f4e198]: 341 224,17 MAD
+          - generic [ref=f4e199]:
+            - generic [ref=f4e200]: En cours
+            - button "Supprimer" [ref=f4e201] [cursor=pointer]
+            - button "Ouvrir" [ref=f4e205] [cursor=pointer]

@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $dbPath = "D:\_vibe\GRF\Declaration.API\tva.db"
 if (Test-Path $dbPath) { Remove-Item $dbPath -Force }

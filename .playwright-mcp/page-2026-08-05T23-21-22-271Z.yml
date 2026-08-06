@@ -1,0 +1,25 @@
+- generic [ref=f12e3]:
+  - complementary [ref=f12e4]:
+    - generic [ref=f12e5] [cursor=pointer]:
+      - generic [ref=f12e7]:
+        - img "DM" [ref=f12e13]
+        - generic [ref=f12e14]: TVA
+      - generic [ref=f12e15]: NEW_EMA DISTRIBUTION
+    - generic [ref=f12e16]:
+      - generic [ref=f12e17]:
+        - generic [ref=f12e18]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f12e19] [cursor=pointer]
+        - generic "Factures" [ref=f12e23] [cursor=pointer]
+      - generic [ref=f12e28]:
+        - generic [ref=f12e29]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f12e30] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f12e36] [cursor=pointer]
+    - generic [ref=f12e42]:
+      - generic [ref=f12e43]: Admin Admin
+      - button "Déconnexion" [ref=f12e44] [cursor=pointer]
+  - main [ref=f12e49]:
+    - generic [ref=f12e50]:
+      - generic [ref=f12e51]:
+        - heading "Déclarations TVA" [level=2] [ref=f12e52]
+        - button "Créer une déclaration" [ref=f12e53] [cursor=pointer]
+      - generic [ref=f12e55]: Chargement des déclarations...

@@ -332,9 +332,9 @@ namespace Declaration.Core.Tests
         }
 
         [Fact]
-        public void ConstruireDeclaration_EcType4_AlerteSoldeInitialNonGere()
+        public void ConstruireDeclaration_EcType4_SansSaisie_AlerteSaisieRequise()
         {
-            // Arrange : affectation avec EC_Type = 4 (solde initial)
+            // Arrange : affectation avec EC_Type = 4 (solde initial), aucune saisie manuelle encore faite
             var affectation = new AffectationADeclarer
             {
                 NumeroFacture = "SOLDE_001",
@@ -344,7 +344,7 @@ namespace Declaration.Core.Tests
                 Tiers = new TiersInfo { Ice = "123456789012345", IdentifiantFiscal = "12345678" }
             };
 
-            // Act : resoudreFacture ne doit jamais être appelée pour EC_Type=4
+            // Act : resoudreFacture ne doit jamais être appelée tant qu'il n'y a pas de saisie
             var appelleResoudre = false;
             Func<AffectationADeclarer, DocumentTaxesInfo?> resoudreFacture = a =>
             {
@@ -357,10 +357,52 @@ namespace Declaration.Core.Tests
                 resoudreFacture,
                 2);
 
-            // Assert : alerte SOLDE_INITIAL_NON_GERE, aucune ventilation, resoudreFacture non appelée
-            Assert.Contains(dec.Alertes, a => a.Code == "SOLDE_INITIAL_NON_GERE");
+            // Assert : alerte actionnable SOLDE_INITIAL_SAISIE_REQUISE, aucune ventilation, resoudreFacture non appelée
+            Assert.Contains(dec.Alertes, a => a.Code == "SOLDE_INITIAL_SAISIE_REQUISE");
             Assert.Empty(dec.Lignes);
-            Assert.False(appelleResoudre, "resoudreFacture ne doit pas être appelée pour EC_Type=4");
+            Assert.False(appelleResoudre, "resoudreFacture ne doit pas être appelée pour EC_Type=4 sans saisie");
+        }
+
+        [Fact]
+        public void ConstruireDeclaration_EcType4_AvecSaisie_IntegreLaLigne()
+        {
+            // Arrange : décision PO — une saisie manuelle (taux + montant TVA) permet d'intégrer le
+            // solde initial au lieu de l'éliminer. MontantAffecte = solde TTC connu côté Sage.
+            var affectation = new AffectationADeclarer
+            {
+                NumeroFacture = "SOLDE_001",
+                MontantAffecte = 750,
+                Source = SourceAffectation.Depense,
+                EC_Type = 4,
+                SoldeInitialTaux = 20,
+                SoldeInitialTva = 125,
+                Tiers = new TiersInfo { Ice = "123456789012345", IdentifiantFiscal = "12345678" }
+            };
+
+            Func<AffectationADeclarer, DocumentTaxesInfo?> resoudreFacture = a => new DocumentTaxesInfo
+            {
+                NumeroPiece = a.NumeroFacture,
+                TotalHT = 625,
+                TotalHTNet = 625,
+                TotalTva = 125,
+                TotalTtc = 750,
+                MontantsBrutsDisponibles = true,
+                LignesTaxe = new List<SageTaxReader.Contracts.TaxeDetail>
+                {
+                    new SageTaxReader.Contracts.TaxeDetail { Code = "", Type = "0", Taux = 20, BaseHT = 625, MontantTva = 125 }
+                }
+            };
+
+            var dec = ConstructeurDeclaration.ConstruireDeclaration(
+                new List<AffectationADeclarer> { affectation },
+                resoudreFacture,
+                2);
+
+            Assert.DoesNotContain(dec.Alertes, a => a.Code == "SOLDE_INITIAL_SAISIE_REQUISE");
+            Assert.Single(dec.Lignes);
+            Assert.Equal(625, dec.Lignes[0].HT);
+            Assert.Equal(125, dec.Lignes[0].Tva);
+            Assert.Equal(20, dec.Lignes[0].Taux);
         }
 
         // TASK-187 : Reference (RT_ECHEANCE.DO_Reference) doit traverser ConstruireDeclaration à

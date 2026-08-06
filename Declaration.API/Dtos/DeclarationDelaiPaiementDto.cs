@@ -191,6 +191,7 @@ public sealed class LigneSelectionDelaiPaiementDto
     public string? TypeReglement { get; init; }
     public DateTime? DateReglement { get; init; }
     public DateTime? DateRapprochement { get; init; }
+    public string? ReglementNumero { get; init; }
     public string? ReglementPiece { get; init; }
 
     public static LigneSelectionDelaiPaiementDto From(LigneSelectionDelaiPaiement ligne) => new()
@@ -219,6 +220,7 @@ public sealed class LigneSelectionDelaiPaiementDto
         TypeReglement = ligne.TypeReglement?.ToString(),
         DateReglement = ligne.DateReglement,
         DateRapprochement = ligne.DateRapprochement,
+        ReglementNumero = ligne.ReglementNumero,
         ReglementPiece = ligne.ReglementPiece,
     };
 }
@@ -238,6 +240,15 @@ public sealed class SelectionDelaiPaiementDto
 
     public int NombreEcheancesExaminees { get; init; }
 
+    /// <summary>
+    /// Échéances de la période DÉJÀ portées par une déclaration antérieure : permet à l'écran de
+    /// distinguer « aucun retard » de « déjà déclaré » (jamais un zéro silencieux).
+    /// </summary>
+    public int NombreEcheancesDejaDeclarees { get; init; }
+
+    /// <summary>Borne la plus récente déjà déclarée (max <c>DDP_DateFin</c>) ; <c>null</c> si aucune.</summary>
+    public DateTime? DerniereBorneDejaDeclaree { get; init; }
+
     public IReadOnlyList<LigneSelectionDelaiPaiementDto> Lignes { get; init; } = Array.Empty<LigneSelectionDelaiPaiementDto>();
 
     /// <summary>Lignes « antérieures à la mise en route — retard réel inconnu » : visibles, jamais intégrables.</summary>
@@ -249,6 +260,8 @@ public sealed class SelectionDelaiPaiementDto
         DateFinPeriode = resultat.DateFinPeriode,
         DateMiseEnRouteSociete = resultat.DateMiseEnRouteSociete,
         NombreEcheancesExaminees = resultat.NombreEcheancesExaminees,
+        NombreEcheancesDejaDeclarees = resultat.NombreEcheancesDejaDeclarees,
+        DerniereBorneDejaDeclaree = resultat.DerniereBorneDejaDeclaree,
         Lignes = resultat.Lignes.Select(LigneSelectionDelaiPaiementDto.From).ToList(),
         LignesRepriseManuelleRequise = resultat.LignesRepriseManuelleRequise.Select(LigneSelectionDelaiPaiementDto.From).ToList(),
     };

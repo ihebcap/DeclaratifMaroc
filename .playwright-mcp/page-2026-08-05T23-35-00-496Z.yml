@@ -1,0 +1,95 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e5] [cursor=pointer]:
+      - generic [ref=f2e7]:
+        - img "DM" [ref=f2e13]
+        - generic [ref=f2e14]: TVA
+      - generic [ref=f2e15]: NEW_EMA DISTRIBUTION
+    - generic [ref=f2e16]:
+      - generic [ref=f2e17]:
+        - generic [ref=f2e18]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f2e19] [cursor=pointer]
+        - generic "Factures" [ref=f2e23] [cursor=pointer]
+      - generic [ref=f2e28]:
+        - generic [ref=f2e29]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f2e30] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f2e36] [cursor=pointer]
+    - generic [ref=f2e42]:
+      - generic [ref=f2e43]: Admin Admin
+      - button "Déconnexion" [ref=f2e44] [cursor=pointer]
+  - main [ref=f2e49]:
+    - generic [ref=f2e460]:
+      - generic [ref=f2e462]:
+        - button "Déclarations" [ref=f2e463] [cursor=pointer]
+        - button "Sélection / Contrôle" [ref=f2e464] [cursor=pointer]
+        - button "Conventions" [ref=f2e465] [cursor=pointer]
+      - generic [ref=f2e467]:
+        - generic [ref=f2e468]:
+          - generic [ref=f2e474]:
+            - heading "Contrôle des lignes hors délai" [level=2] [ref=f2e475]
+            - generic [ref=f2e476]: Délai de Paiement Maroc — CDC §5.A-9 · visibilité seule, aucune intégration depuis cet écran
+          - generic [ref=f2e477]:
+            - generic [ref=f2e478]: Exercice
+            - combobox [ref=f2e479]:
+              - option "2027"
+              - option "2026" [selected]
+              - option "2025"
+              - option "2024"
+              - option "2023"
+            - generic [ref=f2e480]: Type
+            - combobox [ref=f2e481]:
+              - option "Trimestrielle"
+              - option "Annuelle" [selected]
+            - button "Date de mise en route" [ref=f2e482] [cursor=pointer]
+            - button "Colonnes" [ref=f2e487] [cursor=pointer]
+        - generic [ref=f2e491]:
+          - generic [ref=f2e492]:
+            - text: "Période calculée :"
+            - strong [ref=f2e493]: 01/01/2026 → 31/12/2026
+          - generic [ref=f2e494]:
+            - text: "Lignes :"
+            - strong [ref=f2e495]: "0"
+            - text: / 0
+          - generic "Somme de la colonne « Montant » des lignes actuellement affichées (filtres compris)." [ref=f2e496]:
+            - text: "Total montant affiché :"
+            - strong [ref=f2e497]: 0,00 MAD
+          - generic [ref=f2e498]: 1459 échéance(s) examinée(s)
+          - 'generic "Ces échéances figurent déjà dans une déclaration antérieure : leur retard a été compté une première fois et n''est plus recompté ici (anti-double-déclaration)." [ref=f2e499]':
+            - text: dont
+            - strong [ref=f2e500]: "1125"
+            - text: déjà déclarée(s) jusqu'au 31/12/2026
+        - generic [ref=f2e501]:
+          - generic [ref=f2e503]:
+            - 'generic "\"Retard calculé\" : un dépassement a pu être chiffré. \"Reprise manuelle requise\" : échéance antérieure à la date de mise en route de la société, sans historique — aucun dépassement calculé tant que la reprise n''est pas saisie." [ref=f2e504]':
+              - text: Statut
+              - button "Filtrer" [ref=f2e506] [cursor=pointer]
+            - generic [ref=f2e509]:
+              - text: Fournisseur
+              - button "Filtrer" [ref=f2e511] [cursor=pointer]
+            - generic [ref=f2e514]:
+              - text: Facture
+              - button "Filtrer" [ref=f2e516] [cursor=pointer]
+            - generic "Date d'émission de la facture (DO_Date)." [ref=f2e519]: Date facture
+            - generic "Date à laquelle la facture aurait dû être payée selon le délai applicable (convention par tiers/facture, sinon délai par défaut de la société), ajustée aux jours ouvrés." [ref=f2e520]: Échéance légale
+            - 'generic "D''où vient le nombre de jours de délai appliqué : une convention spécifique à cette facture, une convention avec le tiers, ou le délai par défaut de la société." [ref=f2e521]':
+              - text: Origine du délai
+              - button "Filtrer" [ref=f2e523] [cursor=pointer]
+            - generic "Jusqu'à quelle date le retard de cette échéance a déjà été compté dans une déclaration précédente (point de départ du calcul incrémental). Si jamais déclarée, c'est l'échéance légale elle-même (0 jour compté jusqu'ici)." [ref=f2e526]: Déjà déclaré au
+            - 'generic "Jusqu''à quelle date le retard est mesuré cette fois-ci. Pour un chèque/traite/virement déjà rapproché en banque : sa date de rapprochement (plafonnée à la fin de période). Pour une espèce : la date du règlement. Si le règlement n''est pas encore rapproché, ou pour la part jamais payée : la fin de la période (le retard court toujours)." [ref=f2e527]': Constaté au
+            - generic "Jours de retard NOUVEAUX depuis la dernière déclaration = Constaté au − Déjà déclaré au. Jamais le retard total depuis la facture, pour ne pas compter deux fois le même retard." [ref=f2e528]: Dépassement (j)
+            - 'generic "Montant porté par CETTE ligne : le montant réellement affecté à ce règlement précis (part payée), ou le solde restant dû (part jamais réglée) — jamais le total de la facture appliqué à chaque ligne." [ref=f2e529]': Montant
+            - generic "Numéro du règlement à l'origine de cette part payée. Vide pour la part jamais réglée (aucun règlement rattaché)." [ref=f2e530]: N° Règlement
+            - generic "Mode du règlement (Espèce/Chèque/Traite/Virement). Vide pour la part jamais réglée." [ref=f2e531]: Mode
+            - 'generic "\"Payé hors délai\" : réglé et rapproché en banque (ou espèce), mais après l''échéance légale. \"Payé non rapproché\" : un règlement est affecté mais pas encore confirmé par la banque — traité comme un retard qui continue de courir tant qu''il n''est pas rapproché. \"Non payé\" : part de la facture jamais réglée (solde restant)." [ref=f2e532]':
+              - text: Cas
+              - button "Filtrer" [ref=f2e534] [cursor=pointer]
+            - generic [ref=f2e537]: Action
+          - generic [ref=f2e538]:
+            - strong [ref=f2e539]: Aucun retard NOUVEAU à déclarer sur cette période.
+            - generic [ref=f2e540]:
+              - text: "Ce n'est pas « aucun retard » :"
+              - strong [ref=f2e541]: "1125"
+              - text: échéance(s) sur 1459 examinée(s) ont déjà été déclarées jusqu'au
+              - strong [ref=f2e542]: 31/12/2026
+              - text: . Leur retard a donc déjà été compté et ne peut pas l'être une seconde fois.
+            - generic [ref=f2e543]: Pour revoir le détail déjà déclaré, ouvrez la déclaration concernée dans l'onglet « Déclarations ».

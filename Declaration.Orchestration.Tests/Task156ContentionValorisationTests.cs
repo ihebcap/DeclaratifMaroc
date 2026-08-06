@@ -45,7 +45,7 @@ namespace Declaration.Orchestration.Tests
         public Task UpdateStatutAsync(Guid id, StatutDeclaration statut) => throw NotUsed();
         public Task<bool> ExistsAsync(int societeId, int exercice, int periode, Declaration.Application.Entities.TypePeriode type) => throw NotUsed();
         public Task DeleteAsync(Guid declarationId) => throw NotUsed();
-        public Task<Dictionary<Guid, (int NbLignes, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds) => throw NotUsed();
+        public Task<Dictionary<Guid, (int NbLignes, int NbFactures, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds) => throw NotUsed();
         public Task<int> CountAffectationsTamponneesAsync(IEnumerable<string> numerosRapprochement) => throw NotUsed();
         public Task SaveLignesCandidatesAsync(IEnumerable<LigneCandidate> lignes) => throw NotUsed();
         public Task<IEnumerable<LigneCandidate>> GetLignesAsync(Guid declarationId, string domaine, int page, int pageSize, string? sort, string? filter) => throw NotUsed();
@@ -202,7 +202,7 @@ namespace Declaration.Orchestration.Tests
         public Task UpdateStatutAsync(Guid id, StatutDeclaration statut) => throw NotUsed();
         public Task<bool> ExistsAsync(int societeId, int exercice, int periode, Declaration.Application.Entities.TypePeriode type) => throw NotUsed();
         public Task DeleteAsync(Guid declarationId) => throw NotUsed();
-        public Task<Dictionary<Guid, (int NbLignes, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds) => throw NotUsed();
+        public Task<Dictionary<Guid, (int NbLignes, int NbFactures, decimal MontantTva)>> GetAgregatsListeAsync(IEnumerable<Guid> declarationIds) => throw NotUsed();
         public Task<int> CountAffectationsTamponneesAsync(IEnumerable<string> numerosRapprochement) => throw NotUsed();
         public Task<Dictionary<string, List<string>>> GetLignesDistinctsAsync(Guid declarationId, string domaine) => throw NotUsed();
         public Task<Dictionary<int, (DateTime? DoDate, string? DoReference)>> GetDatesFacturesEtReferencesAsync(int soId, IEnumerable<int> ecIds) => throw NotUsed();

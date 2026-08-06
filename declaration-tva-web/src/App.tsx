@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   LogOut, LayoutDashboard, Landmark, FileText, FileCheck,
-  Scissors, Send, BarChart3, Lock, ShieldAlert, AlertTriangle, CalendarClock,
+  Scissors, Send, BarChart3, Lock, ShieldAlert, AlertTriangle, CalendarClock, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import './index.css';
 import './App.css';
@@ -28,9 +28,9 @@ export interface User {
 // Sections navigables (le shell ne fait que router — aucun calcul/API ici).
 type SectionKey = 'rapprochement' | 'factures' | 'declaration' | 'delai-paiement';
 
-// TASK-136 : sous-écrans internes au domaine « Délai de paiement » (sous-navigation interne à la
-// section, pas des SectionKey supplémentaires — le sidebar n'affiche qu'UNE entrée « Délai de
-// paiement », cf. décision PO 19/07/2026 rappelée dans DDP-TASK-136).
+// TASK-136 : sous-écrans internes au domaine « Délai de paiement ». Demande PO (revenue sur la
+// décision précédente) : un groupe DÉDIÉ dans la sidebar avec ces 3 sous-menus, à la place de la
+// barre d'onglets interne au-dessus du contenu (supprimée).
 type DdpSousEcran = 'declarations' | 'controle' | 'conventions';
 
 type MenuStatus = 'live' | 'soon' | 'todo';
@@ -40,6 +40,7 @@ interface MenuEntry {
   label: string;
   icon: typeof LayoutDashboard;
   status: MenuStatus; // live = livré, soon = placeholder honnête, todo = grisé "à venir"
+  ddpSousEcran?: DdpSousEcran; // posé uniquement sur les 3 entrées du groupe « Délai de paiement »
 }
 
 interface MenuGroup {
@@ -56,13 +57,19 @@ const MENU_GROUPS: MenuGroup[] = [
     ],
   },
   {
-    title: 'DÉCLARATION',
+    title: 'DÉCLARATION TVA',
     entries: [
       { key: 'declaration', label: 'Déclaration TVA', icon: FileCheck, status: 'live' },
-      // TASK-136 : entrée autonome au même niveau que « Déclaration TVA » (décision PO 19/07/2026,
-      // DDP-TASK-136) — pas un regroupement sous une entrée existante. Sous-navigation interne vers
-      // les 3 écrans TASK-130 (conventions)/TASK-134 (déclarations DDP + contrôle) : cf. Dashboard.
-      { key: 'delai-paiement', label: 'Délai de paiement', icon: CalendarClock, status: 'live' },
+    ],
+  },
+  {
+    // TASK-136 : groupe dédié (demande PO) — 3 sous-menus au même niveau que les autres groupes,
+    // remplace la barre d'onglets interne précédemment affichée en haut du contenu.
+    title: 'DÉLAI DE PAIEMENT',
+    entries: [
+      { key: 'delai-paiement', label: 'Déclaration', icon: CalendarClock, status: 'live', ddpSousEcran: 'declarations' },
+      { key: 'delai-paiement', label: 'Contrôle', icon: CalendarClock, status: 'live', ddpSousEcran: 'controle' },
+      { key: 'delai-paiement', label: 'Conventions', icon: CalendarClock, status: 'live', ddpSousEcran: 'conventions' },
     ],
   },
   {
@@ -228,10 +235,23 @@ export function Dashboard({ user, onLogout, showToast }: { user: User; onLogout:
   // TASK-136 : sous-écran actif au sein de la section « Délai de paiement » (sous-navigation
   // interne, cf. DdpSousEcran) — indépendant de activeSection, ne modifie rien au sidebar.
   const [ddpSousEcran, setDdpSousEcran] = useState<DdpSousEcran>('declarations');
+  // Groupes de la sidebar pliables (demande PO) — un groupe replié masque ses entrées mais reste
+  // cliquable pour se redéplier ; tous les groupes démarrent dépliés (aucune route cachée au premier
+  // chargement).
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const toggleGroup = (title: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
+      return next;
+    });
+  };
 
   const handleSelect = (entry: MenuEntry) => {
     if (entry.status === 'todo') return; // "à venir" : non cliquable, aucune route morte
     setActiveSection(entry.key as SectionKey);
+    if (entry.ddpSousEcran) setDdpSousEcran(entry.ddpSousEcran);
   };
 
   return (
@@ -264,14 +284,27 @@ export function Dashboard({ user, onLogout, showToast }: { user: User; onLogout:
             .filter(group => group.entries.length > 0)
             .map(group => (
             <div key={group.title} className="sidebar-group">
-              {isSidebarOpen && <div className="sidebar-group-label">{group.title}</div>}
-              {group.entries.map(entry => {
+              {isSidebarOpen && (
+                <div
+                  className="sidebar-group-label"
+                  onClick={() => toggleGroup(group.title)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                  title={collapsedGroups.has(group.title) ? 'Déplier' : 'Replier'}
+                >
+                  <span>{group.title}</span>
+                  {collapsedGroups.has(group.title) ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+                </div>
+              )}
+              {(!isSidebarOpen || !collapsedGroups.has(group.title)) && group.entries.map(entry => {
                 const Icon = entry.icon;
-                const isActive = entry.status !== 'todo' && activeSection === entry.key;
+                // Les 3 entrées du groupe « Délai de paiement » partagent la même SectionKey :
+                // l'entrée active se distingue par son ddpSousEcran, pas par activeSection seul.
+                const isActive = entry.status !== 'todo' && activeSection === entry.key
+                  && (entry.ddpSousEcran === undefined || entry.ddpSousEcran === ddpSousEcran);
                 const disabled = entry.status === 'todo';
                 return (
                   <div
-                    key={entry.key}
+                    key={entry.key + (entry.ddpSousEcran ?? '')}
                     className={`sidebar-item ${isActive ? 'active' : ''} ${disabled ? 'disabled' : ''}`}
                     title={disabled ? `${entry.label} — à venir` : entry.label}
                     onClick={() => handleSelect(entry)}
@@ -314,9 +347,7 @@ export function Dashboard({ user, onLogout, showToast }: { user: User; onLogout:
           ) : (
             <DeclarationList
               societeId={user.societeId}
-              isAdmin={user.isAdmin}
-              currentUserName={user.nom || user.login}
-              onOpenDeclaration={(id) => setCurrentDeclarationId(id)}
+              onSelectDeclaration={(id: string) => setCurrentDeclarationId(id)}
               onCreateNew={() => setIsCreateModalOpen(true)}
               showToast={showToast}
             />
@@ -326,41 +357,16 @@ export function Dashboard({ user, onLogout, showToast }: { user: User; onLogout:
         ) : activeSection === 'factures' ? (
           <FactureInterrogation societeId={user.societeId} showToast={showToast} />
         ) : activeSection === 'delai-paiement' ? (
-          // TASK-136 : sous-navigation interne (Déclarations / Sélection-Contrôle / Conventions),
-          // même niveau de densité que le reste du shell — aucun des 3 écrans TASK-130/134 n'est
-          // modifié ici, ce bloc ne fait que router.
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-            <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-              <div style={{ display: 'inline-flex', border: '1px solid var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
-                <button
-                  onClick={() => setDdpSousEcran('declarations')}
-                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', border: 'none', cursor: 'pointer', background: ddpSousEcran === 'declarations' ? 'var(--accent-primary)' : 'white', color: ddpSousEcran === 'declarations' ? 'white' : 'var(--text-primary)' }}
-                >
-                  Déclarations
-                </button>
-                <button
-                  onClick={() => setDdpSousEcran('controle')}
-                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', border: 'none', cursor: 'pointer', background: ddpSousEcran === 'controle' ? 'var(--accent-primary)' : 'white', color: ddpSousEcran === 'controle' ? 'white' : 'var(--text-primary)' }}
-                >
-                  Sélection / Contrôle
-                </button>
-                <button
-                  onClick={() => setDdpSousEcran('conventions')}
-                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', border: 'none', cursor: 'pointer', background: ddpSousEcran === 'conventions' ? 'var(--accent-primary)' : 'white', color: ddpSousEcran === 'conventions' ? 'white' : 'var(--text-primary)' }}
-                >
-                  Conventions
-                </button>
-              </div>
-            </div>
-            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex' }}>
-              {ddpSousEcran === 'declarations' ? (
-                <DeclarationsDelaiPaiementPanel societeId={user.societeId} showToast={showToast} />
-              ) : ddpSousEcran === 'controle' ? (
-                <ControleLignesDelaiPaiementPanel societeId={user.societeId} showToast={showToast} />
-              ) : (
-                <ConventionsDelaiPaiementPanel societeId={user.societeId} showToast={showToast} />
-              )}
-            </div>
+          // TASK-136 : la navigation entre les 3 écrans se fait désormais depuis le groupe dédié de
+          // la sidebar (demande PO) — plus de barre d'onglets interne ici, ce bloc ne fait que router.
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex' }}>
+            {ddpSousEcran === 'declarations' ? (
+              <DeclarationsDelaiPaiementPanel societeId={user.societeId} showToast={showToast} />
+            ) : ddpSousEcran === 'controle' ? (
+              <ControleLignesDelaiPaiementPanel societeId={user.societeId} showToast={showToast} />
+            ) : (
+              <ConventionsDelaiPaiementPanel societeId={user.societeId} showToast={showToast} />
+            )}
           </div>
         ) : null}
       </main>

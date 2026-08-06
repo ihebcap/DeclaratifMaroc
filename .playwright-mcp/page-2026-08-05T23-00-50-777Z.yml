@@ -1,0 +1,82 @@
+- generic [ref=f5e7]:
+  - complementary [ref=f5e8]:
+    - generic [ref=f5e9] [cursor=pointer]:
+      - generic [ref=f5e11]:
+        - img "DM" [ref=f5e17]
+        - generic [ref=f5e18]: TVA
+      - generic [ref=f5e19]: NEW_EMA DISTRIBUTION
+    - generic [ref=f5e20]:
+      - generic [ref=f5e21]:
+        - generic [ref=f5e22]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f5e23] [cursor=pointer]
+        - generic "Factures" [ref=f5e27] [cursor=pointer]
+      - generic [ref=f5e32]:
+        - generic [ref=f5e33]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f5e34] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f5e40] [cursor=pointer]
+    - generic [ref=f5e46]:
+      - generic [ref=f5e47]: Admin Admin
+      - button "Déconnexion" [ref=f5e48] [cursor=pointer]
+  - main [ref=f5e53]:
+    - generic [ref=f5e834]:
+      - generic [ref=f5e835]:
+        - heading "Déclarations TVA" [level=2] [ref=f5e836]
+        - button "Créer une déclaration" [active] [ref=f5e837] [cursor=pointer]
+      - generic [ref=f5e897]:
+        - generic [ref=f5e898]:
+          - heading "TVA1-2026-01" [level=3] [ref=f5e899]
+          - generic [ref=f5e900]:
+            - generic [ref=f5e901]:
+              - text: "Période:"
+              - strong [ref=f5e902]: Janvier 2026
+            - generic [ref=f5e903]:
+              - text: "Déclaration:"
+              - strong [ref=f5e904]: Mensuelle
+            - generic [ref=f5e905]:
+              - text: "Lignes:"
+              - strong [ref=f5e906]: "1162"
+            - generic [ref=f5e907]:
+              - text: "Montant TVA:"
+              - strong [ref=f5e908]: 341 224,17 MAD
+        - generic [ref=f5e909]:
+          - generic [ref=f5e910]: En cours
+          - button "Supprimer" [ref=f5e911] [cursor=pointer]
+          - button "Ouvrir" [ref=f5e915] [cursor=pointer]
+  - generic [ref=f5e920]:
+    - generic [ref=f5e921]:
+      - heading "Nouvelle Déclaration" [level=3] [ref=f5e922]
+      - button [ref=f5e923] [cursor=pointer]
+    - generic [ref=f5e927]:
+      - generic [ref=f5e928]:
+        - generic [ref=f5e929]: Société
+        - textbox [disabled] [ref=f5e930]: NEW_EMA DISTRIBUTION
+      - generic [ref=f5e931]:
+        - generic [ref=f5e932]:
+          - generic [ref=f5e933]: Exercice
+          - spinbutton [ref=f5e934]: "2026"
+        - generic [ref=f5e935]:
+          - generic [ref=f5e936]: Type
+          - combobox [ref=f5e937]:
+            - option "Mensuel" [selected]
+            - option "Trimestriel"
+      - generic [ref=f5e938]:
+        - generic [ref=f5e939]: Période
+        - combobox [ref=f5e940]:
+          - option "Janvier (01)"
+          - option "Février (02)" [selected]
+          - option "Mars (03)"
+          - option "Avril (04)"
+          - option "Mai (05)"
+          - option "Juin (06)"
+          - option "Juillet (07)"
+          - option "Août (08)"
+          - option "Septembre (09)"
+          - option "Octobre (10)"
+          - option "Novembre (11)"
+          - option "Décembre (12)"
+      - generic [ref=f5e941]:
+        - text: "Numéro généré :"
+        - strong [ref=f5e942]: TVA1-2026-02
+      - generic [ref=f5e943]:
+        - button "Annuler" [ref=f5e944] [cursor=pointer]
+        - button "Créer" [ref=f5e945] [cursor=pointer]

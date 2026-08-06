@@ -77,6 +77,80 @@ namespace Declaration.Orchestration.Tests
             Assert.Equal(2, modele.Lignes.Count);
         }
 
+        // TASK-025 : stub de la persistance de saisie manuelle solde initial — ne touche AUCUNE base
+        // réelle, permet de prouver le batch-load + application aux affectations dans Traiter().
+        public class StubSoldeInitialTvaRepository : ISoldeInitialTvaRepository
+        {
+            private readonly Dictionary<int, SaisieSoldeInitialTva> _saisies;
+            public StubSoldeInitialTvaRepository(Dictionary<int, SaisieSoldeInitialTva> saisies) { _saisies = saisies; }
+
+            public IReadOnlyDictionary<int, SaisieSoldeInitialTva> GetSaisiesBatch(int soId, IEnumerable<int> ecIds, string persistenceConnectionString)
+                => _saisies;
+
+            public void EnregistrerSaisie(int soId, int ecId, decimal taux, decimal montantTva, string saisiPar, string persistenceConnectionString)
+                => _saisies[ecId] = new SaisieSoldeInitialTva { Taux = taux, MontantTva = montantTva };
+        }
+
+        [Fact]
+        public void Traiter_EcType4_SansSaisie_AlerteSansAppelWorker()
+        {
+            // Bout-en-bout orchestrateur (pas seulement ConstructeurDeclaration) : le batch-load de
+            // saisies ne trouve rien pour cet EC_Id → l'affectation reste SoldeInitialTva=null →
+            // alerte actionnable, aucun appel worker Sage (EC_Type=4 n'est jamais une pièce OM/FGR).
+            var stubInvoker = new StubWorkerInvoker();
+            var config = new WorkerConfig();
+            var repoSaisies = new StubSoldeInitialTvaRepository(new Dictionary<int, SaisieSoldeInitialTva>());
+            var orchestrateur = new OrchestrateurDeclaration(
+                stubInvoker, config, new StubLecteurTvaFgr(), "dummy", "dummySage",
+                persistenceConnectionString: "dummyPersistence", soldeInitialTva: repoSaisies);
+
+            var affectations = new List<AffectationADeclarer>
+            {
+                new AffectationADeclarer { NumeroFacture = "SI-001", EC_Type = 4, EC_Id = 22096, MontantAffecte = 750,
+                    Tiers = new TiersInfo { Ice = "123456789012345", IdentifiantFiscal = "12345678" } }
+            };
+
+            var modele = orchestrateur.Traiter(affectations, 1);
+
+            Assert.Contains(modele.Alertes, a => a.Code == "SOLDE_INITIAL_SAISIE_REQUISE");
+            Assert.Empty(modele.Lignes);
+            Assert.Equal(0, stubInvoker.InvocationCount);
+        }
+
+        [Fact]
+        public void Traiter_EcType4_AvecSaisiePersistee_IntegreLaLigne()
+        {
+            // Même scénario, mais avec une saisie déjà enregistrée pour cet EC_Id (simule un
+            // comptable ayant utilisé le bouton « Saisir TVA ») — l'orchestrateur doit la charger en
+            // batch, construire le document synthétique (HT = TTC − TVA saisie) et produire une
+            // ligne normale via le pipeline Ventilateur existant.
+            var stubInvoker = new StubWorkerInvoker();
+            var config = new WorkerConfig();
+            var repoSaisies = new StubSoldeInitialTvaRepository(new Dictionary<int, SaisieSoldeInitialTva>
+            {
+                [22096] = new SaisieSoldeInitialTva { Taux = 20, MontantTva = 125 }
+            });
+            var orchestrateur = new OrchestrateurDeclaration(
+                stubInvoker, config, new StubLecteurTvaFgr(), "dummy", "dummySage",
+                persistenceConnectionString: "dummyPersistence", soldeInitialTva: repoSaisies);
+
+            var affectations = new List<AffectationADeclarer>
+            {
+                new AffectationADeclarer { NumeroFacture = "SI-001", EC_Type = 4, EC_Id = 22096, MontantAffecte = 750,
+                    Tiers = new TiersInfo { Ice = "123456789012345", IdentifiantFiscal = "12345678" } }
+            };
+
+            var modele = orchestrateur.Traiter(affectations, 1);
+
+            Assert.DoesNotContain(modele.Alertes, a => a.Code == "SOLDE_INITIAL_SAISIE_REQUISE");
+            Assert.Single(modele.Lignes);
+            Assert.Equal(625, modele.Lignes[0].HT);
+            Assert.Equal(125, modele.Lignes[0].Tva);
+            Assert.Equal(750, modele.Lignes[0].Ttc);
+            Assert.Equal(20, modele.Lignes[0].Taux);
+            Assert.Equal(0, stubInvoker.InvocationCount);
+        }
+
         [Fact]
         public void Traiter_Alerte_QuandFactureIntrouvable()
         {

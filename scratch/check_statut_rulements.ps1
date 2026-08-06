@@ -1,4 +1,4 @@
-$H = @{ Authorization = "Bearer " + (Invoke-RestMethod -Uri "http://localhost:5018/api/auth/login" -Method Post -Body '{"username":"admin","password":"admin"}' -ContentType "application/json").token }
+﻿$H = @{ Authorization = "Bearer " + (Invoke-RestMethod -Uri "http://localhost:5018/api/auth/login" -Method Post -Body '{"username":"admin","password":"admin"}' -ContentType "application/json").token }
 $url = "http://localhost:518/api/rapprochement" # Wait, port 5018!
 $res = Invoke-RestMethod -Uri "http://localhost:5018/api/rapprochement?soId=1&debut=2026-06-01&fin=2026-06-30&page=1&size=1000" -Method Get -Headers $H
 Write-Host "Total rulements: $($res.totalCount)"

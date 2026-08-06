@@ -1,0 +1,372 @@
+- generic [ref=f9e6]:
+  - generic [ref=f9e7]:
+    - complementary [ref=f9e8]:
+      - generic [ref=f9e9] [cursor=pointer]:
+        - generic [ref=f9e11]:
+          - img "DM" [ref=f9e17]
+          - generic [ref=f9e18]: TVA
+        - generic [ref=f9e19]: NEW_EMA DISTRIBUTION
+      - generic [ref=f9e20]:
+        - generic [ref=f9e21]:
+          - generic [ref=f9e22]: INTERROGATION
+          - generic "Rapprochement bancaire" [ref=f9e23] [cursor=pointer]
+          - generic "Factures" [ref=f9e27] [cursor=pointer]
+        - generic [ref=f9e32]:
+          - generic [ref=f9e33]: DÉCLARATION
+          - generic "Déclaration TVA" [ref=f9e34] [cursor=pointer]
+          - generic "Délai de paiement" [ref=f9e40] [cursor=pointer]
+      - generic [ref=f9e46]:
+        - generic [ref=f9e47]: Admin Admin
+        - button "Déconnexion" [ref=f9e48] [cursor=pointer]
+    - main [ref=f9e53]:
+      - generic [ref=f9e192]:
+        - generic [ref=f9e193]:
+          - generic [ref=f9e194]:
+            - button "Retour" [ref=f9e195] [cursor=pointer]
+            - generic [ref=f9e198]: TVA1-2026-06
+          - generic [ref=f9e199]:
+            - button "1. Sélection" [ref=f9e200] [cursor=pointer]
+            - button "2. Vérifier & Intégrer" [ref=f9e204] [cursor=pointer]
+            - button "3. Déclaration" [disabled] [ref=f9e208]
+          - generic [ref=f9e213]:
+            - generic [ref=f9e214]: Période 01/06/2026 → 30/06/2026
+            - generic [ref=f9e215]: En cours
+        - generic [ref=f9e216]:
+          - generic [ref=f9e218]:
+            - generic [ref=f9e220]:
+              - generic [ref=f9e221]:
+                - checkbox "Sélectionner toutes les lignes visibles (éligibles/à contrôler)" [checked] [ref=f9e223]
+                - generic [ref=f9e224]:
+                  - text: N° Règlement
+                  - button "Filtrer" [ref=f9e227] [cursor=pointer]
+                - generic [ref=f9e230] [cursor=pointer]:
+                  - text: Date
+                  - generic [ref=f9e231]: ▼
+                - generic [ref=f9e232]:
+                  - text: Échéance
+                  - button "Filtrer" [ref=f9e235] [cursor=pointer]
+                - generic [ref=f9e238]:
+                  - text: Mode
+                  - button "Filtrer" [ref=f9e241] [cursor=pointer]
+                - generic [ref=f9e244]:
+                  - text: Domaine
+                  - button "Filtrer" [ref=f9e247] [cursor=pointer]
+                - generic [ref=f9e250]:
+                  - text: Tiers
+                  - button "Filtrer" [ref=f9e253] [cursor=pointer]
+                - generic [ref=f9e256] [cursor=pointer]: Montant
+                - generic [ref=f9e257]: Affecté
+                - generic [ref=f9e258]:
+                  - text: Rappr. banque
+                  - button "Filtrer" [ref=f9e261] [cursor=pointer]
+                - generic [ref=f9e264]:
+                  - text: Date rappro
+                  - button "Filtrer" [ref=f9e267] [cursor=pointer]
+                - generic [ref=f9e270]:
+                  - text: Statut
+                  - button "Filtrer" [ref=f9e273] [cursor=pointer]
+              - generic [ref=f9e276]:
+                - generic [ref=f9e277] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e279]
+                  - generic [ref=f9e280]: RF26060129
+                  - generic [ref=f9e281]: 29/06/2026
+                  - generic [ref=f9e282]: 25/06/2026
+                  - generic [ref=f9e283]: Virement
+                  - generic [ref=f9e284]: Décaissement
+                  - generic [ref=f9e286]: MARJANE
+                  - generic [ref=f9e287]: 403,10 MAD
+                  - generic [ref=f9e288]: 1 facture
+                  - generic [ref=f9e289]: Oui
+                  - generic [ref=f9e291]: 30/06/2026
+                  - generic [ref=f9e292]: Éligible
+                - generic [ref=f9e297] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e299]
+                  - generic [ref=f9e300]: RC26060101
+                  - generic [ref=f9e301]: 29/06/2026
+                  - generic [ref=f9e302]: 29/06/2026
+                  - generic [ref=f9e303]: Virement
+                  - generic [ref=f9e304]: Encaissement
+                  - generic [ref=f9e306]: HOTEL KENZI BASMA
+                  - generic [ref=f9e307]: 6 573,75 MAD
+                  - generic [ref=f9e308]: 3 factures
+                  - generic [ref=f9e309]: Oui
+                  - generic [ref=f9e311]: 30/06/2026
+                  - generic [ref=f9e312]: Éligible
+                - generic [ref=f9e317] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e319]
+                  - generic [ref=f9e320]: RC26060102
+                  - generic [ref=f9e321]: 29/06/2026
+                  - generic [ref=f9e322]: 29/06/2026
+                  - generic [ref=f9e323]: Virement
+                  - generic [ref=f9e324]: Encaissement
+                  - generic [ref=f9e326]: NEOM EVENT
+                  - generic [ref=f9e327]: 10 000,00 MAD
+                  - generic [ref=f9e328]: 1 facture
+                  - generic [ref=f9e329]: Oui
+                  - generic [ref=f9e331]: 30/06/2026
+                  - generic [ref=f9e332]: Éligible
+                - generic [ref=f9e337] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e339]
+                  - generic [ref=f9e340]: RF26060133
+                  - generic [ref=f9e341]: 29/06/2026
+                  - generic [ref=f9e342]: 06/06/2026
+                  - generic [ref=f9e343]: Virement
+                  - generic [ref=f9e344]: Décaissement
+                  - generic [ref=f9e346]: MARJANE
+                  - generic [ref=f9e347]: 540,30 MAD
+                  - generic [ref=f9e348]: 1 facture
+                  - generic [ref=f9e349]: Oui
+                  - generic [ref=f9e351]: 30/06/2026
+                  - generic [ref=f9e352]: Éligible
+                - generic [ref=f9e357] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e359]
+                  - generic [ref=f9e360]: RC26060104
+                  - generic [ref=f9e361]: 29/06/2026
+                  - generic [ref=f9e362]: 29/06/2026
+                  - generic [ref=f9e363]: Espèce
+                  - generic [ref=f9e364]: Encaissement
+                  - generic [ref=f9e366]: SOCIETE DES BAINS DE MER
+                  - generic [ref=f9e367]: 276,00 MAD
+                  - generic [ref=f9e368]: 1 facture
+                  - generic [ref=f9e369]: Oui
+                  - generic [ref=f9e371]: 29/06/2026
+                  - generic [ref=f9e372]: Éligible
+                - generic [ref=f9e377] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e379]
+                  - generic [ref=f9e380]: RF26050005
+                  - generic [ref=f9e381]: 26/06/2026
+                  - generic [ref=f9e382]: 29/05/2026
+                  - generic [ref=f9e383]: Traite
+                  - generic [ref=f9e384]: Décaissement
+                  - generic [ref=f9e386]: WHOLE FOOD
+                  - generic [ref=f9e387]: 26 078,95 MAD
+                  - generic [ref=f9e388]: 2 factures
+                  - generic [ref=f9e389]: Oui
+                  - generic [ref=f9e391]: 30/06/2026
+                  - generic [ref=f9e392]: Éligible
+                - generic [ref=f9e397] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e399]
+                  - generic [ref=f9e400]: RF26060120
+                  - generic [ref=f9e401]: 26/06/2026
+                  - generic [ref=f9e402]: 24/06/2026
+                  - generic [ref=f9e403]: Chèque
+                  - generic [ref=f9e404]: Décaissement
+                  - generic [ref=f9e406]: ADAROUICHE FOOD
+                  - generic [ref=f9e407]: 8 943,95 MAD
+                  - generic [ref=f9e408]: 1 facture
+                  - generic [ref=f9e409]: Oui
+                  - generic [ref=f9e411]: 30/06/2026
+                  - generic [ref=f9e412]: Éligible
+                - generic [ref=f9e417] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e419]
+                  - generic [ref=f9e420]: RC26060095
+                  - generic [ref=f9e421]: 26/06/2026
+                  - generic [ref=f9e422]: 26/06/2026
+                  - generic [ref=f9e423]: Virement
+                  - generic [ref=f9e424]: Encaissement
+                  - generic [ref=f9e426]: HOTEL HOSPITALITY.INN
+                  - generic [ref=f9e427]: 3 311,62 MAD
+                  - generic [ref=f9e428]: 1 facture
+                  - generic [ref=f9e429]: Oui
+                  - generic [ref=f9e431]: 30/06/2026
+                  - generic [ref=f9e432]: Éligible
+                - generic [ref=f9e437] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e439]
+                  - generic [ref=f9e440]: RC26060096
+                  - generic [ref=f9e441]: 26/06/2026
+                  - generic [ref=f9e442]: 26/06/2026
+                  - generic [ref=f9e443]: Virement
+                  - generic [ref=f9e444]: Encaissement
+                  - generic [ref=f9e446]: ZF FOOD
+                  - generic [ref=f9e447]: 998,28 MAD
+                  - generic [ref=f9e448]: 2 factures
+                  - generic [ref=f9e449]: Oui
+                  - generic [ref=f9e451]: 30/06/2026
+                  - generic [ref=f9e452]: Éligible
+                - generic [ref=f9e457] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e459]
+                  - generic [ref=f9e460]: RC26060098
+                  - generic [ref=f9e461]: 26/06/2026
+                  - generic [ref=f9e462]: 26/06/2026
+                  - generic [ref=f9e463]: Virement
+                  - generic [ref=f9e464]: Encaissement
+                  - generic [ref=f9e466]: HERITAGE MANAGEMENT (ADAY HOTEL)
+                  - generic [ref=f9e467]: 80 844,00 MAD
+                  - generic [ref=f9e468]: 26 factures
+                  - generic [ref=f9e469]: Oui
+                  - generic [ref=f9e471]: 30/06/2026
+                  - generic [ref=f9e472]: Éligible
+                - generic [ref=f9e477] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e479]
+                  - generic [ref=f9e480]: RC26060099
+                  - generic [ref=f9e481]: 26/06/2026
+                  - generic [ref=f9e482]: 26/06/2026
+                  - generic [ref=f9e483]: Virement
+                  - generic [ref=f9e484]: Encaissement
+                  - generic [ref=f9e486]: JM SUITES HOTEL MARANELLO
+                  - generic [ref=f9e487]: 13 347,03 MAD
+                  - generic [ref=f9e488]: 1 facture
+                  - generic [ref=f9e489]: Oui
+                  - generic [ref=f9e491]: 30/06/2026
+                  - generic [ref=f9e492]: Éligible
+                - generic [ref=f9e497] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e499]
+                  - generic [ref=f9e500]: RF26050010
+                  - generic [ref=f9e501]: 25/06/2026
+                  - generic [ref=f9e502]: 21/05/2026
+                  - generic [ref=f9e503]: Traite
+                  - generic [ref=f9e504]: Décaissement
+                  - generic [ref=f9e506]: TSM
+                  - generic [ref=f9e507]: 5 439,61 MAD
+                  - generic [ref=f9e508]: 5 factures
+                  - generic [ref=f9e509]: Oui
+                  - generic [ref=f9e511]: 30/06/2026
+                  - generic [ref=f9e512]: Éligible
+                - generic [ref=f9e517] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e519]
+                  - generic [ref=f9e520]: RF26050066
+                  - generic [ref=f9e521]: 25/06/2026
+                  - generic [ref=f9e522]: 19/05/2026
+                  - generic [ref=f9e523]: Traite
+                  - generic [ref=f9e524]: Décaissement
+                  - generic [ref=f9e526]: GROUPE KAYNA
+                  - generic [ref=f9e527]: 19 441,60 MAD
+                  - generic [ref=f9e528]: 3 factures
+                  - generic [ref=f9e529]: Oui
+                  - generic [ref=f9e531]: 30/06/2026
+                  - generic [ref=f9e532]: Éligible
+                - generic [ref=f9e537] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e539]
+                  - generic [ref=f9e540]: RF26060057
+                  - generic [ref=f9e541]: 25/06/2026
+                  - generic [ref=f9e542]: 30/04/2026
+                  - generic [ref=f9e543]: Chèque
+                  - generic [ref=f9e544]: Décaissement
+                  - generic [ref=f9e546]: COMPTOIR MAROCAIN DU SEL
+                  - generic [ref=f9e547]: 7 260,00 MAD
+                  - generic [ref=f9e548]: 3 factures
+                  - generic [ref=f9e549]: Oui
+                  - generic [ref=f9e551]: 30/06/2026
+                  - generic [ref=f9e552]: Éligible
+                - generic [ref=f9e557] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e559]
+                  - generic [ref=f9e560]: RC26060091
+                  - generic [ref=f9e561]: 25/06/2026
+                  - generic [ref=f9e562]: 25/06/2026
+                  - generic [ref=f9e563]: Virement
+                  - generic [ref=f9e564]: Encaissement
+                  - generic [ref=f9e566]: MJ ASSOCIES SARL
+                  - generic [ref=f9e567]: 1 417,00 MAD
+                  - generic [ref=f9e568]: 1 facture
+                  - generic [ref=f9e569]: Oui
+                  - generic [ref=f9e571]: 30/06/2026
+                  - generic [ref=f9e572]: Éligible
+                - generic [ref=f9e577] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e579]
+                  - generic [ref=f9e580]: RC26060092
+                  - generic [ref=f9e581]: 25/06/2026
+                  - generic [ref=f9e582]: 25/06/2026
+                  - generic [ref=f9e583]: Virement
+                  - generic [ref=f9e584]: Encaissement
+                  - generic [ref=f9e586]: MJ ASSOCIES SARL
+                  - generic [ref=f9e587]: 4 791,00 MAD
+                  - generic [ref=f9e588]: 1 facture
+                  - generic [ref=f9e589]: Oui
+                  - generic [ref=f9e591]: 30/06/2026
+                  - generic [ref=f9e592]: Éligible
+                - generic [ref=f9e597] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e599]
+                  - generic [ref=f9e600]: RC26060093
+                  - generic [ref=f9e601]: 25/06/2026
+                  - generic [ref=f9e602]: 25/06/2026
+                  - generic [ref=f9e603]: Virement
+                  - generic [ref=f9e604]: Encaissement
+                  - generic [ref=f9e606]: MJ ASSOCIES SARL
+                  - generic [ref=f9e607]: 709,00 MAD
+                  - generic [ref=f9e608]: partiel 100 % (reste 0,81 MAD)
+                  - generic [ref=f9e609]: Oui
+                  - generic [ref=f9e611]: 30/06/2026
+                  - 'generic "Reste à affecter : 0,81 MAD" [ref=f9e613]': À contrôler
+                - generic [ref=f9e616] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e618]
+                  - generic [ref=f9e619]: RC26060094
+                  - generic [ref=f9e620]: 25/06/2026
+                  - generic [ref=f9e621]: 26/06/2026
+                  - generic [ref=f9e622]: Chèque
+                  - generic [ref=f9e623]: Encaissement
+                  - generic [ref=f9e625]: LA BUVETTE DU MAROC
+                  - generic [ref=f9e626]: 29 158,00 MAD
+                  - generic [ref=f9e627]: 1 facture
+                  - generic [ref=f9e628]: Oui
+                  - generic [ref=f9e630]: 30/06/2026
+                  - generic [ref=f9e631]: Éligible
+                - generic [ref=f9e636] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e638]
+                  - generic [ref=f9e639]: RF26060080
+                  - generic [ref=f9e640]: 24/06/2026
+                  - generic [ref=f9e641]: 04/06/2026
+                  - generic [ref=f9e642]: Chèque
+                  - generic [ref=f9e643]: Décaissement
+                  - generic [ref=f9e645]: MAROC ASSAISONNEMENTS
+                  - generic [ref=f9e646]: 13 548,50 MAD
+                  - generic [ref=f9e647]: 1 facture
+                  - generic [ref=f9e648]: Oui
+                  - generic [ref=f9e650]: 30/06/2026
+                  - generic [ref=f9e651]: Éligible
+                - generic [ref=f9e656] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e658]
+                  - generic [ref=f9e659]: RF26060107
+                  - generic [ref=f9e660]: 24/06/2026
+                  - generic [ref=f9e661]: 23/06/2026
+                  - generic [ref=f9e662]: Chèque
+                  - generic [ref=f9e663]: Décaissement
+                  - generic [ref=f9e665]: MAXI LV
+                  - generic [ref=f9e666]: 35 142,91 MAD
+                  - generic [ref=f9e667]: 4 factures
+                  - generic [ref=f9e668]: Oui
+                  - generic [ref=f9e670]: 30/06/2026
+                  - generic [ref=f9e671]: Éligible
+                - generic [ref=f9e676] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e678]
+                  - generic [ref=f9e679]: RC26060077
+                  - generic [ref=f9e680]: 24/06/2026
+                  - generic [ref=f9e681]: 23/06/2026
+                  - generic [ref=f9e682]: Chèque
+                  - generic [ref=f9e683]: Encaissement
+                  - generic [ref=f9e685]: CAMEPHIA
+                  - generic [ref=f9e686]: 1 423,00 MAD
+                  - generic [ref=f9e687]: 1 facture
+                  - generic [ref=f9e688]: Oui
+                  - generic [ref=f9e690]: 30/06/2026
+                  - generic [ref=f9e691]: Éligible
+                - generic [ref=f9e696] [cursor=pointer]:
+                  - checkbox [checked] [ref=f9e698]
+                  - generic [ref=f9e699]: RC26060080
+                  - generic [ref=f9e700]: 24/06/2026
+                  - generic [ref=f9e701]: 24/06/2026
+                  - generic [ref=f9e702]: Espèce
+                  - generic [ref=f9e703]: Encaissement
+                  - generic [ref=f9e705]: CAMEPHIA
+                  - generic [ref=f9e706]: 4 973,38 MAD
+                  - generic [ref=f9e707]: 1 facture
+                  - generic [ref=f9e708]: Oui
+                  - generic [ref=f9e710]: 24/06/2026
+                  - generic [ref=f9e711]: Éligible
+            - generic [ref=f9e716]:
+              - generic [ref=f9e717]:
+                - generic [ref=f9e718]:
+                  - text: "Règlements :"
+                  - strong [ref=f9e719]: "232"
+                - generic [ref=f9e720]:
+                  - text: "Sélectionnés :"
+                  - strong [ref=f9e721]: "224"
+              - generic [ref=f9e722]:
+                - generic [ref=f9e723]: "Total sélectionné : 3 007 203,29 MAD"
+                - button "Export de contrôle (Excel)" [ref=f9e724] [cursor=pointer]
+                - button "Colonnes" [ref=f9e729] [cursor=pointer]
+          - generic [ref=f9e732]:
+            - generic [ref=f9e733]: 224 règlements sélectionnés · Total 3 007 203,29 MAD
+            - generic [ref=f9e734]:
+              - button "Détail des lignes" [ref=f9e735] [cursor=pointer]
+              - button "Passer au calcul" [ref=f9e736] [cursor=pointer]
+  - generic [ref=f9e739]: Déclaration créée avec succès

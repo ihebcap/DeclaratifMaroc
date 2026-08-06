@@ -1,0 +1,991 @@
+- generic [ref=f3e18]:
+  - complementary [ref=f3e19]:
+    - generic [ref=f3e20] [cursor=pointer]:
+      - generic [ref=f3e22]:
+        - img "DM" [ref=f3e28]
+        - generic [ref=f3e29]: TVA
+      - generic [ref=f3e30]: NEW_EMA DISTRIBUTION
+    - generic [ref=f3e31]:
+      - generic [ref=f3e32]:
+        - generic [ref=f3e33]: INTERROGATION
+        - generic "Rapprochement bancaire" [ref=f3e34] [cursor=pointer]
+        - generic "Factures" [ref=f3e38] [cursor=pointer]
+      - generic [ref=f3e43]:
+        - generic [ref=f3e44]: DÉCLARATION
+        - generic "Déclaration TVA" [ref=f3e45] [cursor=pointer]
+        - generic "Délai de paiement" [ref=f3e51] [cursor=pointer]
+    - generic [ref=f3e57]:
+      - generic [ref=f3e58]: Admin Admin
+      - button "Déconnexion" [ref=f3e59] [cursor=pointer]
+  - main [ref=f3e64]:
+    - generic [ref=f3e121]:
+      - generic [ref=f3e858]:
+        - generic [ref=f3e859]:
+          - button "Retour" [ref=f3e860] [cursor=pointer]
+          - generic [ref=f3e863]: TVA1-2026-07
+        - generic [ref=f3e864]:
+          - button "1. Sélection" [ref=f3e865] [cursor=pointer]
+          - button "2. Vérifier & Intégrer" [ref=f3e869] [cursor=pointer]
+          - button "3. Déclaration" [disabled] [ref=f3e873]
+        - generic [ref=f3e878]:
+          - generic [ref=f3e879]: Période 01/07/2026 → 31/07/2026
+          - generic [ref=f3e880]: En cours
+      - generic [ref=f3e883]:
+        - generic [ref=f3e2506]:
+          - generic [ref=f3e2507]:
+            - generic [ref=f3e2508]:
+              - heading "Diagnostic de l'anomalie" [level=3] [ref=f3e2509]
+              - generic [ref=f3e2513]: Facture SI- 4411ELEC · échéance EC_Id 22096
+            - button [ref=f3e2514] [cursor=pointer]
+          - generic [ref=f3e2518]:
+            - generic [ref=f3e2519]:
+              - generic [ref=f3e2520]: 1 · Échéance Sage concernée
+              - generic [ref=f3e2523]:
+                - generic [ref=f3e2524]:
+                  - generic [ref=f3e2525]: Numéro de pièce
+                  - generic [ref=f3e2526]: SI- 4411ELEC
+                - generic [ref=f3e2527]:
+                  - generic [ref=f3e2528]: Tiers (RT_ECHEANCE)
+                  - generic [ref=f3e2529]: 4411ELEC — SRM-CS
+                - generic [ref=f3e2530]:
+                  - generic [ref=f3e2531]: EC_Id / EC_No
+                  - generic [ref=f3e2532]: 22096 / 0
+                - generic [ref=f3e2533]:
+                  - generic [ref=f3e2534]: Origine
+                  - generic [ref=f3e2535]: SoldeInitial
+                - generic [ref=f3e2536]:
+                  - generic [ref=f3e2537]: Montant échéance (devise)
+                  - generic [ref=f3e2538]: 107,96
+            - generic [ref=f3e2539]:
+              - generic [ref=f3e2540]: 2 · Pourquoi cette ligne n'est pas valorisée
+              - generic [ref=f3e2543]:
+                - paragraph [ref=f3e2544]: "Solde initial : taux et montant de TVA à saisir manuellement pour intégrer cette ligne à la déclaration (montant connu en TTC seul)."
+                - generic [ref=f3e2545]:
+                  - generic [ref=f3e2546]: Action recommandée
+                  - generic [ref=f3e2547]: "Saisissez le taux et le montant de TVA de ce solde initial ci-dessous pour l'intégrer à la déclaration (le HT sera déduit automatiquement : TTC − TVA saisie)."
+                - group [ref=f3e2548]:
+                  - generic "Détail technique" [ref=f3e2549] [cursor=pointer]
+            - generic [ref=f3e2550]:
+              - generic [ref=f3e2551]: Solde initial — saisie du taux et du montant de TVA
+              - generic [ref=f3e2554]:
+                - paragraph [ref=f3e2555]: Le solde n'a aucun détail de TVA côté Sage (montant connu en TTC seul, 107,96 MAD). Saisissez le taux et le montant de TVA pour l'intégrer à la déclaration (HT = TTC − TVA).
+                - generic [ref=f3e2556]:
+                  - generic [ref=f3e2557]:
+                    - generic [ref=f3e2558]: Taux de TVA (%)
+                    - spinbutton [ref=f3e2559]: "20"
+                  - generic [ref=f3e2560]:
+                    - generic [ref=f3e2561]: Montant de TVA
+                    - spinbutton [ref=f3e2562]: "17.99"
+                - button "Enregistrer et intégrer" [ref=f3e2563] [cursor=pointer]
+                - generic [ref=f3e2572]: Saisie enregistrée, mais la ligne reste en anomalie (motif inchangé, voir ci-dessus).
+            - generic [ref=f3e2566]:
+              - generic [ref=f3e2567]: 3 · Contrôle « numéro de pièce partagé entre tiers »
+              - generic [ref=f3e2571]: "Aucune collision : ce numéro de pièce n'est porté que par ce tiers. Ce contrôle n'explique donc pas l'anomalie."
+        - generic [ref=f3e886]:
+          - generic [ref=f3e891]:
+            - heading "Étape 2 — Vérifier & Intégrer" [level=2] [ref=f3e892]
+            - generic [ref=f3e893]: Vérifiez les calculs par taux TVA, contrôlez les anomalies puis confirmez l'intégration
+          - generic [ref=f3e894]: 82 lignes non valorisées
+        - generic [ref=f3e898]:
+          - button "TVA Déductible (Achats)" [ref=f3e899] [cursor=pointer]
+          - button "TVA Collectée (Ventes)" [ref=f3e900] [cursor=pointer]
+        - generic [ref=f3e901]:
+          - generic [ref=f3e902]: ❌ Bloqué — 82 anomalies bloquantes, voir ci-dessous
+          - button "Sous-totaux par taux TVA (5 taux) ▼ Déplier" [ref=f3e908] [cursor=pointer]:
+            - text: Sous-totaux par taux TVA (5 taux)
+            - generic [ref=f3e911]: ▼ Déplier
+          - generic [ref=f3e912]:
+            - generic [ref=f3e913]: Récapitulatif de l'intégration — TVA déductible (achats) uniquement
+            - generic [ref=f3e918]:
+              - generic [ref=f3e919]:
+                - generic [ref=f3e920]: Règlements sélectionnés
+                - generic [ref=f3e921]: 505règlement(s)
+              - generic [ref=f3e922]:
+                - generic [ref=f3e923]: Lignes valorisées
+                - generic [ref=f3e924]: 1248ligne(s)
+              - generic [ref=f3e925]:
+                - generic [ref=f3e926]: Total TVA à intégrer
+                - generic [ref=f3e927]: 830 719,75 MAD
+              - generic [ref=f3e928]:
+                - generic [ref=f3e929]: Lignes déjà figées en base
+                - generic [ref=f3e930]: 0ligne(s)
+          - generic [ref=f3e931]:
+            - generic [ref=f3e932]: Contrôles pré-intégration
+            - generic [ref=f3e935]:
+              - generic [ref=f3e936]:
+                - generic [ref=f3e940]:
+                  - generic [ref=f3e941]: Affectations valides
+                  - generic [ref=f3e942]: 1330 affectation(s) en attente ou intégrée(s)
+                - generic [ref=f3e943]: OK
+              - generic [ref=f3e944]:
+                - generic [ref=f3e949]:
+                  - generic [ref=f3e950]: Cohérence des totaux déclarés
+                  - generic [ref=f3e951]: "Écart détecté : -510 405,13 MAD (somme des TTC − somme des HT+TVA)"
+                  - table [ref=f3e953]:
+                    - rowgroup [ref=f3e954]:
+                      - row [ref=f3e955]:
+                        - columnheader "Montants des lignes à l'origine de l'écart" [ref=f3e956]
+                        - columnheader "HT" [ref=f3e957]
+                        - columnheader "TVA" [ref=f3e958]
+                        - columnheader "TTC" [ref=f3e959]
+                    - rowgroup [ref=f3e960]:
+                      - row [ref=f3e961] [cursor=pointer]:
+                        - cell "Lignes incohérentes (TTC ≠ HT+TVA)" [ref=f3e962]
+                        - cell "249 823,52 MAD" [ref=f3e963]
+                        - cell "0,00 MAD" [ref=f3e964]
+                        - cell "0,00 MAD" [ref=f3e965]
+                    - rowgroup [ref=f3e966]:
+                      - row [ref=f3e967]:
+                        - cell "Total" [ref=f3e968]
+                        - cell "249 823,52 MAD" [ref=f3e969]
+                        - cell "0,00 MAD" [ref=f3e970]
+                        - cell "0,00 MAD" [ref=f3e971]
+                - generic [ref=f3e972]: ÉCART
+              - generic [ref=f3e973]:
+                - generic [ref=f3e978]:
+                  - generic [ref=f3e979]: Absence d'anomalies bloquantes
+                  - generic [ref=f3e980]: 82 anomalies bloquantes — intégration impossible
+                - generic [ref=f3e981]: BLOQUANT
+            - generic [ref=f3e982]:
+              - generic [ref=f3e983]: 82 lignes non valorisées — détail
+              - table [ref=f3e986]:
+                - rowgroup [ref=f3e987]:
+                  - row [ref=f3e988]:
+                    - columnheader "Facture" [ref=f3e989]
+                    - columnheader "Tiers" [ref=f3e990]
+                    - columnheader "Statut ligne" [ref=f3e991]
+                    - columnheader "Motif" [ref=f3e992]
+                    - columnheader [ref=f3e993]
+                - rowgroup [ref=f3e994]:
+                  - row [ref=f3e995]:
+                    - cell "AV2500073" [ref=f3e996]
+                    - cell "NESTRADIS" [ref=f3e997]
+                    - cell "Proposée" [ref=f3e998]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1000]'
+                    - cell [ref=f3e1001]:
+                      - button "Diagnostiquer" [ref=f3e1002] [cursor=pointer]
+                  - row [ref=f3e1006]:
+                    - cell "FC2501667" [ref=f3e1007]
+                    - cell "ATLANTIC FOODS" [ref=f3e1008]
+                    - cell "Proposée" [ref=f3e1009]
+                    - 'cell "Incohérence Sage : Σ(HT net+TVA+Parafiscale)=3960,00 ≠ TTC=3762,00 (écart -198,00) — pièce FC2501667 exclue de la valorisation." [ref=f3e1011]'
+                    - cell [ref=f3e1012]:
+                      - button "Diagnostiquer" [ref=f3e1013] [cursor=pointer]
+                  - row [ref=f3e1017]:
+                    - cell "FC2501717" [ref=f3e1018]
+                    - cell "GHALI WHEELS LOGITRANS" [ref=f3e1019]
+                    - cell "Proposée" [ref=f3e1020]
+                    - 'cell "Incohérence Sage : Σ(HT net+TVA+Parafiscale)=2064301,44 ≠ TTC=20700,00 (écart -2043601,44) — pièce FC2501717 exclue de la valorisation." [ref=f3e1022]'
+                    - cell [ref=f3e1023]:
+                      - button "Diagnostiquer" [ref=f3e1024] [cursor=pointer]
+                  - row [ref=f3e1028]:
+                    - cell "FC2600001" [ref=f3e1029]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1030]
+                    - cell "Proposée" [ref=f3e1031]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1033]'
+                    - cell [ref=f3e1034]:
+                      - button "Diagnostiquer" [ref=f3e1035] [cursor=pointer]
+                  - row [ref=f3e1039]:
+                    - cell "FC2600002" [ref=f3e1040]
+                    - cell "LEADER FROMAGGI" [ref=f3e1041]
+                    - cell "Proposée" [ref=f3e1042]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1044]'
+                    - cell [ref=f3e1045]:
+                      - button "Diagnostiquer" [ref=f3e1046] [cursor=pointer]
+                  - row [ref=f3e1050]:
+                    - cell "FC2600004" [ref=f3e1051]
+                    - cell "ATLANTIC FOODS" [ref=f3e1052]
+                    - cell "Proposée" [ref=f3e1053]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1055]'
+                    - cell [ref=f3e1056]:
+                      - button "Diagnostiquer" [ref=f3e1057] [cursor=pointer]
+                  - row [ref=f3e1061]:
+                    - cell "FC2600005" [ref=f3e1062]
+                    - cell "ATLANTIC FOODS" [ref=f3e1063]
+                    - cell "Proposée" [ref=f3e1064]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1066]'
+                    - cell [ref=f3e1067]:
+                      - button "Diagnostiquer" [ref=f3e1068] [cursor=pointer]
+                  - row [ref=f3e1072]:
+                    - cell "FC2600007" [ref=f3e1073]
+                    - cell "LEADER FROMAGGI" [ref=f3e1074]
+                    - cell "Proposée" [ref=f3e1075]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1077]'
+                    - cell [ref=f3e1078]:
+                      - button "Diagnostiquer" [ref=f3e1079] [cursor=pointer]
+                  - row [ref=f3e1083]:
+                    - cell "FC2600011" [ref=f3e1084]
+                    - cell "TSM" [ref=f3e1085]
+                    - cell "Proposée" [ref=f3e1086]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1088]'
+                    - cell [ref=f3e1089]:
+                      - button "Diagnostiquer" [ref=f3e1090] [cursor=pointer]
+                  - row [ref=f3e1094]:
+                    - cell "FC2600012" [ref=f3e1095]
+                    - cell "FRL COMPANY" [ref=f3e1096]
+                    - cell "Proposée" [ref=f3e1097]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1099]'
+                    - cell [ref=f3e1100]:
+                      - button "Diagnostiquer" [ref=f3e1101] [cursor=pointer]
+                  - row [ref=f3e1105]:
+                    - cell "FC2600015" [ref=f3e1106]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1107]
+                    - cell "Proposée" [ref=f3e1108]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1110]'
+                    - cell [ref=f3e1111]:
+                      - button "Diagnostiquer" [ref=f3e1112] [cursor=pointer]
+                  - row [ref=f3e1116]:
+                    - cell "FC2600017" [ref=f3e1117]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1118]
+                    - cell "Proposée" [ref=f3e1119]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1121]'
+                    - cell [ref=f3e1122]:
+                      - button "Diagnostiquer" [ref=f3e1123] [cursor=pointer]
+                  - row [ref=f3e1127]:
+                    - cell "FC2600022" [ref=f3e1128]
+                    - cell "DFT FOOD" [ref=f3e1129]
+                    - cell "Proposée" [ref=f3e1130]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1132]'
+                    - cell [ref=f3e1133]:
+                      - button "Diagnostiquer" [ref=f3e1134] [cursor=pointer]
+                  - row [ref=f3e1138]:
+                    - cell "FC2600033" [ref=f3e1139]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1140]
+                    - cell "Proposée" [ref=f3e1141]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1143]'
+                    - cell [ref=f3e1144]:
+                      - button "Diagnostiquer" [ref=f3e1145] [cursor=pointer]
+                  - row [ref=f3e1149]:
+                    - cell "FC2600035" [ref=f3e1150]
+                    - cell "MAXI LV" [ref=f3e1151]
+                    - cell "Proposée" [ref=f3e1152]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1154]'
+                    - cell [ref=f3e1155]:
+                      - button "Diagnostiquer" [ref=f3e1156] [cursor=pointer]
+                  - row [ref=f3e1160]:
+                    - cell "FC2600038" [ref=f3e1161]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1162]
+                    - cell "Proposée" [ref=f3e1163]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1165]'
+                    - cell [ref=f3e1166]:
+                      - button "Diagnostiquer" [ref=f3e1167] [cursor=pointer]
+                  - row [ref=f3e1171]:
+                    - cell "FC2600043" [ref=f3e1172]
+                    - cell "3M BUSINESS" [ref=f3e1173]
+                    - cell "Proposée" [ref=f3e1174]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1176]'
+                    - cell [ref=f3e1177]:
+                      - button "Diagnostiquer" [ref=f3e1178] [cursor=pointer]
+                  - row [ref=f3e1182]:
+                    - cell "FC2600044" [ref=f3e1183]
+                    - cell "VISCA FOOD" [ref=f3e1184]
+                    - cell "Proposée" [ref=f3e1185]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1187]'
+                    - cell [ref=f3e1188]:
+                      - button "Diagnostiquer" [ref=f3e1189] [cursor=pointer]
+                  - row [ref=f3e1193]:
+                    - cell "FC2600047" [ref=f3e1194]
+                    - cell "DFT FOOD" [ref=f3e1195]
+                    - cell "Proposée" [ref=f3e1196]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1198]'
+                    - cell [ref=f3e1199]:
+                      - button "Diagnostiquer" [ref=f3e1200] [cursor=pointer]
+                  - row [ref=f3e1204]:
+                    - cell "FC2600049" [ref=f3e1205]
+                    - cell "LEADER FROMAGGI" [ref=f3e1206]
+                    - cell "Proposée" [ref=f3e1207]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1209]'
+                    - cell [ref=f3e1210]:
+                      - button "Diagnostiquer" [ref=f3e1211] [cursor=pointer]
+                  - row [ref=f3e1215]:
+                    - cell "FC2600054" [ref=f3e1216]
+                    - cell "WHOLE FOOD" [ref=f3e1217]
+                    - cell "Proposée" [ref=f3e1218]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1220]'
+                    - cell [ref=f3e1221]:
+                      - button "Diagnostiquer" [ref=f3e1222] [cursor=pointer]
+                  - row [ref=f3e1226]:
+                    - cell "FC2600062" [ref=f3e1227]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1228]
+                    - cell "Proposée" [ref=f3e1229]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1231]'
+                    - cell [ref=f3e1232]:
+                      - button "Diagnostiquer" [ref=f3e1233] [cursor=pointer]
+                  - row [ref=f3e1237]:
+                    - cell "FC2600070" [ref=f3e1238]
+                    - cell "LEADER FROMAGGI" [ref=f3e1239]
+                    - cell "Proposée" [ref=f3e1240]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1242]'
+                    - cell [ref=f3e1243]:
+                      - button "Diagnostiquer" [ref=f3e1244] [cursor=pointer]
+                  - row [ref=f3e1248]:
+                    - cell "FC2600075" [ref=f3e1249]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1250]
+                    - cell "Proposée" [ref=f3e1251]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1253]'
+                    - cell [ref=f3e1254]:
+                      - button "Diagnostiquer" [ref=f3e1255] [cursor=pointer]
+                  - row [ref=f3e1259]:
+                    - cell "FC2600076" [ref=f3e1260]
+                    - cell "TECHNO FOODS SARL" [ref=f3e1261]
+                    - cell "Proposée" [ref=f3e1262]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1264]'
+                    - cell [ref=f3e1265]:
+                      - button "Diagnostiquer" [ref=f3e1266] [cursor=pointer]
+                  - row [ref=f3e1270]:
+                    - cell "FC2600082" [ref=f3e1271]
+                    - cell "COMPTOIR MAROCAIN DU SEL" [ref=f3e1272]
+                    - cell "Proposée" [ref=f3e1273]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1275]'
+                    - cell [ref=f3e1276]:
+                      - button "Diagnostiquer" [ref=f3e1277] [cursor=pointer]
+                  - row [ref=f3e1281]:
+                    - cell "FC2600085" [ref=f3e1282]
+                    - cell "TSM" [ref=f3e1283]
+                    - cell "Proposée" [ref=f3e1284]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1286]'
+                    - cell [ref=f3e1287]:
+                      - button "Diagnostiquer" [ref=f3e1288] [cursor=pointer]
+                  - row [ref=f3e1292]:
+                    - cell "FC2600086" [ref=f3e1293]
+                    - cell "FRL COMPANY" [ref=f3e1294]
+                    - cell "Proposée" [ref=f3e1295]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1297]'
+                    - cell [ref=f3e1298]:
+                      - button "Diagnostiquer" [ref=f3e1299] [cursor=pointer]
+                  - row [ref=f3e1303]:
+                    - cell "FC2600093" [ref=f3e1304]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1305]
+                    - cell "Proposée" [ref=f3e1306]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1308]'
+                    - cell [ref=f3e1309]:
+                      - button "Diagnostiquer" [ref=f3e1310] [cursor=pointer]
+                  - row [ref=f3e1314]:
+                    - cell "FC2600097" [ref=f3e1315]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1316]
+                    - cell "Proposée" [ref=f3e1317]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1319]'
+                    - cell [ref=f3e1320]:
+                      - button "Diagnostiquer" [ref=f3e1321] [cursor=pointer]
+                  - row [ref=f3e1325]:
+                    - cell "FC2600100" [ref=f3e1326]
+                    - cell "LAMI DISTRIBUTION" [ref=f3e1327]
+                    - cell "Proposée" [ref=f3e1328]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1330]'
+                    - cell [ref=f3e1331]:
+                      - button "Diagnostiquer" [ref=f3e1332] [cursor=pointer]
+                  - row [ref=f3e1336]:
+                    - cell "FC2600111" [ref=f3e1337]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1338]
+                    - cell "Proposée" [ref=f3e1339]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1341]'
+                    - cell [ref=f3e1342]:
+                      - button "Diagnostiquer" [ref=f3e1343] [cursor=pointer]
+                  - row [ref=f3e1347]:
+                    - cell "FC2600126" [ref=f3e1348]
+                    - cell "DFT FOOD" [ref=f3e1349]
+                    - cell "Proposée" [ref=f3e1350]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1352]'
+                    - cell [ref=f3e1353]:
+                      - button "Diagnostiquer" [ref=f3e1354] [cursor=pointer]
+                  - row [ref=f3e1358]:
+                    - cell "FC2600129" [ref=f3e1359]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1360]
+                    - cell "Proposée" [ref=f3e1361]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1363]'
+                    - cell [ref=f3e1364]:
+                      - button "Diagnostiquer" [ref=f3e1365] [cursor=pointer]
+                  - row [ref=f3e1369]:
+                    - cell "FC2600137" [ref=f3e1370]
+                    - cell "ATLANTIC FOODS" [ref=f3e1371]
+                    - cell "Proposée" [ref=f3e1372]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1374]'
+                    - cell [ref=f3e1375]:
+                      - button "Diagnostiquer" [ref=f3e1376] [cursor=pointer]
+                  - row [ref=f3e1380]:
+                    - cell "FC2600138" [ref=f3e1381]
+                    - cell "ATLANTIC FOODS" [ref=f3e1382]
+                    - cell "Proposée" [ref=f3e1383]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1385]'
+                    - cell [ref=f3e1386]:
+                      - button "Diagnostiquer" [ref=f3e1387] [cursor=pointer]
+                  - row [ref=f3e1391]:
+                    - cell "FC2600144" [ref=f3e1392]
+                    - cell "LEADER FROMAGGI" [ref=f3e1393]
+                    - cell "Proposée" [ref=f3e1394]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1396]'
+                    - cell [ref=f3e1397]:
+                      - button "Diagnostiquer" [ref=f3e1398] [cursor=pointer]
+                  - row [ref=f3e1402]:
+                    - cell "FC2600145" [ref=f3e1403]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1404]
+                    - cell "Proposée" [ref=f3e1405]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1407]'
+                    - cell [ref=f3e1408]:
+                      - button "Diagnostiquer" [ref=f3e1409] [cursor=pointer]
+                  - row [ref=f3e1413]:
+                    - cell "FC2600151" [ref=f3e1414]
+                    - cell "ATLANTIC FOODS" [ref=f3e1415]
+                    - cell "Proposée" [ref=f3e1416]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1418]'
+                    - cell [ref=f3e1419]:
+                      - button "Diagnostiquer" [ref=f3e1420] [cursor=pointer]
+                  - row [ref=f3e1424]:
+                    - cell "FC2600152" [ref=f3e1425]
+                    - cell "ATLANTIC FOODS" [ref=f3e1426]
+                    - cell "Proposée" [ref=f3e1427]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1429]'
+                    - cell [ref=f3e1430]:
+                      - button "Diagnostiquer" [ref=f3e1431] [cursor=pointer]
+                  - row [ref=f3e1435]:
+                    - cell "FC2600153" [ref=f3e1436]
+                    - cell "FRL COMPANY" [ref=f3e1437]
+                    - cell "Proposée" [ref=f3e1438]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1440]'
+                    - cell [ref=f3e1441]:
+                      - button "Diagnostiquer" [ref=f3e1442] [cursor=pointer]
+                  - row [ref=f3e1446]:
+                    - cell "FC2600155" [ref=f3e1447]
+                    - cell "ATLANTIC FOODS" [ref=f3e1448]
+                    - cell "Proposée" [ref=f3e1449]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1451]'
+                    - cell [ref=f3e1452]:
+                      - button "Diagnostiquer" [ref=f3e1453] [cursor=pointer]
+                  - row [ref=f3e1457]:
+                    - cell "FC2600160" [ref=f3e1458]
+                    - cell "LEADER FROMAGGI" [ref=f3e1459]
+                    - cell "Proposée" [ref=f3e1460]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1462]'
+                    - cell [ref=f3e1463]:
+                      - button "Diagnostiquer" [ref=f3e1464] [cursor=pointer]
+                  - row [ref=f3e1468]:
+                    - cell "FC2600166" [ref=f3e1469]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1470]
+                    - cell "Proposée" [ref=f3e1471]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1473]'
+                    - cell [ref=f3e1474]:
+                      - button "Diagnostiquer" [ref=f3e1475] [cursor=pointer]
+                  - row [ref=f3e1479]:
+                    - cell "FC2600173" [ref=f3e1480]
+                    - cell "ATLANTIC FOODS" [ref=f3e1481]
+                    - cell "Proposée" [ref=f3e1482]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1484]'
+                    - cell [ref=f3e1485]:
+                      - button "Diagnostiquer" [ref=f3e1486] [cursor=pointer]
+                  - row [ref=f3e1490]:
+                    - cell "FC2600175" [ref=f3e1491]
+                    - cell "ATLANTIC FOODS" [ref=f3e1492]
+                    - cell "Proposée" [ref=f3e1493]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1495]'
+                    - cell [ref=f3e1496]:
+                      - button "Diagnostiquer" [ref=f3e1497] [cursor=pointer]
+                  - row [ref=f3e1501]:
+                    - cell "FC2600176" [ref=f3e1502]
+                    - cell "ATLANTIC FOODS" [ref=f3e1503]
+                    - cell "Proposée" [ref=f3e1504]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1506]'
+                    - cell [ref=f3e1507]:
+                      - button "Diagnostiquer" [ref=f3e1508] [cursor=pointer]
+                  - row [ref=f3e1512]:
+                    - cell "FC2600178" [ref=f3e1513]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1514]
+                    - cell "Proposée" [ref=f3e1515]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1517]'
+                    - cell [ref=f3e1518]:
+                      - button "Diagnostiquer" [ref=f3e1519] [cursor=pointer]
+                  - row [ref=f3e1523]:
+                    - cell "FC2600186" [ref=f3e1524]
+                    - cell "3M BUSINESS" [ref=f3e1525]
+                    - cell "Proposée" [ref=f3e1526]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1528]'
+                    - cell [ref=f3e1529]:
+                      - button "Diagnostiquer" [ref=f3e1530] [cursor=pointer]
+                  - row [ref=f3e1534]:
+                    - cell "FC2600187" [ref=f3e1535]
+                    - cell "VISCA FOOD" [ref=f3e1536]
+                    - cell "Proposée" [ref=f3e1537]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1539]'
+                    - cell [ref=f3e1540]:
+                      - button "Diagnostiquer" [ref=f3e1541] [cursor=pointer]
+                  - row [ref=f3e1545]:
+                    - cell "FC2600191" [ref=f3e1546]
+                    - cell "DFT FOOD" [ref=f3e1547]
+                    - cell "Proposée" [ref=f3e1548]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1550]'
+                    - cell [ref=f3e1551]:
+                      - button "Diagnostiquer" [ref=f3e1552] [cursor=pointer]
+                  - row [ref=f3e1556]:
+                    - cell "FC2600193" [ref=f3e1557]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1558]
+                    - cell "Proposée" [ref=f3e1559]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1561]'
+                    - cell [ref=f3e1562]:
+                      - button "Diagnostiquer" [ref=f3e1563] [cursor=pointer]
+                  - row [ref=f3e1567]:
+                    - cell "FC2600221" [ref=f3e1568]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1569]
+                    - cell "Proposée" [ref=f3e1570]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1572]'
+                    - cell [ref=f3e1573]:
+                      - button "Diagnostiquer" [ref=f3e1574] [cursor=pointer]
+                  - row [ref=f3e1578]:
+                    - cell "FC2600226" [ref=f3e1579]
+                    - cell "DFT FOOD" [ref=f3e1580]
+                    - cell "Proposée" [ref=f3e1581]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1583]'
+                    - cell [ref=f3e1584]:
+                      - button "Diagnostiquer" [ref=f3e1585] [cursor=pointer]
+                  - row [ref=f3e1589]:
+                    - cell "FC2600342" [ref=f3e1590]
+                    - cell "MAXI LV" [ref=f3e1591]
+                    - cell "Proposée" [ref=f3e1592]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1594]'
+                    - cell [ref=f3e1595]:
+                      - button "Diagnostiquer" [ref=f3e1596] [cursor=pointer]
+                  - row [ref=f3e1600]:
+                    - cell "FC2600362" [ref=f3e1601]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1602]
+                    - cell "Proposée" [ref=f3e1603]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1605]'
+                    - cell [ref=f3e1606]:
+                      - button "Diagnostiquer" [ref=f3e1607] [cursor=pointer]
+                  - row [ref=f3e1611]:
+                    - cell "FC2600419" [ref=f3e1612]
+                    - cell "MARJANE" [ref=f3e1613]
+                    - cell "Proposée" [ref=f3e1614]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1616]'
+                    - cell [ref=f3e1617]:
+                      - button "Diagnostiquer" [ref=f3e1618] [cursor=pointer]
+                  - row [ref=f3e1622]:
+                    - cell "FC2600420" [ref=f3e1623]
+                    - cell "MARJANE" [ref=f3e1624]
+                    - cell "Proposée" [ref=f3e1625]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1627]'
+                    - cell [ref=f3e1628]:
+                      - button "Diagnostiquer" [ref=f3e1629] [cursor=pointer]
+                  - row [ref=f3e1633]:
+                    - cell "FC2600517" [ref=f3e1634]
+                    - cell "NESTRADIS" [ref=f3e1635]
+                    - cell "Proposée" [ref=f3e1636]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1638]'
+                    - cell [ref=f3e1639]:
+                      - button "Diagnostiquer" [ref=f3e1640] [cursor=pointer]
+                  - row [ref=f3e1644]:
+                    - cell "FC2600542" [ref=f3e1645]
+                    - cell "MARJANE" [ref=f3e1646]
+                    - cell "Proposée" [ref=f3e1647]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1649]'
+                    - cell [ref=f3e1650]:
+                      - button "Diagnostiquer" [ref=f3e1651] [cursor=pointer]
+                  - row [ref=f3e1655]:
+                    - cell "FC2600565" [ref=f3e1656]
+                    - cell "LES DOMAINES AGRICOLES CHERGUI" [ref=f3e1657]
+                    - cell "Proposée" [ref=f3e1658]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1660]'
+                    - cell [ref=f3e1661]:
+                      - button "Diagnostiquer" [ref=f3e1662] [cursor=pointer]
+                  - row [ref=f3e1666]:
+                    - cell "FC2600634" [ref=f3e1667]
+                    - cell "CARREFOUR" [ref=f3e1668]
+                    - cell "Proposée" [ref=f3e1669]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1671]'
+                    - cell [ref=f3e1672]:
+                      - button "Diagnostiquer" [ref=f3e1673] [cursor=pointer]
+                  - row [ref=f3e1677]:
+                    - cell "FC2600714" [ref=f3e1678]
+                    - cell "MADICO PM" [ref=f3e1679]
+                    - cell "Proposée" [ref=f3e1680]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1682]'
+                    - cell [ref=f3e1683]:
+                      - button "Diagnostiquer" [ref=f3e1684] [cursor=pointer]
+                  - row [ref=f3e1688]:
+                    - cell "FC2600751" [ref=f3e1689]
+                    - cell "ABCDIS" [ref=f3e1690]
+                    - cell "Proposée" [ref=f3e1691]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1693]'
+                    - cell [ref=f3e1694]:
+                      - button "Diagnostiquer" [ref=f3e1695] [cursor=pointer]
+                  - row [ref=f3e1699]:
+                    - cell "FC2600752" [ref=f3e1700]
+                    - cell "ABCDIS" [ref=f3e1701]
+                    - cell "Proposée" [ref=f3e1702]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1704]'
+                    - cell [ref=f3e1705]:
+                      - button "Diagnostiquer" [ref=f3e1706] [cursor=pointer]
+                  - row [ref=f3e1710]:
+                    - cell "FC2600753" [ref=f3e1711]
+                    - cell "ABCDIS" [ref=f3e1712]
+                    - cell "Proposée" [ref=f3e1713]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1715]'
+                    - cell [ref=f3e1716]:
+                      - button "Diagnostiquer" [ref=f3e1717] [cursor=pointer]
+                  - row [ref=f3e1721]:
+                    - cell "FC2600755" [ref=f3e1722]
+                    - cell "ABCDIS" [ref=f3e1723]
+                    - cell "Proposée" [ref=f3e1724]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1726]'
+                    - cell [ref=f3e1727]:
+                      - button "Diagnostiquer" [ref=f3e1728] [cursor=pointer]
+                  - row [ref=f3e1732]:
+                    - cell "FC2600756" [ref=f3e1733]
+                    - cell "ABCDIS" [ref=f3e1734]
+                    - cell "Proposée" [ref=f3e1735]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1737]'
+                    - cell [ref=f3e1738]:
+                      - button "Diagnostiquer" [ref=f3e1739] [cursor=pointer]
+                  - row [ref=f3e1743]:
+                    - cell "FC2600758" [ref=f3e1744]
+                    - cell "ABCDIS" [ref=f3e1745]
+                    - cell "Proposée" [ref=f3e1746]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1748]'
+                    - cell [ref=f3e1749]:
+                      - button "Diagnostiquer" [ref=f3e1750] [cursor=pointer]
+                  - row [ref=f3e1754]:
+                    - cell "FC2600760" [ref=f3e1755]
+                    - cell "ABCDIS" [ref=f3e1756]
+                    - cell "Proposée" [ref=f3e1757]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1759]'
+                    - cell [ref=f3e1760]:
+                      - button "Diagnostiquer" [ref=f3e1761] [cursor=pointer]
+                  - row [ref=f3e1765]:
+                    - cell "FC2600761" [ref=f3e1766]
+                    - cell "ABCDIS" [ref=f3e1767]
+                    - cell "Proposée" [ref=f3e1768]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1770]'
+                    - cell [ref=f3e1771]:
+                      - button "Diagnostiquer" [ref=f3e1772] [cursor=pointer]
+                  - row [ref=f3e1776]:
+                    - cell "FC2600762" [ref=f3e1777]
+                    - cell "ABCDIS" [ref=f3e1778]
+                    - cell "Proposée" [ref=f3e1779]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1781]'
+                    - cell [ref=f3e1782]:
+                      - button "Diagnostiquer" [ref=f3e1783] [cursor=pointer]
+                  - row [ref=f3e1787]:
+                    - cell "FC2600763" [ref=f3e1788]
+                    - cell "ABCDIS" [ref=f3e1789]
+                    - cell "Proposée" [ref=f3e1790]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1792]'
+                    - cell [ref=f3e1793]:
+                      - button "Diagnostiquer" [ref=f3e1794] [cursor=pointer]
+                  - row [ref=f3e1798]:
+                    - cell "FC2600764" [ref=f3e1799]
+                    - cell "ABCDIS" [ref=f3e1800]
+                    - cell "Proposée" [ref=f3e1801]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1803]'
+                    - cell [ref=f3e1804]:
+                      - button "Diagnostiquer" [ref=f3e1805] [cursor=pointer]
+                  - row [ref=f3e1809]:
+                    - cell "FC2600765" [ref=f3e1810]
+                    - cell "ABCDIS" [ref=f3e1811]
+                    - cell "Proposée" [ref=f3e1812]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1814]'
+                    - cell [ref=f3e1815]:
+                      - button "Diagnostiquer" [ref=f3e1816] [cursor=pointer]
+                  - row [ref=f3e1820]:
+                    - cell "FC2600766" [ref=f3e1821]
+                    - cell "ABCDIS" [ref=f3e1822]
+                    - cell "Proposée" [ref=f3e1823]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1825]'
+                    - cell [ref=f3e1826]:
+                      - button "Diagnostiquer" [ref=f3e1827] [cursor=pointer]
+                  - row [ref=f3e1831]:
+                    - cell "FC2600767" [ref=f3e1832]
+                    - cell "ABCDIS" [ref=f3e1833]
+                    - cell "Proposée" [ref=f3e1834]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1836]'
+                    - cell [ref=f3e1837]:
+                      - button "Diagnostiquer" [ref=f3e1838] [cursor=pointer]
+                  - row [ref=f3e1842]:
+                    - cell "FC2600768" [ref=f3e1843]
+                    - cell "ABCDIS" [ref=f3e1844]
+                    - cell "Proposée" [ref=f3e1845]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1847]'
+                    - cell [ref=f3e1848]:
+                      - button "Diagnostiquer" [ref=f3e1849] [cursor=pointer]
+                  - row [ref=f3e1853]:
+                    - cell "FC2600769" [ref=f3e1854]
+                    - cell "ABCDIS" [ref=f3e1855]
+                    - cell "Proposée" [ref=f3e1856]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1858]'
+                    - cell [ref=f3e1859]:
+                      - button "Diagnostiquer" [ref=f3e1860] [cursor=pointer]
+                  - row [ref=f3e1864]:
+                    - cell "FC2600770" [ref=f3e1865]
+                    - cell "ABCDIS" [ref=f3e1866]
+                    - cell "Proposée" [ref=f3e1867]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1869]'
+                    - cell [ref=f3e1870]:
+                      - button "Diagnostiquer" [ref=f3e1871] [cursor=pointer]
+                  - row [ref=f3e1875]:
+                    - cell "FC2600771" [ref=f3e1876]
+                    - cell "ABCDIS" [ref=f3e1877]
+                    - cell "Proposée" [ref=f3e1878]
+                    - 'cell "Facture introuvable dans Sage : le détail TVA de cette facture n''a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser »." [ref=f3e1880]'
+                    - cell [ref=f3e1881]:
+                      - button "Diagnostiquer" [ref=f3e1882] [cursor=pointer]
+                  - row [ref=f3e1886]:
+                    - cell "SI- 4411ELEC" [ref=f3e1887]
+                    - cell "SRM-CS" [ref=f3e1888]
+                    - cell "Proposée" [ref=f3e1889]
+                    - 'cell "Solde initial : taux et montant de TVA à saisir manuellement pour intégrer cette ligne à la déclaration (montant connu en TTC seul)." [ref=f3e1891]'
+                    - cell [ref=f3e1892]:
+                      - button "Diagnostiquer" [ref=f3e1893] [cursor=pointer]
+            - generic [ref=f3e1897]:
+              - generic [ref=f3e1898]: Anomalies bloquantes
+              - generic [ref=f3e1903]:
+                - generic [ref=f3e1904]: "• TVA non calculée pour la facture FC2600752 (règlement RF26060023) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600752)"
+                - button "Voir lignes" [ref=f3e1905] [cursor=pointer]
+              - generic [ref=f3e1910]:
+                - generic [ref=f3e1911]: "• TVA non calculée pour la facture FC2600771 (règlement RF26060022) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600771)"
+                - button "Voir lignes" [ref=f3e1912] [cursor=pointer]
+              - generic [ref=f3e1917]:
+                - generic [ref=f3e1918]: "• TVA non calculée pour la facture FC2600714 (règlement RF26050072) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600714)"
+                - button "Voir lignes" [ref=f3e1919] [cursor=pointer]
+              - generic [ref=f3e1924]:
+                - generic [ref=f3e1925]: "• TVA non calculée pour la facture FC2600634 (règlement RF26050039) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600634)"
+                - button "Voir lignes" [ref=f3e1926] [cursor=pointer]
+              - generic [ref=f3e1931]:
+                - generic [ref=f3e1932]: "• TVA non calculée pour la facture SI- 4411ELEC (règlement RF26070038) — elle ne sera pas déclarée : Solde initial : taux et montant de TVA à saisir manuellement pour intégrer cette ligne à la déclaration (montant connu en TTC seul). (SI- 4411ELEC)"
+                - button "Voir lignes" [ref=f3e1933] [cursor=pointer]
+              - generic [ref=f3e1938]:
+                - generic [ref=f3e1939]: "• TVA non calculée pour la facture FC2600770 (règlement RF26060021) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600770)"
+                - button "Voir lignes" [ref=f3e1940] [cursor=pointer]
+              - generic [ref=f3e1945]:
+                - generic [ref=f3e1946]: "• TVA non calculée pour la facture FC2600753 (règlement RF26060020) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600753)"
+                - button "Voir lignes" [ref=f3e1947] [cursor=pointer]
+              - generic [ref=f3e1952]:
+                - generic [ref=f3e1953]: "• TVA non calculée pour la facture FC2600764 (règlement RF26060019) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600764)"
+                - button "Voir lignes" [ref=f3e1954] [cursor=pointer]
+              - generic [ref=f3e1959]:
+                - generic [ref=f3e1960]: "• TVA non calculée pour la facture FC2600565 (règlement RF26040110) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600565)"
+                - button "Voir lignes" [ref=f3e1961] [cursor=pointer]
+              - generic [ref=f3e1966]:
+                - generic [ref=f3e1967]: "• TVA non calculée pour la facture FC2600542 (règlement RF26040098) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600542)"
+                - button "Voir lignes" [ref=f3e1968] [cursor=pointer]
+              - generic [ref=f3e1973]:
+                - generic [ref=f3e1974]: "• TVA non calculée pour la facture FC2600765 (règlement RF26060018) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600765)"
+                - button "Voir lignes" [ref=f3e1975] [cursor=pointer]
+              - generic [ref=f3e1980]:
+                - generic [ref=f3e1981]: "• TVA non calculée pour la facture FC2600517 (règlement RF26040076) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600517)"
+                - button "Voir lignes" [ref=f3e1982] [cursor=pointer]
+              - generic [ref=f3e1987]:
+                - generic [ref=f3e1988]: "• TVA non calculée pour la facture AV2500073 (règlement RF26040076) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (AV2500073)"
+                - button "Voir lignes" [ref=f3e1989] [cursor=pointer]
+              - generic [ref=f3e1994]:
+                - generic [ref=f3e1995]: "• TVA non calculée pour la facture FC2600758 (règlement RF26060017) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600758)"
+                - button "Voir lignes" [ref=f3e1996] [cursor=pointer]
+              - generic [ref=f3e2001]:
+                - generic [ref=f3e2002]: "• TVA non calculée pour la facture FC2600769 (règlement RF26060016) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600769)"
+                - button "Voir lignes" [ref=f3e2003] [cursor=pointer]
+              - generic [ref=f3e2008]:
+                - generic [ref=f3e2009]: "• TVA non calculée pour la facture FC2600768 (règlement RF26060015) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600768)"
+                - button "Voir lignes" [ref=f3e2010] [cursor=pointer]
+              - generic [ref=f3e2015]:
+                - generic [ref=f3e2016]: "• TVA non calculée pour la facture FC2600761 (règlement RF26060014) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600761)"
+                - button "Voir lignes" [ref=f3e2017] [cursor=pointer]
+              - generic [ref=f3e2022]:
+                - generic [ref=f3e2023]: "• TVA non calculée pour la facture FC2600420 (règlement RF26040016) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600420)"
+                - button "Voir lignes" [ref=f3e2024] [cursor=pointer]
+              - generic [ref=f3e2029]:
+                - generic [ref=f3e2030]: "• TVA non calculée pour la facture FC2600419 (règlement RF26040015) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600419)"
+                - button "Voir lignes" [ref=f3e2031] [cursor=pointer]
+              - generic [ref=f3e2036]:
+                - generic [ref=f3e2037]: "• TVA non calculée pour la facture FC2600362 (règlement RF26040033) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600362)"
+                - button "Voir lignes" [ref=f3e2038] [cursor=pointer]
+              - generic [ref=f3e2043]:
+                - generic [ref=f3e2044]: "• TVA non calculée pour la facture FC2600767 (règlement RF26060013) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600767)"
+                - button "Voir lignes" [ref=f3e2045] [cursor=pointer]
+              - generic [ref=f3e2050]:
+                - generic [ref=f3e2051]: "• TVA non calculée pour la facture FC2600763 (règlement RF26060012) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600763)"
+                - button "Voir lignes" [ref=f3e2052] [cursor=pointer]
+              - generic [ref=f3e2057]:
+                - generic [ref=f3e2058]: "• TVA non calculée pour la facture FC2600342 (règlement RF26040056) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600342)"
+                - button "Voir lignes" [ref=f3e2059] [cursor=pointer]
+              - generic [ref=f3e2064]:
+                - generic [ref=f3e2065]: "• TVA non calculée pour la facture FC2600751 (règlement RF26060011) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600751)"
+                - button "Voir lignes" [ref=f3e2066] [cursor=pointer]
+              - generic [ref=f3e2071]:
+                - generic [ref=f3e2072]: "• TVA non calculée pour la facture FC2600756 (règlement RF26060010) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600756)"
+                - button "Voir lignes" [ref=f3e2073] [cursor=pointer]
+              - generic [ref=f3e2078]:
+                - generic [ref=f3e2079]: "• TVA non calculée pour la facture FC2600226 (règlement RF26060045) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600226)"
+                - button "Voir lignes" [ref=f3e2080] [cursor=pointer]
+              - generic [ref=f3e2085]:
+                - generic [ref=f3e2086]: "• TVA non calculée pour la facture FC2600221 (règlement RF26030017) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600221)"
+                - button "Voir lignes" [ref=f3e2087] [cursor=pointer]
+              - generic [ref=f3e2092]:
+                - generic [ref=f3e2093]: "• TVA non calculée pour la facture FC2600193 (règlement RF26030022) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600193)"
+                - button "Voir lignes" [ref=f3e2094] [cursor=pointer]
+              - generic [ref=f3e2099]:
+                - generic [ref=f3e2100]: "• TVA non calculée pour la facture FC2600191 (règlement RF26060044) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600191)"
+                - button "Voir lignes" [ref=f3e2101] [cursor=pointer]
+              - generic [ref=f3e2106]:
+                - generic [ref=f3e2107]: "• TVA non calculée pour la facture FC2600178 (règlement RF26030019) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600178)"
+                - button "Voir lignes" [ref=f3e2108] [cursor=pointer]
+              - generic [ref=f3e2113]:
+                - generic [ref=f3e2114]: "• TVA non calculée pour la facture FC2600187 (règlement RF26040066) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600187)"
+                - button "Voir lignes" [ref=f3e2115] [cursor=pointer]
+              - generic [ref=f3e2120]:
+                - generic [ref=f3e2121]: "• TVA non calculée pour la facture FC2600186 (règlement RF26040067) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600186)"
+                - button "Voir lignes" [ref=f3e2122] [cursor=pointer]
+              - generic [ref=f3e2127]:
+                - generic [ref=f3e2128]: "• TVA non calculée pour la facture FC2600175 (règlement RF26040072) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600175)"
+                - button "Voir lignes" [ref=f3e2129] [cursor=pointer]
+              - generic [ref=f3e2134]:
+                - generic [ref=f3e2135]: "• TVA non calculée pour la facture FC2600176 (règlement RF26040072) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600176)"
+                - button "Voir lignes" [ref=f3e2136] [cursor=pointer]
+              - generic [ref=f3e2141]:
+                - generic [ref=f3e2142]: "• TVA non calculée pour la facture FC2600755 (règlement RF26060009) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600755)"
+                - button "Voir lignes" [ref=f3e2143] [cursor=pointer]
+              - generic [ref=f3e2148]:
+                - generic [ref=f3e2149]: "• TVA non calculée pour la facture FC2600173 (règlement RF26040072) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600173)"
+                - button "Voir lignes" [ref=f3e2150] [cursor=pointer]
+              - generic [ref=f3e2155]:
+                - generic [ref=f3e2156]: "• TVA non calculée pour la facture FC2600166 (règlement RF26030021) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600166)"
+                - button "Voir lignes" [ref=f3e2157] [cursor=pointer]
+              - generic [ref=f3e2162]:
+                - generic [ref=f3e2163]: "• TVA non calculée pour la facture FC2600762 (règlement RF26060008) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600762)"
+                - button "Voir lignes" [ref=f3e2164] [cursor=pointer]
+              - generic [ref=f3e2169]:
+                - generic [ref=f3e2170]: "• TVA non calculée pour la facture FC2600153 (règlement RF26050009) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600153)"
+                - button "Voir lignes" [ref=f3e2171] [cursor=pointer]
+              - generic [ref=f3e2176]:
+                - generic [ref=f3e2177]: "• TVA non calculée pour la facture FC2600160 (règlement RF26050007) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600160)"
+                - button "Voir lignes" [ref=f3e2178] [cursor=pointer]
+              - generic [ref=f3e2183]:
+                - generic [ref=f3e2184]: "• TVA non calculée pour la facture FC2600151 (règlement RF26040072) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600151)"
+                - button "Voir lignes" [ref=f3e2185] [cursor=pointer]
+              - generic [ref=f3e2190]:
+                - generic [ref=f3e2191]: "• TVA non calculée pour la facture FC2600145 (règlement RF26030020) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600145)"
+                - button "Voir lignes" [ref=f3e2192] [cursor=pointer]
+              - generic [ref=f3e2197]:
+                - generic [ref=f3e2198]: "• TVA non calculée pour la facture FC2600155 (règlement RF26040072) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600155)"
+                - button "Voir lignes" [ref=f3e2199] [cursor=pointer]
+              - generic [ref=f3e2204]:
+                - generic [ref=f3e2205]: "• TVA non calculée pour la facture FC2600152 (règlement RF26040072) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600152)"
+                - button "Voir lignes" [ref=f3e2206] [cursor=pointer]
+              - generic [ref=f3e2211]:
+                - generic [ref=f3e2212]: "• TVA non calculée pour la facture FC2600137 (règlement RF26040072) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600137)"
+                - button "Voir lignes" [ref=f3e2213] [cursor=pointer]
+              - generic [ref=f3e2218]:
+                - generic [ref=f3e2219]: "• TVA non calculée pour la facture FC2600144 (règlement RF26050007) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600144)"
+                - button "Voir lignes" [ref=f3e2220] [cursor=pointer]
+              - generic [ref=f3e2225]:
+                - generic [ref=f3e2226]: "• TVA non calculée pour la facture FC2600138 (règlement RF26040072) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600138)"
+                - button "Voir lignes" [ref=f3e2227] [cursor=pointer]
+              - generic [ref=f3e2232]:
+                - generic [ref=f3e2233]: "• TVA non calculée pour la facture FC2600129 (règlement RF26030023) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600129)"
+                - button "Voir lignes" [ref=f3e2234] [cursor=pointer]
+              - generic [ref=f3e2239]:
+                - generic [ref=f3e2240]: "• TVA non calculée pour la facture FC2600126 (règlement RF26060041) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600126)"
+                - button "Voir lignes" [ref=f3e2241] [cursor=pointer]
+              - generic [ref=f3e2246]:
+                - generic [ref=f3e2247]: "• TVA non calculée pour la facture FC2600111 (règlement RF26030018) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600111)"
+                - button "Voir lignes" [ref=f3e2248] [cursor=pointer]
+              - generic [ref=f3e2253]:
+                - generic [ref=f3e2254]: "• TVA non calculée pour la facture FC2600760 (règlement RF26060007) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600760)"
+                - button "Voir lignes" [ref=f3e2255] [cursor=pointer]
+              - generic [ref=f3e2260]:
+                - generic [ref=f3e2261]: "• TVA non calculée pour la facture FC2600097 (règlement RF26030016) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600097)"
+                - button "Voir lignes" [ref=f3e2262] [cursor=pointer]
+              - generic [ref=f3e2267]:
+                - generic [ref=f3e2268]: "• TVA non calculée pour la facture FC2600093 (règlement RF26010011) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600093)"
+                - button "Voir lignes" [ref=f3e2269] [cursor=pointer]
+              - generic [ref=f3e2274]:
+                - generic [ref=f3e2275]: "• TVA non calculée pour la facture FC2600086 (règlement RF26050009) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600086)"
+                - button "Voir lignes" [ref=f3e2276] [cursor=pointer]
+              - generic [ref=f3e2281]:
+                - generic [ref=f3e2282]: "• TVA non calculée pour la facture FC2600082 (règlement RF26060057) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600082)"
+                - button "Voir lignes" [ref=f3e2283] [cursor=pointer]
+              - generic [ref=f3e2288]:
+                - generic [ref=f3e2289]: "• TVA non calculée pour la facture FC2600085 (règlement RF26050010) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600085)"
+                - button "Voir lignes" [ref=f3e2290] [cursor=pointer]
+              - generic [ref=f3e2295]:
+                - generic [ref=f3e2296]: "• TVA non calculée pour la facture FC2600075 (règlement RF26010012) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600075)"
+                - button "Voir lignes" [ref=f3e2297] [cursor=pointer]
+              - generic [ref=f3e2302]:
+                - generic [ref=f3e2303]: "• TVA non calculée pour la facture FC2600070 (règlement RF26050006) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600070)"
+                - button "Voir lignes" [ref=f3e2304] [cursor=pointer]
+              - generic [ref=f3e2309]:
+                - generic [ref=f3e2310]: "• TVA non calculée pour la facture FC2600062 (règlement RF26030015) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600062)"
+                - button "Voir lignes" [ref=f3e2311] [cursor=pointer]
+              - generic [ref=f3e2316]:
+                - generic [ref=f3e2317]: "• TVA non calculée pour la facture FC2600766 (règlement RF26060006) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600766)"
+                - button "Voir lignes" [ref=f3e2318] [cursor=pointer]
+              - generic [ref=f3e2323]:
+                - generic [ref=f3e2324]: "• TVA non calculée pour la facture FC2600054 (règlement RF26050005) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600054)"
+                - button "Voir lignes" [ref=f3e2325] [cursor=pointer]
+              - generic [ref=f3e2330]:
+                - generic [ref=f3e2331]: "• TVA non calculée pour la facture FC2600076 (règlement RF26040074) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600076)"
+                - button "Voir lignes" [ref=f3e2332] [cursor=pointer]
+              - generic [ref=f3e2337]:
+                - generic [ref=f3e2338]: "• TVA non calculée pour la facture FC2600049 (règlement RF26050006) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600049)"
+                - button "Voir lignes" [ref=f3e2339] [cursor=pointer]
+              - generic [ref=f3e2344]:
+                - generic [ref=f3e2345]: "• TVA non calculée pour la facture FC2600047 (règlement RF26060042) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600047)"
+                - button "Voir lignes" [ref=f3e2346] [cursor=pointer]
+              - generic [ref=f3e2351]:
+                - generic [ref=f3e2352]: "• TVA non calculée pour la facture FC2600038 (règlement RF26010010) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600038)"
+                - button "Voir lignes" [ref=f3e2353] [cursor=pointer]
+              - generic [ref=f3e2358]:
+                - generic [ref=f3e2359]: "• TVA non calculée pour la facture FC2600043 (règlement RF26040067) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600043)"
+                - button "Voir lignes" [ref=f3e2360] [cursor=pointer]
+              - generic [ref=f3e2365]:
+                - generic [ref=f3e2366]: "• TVA non calculée pour la facture FC2600044 (règlement RF26040066) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600044)"
+                - button "Voir lignes" [ref=f3e2367] [cursor=pointer]
+              - generic [ref=f3e2372]:
+                - generic [ref=f3e2373]: "• TVA non calculée pour la facture FC2600033 (règlement RF26030013) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600033)"
+                - button "Voir lignes" [ref=f3e2374] [cursor=pointer]
+              - generic [ref=f3e2379]:
+                - generic [ref=f3e2380]: "• TVA non calculée pour la facture FC2600035 (règlement RF26060064) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600035)"
+                - button "Voir lignes" [ref=f3e2381] [cursor=pointer]
+              - generic [ref=f3e2386]:
+                - generic [ref=f3e2387]: "• TVA non calculée pour la facture FC2600022 (règlement RF26060043) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600022)"
+                - button "Voir lignes" [ref=f3e2388] [cursor=pointer]
+              - generic [ref=f3e2393]:
+                - generic [ref=f3e2394]: "• TVA non calculée pour la facture FC2600017 (règlement RF26030014) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600017)"
+                - button "Voir lignes" [ref=f3e2395] [cursor=pointer]
+              - generic [ref=f3e2400]:
+                - generic [ref=f3e2401]: "• TVA non calculée pour la facture FC2600015 (règlement RF26060049) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600015)"
+                - button "Voir lignes" [ref=f3e2402] [cursor=pointer]
+              - generic [ref=f3e2407]:
+                - generic [ref=f3e2408]: "• TVA non calculée pour la facture FC2600100 (règlement RF26040075) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600100)"
+                - button "Voir lignes" [ref=f3e2409] [cursor=pointer]
+              - generic [ref=f3e2414]:
+                - generic [ref=f3e2415]: "• TVA non calculée pour la facture FC2600011 (règlement RF26050010) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600011)"
+                - button "Voir lignes" [ref=f3e2416] [cursor=pointer]
+              - generic [ref=f3e2421]:
+                - generic [ref=f3e2422]: "• TVA non calculée pour la facture FC2600012 (règlement RF26050009) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600012)"
+                - button "Voir lignes" [ref=f3e2423] [cursor=pointer]
+              - generic [ref=f3e2428]:
+                - generic [ref=f3e2429]: "• TVA non calculée pour la facture FC2600004 (règlement RF26030084) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600004)"
+                - button "Voir lignes" [ref=f3e2430] [cursor=pointer]
+              - generic [ref=f3e2435]:
+                - generic [ref=f3e2436]: "• TVA non calculée pour la facture FC2600007 (règlement RF26050006) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600007)"
+                - button "Voir lignes" [ref=f3e2437] [cursor=pointer]
+              - generic [ref=f3e2442]:
+                - generic [ref=f3e2443]: "• TVA non calculée pour la facture FC2600005 (règlement RF26030084) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600005)"
+                - button "Voir lignes" [ref=f3e2444] [cursor=pointer]
+              - generic [ref=f3e2449]:
+                - generic [ref=f3e2450]: "• TVA non calculée pour la facture FC2600001 (règlement RF26010009) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600001)"
+                - button "Voir lignes" [ref=f3e2451] [cursor=pointer]
+              - generic [ref=f3e2456]:
+                - generic [ref=f3e2457]: "• TVA non calculée pour la facture FC2600002 (règlement RF26050006) — elle ne sera pas déclarée : Facture introuvable dans Sage : le détail TVA de cette facture n'a pas pu être lu. Vérifiez que la facture existe toujours dans Sage et relancez « Resynchroniser ». (FC2600002)"
+                - button "Voir lignes" [ref=f3e2458] [cursor=pointer]
+              - generic [ref=f3e2463]:
+                - generic [ref=f3e2464]: "• TVA non calculée pour la facture FC2501717 (règlement RF26040040) — elle ne sera pas déclarée : Incohérence Sage : Σ(HT net+TVA+Parafiscale)=2064301,44 ≠ TTC=20700,00 (écart -2043601,44) — pièce FC2501717 exclue de la valorisation. (FC2501717)"
+                - button "Voir lignes" [ref=f3e2465] [cursor=pointer]
+              - generic [ref=f3e2470]:
+                - generic [ref=f3e2471]: "• TVA non calculée pour la facture FC2501667 (règlement RF26030075) — elle ne sera pas déclarée : Incohérence Sage : Σ(HT net+TVA+Parafiscale)=3960,00 ≠ TTC=3762,00 (écart -198,00) — pièce FC2501667 exclue de la valorisation. (FC2501667)"
+                - button "Voir lignes" [ref=f3e2472] [cursor=pointer]
+            - button "116 avertissements (non bloquants) ▼ Déplier" [ref=f3e2478] [cursor=pointer]:
+              - text: 116 avertissements (non bloquants)
+              - generic [ref=f3e2481]: ▼ Déplier
+        - generic [ref=f3e2482]:
+          - generic [ref=f3e2483]: 82 contrôles bloquants — intégration impossible
+          - generic [ref=f3e2489]:
+            - button "Export de contrôle (Excel)" [ref=f3e2490] [cursor=pointer]
+            - button "Codes activité" [ref=f3e2494] [cursor=pointer]
+            - button "Toutes les lignes / Resynchroniser" [ref=f3e2495] [cursor=pointer]
+            - button "Confirmer intégration" [disabled] [ref=f3e2501]
