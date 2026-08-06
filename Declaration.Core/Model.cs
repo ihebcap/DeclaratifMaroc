@@ -54,6 +54,7 @@ namespace Declaration.Core.Model
         public decimal? ValorisationDirecteTaux { get; set; }
         public decimal? ValorisationDirecteTva { get; set; }
         public string? ValorisationDirecteCodeTaxe { get; set; }
+        public string? ValorisationDirecteIntituleTaxe { get; set; }
 
         // Solde initial GRF (EC_Type = 4, cf. TASK-025) : le solde n'a pas de détail HT/TVA/taux
         // dans Sage (montant connu en TTC seul, EC_Montant/MontantAffecte). Décision PO : intégrer
@@ -76,6 +77,8 @@ namespace Declaration.Core.Model
         public decimal Taux { get; set; }
         // TASK-198 : code taxe Sage (F_TAXE.TA_Code), permet d'identifier la nature de taxe (ex. Achat vs Immobilisation au même taux 20%).
         public string CodeTaxe { get; set; } = "";
+        // TASK-203 : intitulé taxe Sage (F_TAXE.TA_Intitule)
+        public string IntituleTaxe { get; set; } = "";
         public decimal Tva { get; set; }
         public decimal Ttc { get; set; }
         public decimal Prorata { get; set; }
@@ -100,6 +103,8 @@ namespace Declaration.Core.Model
         public decimal Taux { get; set; }
         // TASK-198 : distinction par code taxe (F_TAXE.TA_Code) au lieu du seul taux numérique.
         public string CodeTaxe { get; set; } = "";
+        // TASK-203 : intitulé taxe Sage (F_TAXE.TA_Intitule)
+        public string IntituleTaxe { get; set; } = "";
         // TASK-180 : clivage fiscal Collecté (Source == Encaissement) / Déductible (autre source),
         // même critère que RecapParSource — permet de scinder l'affichage Excel sans recalcul TVA.
         public bool Collecte { get; set; }

@@ -108,6 +108,8 @@ public class LigneCandidate
     public decimal Taux { get; set; }
     // TASK-198 : code taxe Sage (F_TAXE.TA_Code)
     public string CodeTaxe { get; set; } = "";
+    // TASK-203 : intitulé taxe Sage (F_TAXE.TA_Intitule)
+    public string IntituleTaxe { get; set; } = "";
     public decimal TVA { get; set; }
     public decimal TTC { get; set; }
 

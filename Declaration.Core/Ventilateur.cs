@@ -13,6 +13,7 @@ namespace Declaration.Core
         public decimal Ttc { get; set; }
         public decimal Prorata { get; set; }
         public string CodeTaxe { get; set; } = "";
+        public string IntituleTaxe { get; set; } = "";
     }
 
     public class VentilationResult
@@ -51,6 +52,7 @@ namespace Declaration.Core
                 lignes.Add(new LigneDeclaration
                 {
                     CodeTaxe = taxe.Code,
+                    IntituleTaxe = taxe.Intitule ?? "",
                     Taux = (decimal)taxe.Taux,
                     Assiette = assiette,
                     Tva = tva,

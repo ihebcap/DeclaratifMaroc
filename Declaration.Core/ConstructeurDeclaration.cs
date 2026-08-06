@@ -152,6 +152,9 @@ namespace Declaration.Core
                     var codeTaxe = string.IsNullOrWhiteSpace(affectation.ValorisationDirecteCodeTaxe) 
                         ? (ligne.CodeTaxe ?? "") 
                         : affectation.ValorisationDirecteCodeTaxe;
+                    var intituleTaxe = string.IsNullOrWhiteSpace(affectation.ValorisationDirecteIntituleTaxe)
+                        ? (ligne.IntituleTaxe ?? "")
+                        : affectation.ValorisationDirecteIntituleTaxe;
 
                     var enrichie = new LigneDeclarationEnrichie
                     {
@@ -163,6 +166,7 @@ namespace Declaration.Core
                         HT = ligne.Assiette,
                         Taux = ligne.Taux,
                         CodeTaxe = codeTaxe,
+                        IntituleTaxe = intituleTaxe,
                         Tva = ligne.Tva,
                         Ttc = ligne.Ttc,
                         Prorata = ligne.Prorata,
@@ -188,13 +192,14 @@ namespace Declaration.Core
                     TotalTtc = g.Sum(x => x.Ttc)
                 }).ToList();
 
-            // TASK-180 / TASK-198 : clivage Collecté / Déductible + regrouper par (Taux, CodeTaxe).
+            // TASK-180 / TASK-198 / TASK-203 : clivage Collecté / Déductible + regrouper par (Taux, CodeTaxe).
             modele.RecapsParTaux = lignesPourRecap
                 .GroupBy(l => new { l.Taux, CodeTaxe = l.CodeTaxe ?? "", Collecte = l.Source == SourceAffectation.Encaissement })
                 .Select(g => new RecapParTaux
                 {
                     Taux = g.Key.Taux,
                     CodeTaxe = g.Key.CodeTaxe,
+                    IntituleTaxe = g.First().IntituleTaxe ?? "",
                     Collecte = g.Key.Collecte,
                     TotalHT = g.Sum(x => x.HT),
                     TotalTva = g.Sum(x => x.Tva),

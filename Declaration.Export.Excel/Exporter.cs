@@ -165,22 +165,22 @@ namespace Declaration.Export.Excel
             ws.Cell(row, 1).Style.Font.Bold = true;
             row++;
             ws.Cell(row, 1).Value = "Taux";
-            ws.Cell(row, 2).Value = "Total HT";
-            ws.Cell(row, 3).Value = "Total TVA";
-            ws.Cell(row, 4).Value = "Total TTC";
-            ws.Range(row, 1, row, 4).Style.Font.Bold = true;
+            ws.Cell(row, 2).Value = "Ta_Code";
+            ws.Cell(row, 3).Value = "Ta_Intitule";
+            ws.Cell(row, 4).Value = "Total HT";
+            ws.Cell(row, 5).Value = "Total TVA";
+            ws.Cell(row, 6).Value = "Total TTC";
+            ws.Range(row, 1, row, 6).Style.Font.Bold = true;
             row++;
             decimal sommeHT = 0, sommeTva = 0, sommeTtc = 0;
             foreach (var recap in recaps)
             {
-                if (string.IsNullOrWhiteSpace(recap.CodeTaxe))
-                    ws.Cell(row, 1).Value = recap.Taux;
-                else
-                    ws.Cell(row, 1).Value = $"{recap.Taux:G} ({recap.CodeTaxe})";
-
-                ws.Cell(row, 2).Value = recap.TotalHT;
-                ws.Cell(row, 3).Value = recap.TotalTva;
-                ws.Cell(row, 4).Value = recap.TotalTtc;
+                ws.Cell(row, 1).Value = recap.Taux;
+                ws.Cell(row, 2).Value = recap.CodeTaxe ?? "";
+                ws.Cell(row, 3).Value = recap.IntituleTaxe ?? "";
+                ws.Cell(row, 4).Value = recap.TotalHT;
+                ws.Cell(row, 5).Value = recap.TotalTva;
+                ws.Cell(row, 6).Value = recap.TotalTtc;
                 sommeHT += recap.TotalHT;
                 sommeTva += recap.TotalTva;
                 sommeTtc += recap.TotalTtc;
@@ -189,10 +189,10 @@ namespace Declaration.Export.Excel
             if (libelleTotal != null)
             {
                 ws.Cell(row, 1).Value = libelleTotal;
-                ws.Cell(row, 2).Value = sommeHT;
-                ws.Cell(row, 3).Value = sommeTva;
-                ws.Cell(row, 4).Value = sommeTtc;
-                ws.Range(row, 1, row, 4).Style.Font.Bold = true;
+                ws.Cell(row, 4).Value = sommeHT;
+                ws.Cell(row, 5).Value = sommeTva;
+                ws.Cell(row, 6).Value = sommeTtc;
+                ws.Range(row, 1, row, 6).Style.Font.Bold = true;
                 row++;
             }
             return row;

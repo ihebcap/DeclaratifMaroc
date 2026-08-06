@@ -1122,6 +1122,7 @@ public class DeclarationWorkflowService
                             HT = tl.HT,
                             Taux = tl.Taux,
                             CodeTaxe = tl.CodeTaxe ?? "",
+                            IntituleTaxe = tl.IntituleTaxe ?? "",
                             TVA = tl.Tva,
                             TTC = tl.Ttc,
                             Prorata = tl.Prorata,

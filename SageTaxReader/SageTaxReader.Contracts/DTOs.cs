@@ -10,6 +10,7 @@ namespace SageTaxReader.Contracts
         public double MontantTva { get; set; }
         public double TTC { get; set; }
         public string Code { get; set; } = "";
+        public string Intitule { get; set; } = "";
         public string Type { get; set; } = "";
     }
 

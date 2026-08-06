@@ -46,9 +46,9 @@ namespace Declaration.Orchestration.Tests
                 }
             };
 
-            var tauxInfo = new Dictionary<int, (decimal Taux, string CodeTaxe)>
+            var tauxInfo = new Dictionary<int, (decimal Taux, string CodeTaxe, string IntituleTaxe)>
             {
-                { 1, (20m, "T20") }
+                { 1, (20m, "T20", "Taxe 20%") }
             };
 
             var affectations = SelectionExpliqueeService.MapFraisBancaireRows(rows, tauxInfo);

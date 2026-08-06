@@ -23,13 +23,13 @@ namespace Declaration.Orchestration.Tests
                 return _lignes;
             }
 
-            protected override Dictionary<string, double> GetTaxes(string sageConnectionString)
+            protected override Dictionary<string, (double Taux, string Intitule)> GetTaxes(string sageConnectionString)
             {
-                return new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+                return new Dictionary<string, (double Taux, string Intitule)>(StringComparer.OrdinalIgnoreCase)
                 {
-                    { "D20", 20 },
-                    { "D10", 10 },
-                    { "C20", 20 }
+                    { "D20", (20, "TVA 20%") },
+                    { "D10", (10, "TVA 10%") },
+                    { "C20", (20, "TVA 20% Coll") }
                 };
             }
         }

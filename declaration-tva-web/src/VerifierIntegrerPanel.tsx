@@ -63,6 +63,7 @@ type LigneValorisation = {
   tiersICE: string;
   tauxTVA: number;
   codeTaxe?: string;
+  intituleTaxe?: string;
   montantHT: number;
   montantTVA: number;
   montantTTC: number;
@@ -105,6 +106,7 @@ type RowAggr = {
   tiersICE: string;
   tauxTVA: number;
   codeTaxe?: string;
+  intituleTaxe?: string;
   montantHT: number;    // du back, jamais recalculé
   montantTVA: number;   // du back, jamais recalculé
   nonValorise: boolean;
@@ -136,6 +138,7 @@ function agregParFactureTaux(lignes: LigneValorisation[]): RowAggr[] {
         tiersICE: l.tiersICE,
         tauxTVA: l.tauxTVA,
         codeTaxe: l.codeTaxe,
+        intituleTaxe: l.intituleTaxe,
         montantHT: nonValorise ? 0 : l.montantHT,
         montantTVA: nonValorise ? 0 : l.montantTVA,
         nonValorise,
@@ -154,11 +157,12 @@ function agregParFactureTaux(lignes: LigneValorisation[]): RowAggr[] {
   });
 }
 
-// Sous-totaux par (taux, code taxe) — TASK-198 : deux taux identiques mais codes taxe
-// différents (ex. achat courant vs immobilisation) restent des sous-totaux distincts.
+// Sous-totaux par (taux, code taxe) — TASK-198 / TASK-203 : deux taux identiques mais codes taxe
+// différents (ex. achat courant vs immobilisation) restent des sous-totaux distincts avec intitulé.
 type SousTotalTaux = {
   taux: number;
   codeTaxe?: string;
+  intituleTaxe?: string;
   totalHT: number;
   totalTVA: number;
   nbLignes: number;
@@ -175,7 +179,7 @@ function sousTotauxParTaux(rows: RowAggr[]): SousTotalTaux[] {
       existing.totalTVA += r.montantTVA;
       existing.nbLignes += 1;
     } else {
-      map.set(key, { taux: r.tauxTVA, codeTaxe: r.codeTaxe, totalHT: r.montantHT, totalTVA: r.montantTVA, nbLignes: 1 });
+      map.set(key, { taux: r.tauxTVA, codeTaxe: r.codeTaxe, intituleTaxe: r.intituleTaxe, totalHT: r.montantHT, totalTVA: r.montantTVA, nbLignes: 1 });
     }
   }
   return [...map.values()].sort((a, b) => b.taux - a.taux || (a.codeTaxe ?? '').localeCompare(b.codeTaxe ?? ''));
@@ -905,6 +909,7 @@ export function VerifierIntegrerPanel({
                                 <tr style={{ background: 'var(--bg-secondary)' }}>
                                     <th style={thStyle('left')}>Taux</th>
                                     <th style={thStyle('left')}>Code taxe</th>
+                                    <th style={thStyle('left')}>Intitulé taxe</th>
                                     <th style={thStyle('right')}>Nb lignes</th>
                                     <th style={thStyle('right')}>Total HT</th>
                                     <th style={thStyle('right')}>Total TVA</th>
@@ -918,6 +923,7 @@ export function VerifierIntegrerPanel({
                                             <TauxBadge taux={st.taux} />
                                         </td>
                                         <td style={tdStyle('left')}>{st.codeTaxe || '—'}</td>
+                                        <td style={tdStyle('left')}>{st.intituleTaxe || '—'}</td>
                                         <td style={{ ...tdStyle('right'), color: 'var(--text-secondary)' }}>{st.nbLignes}</td>
                                         <td style={{ ...tdStyle('right'), fontVariantNumeric: 'tabular-nums' }}>{formatMoney(st.totalHT)}</td>
                                         <td style={{ ...tdStyle('right'), fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(st.totalTVA)}</td>
@@ -930,7 +936,7 @@ export function VerifierIntegrerPanel({
                                     défaut — le RecapCard reste l'unique chiffre visible en premier
                                     niveau de lecture). */}
                                 <tr style={{ borderTop: '2px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
-                                    <td style={{ ...tdStyle('left'), fontWeight: 700 }} colSpan={3}>Σ Total</td>
+                                    <td style={{ ...tdStyle('left'), fontWeight: 700 }} colSpan={4}>Σ Total</td>
                                     <td style={{ ...tdStyle('right'), fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(localTotalHT)}</td>
                                     <td style={{ ...tdStyle('right'), fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(localTotalTVA)}</td>
                                     <td style={{ ...tdStyle('right'), fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(localTotalHT + localTotalTVA)}</td>

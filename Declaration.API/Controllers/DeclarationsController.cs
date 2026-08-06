@@ -481,6 +481,7 @@ public class DeclarationsController : ControllerBase
                 {
                     taux = g.Key.Taux,
                     codeTaxe = g.Key.CodeTaxe,
+                    intituleTaxe = g.First().IntituleTaxe ?? "",
                     domaine = g.Key.Domaine,
                     ht = g.Sum(x => x.HT),
                     tva = g.Sum(x => x.TVA),

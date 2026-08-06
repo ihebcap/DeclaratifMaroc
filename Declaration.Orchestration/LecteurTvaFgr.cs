@@ -42,15 +42,16 @@ namespace Declaration.Orchestration
                     {
                         var codeTaxe = htRow.HC_TaxeCode ?? "";
                         
-                        if (taxes.TryGetValue(codeTaxe, out double taux))
+                        if (taxes.TryGetValue(codeTaxe, out var tInfo))
                         {
                             doc.LignesTaxe.Add(new TaxeDetail
                             {
-                                Taux = taux,
+                                Taux = tInfo.Taux,
                                 BaseHT = (double)htRow.HC_Montant,
                                 MontantTva = (double)tvaRow.HC_Montant,
                                 TTC = (double)(htRow.HC_Montant + tvaRow.HC_Montant),
                                 Code = codeTaxe,
+                                Intitule = tInfo.Intitule,
                                 Type = "TaxeTypeTVA"
                             });
                         }
@@ -76,6 +77,7 @@ namespace Declaration.Orchestration
                             MontantTva = 0,
                             TTC = (double)exoRow.HC_Montant,
                             Code = "EXO",
+                            Intitule = "Exonéré",
                             Type = "TaxeTypeTVA"
                         });
                     }
@@ -117,10 +119,10 @@ namespace Declaration.Orchestration
             return conn.Query<HistoComptaRow>(sql, new { EcId = ecId });
         }
 
-        private static Dictionary<string, double>? _taxesCache;
+        private static Dictionary<string, (double Taux, string Intitule)>? _taxesCache;
         private static readonly object _cacheLock = new object();
 
-        protected virtual Dictionary<string, double> GetTaxes(string sageConnectionString)
+        protected virtual Dictionary<string, (double Taux, string Intitule)> GetTaxes(string sageConnectionString)
         {
             if (_taxesCache != null) return _taxesCache;
             lock (_cacheLock)
@@ -128,14 +130,17 @@ namespace Declaration.Orchestration
                 if (_taxesCache != null) return _taxesCache;
                 using var conn = new SqlConnection(sageConnectionString);
                 conn.Open();
-                var sql = "SELECT TA_Code, TA_Taux FROM F_TAXE";
+                var sql = "SELECT TA_Code, TA_Taux, TA_Intitule FROM F_TAXE";
                 var result = conn.Query(sql);
-                var dict = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+                var dict = new Dictionary<string, (double Taux, string Intitule)>(StringComparer.OrdinalIgnoreCase);
                 foreach (var row in result)
                 {
                     if (row.TA_Code != null && row.TA_Taux != null)
                     {
-                        dict[row.TA_Code.ToString()] = Convert.ToDouble(row.TA_Taux);
+                        string code = row.TA_Code.ToString();
+                        double taux = Convert.ToDouble(row.TA_Taux);
+                        string intitule = row.TA_Intitule != null ? row.TA_Intitule.ToString() : "";
+                        dict[code] = (taux, intitule);
                     }
                 }
                 _taxesCache = dict;

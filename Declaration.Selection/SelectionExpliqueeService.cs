@@ -109,7 +109,7 @@ namespace Declaration.Selection
 
         internal static List<AffectationADeclarer> MapFraisBancaireRows(
             IEnumerable<FraisBancaireRow> rows,
-            Dictionary<int, (decimal Taux, string CodeTaxe)> tauxInfo)
+            Dictionary<int, (decimal Taux, string CodeTaxe, string IntituleTaxe)> tauxInfo)
         {
             var result = new List<AffectationADeclarer>();
             foreach (var r in rows)
@@ -146,7 +146,8 @@ namespace Declaration.Selection
                     MV_Id = 0,
                     ValorisationDirecteTaux = infoTaxe.Taux,
                     ValorisationDirecteTva = r.PT_MontantTva,
-                    ValorisationDirecteCodeTaxe = infoTaxe.CodeTaxe
+                    ValorisationDirecteCodeTaxe = infoTaxe.CodeTaxe,
+                    ValorisationDirecteIntituleTaxe = infoTaxe.IntituleTaxe
                 });
             }
             return result;
@@ -175,16 +176,16 @@ namespace Declaration.Selection
 
             if (rows.Count == 0) return new List<AffectationADeclarer>();
 
-            // Taux et Code Taxe Sage (F_TAXE.TA_No) — batché, jamais un aller-retour par ligne (TASK-154, TASK-198).
+            // Taux, Code et Intitulé Taxe Sage (F_TAXE.TA_No) — batché, jamais un aller-retour par ligne (TASK-154, TASK-198, TASK-203).
             var taxeNos = rows.Where(r => r.TO_ErpTaxeNo.HasValue).Select(r => r.TO_ErpTaxeNo!.Value).Distinct().ToList();
-            var tauxInfo = new Dictionary<int, (decimal Taux, string CodeTaxe)>();
+            var tauxInfo = new Dictionary<int, (decimal Taux, string CodeTaxe, string IntituleTaxe)>();
             if (taxeNos.Count > 0)
             {
                 using var sageConnection = new SqlConnection(sageConnectionString);
                 await sageConnection.OpenAsync();
-                var taxeRows = await sageConnection.QueryAsync<(int TA_No, decimal TA_Taux, string? TA_Code)>(
-                    "SELECT TA_No, TA_Taux, TA_Code FROM F_TAXE WHERE TA_No IN @nos", new { nos = taxeNos });
-                foreach (var t in taxeRows) tauxInfo[t.TA_No] = (t.TA_Taux, t.TA_Code ?? "");
+                var taxeRows = await sageConnection.QueryAsync<(int TA_No, decimal TA_Taux, string? TA_Code, string? TA_Intitule)>(
+                    "SELECT TA_No, TA_Taux, TA_Code, TA_Intitule FROM F_TAXE WHERE TA_No IN @nos", new { nos = taxeNos });
+                foreach (var t in taxeRows) tauxInfo[t.TA_No] = (t.TA_Taux, t.TA_Code ?? "", t.TA_Intitule ?? "");
             }
 
             return MapFraisBancaireRows(rows, tauxInfo);
