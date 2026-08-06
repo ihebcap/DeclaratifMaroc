@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   LogOut, LayoutDashboard, Landmark, FileText, FileCheck,
-  Scissors, Send, BarChart3, Lock, ShieldAlert, AlertTriangle, CalendarClock, ChevronDown, ChevronRight,
+  Scissors, Send, BarChart3, Lock, ShieldAlert, AlertTriangle, CalendarClock, ChevronDown, ChevronRight, BookOpen,
 } from 'lucide-react';
 import './index.css';
 import './App.css';
@@ -322,6 +322,34 @@ export function Dashboard({ user, onLogout, showToast }: { user: User; onLogout:
         </div>
 
         <div className="sidebar-footer">
+          <button
+            onClick={() => {
+              const baseUrl = import.meta.env.BASE_URL || '/';
+              const targetUrl = baseUrl.endsWith('/') ? `${baseUrl}guide-fonctionnel-tva.html` : `${baseUrl}/guide-fonctionnel-tva.html`;
+              window.open(targetUrl, '_blank', 'noopener');
+            }}
+            className="btn"
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-color)',
+              padding: '0.45rem 0.6rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+              gap: '0.5rem',
+              width: '100%',
+              marginBottom: '0.65rem',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              borderRadius: '6px',
+            }}
+            title="Guide fonctionnel TVA"
+          >
+            <BookOpen size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+            {isSidebarOpen && <span>Guide fonctionnel</span>}
+          </button>
           {isSidebarOpen ? (
             <>
               <div style={{fontWeight: 600, fontSize: '0.8125rem', color: 'var(--text-primary)', marginBottom: '0.5rem'}}>

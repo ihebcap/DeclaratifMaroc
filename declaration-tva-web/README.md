@@ -30,3 +30,15 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## Guide fonctionnel TVA
+
+Le guide fonctionnel (version client) est stocké à la racine du projet sous `DOCS/GUIDE_PROCESS_DECLARATION_TVA.html`.
+
+Pour le rendre accessible directement depuis l'application front :
+- Le fichier est copié vers `declaration-tva-web/public/guide-fonctionnel-tva.html`.
+- En production/build Vite, cet asset statique est servi sous `/guide-fonctionnel-tva.html`.
+- Procédure de synchronisation à rejouer lors de chaque mise à jour de la documentation :
+  ```powershell
+  Copy-Item -Path ../DOCS/GUIDE_PROCESS_DECLARATION_TVA.html -Destination public/guide-fonctionnel-tva.html
+  ```
