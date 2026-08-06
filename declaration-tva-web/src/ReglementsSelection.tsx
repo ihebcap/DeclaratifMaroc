@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Loader2, CheckCircle2, AlertTriangle, XCircle, FileSpreadsheet } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertTriangle, XCircle, FileSpreadsheet, Play, RefreshCw } from 'lucide-react';
 import type { ColDef, GridApi, GridReadyEvent } from 'ag-grid-community';
 import { ApbsGrid } from './grid/ApbsGrid';
 import { CustomListFilter } from './grid/CustomListFilter';
@@ -144,6 +144,7 @@ export function ReglementsSelection({
 
   const [allData, setAllData] = useState<ReglementRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
   const [exportingControle, setExportingControle] = useState(false);
   const [modeOptions, setModeOptions] = useState<{ label: string; value: string }[]>([]);
   const [gridApi, setGridApi] = useState<GridApi | null>(null);
@@ -217,11 +218,26 @@ export function ReglementsSelection({
     }
   }, [debut, fin, showToast, societeId, declarationId]);
 
-  useEffect(() => {
+  const handleIntegrerClick = useCallback(() => {
     const cancelled = { current: false };
     fetchAll(cancelled);
-    return () => { cancelled.current = true; };
+    setHasFetched(true);
   }, [fetchAll]);
+
+  // TASK-200 PO Decision:
+  // Existing declaration with saved selection -> load automatically and restore selection.
+  // New declaration or empty saved selection -> do NOT load automatically, wait for user to click "Intégrer".
+  useEffect(() => {
+    if (savedSelection && savedSelection.length > 0) {
+      const cancelled = { current: false };
+      fetchAll(cancelled);
+      setHasFetched(true);
+      return () => { cancelled.current = true; };
+    } else {
+      setHasFetched(false);
+      setAllData([]);
+    }
+  }, [declarationId, savedSelection, fetchAll]);
 
   const initializedRef = useRef(false);
 
@@ -238,7 +254,7 @@ export function ReglementsSelection({
         return;
       }
 
-      if (savedSelection.length > 0) {
+      if (savedSelection && savedSelection.length > 0) {
         const keys = new Set<string>();
         const rows: ReglementRow[] = [];
         allData.forEach(r => {
@@ -249,18 +265,9 @@ export function ReglementsSelection({
           }
         });
         onSelectionChange(keys, rows);
-      } else {
-        const keys = new Set<string>();
-        const rows: ReglementRow[] = [];
-        allData.forEach(r => {
-          if (statutDe(r) !== 'bloque') {
-            const key = reglementKey(r);
-            keys.add(key);
-            rows.push(r);
-          }
-        });
-        onSelectionChange(keys, rows);
       }
+      // TASK-200: For new declarations (savedSelection.length === 0), do NOT pre-select any rows!
+      // Leave selectedKeys empty for 100% manual selection.
       initializedRef.current = true;
     }
   }, [allData, loading, savedSelection, onSelectionChange, selectedKeys.size]);
@@ -435,26 +442,78 @@ export function ReglementsSelection({
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <div style={{ flexGrow: 1, position: 'relative', background: 'white' }}>
-        <ApbsGrid<ReglementRow>
-          rowData={allData}
-          columnDefs={columnDefs}
-          rowSelection={{ mode: 'multiRow', checkboxes: true }}
-          getRowId={(params) => reglementKey(params.data)}
-          isRowSelectable={(node) => statutDe(node.data) !== 'bloque'}
-          onSelectionChanged={handleSelectionChanged}
-          onModelUpdated={handleModelUpdated}
-          onGridReady={onGridReady}
-          height="100%"
-          showColumnSelector={true}
-          showExportButton={false}
-        />
+        {!hasFetched && (!savedSelection || savedSelection.length === 0) ? (
+          <div
+            data-testid="selection-vide-invite"
+            style={{
+              height: '100%', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              padding: '3rem 1.5rem', textAlign: 'center',
+            }}
+          >
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: 'var(--accent-primary)' }}>
+              <RefreshCw size={26} />
+            </div>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Liste vide par défaut
+            </h3>
+            <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.875rem', color: 'var(--text-secondary)', maxWidth: '480px', lineHeight: 1.5 }}>
+              Cliquez sur le bouton <strong>« Intégrer »</strong> pour charger et examiner les règlements de la période.
+            </p>
+            <button
+              onClick={handleIntegrerClick}
+              disabled={loading}
+              className="btn btn-primary"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.55rem 1.25rem', fontSize: '0.875rem', fontWeight: 600,
+                borderRadius: 'var(--radius-md)', background: 'var(--accent-primary)', color: 'white', border: 'none', cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+              Intégrer les règlements
+            </button>
+          </div>
+        ) : (
+          <ApbsGrid<ReglementRow>
+            rowData={allData}
+            columnDefs={columnDefs}
+            rowSelection={{ mode: 'multiRow', checkboxes: true }}
+            getRowId={(params) => reglementKey(params.data)}
+            isRowSelectable={(node) => statutDe(node.data) !== 'bloque'}
+            onSelectionChanged={handleSelectionChanged}
+            onModelUpdated={handleModelUpdated}
+            onGridReady={onGridReady}
+            height="100%"
+            showColumnSelector={true}
+            showExportButton={false}
+          />
+        )}
       </div>
 
       <div style={{ padding: '0.5rem 1rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.8rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            onClick={handleIntegrerClick}
+            disabled={loading}
+            className="btn btn-primary"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+              padding: '0.4rem 0.85rem', fontSize: '0.8125rem', fontWeight: 600,
+              borderRadius: 'var(--radius-md)', background: 'var(--accent-primary)', color: 'white', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
+            }}
+            title="Intégrer / Rafraîchir les règlements de la période"
+          >
+            {loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+            {hasFetched ? 'Rafraîchir' : 'Intégrer'}
+          </button>
           {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
-          <span>Règlements : <strong>{displayedCount}</strong>{displayedCount !== allData.length && <> sur {allData.length}</>}</span>
-          <span>Sélectionnés : <strong>{selectedKeys.size}</strong></span>
+          {hasFetched && (
+            <>
+              <span>Règlements : <strong>{displayedCount}</strong>{displayedCount !== allData.length && <> sur {allData.length}</>}</span>
+              <span>Sélectionnés : <strong>{selectedKeys.size}</strong></span>
+            </>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Total sélectionné : {formatMoney(selectedTotal)}</span>
