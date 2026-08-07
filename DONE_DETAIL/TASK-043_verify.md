@@ -32,12 +32,33 @@
 
 ## Verification Evidence & Test Results
 
-### 1. Unit Tests Verification
+### 1. Unit Tests Verification (ciblé, conservé pour référence)
 Command: `dotnet test --filter Task043RapprochementTvaServiceTests`
 Result:
 ```
 Réussi! - échec : 0, réussite : 5, ignorée(s) : 0, total : 5, durée : 52 ms - Declaration.Orchestration.Tests.dll
 ```
+
+### Suite complète (`dotnet test DeclarationTVA.slnx --no-build`, rejouée le 2026-08-07, revue architecte — remplace la vérification partielle ci-dessus)
+```
+[FAIL] Declaration.Selection.Tests.IntegrationRegressionTests.TestRegression_NouveauSurensembleIncludAncienTask008_Task050
+  Microsoft.Data.SqlClient.SqlException : Échec de l'ouverture de session de l'utilisateur 'IHEB-PC\ihebc'.
+Échoué!  - échec : 1, réussite : 60, ignorée(s) : 0, total : 61 - Declaration.Selection.Tests.dll
+
+Réussi!  - échec : 0, réussite : 219, ignorée(s) : 0, total : 219 - Declaration.Core.Tests.dll
+Réussi!  - échec : 0, réussite : 26, ignorée(s) : 0, total : 26 - Declaration.Export.Xml.Tests.dll
+
+[FAIL] Declaration.Controle.Tests.ComparateurTests.GenererRapportVerification
+  System.Exception : Déclaration GRFN 66 introuvable.
+Échoué!  - échec : 1, réussite : 1, ignorée(s) : 0, total : 2 - Declaration.Controle.Tests.dll
+
+Réussi!  - échec : 0, réussite : 3, ignorée(s) : 0, total : 3 - Declaration.Export.Excel.Tests.dll
+Réussi!  - échec : 0, réussite : 266, ignorée(s) : 0, total : 266 - Declaration.Orchestration.Tests.dll
+```
+**Bilan global : 575 réussis / 2 échecs / 577 total.** Les 2 échecs sont environnementaux et
+préexistants, sans rapport avec cette tâche : échec d'authentification SQL locale
+(`IntegrationRegressionTests`) et donnée de référence GRFN 66 absente en local
+(`ComparateurTests`).
 
 ### 2. Frontend Build Verification
 Command: `npm run build` inside `declaration-tva-web/`

@@ -24,22 +24,20 @@ public class RapprochementTvaService : IRapprochementTvaService
     private readonly string _sageConnectionString;
     private readonly string _persistenceConnectionString;
 
-    public RapprochementTvaService(
+    public static RapprochementTvaService DepuisConfiguration(
         IDeclarationRepository repository,
         IVentilationSageCacheRepository? ventilationCache,
         ILecteurTvaFgr? lecteurFgr,
         IConfiguration configuration)
     {
-        _repository = repository;
-        _ventilationCache = ventilationCache;
-        _lecteurFgr = lecteurFgr;
-        _grfConnectionString = configuration.GetConnectionString("GrfConnection") 
-            ?? configuration.GetConnectionString("DefaultConnection") 
+        var grf = configuration.GetConnectionString("GrfConnection")
+            ?? configuration.GetConnectionString("DefaultConnection")
             ?? "";
-        _sageConnectionString = configuration.GetConnectionString("SageConnection") ?? "";
-        _persistenceConnectionString = configuration.GetConnectionString("PersistenceConnection") 
-            ?? configuration.GetConnectionString("DefaultConnection") 
+        var sage = configuration.GetConnectionString("SageConnection") ?? "";
+        var persistence = configuration.GetConnectionString("PersistenceConnection")
+            ?? configuration.GetConnectionString("DefaultConnection")
             ?? "";
+        return new RapprochementTvaService(repository, ventilationCache, lecteurFgr, grf, sage, persistence);
     }
 
     public RapprochementTvaService(

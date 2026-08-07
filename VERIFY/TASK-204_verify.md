@@ -72,6 +72,31 @@ n'a été modifiée pour produire cette correction — uniquement la documentati
 
 ---
 
+## Correction apportée (07/08/2026, suite au rejet architecte)
+
+### Nettoyage réellement effectué (la ligne "Pre-Requisites" ci-dessous était inexacte à la clôture initiale)
+`git rm src/ExcelFilter.tsx src/ColumnSelector.tsx src/useColumnPrefs.ts` — confirmé sans aucun
+import restant (`grep` exhaustif sur `declaration-tva-web/src`, seules des correspondances de noms
+de props similaires sur `ApbsGrid`/`showColumnSelector` subsistaient, pas d'import réel). Dépendance
+`@tanstack/react-virtual` retirée de `package.json` (aucun usage dans `src/`), `npm install` rejoué
+pour mettre à jour `package-lock.json`. Build (`npm run build`) et suite de tests unitaires
+(`npm run test:unit`) rejoués après suppression : verts (voir sortie ci-dessous).
+
+```
+✓ built in 1.67s (dist/index.html, dist/assets/*.css, dist/assets/*.js — 0 erreur)
+✔ tests-unit : 5/5 (voir VERIFY/TASK-060_verify.md pour le détail des tests)
+```
+
+### Preuve écran par écran (livrable #2) : **NON RÉALISABLE dans cet environnement**
+Comme pour TASK-029/060/200/202, un retest fonctionnel réel des 10 écrans migrés (tri/filtre/
+colonnes/export/actions en masse) nécessite un backend + DB réels. `Declaration.API` ne démarre pas
+de requête valide dans ce poste (pas d'accès SQL Server réel — `Error Number:53`). **À exécuter et
+documenter (captures écran par écran) sur un poste avec accès DB avant clôture définitive.** La
+preuve apportée ici se limite donc à : absence de régression de compilation/build après suppression
+du code mort, confirmée par build + tests unitaires verts.
+
+---
+
 ## Pre-Requisites & Dependencies
 - `ag-grid-community` and `ag-grid-react` installed at `^36.1.0`.
 - AG Grid `AllCommunityModule` registered in `src/grid/agGridSetup.ts`.

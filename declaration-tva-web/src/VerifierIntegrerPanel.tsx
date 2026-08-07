@@ -1427,7 +1427,7 @@ function ChecklistCard({
                                             <div style={{ padding: '0.5rem 0.65rem', fontSize: '0.75rem', color: 'var(--status-warning-text-alt)', background: 'var(--status-warning-bg)', borderTop: '1px solid var(--status-warning-border)' }}>
                                                 Écart non intégralement expliqué par {ligneIncoherente.nbLignes} ligne(s) incohérente(s)
                                                 (résidu {formatMoney(ligneIncoherente.residu)}){reconciliation && (
-                                                    ` — ${reconciliation.candidates} ligne(s) candidate(s), ${reconciliation.integrees + reconciliation.proposees} intégrée(s)/proposée(s), ${reconciliation.exclues} exclue(s), ${reconciliation.reportees} reportée(s), ${reconciliation.ecartees} écartée(s).`
+                                                    ` — ${reconciliation.candidates} ligne(s) candidate(s), ${reconciliation.integrees + reconciliation.proposees} intégrée(s)/proposée(s).`
                                                 )}
                                             </div>
                                         )}
@@ -1445,7 +1445,7 @@ function ChecklistCard({
                                     <div style={{ marginTop: '0.6rem', padding: '0.5rem 0.65rem', fontSize: '0.75rem', color: 'var(--status-warning-text-alt)', background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)', borderRadius: 'var(--radius-md)' }}>
                                         Écart détecté mais aucune ligne incohérente identifiée dans les lignes déclarées
                                         {reconciliation && (
-                                            ` — ${reconciliation.candidates} ligne(s) candidate(s), ${reconciliation.integrees + reconciliation.proposees} intégrée(s)/proposée(s), ${reconciliation.exclues} exclue(s), ${reconciliation.reportees} reportée(s), ${reconciliation.ecartees} écartée(s).`
+                                            ` — ${reconciliation.candidates} ligne(s) candidate(s), ${reconciliation.integrees + reconciliation.proposees} intégrée(s)/proposée(s).`
                                         )}
                                     </div>
                                 )

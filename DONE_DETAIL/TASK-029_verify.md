@@ -4,7 +4,22 @@
 - **Date**: 2026-08-07
 - **Task ID**: TASK-029
 - **Scope**: Make `DOCS/GUIDE_PROCESS_DECLARATION_TVA.html` accessible directly from `declaration-tva-web` interface as a static asset served at `/guide-fonctionnel-tva.html`.
-- **Status**: COMPLETE & VERIFIED
+- **Status**: COMPLETE — voir limitation d'environnement documentée ci-dessous (e2e)
+
+---
+
+## Correction apportée (07/08/2026, suite au rejet architecte : test e2e manquant)
+
+`declaration-tva-web/tests/task029.spec.ts` ajouté (login → clic sur l'entrée « Guide fonctionnel »
+→ vérifie l'ouverture d'un nouvel onglet, l'URL `guide-fonctionnel-tva.html` et la présence du texte
+« Déclaration de TVA déductible » — confirmé présent dans le HTML source, `h1` ligne 119).
+
+**Non exécuté** : le login nécessite un appel réel à la liste des sociétés en base
+(`GET /api/.../societes`), qui échoue dans cet environnement (pas d'accès SQL Server réel —
+`Error Number:53`, chemin réseau introuvable — même limitation que TASK-060/200/202). Structure du
+test alignée sur `tests/task183.spec.ts` (mêmes conventions de login) pour exécution ultérieure sur
+un poste avec accès DB. **À exécuter et documenter (captures `VERIFY/task029-*.png`) avant clôture
+définitive.**
 
 ---
 

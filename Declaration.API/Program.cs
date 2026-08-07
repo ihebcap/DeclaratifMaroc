@@ -5,6 +5,8 @@ using Declaration.Application.Interfaces;
 using Declaration.Application.Services;
 using Declaration.Infrastructure.Factories;
 using Declaration.Infrastructure.Repositories;
+using Declaration.Orchestration;
+using Declaration.Core;
 using Declaration.Selection;
 using GRLicence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -41,7 +43,11 @@ builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
 builder.Services.AddScoped<IDeclarationRepository, DeclarationRepository>();
 builder.Services.AddScoped<Declaration.Orchestration.IVentilationSageCacheRepository, Declaration.Orchestration.VentilationSageCacheRepository>();
 builder.Services.AddSingleton<Declaration.Core.ILecteurTvaFgr, Declaration.Orchestration.LecteurTvaFgr>();
-builder.Services.AddScoped<IRapprochementTvaService, RapprochementTvaService>();
+builder.Services.AddScoped<IRapprochementTvaService>(sp => RapprochementTvaService.DepuisConfiguration(
+    sp.GetRequiredService<IDeclarationRepository>(),
+    sp.GetService<IVentilationSageCacheRepository>(),
+    sp.GetService<ILecteurTvaFgr>(),
+    sp.GetRequiredService<IConfiguration>()));
 
 // Injection du service réel pour valider les données réelles (GR_EMA_DISTRIBUTION)
 builder.Services.AddScoped<ISelectionExpliqueeService, SelectionExpliqueeService>();

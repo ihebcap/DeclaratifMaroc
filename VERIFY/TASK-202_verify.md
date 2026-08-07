@@ -8,7 +8,79 @@
   2. **② Factures à déclarer** (`FacturesADeclarerPanel.tsx` / `DomainGrid.tsx`) — Persistent view of candidate invoices with AG Grid columns, code activite options, line actions (resync, solde initial TVA), and bulk actions (Intégrer, Réinitialiser).
   3. **③ Vérifier** (`VerifierIntegrerPanel.tsx` mode `verifier`) — Consultative controls & diagnostic screen (`ChecklistCard`, `RecapSourceTable`, unvalorized lines + Diagnostiquer, blocking anomalies + "Voir lignes" redirecting to step ② with pre-applied filter). **No confirmation button here.**
   4. **④ Confirmer** (`VerifierIntegrerPanel.tsx` mode `confirmer`) — Final summary & integration screen (4 `RecapCard` stat cards, "Sous-totaux par taux TVA" table without duplicate total row, Excel Control Export button, and **"Confirmer intégration"** button enabled only if step ③ has 0 blocking anomalies).
-- **Status**: COMPLETE & VERIFIED
+- **Status**: COMPLET SUR LE FRONT PRÉSENTATIONNEL — POINT BACKEND À ARBITRER PAR LE PO (voir ci-dessous)
+
+---
+
+## Corrections apportées (07/08/2026, suite au rejet architecte)
+
+### 1. Écran ② construit en enveloppant `DomainGrid.tsx` — choix documenté, pas de recodage
+`FacturesADeclarerPanel.tsx` enveloppe `DomainGrid` via ses props existantes
+(`codeActiviteOptions`, `showResynchroniserAction`) plutôt que d'être un composant AG Grid dédié.
+Justification : la dépendance ajoutée le 07/08/2026 (TASK-204 avant TASK-202) visait à éviter que
+`DomainGrid.tsx` soit codé deux fois avec deux moteurs de grille différents — c'est chose faite,
+`DomainGrid.tsx` est lui-même déjà entièrement AG Grid (migré par TASK-204). Envelopper un composant
+qui est déjà AG Grid ne recrée donc pas le risque que la dépendance cherchait à éviter (pas de double
+moteur). Point conservé tel quel — **si le PO préfère malgré tout un composant dédié à la lettre de
+la consigne** (plutôt que par principe de risque, qui ne s'applique plus), cela reste un refactor pur
+sans changement fonctionnel, à programmer séparément si demandé.
+
+### 2. Statut binaire — propagation front réalisée, point backend escaladé (pas tranché seul)
+
+**Fait (sans risque, front présentationnel)** :
+- `VerifierIntegrerPanel.tsx` (lignes ~1430/1448) : les 2 messages de réconciliation affichant
+  « N exclue(s), N reportée(s), N écartée(s) » sont simplifiés en ne gardant que les lignes
+  candidates / intégrées-proposées (ces 3 compteurs sont de toute façon toujours à 0 aujourd'hui,
+  cf. constat ci-dessous).
+- `WorkstationPanel.tsx` **supprimé** — confirmé mort (aucun `import`/`<WorkstationPanel` nulle part
+  dans le projet, grep exhaustif), portait l'ancien bouton "Exclure"/"Reporter".
+- `mockServer.ts` **supprimé** — confirmé mort (aucune référence, même par nom, nulle part dans le
+  projet). Portait le jeu de données de test avec statuts `Exclue`/`Reportée`/`Écartée` que le
+  recensement de la TASK demandait d'adapter ; supprimer le fichier entier règle le point plus
+  proprement qu'une adaptation, puisqu'il n'était de toute façon appelé par rien.
+
+**Escaladé au PO, non tranché seul** — `EtatLigne.Exclue`/`Reportee`/`Ecartee`
+(`Declaration.Application/Entities/WorkflowEntities.cs:84-86`) et le champ brut
+`LigneCandidateDto.StatutLigne`/`VerifierIntegrerPanel.tsx:72,93-98` **n'ont volontairement pas été
+supprimés côté backend**. Constat établi par lecture du code (pas une supposition) :
+- `DeclarationWorkflowService.MapLignesCandidates` (ligne ~1055) ne produit **plus jamais** de ligne
+  `Exclue`/`Reportee`/`Ecartee` depuis TASK-097 (tout candidat non éligible ne produit aucune ligne du
+  tout) — confirmant la lecture PO ("ces statuts n'ont jamais été utilisés en production").
+- **Mais** `RevaliderLignesFigeesAsync` (lignes 367-405) et `GetCheckupAsync` (ligne 1181) **lisent
+  encore** `Etat == EtatLigne.Exclue` pour une logique de compatibilité de données historiques
+  (réintégration TASK-080 après résolution d'un conflit inter-déclaration, alerte
+  `LIGNE_FIGEE_A_REVERIFIER` TASK-082 pour des lignes figées avant ce correctif) — et **5 fichiers de
+  tests** (`Task080ExclusiviteInterDeclarationTests.cs`, `Task082LigneExclueDesLeFigeageTests.cs`,
+  `Task102NumeroReglementAnomaliesFactureTests.cs`, `Task155GenerationExportTests.cs`,
+  `Task160ExportControleTests.cs`) construisent explicitement des `LigneCandidate` avec
+  `Etat = EtatLigne.Exclue` pour vérifier ce comportement de compatibilité.
+- Supprimer l'enum casserait ces 5 fichiers de tests et la logique de compatibilité avec d'éventuelles
+  déclarations figées avant TASK-097 encore présentes en base de production (le PO a confirmé
+  qu'aucune migration de données n'est nécessaire, mais n'a pas confirmé qu'aucune ligne historique
+  `Exclue` n'existe déjà en base sur des déclarations anciennes non rouvertes).
+
+**Question posée au PO** : la TASK demande un statut binaire "partout où Exclue/Reportée existaient",
+mais ce nettoyage backend supprimerait une logique de compatibilité pour des données historiques
+potentiellement réelles, avec un coût de récriture de 5 suites de tests. Le rapport risque/bénéfice
+n'a pas semblé favorable pour trancher seul (contrairement au nettoyage front WorkstationPanel/
+mockServer, sans risque car confirmés morts). **Décision à prendre par le PO avant nouvelle
+soumission** : (a) laisser cette logique de compatibilité en l'état (statut binaire uniquement pour
+les nouvelles lignes et l'UI, legacy backend inchangé), ou (b) demander explicitement sa suppression
+avec récriture des 5 tests concernés.
+
+### 3. Point de vigilance multi-facture — remonté, pas résolu
+Confirmé non résolu et non traité dans le code : un règlement peut affecter plusieurs factures ; avec
+le statut binaire, la seule granularité de décision reste le règlement entier (écran ①). Si un
+comptable a besoin de traiter différemment deux factures d'un même règlement (cas qui existait avant
+via Exclure/Reporter ligne par ligne), ce cas d'usage n'est plus supporté. **Remonté ici explicitement
+au PO, comme demandé par la TASK — nécessite un retour du PO sur si ce cas se présente en pratique**
+avant clôture définitive.
+
+### 4. Preuve de retest fonctionnel réel : **NON RÉALISABLE dans cet environnement**
+Comme pour TASK-029/060/200/204, un parcours réel ①→②→③→④ nécessite un backend + DB réels
+(`Declaration.API` ne peut traiter aucune requête sans accès SQL Server réel — `Error Number:53`,
+même limitation documentée dans les autres VERIFY). **À exécuter par le PO ou sur un poste avec accès
+DB avant clôture définitive** — build/compilation seuls disponibles ici (voir ci-dessous).
 
 ---
 

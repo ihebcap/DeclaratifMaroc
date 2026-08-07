@@ -27,13 +27,27 @@ pas par extension de l'ancien `DomainGrid.tsx`). Package npm partagé (`@apbs/ui
 **hors périmètre** de cette TASK — décision transverse à formaliser séparément si confirmée. Voir
 `TASKS/TASK-204-migration-ag-grid-community.md`.
 
-> ❌ **REJETÉE (07/08/2026, revue architecte du lot de nuit)** — migration techniquement correcte sur
-> le fond (`ag-grid-community` seul, pas d'Enterprise ; `ReglementsSelection`/`DomainGrid`/
-> `RapprochementInterrogation` confirmés migrés vers `grid/ApbsGrid.tsx`), mais 2 livrables explicites
-> non tenus : (1) nettoyage non fait — `ExcelFilter.tsx`/`ColumnSelector.tsx`/`useColumnPrefs.ts` et la
-> dépendance `@tanstack/react-virtual` restent dans le repo alors que confirmés **totalement morts**
-> (aucun import restant) ; (2) aucune preuve de retest fonctionnel écran par écran (captures/parcours)
-> malgré l'exigence explicite de la TASK — seul un build vert est fourni. Voir
+> ❌ **REJETÉE de nouveau (07/08/2026, retest réel sur base prod `GR_EMA_DISTRIBUTION`)** — nettoyage
+> du code mort (`ExcelFilter.tsx`/`ColumnSelector.tsx`/`useColumnPrefs.ts`/`@tanstack/react-virtual`)
+> confirmé fait cette fois. Mais le retest fonctionnel réel désormais possible (accès SQL débloqué)
+> a été effectué par l'architecte et révèle une **régression réelle, pas seulement un manque de
+> preuve** : la pagination interne d'AG Grid injecte son propre `<input type="number">` (spinbutton
+> de page) qui **collisionne** avec le sélecteur générique `input[type="number"]` utilisé par le
+> parcours de création de déclaration (`declaration-tva-web/tests/declaration.spec.ts:30` et
+> l'helper partagé `creerDeclaration2026` de `task111.spec.ts` — probablement d'autres specs) :
+> `page.fill('input[type="number"]', '2026')` cible désormais en priorité l'input de pagination AG
+> Grid (non éditable), timeout 30s, le parcours de création de déclaration ne peut plus être testé
+> ni fiablement piloté au clavier. Suite Playwright complète rejouée : **23/30 tests échouent** contre
+> la vraie base. Deux régressions supplémentaires confirmées, propres à cette migration : (1)
+> `column-selector.spec.ts` — le masquage de colonne + persistance `localStorage['grf.cols.rapprochement']`
+> ne fonctionne plus (AG Grid a son propre mécanisme, jamais raccordé à l'ancienne clé) ; (2)
+> `task138.spec.ts` (alignement en-tête/lignes) — l'ancien sélecteur CSS (`.header-cell`/lignes) ne
+> trouve plus aucun en-tête (0 vs 9 colonnes), la structure DOM AG Grid n'a jamais été revalidée.
+> **Correction attendue avant nouvelle soumission** : (a) donner un identifiant stable (`id`/
+> `data-testid`) au champ année de création de déclaration pour lever la collision avec les contrôles
+> internes AG Grid ; (b) adapter ou retirer `column-selector.spec.ts` et `task138.spec.ts` pour
+> refléter la structure AG Grid réelle ; (c) rejouer la suite Playwright complète et fournir le
+> résultat dans le VERIFY (pas seulement `npm run build`). Voir
 > `IN_PROGRESS/TASK-204-migration-ag-grid-community.md` et `VERIFY/TASK-204_verify.md`.
 
 ## 🆕 TASK-202 — Refonte navigation TVA : 4 écrans à responsabilité unique (PO 06/08/2026, remplace TASK-178)
@@ -48,19 +62,27 @@ consultatif) et **④ Confirmer** (récap chiffré dédupliqué + bouton), le PO
 illustrative) : `TASKS/assets/TASK-202-maquette.html`. Voir
 `TASKS/TASK-202-refonte-navigation-ecran-factures-recap.md`.
 
-> ❌ **REJETÉE (07/08/2026, revue architecte du lot de nuit)** — stepper 5 étapes conforme, split
-> ③ Vérifier / ④ Confirmer conforme (pas de doublon), écran ② livré (`FacturesADeclarerPanel.tsx`,
-> commit `61e5ef4`). Mais deux manquements substantiels : (1) écran ② construit en **enveloppant**
-> l'ancien `DomainGrid.tsx` (`codeActiviteOptions`/`showResynchroniserAction`) — exactement ce que la
-> note de dépendance TASK-204 interdisait ("pas par extension des props de l'ancien DomainGrid.tsx"),
-> non signalé dans le VERIFY ; (2) le **statut binaire Proposée/Intégrée n'est pas propagé** au-delà
-> des boutons UI de `DomainGrid` — `EtatLigne` (backend), `LigneCandidateDto.StatutLigne`,
-> `VerifierIntegrerPanel.tsx`, `WorkstationPanel.tsx` et `mockServer.ts` continuent tous de
-> référencer/produire `Exclue`/`Reportee`/`Ecartee`, alors que la TASK exigeait explicitement une
-> confirmation qu'aucune trace de ces états ne subsiste "dans le code ou en base", et demandait de
-> faire remonter au PO le point de vigilance multi-facture-par-règlement avant clôture — non fait.
-> Voir `IN_PROGRESS/TASK-202-refonte-navigation-ecran-factures-recap.md` et
-> `VERIFY/TASK-202_verify.md`.
+> ❌ **REJETÉE de nouveau (07/08/2026, retest réel sur base prod `GR_EMA_DISTRIBUTION`)** — points
+> précédents traités : (1) enveloppement de `DomainGrid.tsx` accepté (déjà 100% AG Grid depuis
+> TASK-204, plus de risque double-moteur) ; (2) `WorkstationPanel.tsx`/`mockServer.ts` supprimés
+> (confirmés morts) ; `EtatLigne.Exclue`/`Reportee`/`Ecartee` **conservés côté backend** sur décision
+> PO (07/08/2026) — logique de compatibilité de données historiques (`RevaliderLignesFigeesAsync`,
+> `GetCheckupAsync`) + 5 suites de tests en dépendent, suppression jugée hors bénéfice ; (3) point de
+> vigilance multi-facture correctement remonté, non résolu, accepté en l'état. **Mais le retest
+> fonctionnel réel désormais possible (accès SQL débloqué) révèle des régressions non détectées par
+> le seul build** : suite Playwright complète rejouée sur données réelles, 23/30 tests échouent, dont
+> au moins 3 directement liés à la navigation touchée par cette TASK et sans rapport avec la collision
+> AG Grid de TASK-204 : `task136.spec.ts` — l'entrée sidebar « Délai de paiement » n'est plus trouvée
+> du tout (`.sidebar-item:has-text("Délai de paiement")` introuvable) ; `task139.spec.ts` (cas B et C)
+> — le tableau `RecapSourceTable` (colonne « Écart ») ne s'affiche plus à l'écran ③ Vérifier
+> (`getByText('Écart')` introuvable, alors que ce test valide un comportement TASK-112/139 antérieur
+> non censé régresser) ; `task183.spec.ts` — navigation vers le drill Codes activité (fusionné dans
+> l'écran ②) time-out après 30s. **Correction attendue avant nouvelle soumission** : (a) expliquer
+> et corriger la disparition de l'entrée « Délai de paiement » ; (b) expliquer et corriger l'absence
+> du tableau « Écart » à l'étape ③ Vérifier ; (c) fiabiliser la navigation vers le drill Codes
+> activité depuis l'écran ② ; (d) rejouer la suite Playwright complète après correctifs et fournir
+> le résultat dans le VERIFY. Voir `IN_PROGRESS/TASK-202-refonte-navigation-ecran-factures-recap.md`
+> et `VERIFY/TASK-202_verify.md`.
 
 ## 🆕 TASK-201 — En-têtes de grille (écran ① Sélection + Rapprochement) : autoriser le retour à la ligne (PO 06/08/2026)
 Signalement PO (capture d'écran) : libellés d'en-tête forcés sur une seule ligne (`whiteSpace:
@@ -78,12 +100,15 @@ automatiquement (comportement actuel conservé, pas de bouton requis dans ce cas
 règlements après intégration restent inchangés (déjà possibles tant que non clôturée). Voir
 `TASKS/TASK-200-ecran-selection-vide-par-defaut-bouton-integrer.md`.
 
-> ⚠️ **APPROUVÉE SOUS RÉSERVE (07/08/2026, revue architecte)** — code livré (commit isolé `ed23351`)
-> et fonctionnellement conforme point par point (écran vide par défaut, restauration gated sur
-> sélection sauvegardée, aucune présélection automatique, bouton « Intégrer »/« Rafraîchir »
-> réutilisable). **Ne pas clôturer** : la TASK exige explicitement, dans sa section Risques, "un
-> retest fonctionnel réel avec le PO avant clôture, pas seulement une vérification de compilation" —
-> le VERIFY ne fournit qu'un `npm run build` vert, aucun retest. Clôture conditionnée à ce retest.
+> ⚠️ **TOUJOURS APPROUVÉE SOUS RÉSERVE (07/08/2026, mise à jour)** — code toujours conforme point par
+> point (écran vide par défaut, restauration gated sur sélection sauvegardée, aucune présélection
+> automatique, bouton « Intégrer »/« Rafraîchir » réutilisable). L'accès SQL réel a été débloqué
+> cette nuit et le retest fonctionnel exigé a été tenté, mais **bloqué par une régression tierce** :
+> le parcours de création de déclaration (prérequis pour exercer l'écran ① sur une déclaration
+> fraîche) échoue systématiquement à cause de la collision `input[type="number"]` introduite par
+> AG Grid (cf. **TASK-204 REJETÉE**, `declaration.spec.ts`/`task111.spec.ts`). Rien n'indique que
+> `ReglementsSelection.tsx` lui-même soit en cause. **Clôture toujours conditionnée au retest réel**,
+> mais désormais dépendante de la correction de TASK-204 pour être exécutable.
 
 ## 🗺️ ROADMAP — Afficher les Frais bancaires (et Dépenses) dans l'onglet Sélection (PO 05/08/2026, pas une TASK prête)
 Constat suite au diagnostic TASK-193/196/197 (frais bancaires) : l'onglet Sélection
@@ -499,29 +524,10 @@ TASK-155) avant de pouvoir livrer un cycle complet.
 > session, cause non élucidée (hors lecture seule). `TVA1-2026-02` a aussi été recréée/élargie
 > (730→2005 lignes) la même nuit. Voir `DOCS/AUDIT-TASK-143/01-reaudit-post-145.md`.
 
-> ⚠️ **TASK-144** reste **BLOQUÉE** (non close) : l'architecte a vérifié lui-même 2 des 3 points
-> laissés ouverts par le VERIFY du 20/07/2026 (rejeu réel `FA2600106` conforme ; schéma `F_DOCREGL`
-> confirmé, jointure réelle = `RT_ECHEANCE.EC_No = F_DOCREGL.DR_No`, pas `F_DOCREGL.EC_No` qui vaut
-> toujours 0). **Le 3ᵉ point (validation PO des libellés métier de `DiagnosticMotifMetier.cs`) ne
-> peut pas être auto-approuvé par un worker — il attend une lecture humaine du PO.** Voir
-> `VERIFY/TASK-144_verify.md`.
->
-> ❌ **REJETÉE de nouveau (07/08/2026, revue architecte du lot de nuit)** : le code réel a bien été
-> livré depuis (`DiagnosticLigneDto.cs`, `DiagnosticModal.tsx`, `DiagnosticMotifMetier.cs` — commits
-> `721bfdc`/`063c527`, mal étiquetés "TASK-146"/"TASK-147") et correspond au périmètre attendu
-> (3 blocs identité/motif/collision, lecture seule confirmée, connexion Sage dynamique confirmée).
-> Mais `VERIFY/TASK-144_verify.md` déclare **« Status: COMPLETE & VERIFIED »** en passant sous
-> silence le blocage PO ci-dessus, pourtant toujours documenté ici et toujours vrai :
-> `DiagnosticMotifMetier.cs` contient lui-même l'avertissement « libellés métier à valider par le PO
-> avant clôture ». **Le VERIFY ne doit pas être considéré comme fiable tant que la relecture PO des
-> libellés n'a pas eu lieu.** Le fichier TASK est resté dans `TASKS/` (jamais déplacé en
-> `IN_PROGRESS/`), incohérence supplémentaire à corriger au prochain passage.
-
-## 🎯 Diagnostic en ligne (demande PO 20/07/2026 — objectif TASK-143 jugé non atteint)
-
-| # | Task | Description | Statut |
-|---|------|-------------|--------|
-| 1 | [TASK-144](TASKS/TASK-144-diagnostic-en-ligne-factures-non-ventilees.md) | Le comptable doit comprendre **dans l'app**, sans revenir demander à l'assistant, pourquoi une ligne est en anomalie : diagnostic en ligne (EC_Id/numéro Sage/tiers + motif d'échec OM réel + contrôle collision `DO_Numero`↔`F_DOCREGL`). | 🎯 **prêt** — fondé sur recherche de code (motif brut non enrichi, aucun contrôle collision vivant, aucun écran de preuve dédié). |
+> ✅ **TASK-144 approuvée** (07/08/2026) — libellés métier de `DiagnosticMotifMetier.cs`
+> (`SOLDE_INITIAL_SAISIE_REQUISE`/`FACTURE_ILLISIBLE_OM`/`FACTURE_INTROUVABLE`/`CommentaireCollision`)
+> relus et validés explicitement par le PO. Traçabilité corrigée : code réel livré par les commits
+> `721bfdc`/`063c527`, mal étiquetés à l'origine. Voir `DONE.md` et `DONE_DETAIL/TASK-144_verify.md`.
 
 > ✅ **TASK-143 approuvée** (20/07/2026) — audit exhaustif (lecture seule) des 6 déclarations
 > `TVA1-2026-01` à `06` (5 182 lignes) contre les données réelles Sage. **Verdict : aucune des 6
@@ -1017,7 +1023,6 @@ Jalons **planifiés pour plus tard** (à cadrer en TASKS le moment venu, **pas m
 ### 🚧 Blocage valorisation famille B (Sage OM) — isolé par la traçabilité (10/07/2026)
 | # | Task | Objet | État |
 |---|---|---|---|
-| 5 | [TASK-060](IN_PROGRESS/TASK-060-remontee-claire-erreurs-valorisation.md) | **Remontée claire des erreurs de valorisation à l'utilisateur** : le rafraîchissement facture-first juin 2026 affiche `240 en erreur` en agrégat, sans qu'aucun écran ne détaille la répartition par code. **Preuve code** : le backend calcule et transmet déjà le détail complet (`RapportValorisation.Erreurs[]`, `Code`/`Message`/`RefLigne`, `FacturesController.cs:107-126`), mais le front (`FactureInterrogation.tsx:174-196`) ne fait qu'un `console.warn` + toast agrégé renvoyant vers « la console / les logs serveur ». Objectif : agrégation par code + affichage lisible (modale/panneau), distinguant qualité-de-données tiers (`TIERS_SANS_ICE`/`IF`) des anomalies applicatives (`ERREUR_FGR`, `FACTURE_ILLISIBLE_OM`...). | ❌ **REJETÉE (07/08/2026)** — code livré (`RapportValorisationModal` dans `FactureInterrogation.tsx`, commit `5fc8fe4`) et globalement conforme à l'intention, mais 3 des 4 « Livrables de preuve » explicitement exigés par la TASK sont absents du VERIFY : (1) aucune capture/description sur le jeu réel juin 2026 (`soId=1`) ; (2) aucune confirmation que Σ Count par code = 240 ; (4) aucun test front. De plus le choix modale (vs panneau) — perimètre B, explicitement signalé « à ne pas laisser arbitrer seul par l'implémenteur » — n'a pas été soumis au PO. À corriger avant nouvelle soumission. |
 | 6 | [TASK-061](DONE_DETAIL/TASK-061-montants-float-vers-decimal.md) | **Montants persistés en FLOAT au lieu de DECIMAL** : `dbo.LigneCandidate` (`DeclarationTVA.sql:49-54,70,74`) déclare `HT`/`Taux`/`TVA`/`TTC`/`Prorata`/`MontantAffecte` en `FLOAT`, alors que le modèle C# est déjà en `decimal` (`WorkflowEntities.cs:56-67`). Désalignement de type sur des montants de TVA → arrondis binaires + conversion Dapper. Passer en `DECIMAL(18,6)` (CREATE + ALTER ADD + commentaire) **et** ajouter un bloc `ALTER COLUMN` idempotent pour migrer les bases déjà déployées. Aucune logique C# touchée. | ✅ **implémenté** (2026-07-13) — DECIMAL(18,6) appliqué, migration idempotente avec gestion dynamique des contraintes de défaut incluse. Voir DONE.md. |
 | 7 | [TASK-064](DONE_DETAIL/TASK-064-trigger-immuabilite-totale-affectation-declaree.md) | **Immuabilité TOTALE d'une affectation déclarée (trigger)** : le verrou TASK-028 (`003_Verrou_DT_Id.sql:83-117`, bloc 1b) ne bloque l'UPDATE que des colonnes **financières** (`AF_Montant`/`MV_Id`/`EC_Id`/`AF_Date`) d'une affectation `DT_Id NOT NULL` → toute autre colonne reste modifiable. Généraliser le bloc 1b : **tout** UPDATE refusé si `DT_Id NOT NULL` avant ET après, **sauf** le dé-tamponnage pur `DT_Id : valeur → NULL` (réouverture, à préserver pour `ReouvriDeclarationAsync`). DELETE (1a) et trigger `RT_MOUVEMENT` (2) inchangés. Fichier unique. | ✅ **implémenté** (2026-07-13) — Trigger d'immuabilité totale implémenté avec exception exclusive de dé-tamponnage pur. Voir DONE.md. |
 | 8 | [TASK-065](DONE_DETAIL/TASK-065-renommage-tables-conformes-dm-enttva-dm-lgtva.md) | **Renommer les tables en `DM_ENTTVA` / `DM_LGTVA` (nommage conforme)** : `DeclarationEntete`/`LigneCandidate` sont en PascalCase C# non conforme à la convention legacy (`PREFIXE_XX_`). Renommer **uniquement les tables SQL** (DDL `DeclarationTVA.sql` + index/FK + 22 littéraux `DeclarationRepository.cs`) via `sp_rename` idempotent ; **ne pas** toucher aux classes C#/DTO/TS (Dapper mappe par colonne). **Supprime aussi `001_Schema_TVA.sql`** (mort + incompatible `UNIQUEIDENTIFIER`). | ✅ **implémenté** (2026-07-13) — Tables, index et contraintes renommés via `sp_rename` idempotent, `001_Schema_TVA.sql` supprimé, repository mis à jour. |
@@ -1165,7 +1170,6 @@ contre `.\sql2022`/`GR_EMA_DISTRIBUTION`) — voir `DONE.md`.
 ### 📘 Documentation
 | # | Task | Objet | État |
 |---|---|---|---|
-| 1 | [TASK-029](IN_PROGRESS/TASK-029-guide-fonctionnel-accessible-app.md) | **Guide fonctionnel accessible depuis l'app** : servir `DOCS/GUIDE_PROCESS_DECLARATION_TVA.html` comme asset statique (`public/guide-fonctionnel-tva.html`) + entrée « Guide » dans la sidebar `App.tsx` (ouverture nouvel onglet) ; source unique = `DOCS/`, `public/` en miroir | ❌ **REJETÉE (07/08/2026)** — code livré et fonctionnellement correct (commit isolé `51b135e` : asset copié, entrée sidebar `BookOpen`, ouverture nouvel onglet via `BASE_URL`, README synchronisé). Manque le **test e2e Playwright** explicitement exigé par la TASK (étape 6, Livrables, Critères de validation) : absent du code et du VERIFY, qui n'en fait même pas mention. À ajouter avant clôture. |
 
 ### 📦 Déploiement
 | # | Task | Objet | État |

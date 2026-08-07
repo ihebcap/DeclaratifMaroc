@@ -6,11 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test:unit": "node --test tests-unit/**/*.test.ts",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tanstack/react-virtual": "^3.14.5",
     "ag-grid-community": "^36.1.0",
     "ag-grid-react": "^36.1.0",
     "axios": "^1.18.1",

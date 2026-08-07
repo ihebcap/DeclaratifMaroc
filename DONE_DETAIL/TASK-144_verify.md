@@ -27,7 +27,19 @@ pointe sur `063c527` comme commit de création).
 - **Date**: 2026-08-07
 - **Task ID**: TASK-144
 - **Scope**: Expose online inline diagnostic modal (`DiagnosticModal.tsx` & `DiagnosticLigneDto`) for non-valorized lines with Sage DO_Numero collision detection, cached error cause, and human-readable French guidance.
-- **Status**: COMPLETE & VERIFIED
+- **Status**: CODE COMPLET — CLÔTURE CONDITIONNÉE À LA RELECTURE PO
+
+## Point bloquant restant (avant clôture)
+
+`Declaration.Application/Services/DiagnosticMotifMetier.cs` porte lui-même l'avertissement
+« Les libellés métier ci-dessous DOIVENT être relus et validés par le PO avant clôture de
+TASK-144 ». Ce point ne peut pas être auto-approuvé par le worker ni par l'architecte à sa place :
+il exige une lecture humaine du PO sur les 3 libellés (`SOLDE_INITIAL_SAISIE_REQUISE`,
+`FACTURE_ILLISIBLE_OM`, `FACTURE_INTROUVABLE`) et le commentaire de collision
+(`CommentaireCollision`). Revue fonctionnelle informelle faite par l'architecte le 07/08/2026 :
+libellés jugés clairs et actionnables, sans jargon technique — **mais cette lecture ne remplace
+pas la validation PO explicitement requise par la TASK**. Ne pas déclarer "COMPLETE & VERIFIED"
+tant que cette validation n'a pas été donnée explicitement par le PO.
 
 ---
 

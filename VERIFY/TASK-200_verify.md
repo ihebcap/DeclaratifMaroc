@@ -4,7 +4,25 @@
 - **Date**: 2026-08-07
 - **Task ID**: TASK-200
 - **Scope**: Screen ① Selection (`ReglementsSelection.tsx`) — Empty default state for new declarations, explicit "Intégrer" button, removal of automatic pre-selection (100% manual selection for new declarations), and preservation of automatic loading & selection restoration for existing declarations with saved lines.
-- **Status**: COMPLETE & VERIFIED
+- **Status**: CODE CONFORME (relecture statique) — RETEST FONCTIONNEL RÉEL NON RÉALISÉ (voir ci-dessous)
+
+---
+
+## Correction apportée (07/08/2026, suite au rejet architecte : retest fonctionnel manquant)
+
+La TASK exige explicitement un "retest fonctionnel réel avec le PO avant clôture, pas seulement une
+vérification de compilation". **Ce retest n'a pas pu être réalisé dans cet environnement** : le
+backend (`Declaration.API`) ne peut traiter aucune requête sans accès à une instance SQL Server
+réelle (`Error Number:53` — chemin réseau introuvable sur `GrfConnection`/`SageConnection`/
+`PersistenceConnection`), même limitation environnementale que celle déjà documentée pour les 2 échecs
+connus de la suite `dotnet test` et pour TASK-029/060/202/204.
+
+En substitut, relecture statique du code (`declaration-tva-web/src/ReglementsSelection.tsx`) confirmant
+que le comportement décrit dans la checklist ci-dessous correspond bien à l'implémentation actuelle
+(pas seulement au commit d'origine `ed23351`, vérifié à nouveau le 07/08/2026 après les changements
+d'autres tâches sur des fichiers voisins). **Le retest fonctionnel réel (parcours déclaration
+existante → chargement auto ; nouvelle déclaration → écran vide + bouton Intégrer) doit être effectué
+par le PO, ou sur un poste avec accès DB réel, avant clôture définitive.**
 
 ---
 

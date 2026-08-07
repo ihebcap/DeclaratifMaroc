@@ -9,9 +9,18 @@
 ---
 
 ## Pre-Requisites & Verification
-- Sage SQL table `F_TAXE` column `TA_Intitule` confirmed and queried in `LecteurTvaFgr.cs` and `SelectionExpliqueeService.cs`.
-- Grouping key strictly preserved as `(Taux, CodeTaxe, Collecte)` — no changes to grouping calculations or amounts.
+- Sage SQL table `F_TAXE` column `TA_Intitule` confirmed and queried in `LecteurTvaFgr.cs` and `SelectionExpliqueeService.cs`. **Correction (2026-08-07, revue architecte)** : ce doc affirmait la confirmation sans preuve tracée ; le fait que le code interroge `TA_Intitule` de façon cohérente aux deux points d'accès (et compile/s'exécute sans erreur SQL sur base réelle via les tests d'intégration existants) constitue la preuve indirecte retenue — aucune capture de schéma séparée n'a été produite, à faire à l'avenir pour ce type de pré-requis.
+- Grouping key strictly preserved as `(Taux, CodeTaxe)` — confirmé en relisant `ConstructeurDeclaration.cs:197` et `DeclarationsController.cs:479` : `IntituleTaxe` n'apparaît jamais dans une clé `GroupBy`, uniquement via `g.First().IntituleTaxe`. Pas de changement sur les montants.
 - `Task203IntituleTaxeGroupingTests.cs` created and passed (100% success).
+
+## Effet de bord documenté — régénération de `VERIFY/TASK-006_verify.md`
+Le test `Declaration.Core.Tests.ConstructeurDeclarationTests.DumpJSON_Verify()` sérialise un
+`Declaration` complet et **réécrit** `VERIFY/TASK-006_verify.md` à chaque exécution
+(`File.WriteAllText`). L'ajout du champ `IntituleTaxe` par cette tâche fait apparaître
+`"IntituleTaxe": ""` dans ce dump dès que le test est rejoué — les fixtures synthétiques de ce
+test ne renseignent jamais `TaxeDetail.Intitule`, d'où la valeur vide. Ce n'est pas un bug de
+production, c'est un effet mécanique attendu de l'ajout de champ ; le fichier régénéré est
+commité tel quel avec cette tâche plutôt que laissé en diff local non expliqué.
 
 ---
 

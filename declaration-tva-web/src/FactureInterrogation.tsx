@@ -5,6 +5,7 @@ import { ApbsGrid } from './grid/ApbsGrid';
 import { CustomListFilter } from './grid/CustomListFilter';
 import { formatMoney, formatDate } from './utils';
 import api from './api';
+import { agregerErreursValorisation, CODE_METADATA_VALORISATION, type MotifValorisation } from './valorisationErreurs';
 
 // ─── Interrogation « Factures » (TASK-041 / TASK-204 AG Grid) ──────────────────
 
@@ -392,53 +393,17 @@ export function FactureInterrogation({
   );
 }
 
-type MotifValorisation = {
-  code: string;
-  message: string;
-  refLigne: string;
-};
-
 type ValorisationReport = {
   facturesTraitees: number;
   nbErreurs: number;
   erreurs: MotifValorisation[];
 };
 
-const CODE_METADATA: Record<string, { label: string; qualiteDonnees: boolean }> = {
-  TIERS_SANS_ICE: { label: 'Fiche tiers sans ICE', qualiteDonnees: true },
-  ICE_INVALIDE: { label: 'ICE tiers invalide', qualiteDonnees: true },
-  TIERS_SANS_IF: { label: 'Fiche tiers sans Identifiant Fiscal', qualiteDonnees: true },
-  IF_INVALIDE: { label: 'Identifiant Fiscal tiers invalide', qualiteDonnees: true },
-  REGLEMENT_NON_AFFECTE: { label: 'Règlement non affecté à une facture', qualiteDonnees: false },
-  CODE_TAXE_INCONNU: { label: 'Code taxe non reconnu', qualiteDonnees: false },
-  ERREUR_FGR: { label: 'Échec de lecture des taxes FGR', qualiteDonnees: false },
-  FACTURE_INTROUVABLE: { label: 'Pièce introuvable dans Sage / FGR', qualiteDonnees: false },
-  FACTURE_ILLISIBLE_OM: { label: 'Lecture OM Sage échouée / illisible', qualiteDonnees: false }
-};
-
 function RapportValorisationModal({ report, onClose }: { report: ValorisationReport; onClose: () => void }) {
-  const grouped = useMemo(() => {
-    const map = new Map<string, { code: string; label: string; qualiteDonnees: boolean; count: number; exemples: string[] }>();
-    for (const err of report.erreurs) {
-      const code = err.code || 'AUTRE';
-      const meta = CODE_METADATA[code] || { label: err.message || code, qualiteDonnees: false };
-      if (!map.has(code)) {
-        map.set(code, {
-          code,
-          label: meta.label,
-          qualiteDonnees: meta.qualiteDonnees,
-          count: 0,
-          exemples: []
-        });
-      }
-      const entry = map.get(code)!;
-      entry.count++;
-      if (err.refLigne && entry.exemples.length < 5 && !entry.exemples.includes(err.refLigne)) {
-        entry.exemples.push(err.refLigne);
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  }, [report]);
+  const grouped = useMemo(
+    () => agregerErreursValorisation(report.erreurs, CODE_METADATA_VALORISATION),
+    [report],
+  );
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={onClose}>

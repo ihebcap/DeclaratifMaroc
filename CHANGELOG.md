@@ -1,5 +1,45 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-08-07 (soir) — retest réel sur base prod débloquée (`GR_EMA_DISTRIBUTION`), 6 VERIFY traités
+
+Accès SQL réel obtenu en cours de session (`DESKTOP-5BFKKEP`/`GR_EMA_DISTRIBUTION`), levant la
+limitation d'environnement invoquée par tous les VERIFY précédents. Bug bloquant trouvé et corrigé
+au passage : `RapprochementTvaService` (TASK-043) avait deux constructeurs publics ambigus pour
+l'injection de dépendances → `AggregateException` au démarrage, **aucun écran de l'app ne
+fonctionnait** depuis l'approbation de TASK-043. Corrigé (`Declaration.API/Program.cs`,
+`RapprochementTvaService.cs`) : un seul constructeur public restant, résolution `IConfiguration`
+via factory statique explicite dans l'enregistrement DI. Suite complète rejouée : 576/577 (1 échec
+environnemental résiduel — déclaration GRFN `DT_Id=66` absente de cette base).
+
+### 3 tâches APPROUVÉES (preuve réelle obtenue, plus seulement du code relu)
+- **TASK-029** — Guide fonctionnel : e2e Playwright exécuté sur base réelle, passe.
+- **TASK-060** — Remontée erreurs de valorisation : invariant Σcount=nbErreurs prouvé
+  structurellement (5/5 tests unitaires) ; e2e non concluant faute d'anomalie réelle sur la période
+  testée (0 erreur sur juin 2026 dans cette base), pas une régression. Choix modale validé PO.
+- **TASK-144** — Diagnostic en ligne : libellés métier de `DiagnosticMotifMetier.cs` relus et
+  validés explicitement par le PO (dernier point bloquant depuis le 20/07/2026).
+
+### 2 tâches REJETÉES DE NOUVEAU (régressions réelles trouvées, invisibles sans accès DB)
+Suite Playwright complète rejouée sur données réelles : **23/30 tests échouent**, contre 0 preuve
+fonctionnelle fournie dans les VERIFY précédents (limités à `npm run build`).
+- **TASK-204** (migration AG Grid) — la pagination AG Grid injecte un `input[type="number"]` qui
+  collisionne avec le champ année de création de déclaration, cassant le parcours testé par
+  plusieurs specs (`declaration.spec.ts`, `task111.spec.ts`, probablement d'autres). Deux
+  régressions supplémentaires confirmées : sélecteur de colonnes (persistance `localStorage`
+  cassée) et alignement en-tête/lignes (ancien sélecteur CSS ne trouve plus rien sur le DOM AG
+  Grid). Nettoyage du code mort (`ExcelFilter`/`ColumnSelector`/`useColumnPrefs`/
+  `@tanstack/react-virtual`) confirmé fait, en revanche.
+- **TASK-202** (refonte navigation 4 écrans) — entrée sidebar « Délai de paiement » introuvable,
+  tableau « Écart » absent de l'écran ③ Vérifier (régression sur un comportement TASK-112/139
+  antérieur), navigation vers le drill Codes activité en timeout. Décision PO obtenue entretemps :
+  `EtatLigne.Exclue`/`Reportee`/`Ecartee` **conservés** côté backend (logique de compatibilité
+  données historiques + 5 suites de tests en dépendent, suppression jugée non rentable).
+
+### 1 tâche toujours bloquée en l'état (dépendance croisée)
+- **TASK-200** (écran Sélection vide par défaut) — code toujours jugé conforme, mais le retest
+  fonctionnel réel reste impossible : le prérequis (créer une déclaration) est cassé par la
+  régression TASK-204 ci-dessus. Clôture dépend désormais de la correction de TASK-204.
+
 ## 2026-08-07 (revue architecte — traitement des 12 VERIFY en attente)
 
 Revue individuelle indépendante (rebuild + suite complète + vérification code réel ↔ VERIFY ↔ commit)
