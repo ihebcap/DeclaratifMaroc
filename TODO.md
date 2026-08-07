@@ -1,5 +1,20 @@
 # TODO — Module Déclaration TVA (GRF)
 
+## 🆕 TASK-206 — Action « Corriger la TVA » : saisie manuelle multi-taux sur une ligne intégrée (PO 07/08/2026)
+Cas réel factures de douane : la TVA lue depuis Sage n'est pas assise sur le HT facture (ex. HT=5 000,
+TVA=15 000). Décisions PO : action disponible sur **n'importe quelle** ligne intégrée (pas seulement
+les anomalies) ; saisie **libre**, aucun contrôle de cohérence bloquant contre le HT/TVA/TTC Sage ;
+par bracket, taux + (base HT **ou** montant TTC au choix) ; code taxe de chaque bracket **choisi dans
+le référentiel Sage `F_TAXE`** (nouvel endpoint de liste requis). Réversible via resynchronisation
+Sage classique. Voir `TASKS/TASK-206-correction-tva-manuelle-ligne-multi-taux.md`.
+
+## 🆕 TASK-205 — Solde initial GRF : passage à plusieurs taux de TVA (PO 07/08/2026, généralise TASK-025)
+Le mécanisme de saisie manuelle du solde initial (TASK-025) n'accepte qu'un seul taux par échéance.
+Décisions PO : plusieurs brackets par échéance, chacun en (HT+taux) ou (TTC+taux) au choix ; **saisie
+libre**, le garde-fou actuel (`montantTva > MontantAffecte`, `DeclarationWorkflowService.cs:728-729`)
+est **retiré**, pas étendu. Chaque bracket produit sa propre ligne. Voir
+`TASKS/TASK-205-solde-initial-plusieurs-taux.md`.
+
 ## 🆕 TASK-204 — Migrer toutes les grilles vers AG Grid Community (PO 07/08/2026, précède TASK-201/202)
 Remplacer les grilles maison (`ExcelFilter`, `ColumnSelector`, virtualisation `@tanstack/react-virtual`)
 par AG Grid Community sur les 10 écrans qui les utilisent (`DomainGrid`, `ReglementsSelection`,
