@@ -103,6 +103,12 @@ public interface IDeclarationRepository
     Task<ReglementRapprochementDistincts> GetReglementsRapprochementDistinctsAsync(
         int soId, DateTime dateDebut, DateTime dateFin);
 
+    /// <summary>
+    /// Remonte les affectations détaillées d'une liste de règlements (MV_Numero) pour l'enrichissement TVA (TASK-043).
+    /// </summary>
+    Task<IEnumerable<AffectationDetailRow>> GetAffectationDetailsRapprochementAsync(
+        int soId, IEnumerable<string> mvNumeros) => Task.FromResult<IEnumerable<AffectationDetailRow>>(Array.Empty<AffectationDetailRow>());
+
     // ─── Interrogation « Factures » (pivot facture, lecture seule — TASK-041) ───
     /// <summary>
     /// Retourne, en LECTURE SEULE, les factures fournisseur (pivot RT_ECHEANCE.EC_Id, DO_Domaine=Achat)

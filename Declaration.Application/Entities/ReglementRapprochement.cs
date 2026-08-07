@@ -56,6 +56,10 @@ public sealed class ReglementRapprochementRow
     /// </summary>
     public string? NumeroDeclaration { get; set; }
 
+    // ─── TASK-043 — enrichissement TVA par règlement ─────────────────────────────
+    public decimal? MontantTva { get; set; }
+    public string EtatValorisation { get; set; } = "NonApplicable";
+
     // ─── Indicateurs dérivés (rendus VISIBLES, jamais absorbés) ────────────────
 
     /// <summary>Montant réellement affecté aux factures (0 si aucune affectation).</summary>
@@ -194,6 +198,21 @@ public sealed class ReglementRapprochementDistincts
     public List<string> NumerosReglement { get; set; } = new();
     public List<string> NumerosExtrait { get; set; } = new();
     public List<string> Banques { get; set; } = new();
+}
+
+/// <summary>
+/// Detail d'une affectation reglement <-> facture (TASK-043).
+/// </summary>
+public sealed class AffectationDetailRow
+{
+    public int MvId { get; set; }
+    public string MvNumero { get; set; } = "";
+    public decimal AfMontant { get; set; }
+    public int EcId { get; set; }
+    public int EcType { get; set; }
+    public string EcNumero { get; set; } = "";
+    public decimal EcMontant { get; set; }
+    public int DoDomaine { get; set; }
 }
 
 /// <summary>

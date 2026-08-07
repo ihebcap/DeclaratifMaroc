@@ -37,6 +37,8 @@ public sealed record ReglementRapprochementDto
         Origine = r.Origine;
         Declare = r.EstDeclare;
         NumeroDeclaration = r.NumeroDeclaration;   // TASK-140 : numéro de la déclaration verrou (null si non résolu — jamais inventé)
+        MontantTva = r.MontantTva;                  // TASK-043 : montant TVA enrichi (nullable)
+        EtatValorisation = r.EtatValorisation ?? "NonApplicable"; // TASK-043 : état de valorisation (Valorisee/Partielle/Indisponible/NonApplicable)
     }
 
     [JsonPropertyName("numeroReglement")]
@@ -98,4 +100,11 @@ public sealed record ReglementRapprochementDto
     // simple booléen ; l'écran ① Sélection, lui, retire ces lignes côté front.
     [JsonPropertyName("numeroDeclaration")]
     public string? NumeroDeclaration { get; }
+
+    // TASK-043 : montant de TVA enrichi et état de valorisation explicite
+    [JsonPropertyName("montantTva")]
+    public decimal? MontantTva { get; }
+
+    [JsonPropertyName("etatValorisation")]
+    public string EtatValorisation { get; }
 }

@@ -34,6 +34,7 @@ const COLUMNS: Col[] = [
   { key: 'banqueCode', label: 'Code banque', filterType: 'list', width: '110px' },
   { key: 'nbFacturesAffectees', label: 'Factures', align: 'center', filterType: 'number', width: '90px' },
   { key: 'resteAAffecter', label: 'Reste à affecter', align: 'right', sortKey: 'reste', filterType: 'number', width: '140px' },
+  { key: 'montantTva', label: 'TVA', align: 'right', filterType: 'number', width: '130px' },
   { key: 'origine', label: 'Origine', filterType: 'list', width: '120px' },
   { key: 'declare', label: 'Déclaré', align: 'center', filterType: 'list', width: '150px' },
 ];
@@ -232,6 +233,24 @@ export function RapprochementInterrogation({
         return isResteNonNul(v)
           ? <span style={{ color: 'var(--status-warning-text-alt)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'flex-end' }}><AlertTriangle size={12} />{formatMoney(v)}</span>
           : <span style={{ color: 'var(--text-secondary)' }}>{formatMoney(v)}</span>;
+      case 'montantTva': {
+        const etat = row.etatValorisation;
+        if (etat === 'Indisponible') {
+          return <span style={{ color: 'var(--status-blocking-text)', fontWeight: 500, fontSize: '0.78rem' }} title="Valorisation indisponible">— (indisponible)</span>;
+        }
+        if (etat === 'Partielle') {
+          return (
+            <span style={{ color: 'var(--status-warning-text-alt)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title="Valorisation partielle">
+              <AlertTriangle size={12} />
+              {formatMoney(v)}
+            </span>
+          );
+        }
+        if (v !== null && v !== undefined && etat === 'Valorisee') {
+          return formatMoney(v);
+        }
+        return <span style={{ color: 'var(--text-secondary)' }}>—</span>;
+      }
       case 'nbFacturesAffectees': return v;
       default: return v;
     }
@@ -239,7 +258,7 @@ export function RapprochementInterrogation({
 
   const columnDefs: ColDef[] = useMemo(() => {
     return COLUMNS.map((col) => {
-      const isNumeric = ['montant', 'nbFacturesAffectees', 'resteAAffecter'].includes(col.key);
+      const isNumeric = ['montant', 'nbFacturesAffectees', 'resteAAffecter', 'montantTva'].includes(col.key);
       const w = col.width ? parseInt(col.width, 10) : 130;
 
       let filterComponent: any = undefined;

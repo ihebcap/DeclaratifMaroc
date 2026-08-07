@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Declaration.API.Dtos;
 using Declaration.Application.Entities;
 using Declaration.Application.Interfaces;
+using Declaration.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,10 +26,12 @@ namespace Declaration.API.Controllers;
 public class RapprochementController : ControllerBase
 {
     private readonly IDeclarationRepository _repository;
+    private readonly IRapprochementTvaService _tvaService;
 
-    public RapprochementController(IDeclarationRepository repository)
+    public RapprochementController(IDeclarationRepository repository, IRapprochementTvaService tvaService)
     {
         _repository = repository;
+        _tvaService = tvaService;
     }
 
     /// <summary>
@@ -105,10 +108,13 @@ public class RapprochementController : ControllerBase
             EcheanceMax = echeanceMax
         };
 
-        var rows = await _repository.GetReglementsRapprochementAsync(
-            soId, debut.Value, fin.Value, filter, page, size, sort);
+        var rows = (await _repository.GetReglementsRapprochementAsync(
+            soId, debut.Value, fin.Value, filter, page, size, sort)).ToList();
         var total = await _repository.GetReglementsRapprochementCountAsync(
             soId, debut.Value, fin.Value, filter);
+
+        // TASK-043 : Enrichissement du montant TVA de la SEULE page paginée
+        await _tvaService.EnrichirTvaAsync(soId, rows);
 
         return Ok(new
         {

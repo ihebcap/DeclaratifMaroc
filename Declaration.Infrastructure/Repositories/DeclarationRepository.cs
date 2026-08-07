@@ -1026,6 +1026,31 @@ public class DeclarationRepository : IDeclarationRepository
         };
     }
 
+    public async Task<IEnumerable<AffectationDetailRow>> GetAffectationDetailsRapprochementAsync(
+        int soId, IEnumerable<string> mvNumeros)
+    {
+        var list = mvNumeros.Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
+        if (list.Count == 0) return Array.Empty<AffectationDetailRow>();
+
+        var sql = @"
+            SELECT
+                AF.MV_Id      AS MvId,
+                M.MV_Numero   AS MvNumero,
+                AF.AF_Montant AS AfMontant,
+                E.EC_Id       AS EcId,
+                E.EC_Type     AS EcType,
+                E.EC_Numero   AS EcNumero,
+                E.EC_Montant  AS EcMontant,
+                E.DO_Domaine  AS DoDomaine
+            FROM dbo.RT_AFFECTATION AF
+            JOIN dbo.RT_MOUVEMENT M ON AF.MV_Id = M.MV_Id
+            JOIN dbo.RT_ECHEANCE E ON AF.EC_Id = E.EC_Id
+            WHERE M.SO_Id = @soId AND M.MV_Numero IN @list";
+
+        using var connection = _connectionFactory.CreateGrfConnection();
+        return await connection.QueryAsync<AffectationDetailRow>(sql, new { soId, list });
+    }
+
     // Borne du volume renvoyé par les endpoints « distincts » sur les colonnes identifiantes à
     // cardinalité potentiellement élevée (n° pièce, n° extrait, code banque). ExcelFilter (front)
     // plafonne déjà l'affichage à 200 lignes avec recherche ; 500 laisse une marge de recherche
