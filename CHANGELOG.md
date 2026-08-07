@@ -1,5 +1,29 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-08-07 (revue architecte — rejet partiel du lot de nuit, corrections + clôture TASK-062)
+
+### Lot de 10 tâches (TASK-029/043/060/062/144/197/200/202/203/204) — REJETÉ puis corrigé partiellement
+- **2 régressions bloquantes** trouvées par bisection indépendante (rebuild+retest à chaque commit) :
+  clôture de déclaration cassée pour `Periode=0` (Trimestriel/Annuel — `ObtenirIntervalleDates()`),
+  et sous-totaux TVA par taux erronés dans les tests (grouping `(Taux, CodeTaxe)` de TASK-198 non
+  répercuté dans `ConstruireDeclaration_Recaps_Corrects`). **Corrigées** par mise à jour de 4 tests
+  (aucune ligne de production modifiée, comportement déjà voulu) — commit `9bcaf11`. Suite complète
+  rejouée : 575/577 tests verts, 2 échecs restants environnementaux (auth SQL locale, GRFN 66 absent).
+- **Traçabilité git** : plusieurs commits titrés avec un nom de tâche ne contenaient aucun code réel
+  (le vrai code étant bundlé dans `842f9ef`, titré à tort "TASK-204"). VERIFY de TASK-197/144/204
+  corrigés pour référencer les commits réels (`842f9ef`, `721bfdc`, `063c527`) — documentaire
+  uniquement, aucun code touché.
+- **TASK-062 — collision de numéro de tâche découverte pendant la revue** : le "TASK-062 bouton
+  Preuve" (`IN_PROGRESS/TASK-062-suppression-bouton-preuve-affectations.md`) réutilisait par erreur
+  le numéro d'une tâche différente et déjà terminée (`DONE_DETAIL/TASK-062-source-unique-date-reference-periode.md`,
+  approuvée 12/07/2026). Vérification exhaustive (`git log --all -S"ProofModal"`/`-S"Preuve"` sur
+  `AffectationsDrill.tsx`, sur tout l'historique y compris le commit de création `be01339`) : aucun
+  bouton « Preuve »/`ProofModal` n'a jamais existé dans ce fichier. Le commit `7a64e57` titré à tort
+  `feat(TASK-062): ...` ne contient aucun code. **Clôturée sans code** (07/08/2026) : l'état actuel
+  du fichier satisfait déjà l'objectif de la tâche. `IN_PROGRESS/TASK-062-suppression-bouton-preuve-affectations.md`
+  et `VERIFY/TASK-062_verify.md` supprimés. Si le besoin revient, à reprendre sous un **nouveau
+  numéro** de tâche.
+
 ## 2026-08-05 (revue architecte — code taxe TA_Code & référence frais bancaire)
 
 ### TASK-199 — Frais bancaire : colonne Référence vide, utiliser RT_PREVISIONNELLE.MV_PieceBq (APPROUVÉE)

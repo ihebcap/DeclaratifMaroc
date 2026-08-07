@@ -8,6 +8,70 @@
 
 ---
 
+## ⚠️ Élargissement du Scope (2026-08-07, post-revue architecte)
+
+Le commit `842f9ef` (titré `feat(TASK-204): migration grilles vers AG Grid Community`)
+contient en réalité, en plus de la migration AG Grid, un **bundle non déclaré de code
+backend et de tests sans rapport avec AG Grid**, appartenant à d'autres tâches. Liste
+exhaustive établie à partir de `git show 842f9ef --stat` (hors captures d'écran
+`.playwright-mcp/*.png` et fichiers `.yml`/scratch, non pertinents pour la revue de
+code) :
+
+### Code backend hors AG Grid (appartenant à TASK-197 et à d'autres tâches)
+- `Declaration.API/Controllers/DeclarationsController.cs` (+45/-)
+- `Declaration.API/Dtos/ConventionDelaiPaiementDto.cs`, `DeclarationDelaiPaiementDto.cs`, `LigneCandidateDto.cs`
+- `Declaration.API/Entities/ConventionDelaiPaiementQueryModels.cs`, `DiagnosticLigne.cs`, `WorkflowEntities.cs` (+36)
+- `Declaration.API/Interfaces/IDeclarationRepository.cs`
+- `Declaration.API/Services/DeclarationWorkflowService.cs` **(+260 lignes)** — cœur du
+  moteur de workflow, sans rapport avec une migration de grille front.
+- `Declaration.API/Services/DiagnosticMotifMetier.cs`, `SelectionDelaiPaiementService.cs`
+- `Declaration.Core/ConstructeurDeclaration.cs` (+26/-), `Declaration.Core/Model.cs` (+24/-)
+- `Declaration.Core.Tests/ConstructeurDeclarationTests.cs` (+54/-)
+- `Declaration.Export.Excel/Exporter.cs` (+678/-) et `Declaration.Export.Excel.Tests/ExporterTests.cs` (+702/-)
+- `Declaration.Persistence/Repositories/ConventionDelaiPaiementRepository.cs`, `DeclarationRepository.cs` (+34/-)
+- `Declaration.Persistence/SQL/012_DM_LGTVA_CodeTaxe.sql`, `013_DM_SOLDE_INITIAL_TVA.sql` (migrations SQL)
+- `Declaration.Orchestration/ISoldeInitialTvaRepository.cs` (nouveau) et
+  `SoldeInitialTvaRepository.cs` (nouveau, +48) — **nouveau repository jamais annoncé
+  dans le périmètre AG Grid**.
+- `Declaration.Orchestration/OrchestrateurDeclaration.cs` (+91/-)
+- `Declaration.Selection/SelectionExpliqueeService.cs` (+143/-) — **code réel de TASK-197**
+  (exemption Dépense/FraisBancaire du filtre de sélection). Voir `VERIFY/TASK-197_verify.md`.
+- `Declaration.Selection/GrfEnums.cs` (nouveau), `Declaration.Selection.csproj`
+- `Declaration.Selection.Tests/IntegrationRegressionTests.cs`, nouveau `Task194CtTypeFilteringTests.cs`
+
+### Tests unitaires ajoutés (appartenant à TASK-193/194/195/196/197/198/199, pas à TASK-204)
+- `Declaration.Orchestration.Tests/OrchestrateurTests.cs` (+74)
+- `Declaration.Orchestration.Tests/Task193FraisBancairesDomaineTests.cs` (+98, nouveau)
+- `Declaration.Orchestration.Tests/Task195DeclarationTrimestrielleDatesTests.cs` (+78, nouveau)
+- `Declaration.Orchestration.Tests/Task196RapprochementCtTypeFilteringTests.cs` (+33, nouveau)
+- `Declaration.Orchestration.Tests/Task197ExemptionFiltreSelectionTests.cs` (+141, nouveau) — code réel de TASK-197
+- `Declaration.Orchestration.Tests/Task198CodeTaxeGroupingTests.cs` (+86, nouveau)
+- `Declaration.Orchestration.Tests/Task199FraisBancairesReferenceTests.cs` (+69, nouveau)
+- 11 fichiers de tests `TaskNNN*Tests.cs` existants légèrement retouchés (namespace/refs)
+
+### Documentation associée déjà présente dans le commit
+- `DONE_DETAIL/TASK-193_verify.md`, `TASK-194_verify.md`, `TASK-195_verify.md`,
+  `TASK-196_verify.md`, `TASK-198_verify.md`, `TASK-199_verify.md`
+- `TASKS/TASK-197-frais-bancaire-depense-elimines-par-filtre-selection.md` (déplacé/ajouté)
+
+### Code front réellement lié à AG Grid (périmètre annoncé, confirmé conforme)
+- `declaration-tva-web/src/grid/ApbsGrid.tsx`, `CustomListFilter.tsx`, `agGridSetup.ts`, `gridExport.ts` (nouveaux)
+- Les 10 écrans listés dans la checklist ci-dessous (`ReglementsSelection.tsx`, `DomainGrid.tsx`,
+  `FactureInterrogation.tsx`, `RapprochementInterrogation.tsx`, `AffectationsDrill.tsx`,
+  `ControlGrid.tsx`, `DeclarationList.tsx`, `DeclarationsDelaiPaiementPanel.tsx`,
+  `ConventionsDelaiPaiementPanel.tsx`, `ControleLignesDelaiPaiementPanel.tsx`)
+- `declaration-tva-web/package.json`/`package-lock.json` (dépendances `ag-grid-*`)
+
+**Constat** : ce commit mélange une migration front (le sujet annoncé) avec un lot de
+correctifs/fonctionnalités backend indépendants (TASK-197 entre autres) et des tests de
+non-régression pour six autres tâches (193/195/196/197/198/199), sans que le message de
+commit ni ce VERIFY ne le mentionnent à l'origine. Conséquence directe : les commits
+`81358ad` (TASK-197) et `9638007`/`721bfdc`/`063c527` (TASK-144, voir leurs VERIFY
+respectifs) sont concernés par cette même confusion de périmètre. Aucune ligne de code
+n'a été modifiée pour produire cette correction — uniquement la documentation.
+
+---
+
 ## Pre-Requisites & Dependencies
 - `ag-grid-community` and `ag-grid-react` installed at `^36.1.0`.
 - AG Grid `AllCommunityModule` registered in `src/grid/agGridSetup.ts`.
