@@ -1,5 +1,52 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-08-07 (revue architecte — traitement des 12 VERIFY en attente)
+
+Revue individuelle indépendante (rebuild + suite complète + vérification code réel ↔ VERIFY ↔ commit)
+des 12 tâches ayant un fichier `VERIFY/*.md` en attente.
+
+### Nettoyage — 3 VERIFY obsolètes supprimés (TASK-006/007/024)
+Ces 3 tâches étaient déjà approuvées et dans `DONE_DETAIL/` depuis 2026-07-08/09 ; leur fichier
+`VERIFY/` n'avait jamais été supprimé lors de la clôture d'origine (oubli de process). Supprimés
+sans autre action. Un worktree Git abandonné (`.claude/worktrees/agent-a7c9a3d1a5d351f8f`, aucun
+commit divergent) a également été retiré.
+
+### 3 tâches APPROUVÉES (après correction documentaire, aucun code source touché)
+- **TASK-043** — Montant TVA par règlement (rapprochement) : commit isolé `562b237`, conforme au
+  périmètre. VERIFY corrigé pour référencer la suite complète (575/577) au lieu d'un `--filter` ciblé.
+- **TASK-197** — Exemption Dépense/FraisBancaire du filtre de sélection : code réel confirmé dans
+  `DeclarationWorkflowService.cs` (bundle `842f9ef`). VERIFY corrigé (attribuait à tort une partie du
+  diff à `SelectionExpliqueeService.cs`, qui appartient en réalité à TASK-031/194/032) + note sur la
+  3ᵉ occurrence non exemptée (décision correcte, à commenter dans le code au prochain passage).
+- **TASK-203** — Intitulé taxe F_TAXE : conforme de bout en bout, clé de regroupement inchangée.
+  Effet de bord documenté et commité : `VERIFY/TASK-006_verify.md` est régénéré par un test qui
+  sérialise un dump JSON sur disque à chaque exécution (`ConstructeurDeclarationTests.DumpJSON_Verify`)
+  — le nouveau champ `IntituleTaxe` y apparaît vide (fixtures synthétiques ne le renseignent pas),
+  comportement mécanique attendu, pas un bug.
+
+### 6 tâches REJETÉES ou bloquées — corrections requises avant nouvelle soumission
+- **TASK-144** (diagnostic en ligne) — **REJETÉE** : code réel livré et conforme (bundle `721bfdc`/
+  `063c527`), mais le VERIFY déclare "COMPLETE & VERIFIED" en passant sous silence un blocage déjà
+  documenté au 20/07/2026 (validation PO des libellés métier de `DiagnosticMotifMetier.cs`, jamais
+  faite). Le fichier TASK est en plus resté dans `TASKS/` au lieu d'être déplacé en `IN_PROGRESS/`.
+- **TASK-060** (remontée erreurs valorisation) — **REJETÉE** : code livré (`5fc8fe4`) mais 3 des 4
+  livrables de preuve explicitement exigés sont absents (preuve sur données réelles juin 2026,
+  confirmation Σ Count = 240, tests front) ; choix UX (modale) jamais arbitré par le PO comme demandé.
+- **TASK-029** (guide fonctionnel) — **REJETÉE** : code conforme (`51b135e`) mais le test e2e
+  Playwright explicitement requis (étape 6 de la TASK) est absent, VERIFY n'en parle même pas.
+- **TASK-200** (écran Sélection vide par défaut) — **APPROUVÉE SOUS RÉSERVE** : code conforme
+  (`ed23351`), mais le retest fonctionnel PO explicitement exigé par la TASK (section Risques) n'a
+  pas eu lieu — seul un build est fourni. Clôture différée jusqu'au retest.
+- **TASK-202** (refonte navigation 4 écrans) — **REJETÉE** : écran ② construit en enveloppant l'ancien
+  `DomainGrid.tsx`, contrairement à la note de dépendance TASK-204 ; statut binaire Proposée/Intégrée
+  non propagé au-delà des boutons UI (`EtatLigne`, DTO, `VerifierIntegrerPanel.tsx`,
+  `WorkstationPanel.tsx`, `mockServer.ts` gardent tous les états legacy) ; point de vigilance
+  multi-facture jamais remonté au PO comme demandé.
+- **TASK-204** (migration AG Grid) — **REJETÉE** : migration Community-only correcte sur le fond, mais
+  nettoyage non fait (`ExcelFilter.tsx`/`ColumnSelector.tsx`/`useColumnPrefs.ts`/
+  `@tanstack/react-virtual` confirmés morts et non supprimés) et aucune preuve de retest fonctionnel
+  malgré l'exigence explicite de la TASK.
+
 ## 2026-08-07 (revue architecte — rejet partiel du lot de nuit, corrections + clôture TASK-062)
 
 ### Lot de 10 tâches (TASK-029/043/060/062/144/197/200/202/203/204) — REJETÉ puis corrigé partiellement
