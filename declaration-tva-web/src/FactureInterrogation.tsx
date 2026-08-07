@@ -225,15 +225,20 @@ export function FactureInterrogation({
   useEffect(() => { setPage(1); }, [filters, sortConfig, debouncedDebut, debouncedFin]);
   useEffect(() => { fetchPage(); }, [fetchPage]);
 
+  const [valorisationReport, setValorisationReport] = useState<ValorisationReport | null>(null);
+
   const handleRefreshValorisation = useCallback(async () => {
     setRefreshing(true);
     try {
       const res = await api.post('/factures/rafraichir-valorisation', null, { params: { debut, fin, soId: societeId } });
       const n = res.data?.facturesTraitees ?? 0;
       const nbErr = res.data?.nbErreurs ?? 0;
+      const meList: MotifValorisation[] = res.data?.erreurs ?? [];
       if (nbErr > 0) {
-        showToast(`Valorisation — ${n} traitée(s), ${nbErr} en erreur (voir console / logs serveur)`, 'error');
+        setValorisationReport({ facturesTraitees: n, nbErreurs: nbErr, erreurs: meList });
+        showToast(`Valorisation — ${n} traitée(s), ${nbErr} en erreur (cliquez pour voir le détail)`, 'error');
       } else {
+        setValorisationReport(null);
         showToast(`Valorisation rafraîchie — ${n} facture(s) traitée(s)`, 'success');
       }
       await fetchPage();
@@ -382,6 +387,123 @@ export function FactureInterrogation({
       </div>
 
       {detailRow && <FactureDetail row={detailRow} onClose={() => setDetailRow(null)} />}
+      {valorisationReport && <RapportValorisationModal report={valorisationReport} onClose={() => setValorisationReport(null)} />}
+    </div>
+  );
+}
+
+type MotifValorisation = {
+  code: string;
+  message: string;
+  refLigne: string;
+};
+
+type ValorisationReport = {
+  facturesTraitees: number;
+  nbErreurs: number;
+  erreurs: MotifValorisation[];
+};
+
+const CODE_METADATA: Record<string, { label: string; qualiteDonnees: boolean }> = {
+  TIERS_SANS_ICE: { label: 'Fiche tiers sans ICE', qualiteDonnees: true },
+  ICE_INVALIDE: { label: 'ICE tiers invalide', qualiteDonnees: true },
+  TIERS_SANS_IF: { label: 'Fiche tiers sans Identifiant Fiscal', qualiteDonnees: true },
+  IF_INVALIDE: { label: 'Identifiant Fiscal tiers invalide', qualiteDonnees: true },
+  REGLEMENT_NON_AFFECTE: { label: 'Règlement non affecté à une facture', qualiteDonnees: false },
+  CODE_TAXE_INCONNU: { label: 'Code taxe non reconnu', qualiteDonnees: false },
+  ERREUR_FGR: { label: 'Échec de lecture des taxes FGR', qualiteDonnees: false },
+  FACTURE_INTROUVABLE: { label: 'Pièce introuvable dans Sage / FGR', qualiteDonnees: false },
+  FACTURE_ILLISIBLE_OM: { label: 'Lecture OM Sage échouée / illisible', qualiteDonnees: false }
+};
+
+function RapportValorisationModal({ report, onClose }: { report: ValorisationReport; onClose: () => void }) {
+  const grouped = useMemo(() => {
+    const map = new Map<string, { code: string; label: string; qualiteDonnees: boolean; count: number; exemples: string[] }>();
+    for (const err of report.erreurs) {
+      const code = err.code || 'AUTRE';
+      const meta = CODE_METADATA[code] || { label: err.message || code, qualiteDonnees: false };
+      if (!map.has(code)) {
+        map.set(code, {
+          code,
+          label: meta.label,
+          qualiteDonnees: meta.qualiteDonnees,
+          count: 0,
+          exemples: []
+        });
+      }
+      const entry = map.get(code)!;
+      entry.count++;
+      if (err.refLigne && entry.exemples.length < 5 && !entry.exemples.includes(err.refLigne)) {
+        entry.exemples.push(err.refLigne);
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }, [report]);
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={onClose}>
+      <div style={{ background: 'white', borderRadius: '12px', width: '100%', maxWidth: '720px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <AlertTriangle style={{ color: 'var(--status-warning-text-alt, #d97706)' }} size={22} />
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Détail des erreurs de valorisation</h3>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                {report.facturesTraitees} facture(s) traitée(s) · {report.nbErreurs} anomalie(s) détectée(s)
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '0.25rem' }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                <th style={{ padding: '0.5rem' }}>Motif / Code</th>
+                <th style={{ padding: '0.5rem' }}>Type</th>
+                <th style={{ padding: '0.5rem', textAlign: 'right' }}>Nombre</th>
+                <th style={{ padding: '0.5rem' }}>Exemples de pièces</th>
+              </tr>
+            </thead>
+            <tbody>
+              {grouped.map((g) => (
+                <tr key={g.code} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                  <td style={{ padding: '0.75rem 0.5rem', fontWeight: 600 }}>
+                    {g.label}
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400 }}>{g.code}</div>
+                  </td>
+                  <td style={{ padding: '0.75rem 0.5rem' }}>
+                    {g.qualiteDonnees ? (
+                      <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#f1f5f9', color: 'var(--text-secondary)' }}>
+                        Fiche tiers (Sage)
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+                        Anomalie calcul / FGR
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right', fontWeight: 700 }}>
+                    {g.count}
+                  </td>
+                  <td style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                    {g.exemples.length > 0 ? g.exemples.join(', ') : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} className="btn" style={{ minWidth: '100px', padding: '0.4rem 1rem' }}>
+            Fermer
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
