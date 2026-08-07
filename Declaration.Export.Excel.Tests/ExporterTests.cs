@@ -305,24 +305,28 @@ namespace Declaration.Export.Excel.Tests
             // TASK-184 : bloc "Contrôle d'équilibre" retiré.
             // TASK-185 : 4 colonnes (plus de "Domaine Activité") + ligne "Total Collecté"/
             // "Total Déductible" en pied des blocs "Totaux par taux" uniquement.
+            // TASK-198/203 : colonnes "Ta_Code" (2) et "Ta_Intitule" (3) insérées avant les totaux,
+            // qui passent donc de (HT=2,TVA=3,TTC=4) à (HT=4,TVA=5,TTC=6).
             var wsDetailTva = workbook.Worksheet("Détail TVA");
             Assert.Equal("Totaux par taux — Collecté", wsDetailTva.Cell(1, 1).Value.ToString());
-            Assert.Equal("Total HT", wsDetailTva.Cell(2, 2).Value.ToString());
+            Assert.Equal("Ta_Code", wsDetailTva.Cell(2, 2).Value.ToString());
+            Assert.Equal("Ta_Intitule", wsDetailTva.Cell(2, 3).Value.ToString());
+            Assert.Equal("Total HT", wsDetailTva.Cell(2, 4).Value.ToString());
             Assert.Equal(20m, (decimal)wsDetailTva.Cell(3, 1).Value.GetNumber());
-            Assert.Equal(500m, (decimal)wsDetailTva.Cell(3, 2).Value.GetNumber());
-            Assert.Equal(600m, (decimal)wsDetailTva.Cell(3, 4).Value.GetNumber());
+            Assert.Equal(500m, (decimal)wsDetailTva.Cell(3, 4).Value.GetNumber());
+            Assert.Equal(600m, (decimal)wsDetailTva.Cell(3, 6).Value.GetNumber());
             Assert.Equal("Total Collecté", wsDetailTva.Cell(4, 1).Value.ToString());
-            Assert.Equal(500m, (decimal)wsDetailTva.Cell(4, 2).Value.GetNumber());
-            Assert.Equal(100m, (decimal)wsDetailTva.Cell(4, 3).Value.GetNumber());
-            Assert.Equal(600m, (decimal)wsDetailTva.Cell(4, 4).Value.GetNumber());
+            Assert.Equal(500m, (decimal)wsDetailTva.Cell(4, 4).Value.GetNumber());
+            Assert.Equal(100m, (decimal)wsDetailTva.Cell(4, 5).Value.GetNumber());
+            Assert.Equal(600m, (decimal)wsDetailTva.Cell(4, 6).Value.GetNumber());
 
             Assert.Equal("Totaux par taux — Déductible", wsDetailTva.Cell(6, 1).Value.ToString());
             Assert.Equal(20m, (decimal)wsDetailTva.Cell(8, 1).Value.GetNumber());
-            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(8, 4).Value.GetNumber());
+            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(8, 6).Value.GetNumber());
             Assert.Equal("Total Déductible", wsDetailTva.Cell(9, 1).Value.ToString());
-            Assert.Equal(1000m, (decimal)wsDetailTva.Cell(9, 2).Value.GetNumber());
-            Assert.Equal(200m, (decimal)wsDetailTva.Cell(9, 3).Value.GetNumber());
-            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(9, 4).Value.GetNumber());
+            Assert.Equal(1000m, (decimal)wsDetailTva.Cell(9, 4).Value.GetNumber());
+            Assert.Equal(200m, (decimal)wsDetailTva.Cell(9, 5).Value.GetNumber());
+            Assert.Equal(1200m, (decimal)wsDetailTva.Cell(9, 6).Value.GetNumber());
 
             Assert.Equal("Totaux par code activité — Collecté", wsDetailTva.Cell(11, 1).Value.ToString());
             Assert.Equal("Totaux par code activité — Déductible", wsDetailTva.Cell(14, 1).Value.ToString());

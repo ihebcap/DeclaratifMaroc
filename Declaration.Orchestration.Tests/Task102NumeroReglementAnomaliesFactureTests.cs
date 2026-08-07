@@ -107,8 +107,10 @@ namespace Declaration.Orchestration.Tests
             var model = await service.GetCheckupAsync(declarationId);
 
             // Assert
+            // TASK-144 : wording du diagnostic revu pour être compréhensible par un comptable
+            // (l'ancien "Ligne en anomalie de recalcul" ne disait rien du motif réel).
             var alerte = Assert.Single(model.Alertes, a => a.Code == "FACTURE_NON_VENTILEE");
-            Assert.Equal("Ligne en anomalie de recalcul (facture FC200, règlement RC300) : Facture introuvable", alerte.Message);
+            Assert.Equal("TVA non calculée pour la facture FC200 (règlement RC300) — elle ne sera pas déclarée : Facture introuvable", alerte.Message);
         }
 
         [Fact]
@@ -128,8 +130,9 @@ namespace Declaration.Orchestration.Tests
             var model = await service.GetCheckupAsync(declarationId);
 
             // Assert
+            // TASK-144 : wording du diagnostic revu (cf. test ci-dessus).
             var alerte = Assert.Single(model.Alertes, a => a.Code == "FACTURE_NON_VENTILEE");
-            Assert.Equal("Ligne en anomalie de recalcul : Facture introuvable", alerte.Message);
+            Assert.Equal("TVA non calculée, facture exclue de la déclaration : Facture introuvable", alerte.Message);
             Assert.DoesNotContain("règlement", alerte.Message);
         }
 

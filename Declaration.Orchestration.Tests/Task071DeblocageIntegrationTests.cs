@@ -28,7 +28,13 @@ namespace Declaration.Orchestration.Tests
                 Id = declarationId,
                 Statut = StatutDeclaration.EnCours,
                 SocieteId = 1,
-                Numero = "TVA-TEST-001"
+                Numero = "TVA-TEST-001",
+                // Exercice/Periode/Type requis depuis le contrôle DATE_PAIEMENT_HORS_PERIODE
+                // (GetCheckupAsync appelle ObtenirIntervalleDates()) — sans ces valeurs, Periode
+                // vaut 0 par défaut et CalculerIntervalleDates lève ArgumentOutOfRangeException.
+                Exercice = 2026,
+                Periode = 1,
+                Type = TypePeriode.Mensuelle
             };
             foreach (var l in lignes)
             {

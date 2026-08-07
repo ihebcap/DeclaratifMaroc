@@ -132,9 +132,13 @@ namespace Declaration.Core.Tests
 
             var dec = ConstructeurDeclaration.ConstruireDeclaration(affs, a => a.NumeroFacture == f1.NumeroPiece ? f1 : f2, 2);
 
-            // Recaps par taux
-            Assert.Equal(3, dec.RecapsParTaux.Count); // 20, 14, 10
-            Assert.Contains(dec.RecapsParTaux, r => r.Taux == 20);
+            // Recaps par taux — TASK-198 : le regroupement se fait par (Taux, CodeTaxe), pas par
+            // Taux seul. f1 (code taxe "1", taux 20) et f2 (code taxe "2", taux 20) partagent le
+            // même taux mais des codes taxe Sage différents -> 2 buckets distincts à 20 %, plus
+            // 14 (f1, code "3") et 10 (f2, code "02") = 4 groupes, pas 3.
+            Assert.Equal(4, dec.RecapsParTaux.Count); // 20/code1, 20/code2, 14, 10
+            Assert.Contains(dec.RecapsParTaux, r => r.Taux == 20 && r.CodeTaxe == "1");
+            Assert.Contains(dec.RecapsParTaux, r => r.Taux == 20 && r.CodeTaxe == "2");
             Assert.Contains(dec.RecapsParTaux, r => r.Taux == 14);
             Assert.Contains(dec.RecapsParTaux, r => r.Taux == 10);
 
