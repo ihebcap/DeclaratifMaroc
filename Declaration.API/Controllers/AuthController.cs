@@ -41,7 +41,8 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public IActionResult Login([FromBody] LoginRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrEmpty(request.Password))
+        var loginName = !string.IsNullOrWhiteSpace(request.Username) ? request.Username : request.Email;
+        if (string.IsNullOrWhiteSpace(loginName) || string.IsNullOrEmpty(request.Password))
             return Unauthorized(new { Message = "Identifiants invalides." });
 
         using var connection = _connectionFactory.CreateGrfConnection();
@@ -49,7 +50,7 @@ public class AuthController : ControllerBase
             @"SELECT UT_Id AS No, UT_Login AS Login, UT_Admin AS IsAdmin, UT_Actif AS IsActif,
                      UT_HASH AS Hash, UT_SALT AS Salt, UT_Nom AS Nom, UT_Prenom AS Prenom
               FROM P_UTILISATEUR WHERE UT_Login = @Login",
-            new { Login = request.Username });
+            new { Login = loginName });
 
         if (user == null || !user.IsActif)
             return Unauthorized(new { Message = "Identifiants invalides." });
@@ -99,7 +100,13 @@ public class AuthController : ControllerBase
 
 public class LoginRequest
 {
+    [Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ValidateNever]
     public string Username { get; set; } = "";
+
+    [Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ValidateNever]
+    public string Email { get; set; } = "";
+
+    [Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ValidateNever]
     public string Password { get; set; } = "";
 }
 

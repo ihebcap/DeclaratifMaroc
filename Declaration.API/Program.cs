@@ -34,7 +34,7 @@ builder.Configuration.AddJsonFile(
 builder.Host.UseWindowsService();
 
 // Controllers & Swagger
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

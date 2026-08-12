@@ -236,10 +236,14 @@ public class DeclarationRepository : IDeclarationRepository
         if (ids.Count == 0) return result;
 
         using var connection = _connectionFactory.CreatePersistenceConnection();
-        var rows = await connection.QueryAsync<int>(
-            "SELECT DISTINCT EC_Id FROM DM_VENTILATION_SAGE_CACHE WHERE SO_Id = @soId AND EC_Id IN @ecIds AND CodeTaxe = 'ERREUR'",
-            new { soId, ecIds = ids });
-        foreach (var r in rows) result.Add(r);
+        for (int i = 0; i < ids.Count; i += 1000)
+        {
+            var chunk = ids.Skip(i).Take(1000).ToList();
+            var rows = await connection.QueryAsync<int>(
+                "SELECT DISTINCT EC_Id FROM DM_VENTILATION_SAGE_CACHE WHERE SO_Id = @soId AND EC_Id IN @chunk AND CodeTaxe = 'ERREUR'",
+                new { soId, chunk });
+            foreach (var r in rows) result.Add(r);
+        }
         return result;
     }
 
@@ -1039,7 +1043,7 @@ public class DeclarationRepository : IDeclarationRepository
                 AF.AF_Montant AS AfMontant,
                 E.EC_Id       AS EcId,
                 E.EC_Type     AS EcType,
-                E.EC_Numero   AS EcNumero,
+                COALESCE(E.DO_Numero, CAST(E.EC_Id AS VARCHAR(50))) AS EcNumero,
                 E.EC_Montant  AS EcMontant,
                 E.DO_Domaine  AS DoDomaine
             FROM dbo.RT_AFFECTATION AF

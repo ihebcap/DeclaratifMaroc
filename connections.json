@@ -21,12 +21,12 @@
   },
 
   "WorkerConfig": {
-    "WorkerExePath": "D:\\_vibe\\GRF\\SageTaxReader\\SageTaxReader.Console\\bin\\Debug\\net48\\SageTaxReader.Console.exe"
+    "WorkerExePath": "D:\\_vibe\\GRF\\deploy\\workers\\v12\\SageTaxReader.Console.exe"
   },
 
   "_comment_ServerConfig": "TASK-115 : port d'ecoute Kestrel, saisi au formulaire de setup. Defaut 5000 si absent.",
   "ServerConfig": {
-    "Port": 5000
+    "Port": 5005
   },
 
   "_comment_ApLicence": "TASK-117 : adresse/port/timeout du serveur ApLicence.Server, saisis via Declaration.Setup (parametres de deploiement, varient par client). Le subject N'EST PLUS ICI (retire) -- il est fige en dur dans Declaration.API/Program.cs (anti-contournement, decision PO TASK-002/GRLicence 17/07/2026) : un fichier de config sur le poste client serait modifiable par quiconque y a acces disque. Un champ Subject laisse ici serait sans effet et pourrait induire en erreur.",
