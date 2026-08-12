@@ -626,8 +626,8 @@ function FicheDeclarationDelaiPaiement({ societeId, ddpId, showToast, onRetour }
     { field: 'tiers', headerName: 'Fournisseur', filter: 'agTextColumnFilter', valueGetter: (p) => p.data ? `${p.data.tiersCode || ''} · ${p.data.tiersIntitule || ''}` : '' },
     { field: 'identifiantFiscal', headerName: 'IF', width: 110, valueGetter: (p) => p.data?.tiersIdentifiantFiscal || '—' },
     { field: 'ice', headerName: 'ICE', width: 130, valueGetter: (p) => p.data?.tiersICE || '—' },
-    { field: 'montantPart', headerName: 'Montant', width: 120, type: 'numericColumn', valueGetter: (p) => p.data ? formatMoney(p.data.montantPart) : '' },
-    { field: 'depassementJours', headerName: 'Dépassement (j)', width: 130, type: 'numericColumn', valueGetter: (p) => p.data?.depassementJours ?? 0 },
+    { field: 'montantLigne', headerName: 'Montant', width: 120, type: 'numericColumn', valueGetter: (p) => p.data ? formatMoney(p.data.montantLigne) : '' },
+    { field: 'depassement', headerName: 'Dépassement (j)', width: 130, type: 'numericColumn', valueGetter: (p) => p.data?.depassement ?? 0 },
     {
       headerName: 'Action',
       width: 90,

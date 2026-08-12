@@ -1,5 +1,17 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-08-12 — TASK-215 : fix colonnes DDP « Montant »/« Dépassement (j) » à 0 (bug live signalé par le PO)
+
+Chez un client, l'écran ① Sélection DDP affichait `0,00 MAD` sur toutes les lignes alors que le total
+d'en-tête était correct. Cause : 4 `valueGetter` AG Grid (2 écrans) lisaient des champs JSON qui
+n'existent pas dans le contrat API (`montantPart`, `depassementJours`) au lieu des vrais champs du
+DTO (`montantLigne`, `depassement`) — masqué silencieusement par les fallbacks `|| 0`/`?? 0` du front
+au lieu de planter. Corrigé dans `ControleLignesDelaiPaiementPanel.tsx` et
+`DeclarationsDelaiPaiementPanel.tsx`. Vérification complémentaire : absence de déclarations DDP de
+l'ancien logiciel confirmée pour ce client (une seule base, historique GRF uniquement). Codé
+directement par Claude à la demande explicite du PO (dérogation ponctuelle). Voir
+`DONE_DETAIL/TASK-215-fix-champs-montant-depassement-inexistants-grilles-ddp.md`.
+
 ## 2026-08-09 — TASK-202 : refonte navigation clôturée sur scope réduit (décision PO)
 
 Le scope original (scission en 4 écrans stepper) avait été rejeté deux fois (cadrage 06/08/2026,
