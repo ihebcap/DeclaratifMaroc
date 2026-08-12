@@ -134,9 +134,9 @@ export function ConventionsDelaiPaiementPanel({ societeId, showToast }: {
     { field: 'tiersIntitule', headerName: 'Intitulé fournisseur', filter: 'agTextColumnFilter' },
     { field: 'type', headerName: 'Type', width: 110, filter: CustomListFilter, cellRenderer: (p: any) => p.data ? <TypeBadge type={p.data.type} /> : null },
     { field: 'numero', headerName: 'N° convention', width: 150 },
-    { field: 'periodeOuFacture', headerName: 'Dates / N° facture', width: 230, valueGetter: (p) => p.data ? (p.data.type === 'Facture' ? (p.data.numeroFacture || '—') : `${formatDate(p.data.dateDebut)} → ${formatDate(p.data.dateFin)}`) : '' },
-    { field: 'delai', headerName: 'Délai (j)', width: 90, type: 'numericColumn', valueGetter: (p) => p.data?.delaiJours ?? 0 },
-    { field: 'valide', headerName: 'Statut', width: 110, filter: CustomListFilter, cellRenderer: (p: any) => p.data ? <ValideBadge valide={p.data.estValide} /> : null },
+    { field: 'periodeOuFacture', headerName: 'Dates / N° facture', width: 230, valueGetter: (p) => p.data ? (p.data.type === 'Facture' ? (p.data.factureNumero || '—') : `${formatDate(p.data.dateDebut)} → ${formatDate(p.data.dateFin)}`) : '' },
+    { field: 'nombreJoursDelaisPaiement', headerName: 'Délai (j)', width: 90, type: 'numericColumn', valueGetter: (p) => p.data?.nombreJoursDelaisPaiement ?? 0 },
+    { field: 'valide', headerName: 'Statut', width: 110, filter: CustomListFilter, cellRenderer: (p: any) => p.data ? <ValideBadge valide={p.data.valide} /> : null },
     {
       field: 'piece',
       headerName: 'Pièce jointe',
@@ -168,7 +168,7 @@ export function ConventionsDelaiPaiementPanel({ societeId, showToast }: {
         if (!row) return null;
         return (
           <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', height: '100%' }} onClick={(e) => e.stopPropagation()}>
-            {row.estValide && row.type === 'Convention' && (
+            {row.valide && row.type === 'Convention' && (
               <button className="btn" style={btnStyle} onClick={() => setTerminerTarget(row)}>
                 Terminer
               </button>

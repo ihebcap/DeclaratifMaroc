@@ -1,5 +1,14 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-08-12 — TASK-216 : fix Statut « Expirée »/Délai à 0 sur l'écran Conventions (bug live signalé par le PO)
+
+Même famille de bug que TASK-215, sur un écran différent (`ConventionsDelaiPaiementPanel.tsx`) : la
+grille lisait des champs JSON inexistants (`estValide`, `delaiJours`, `numeroFacture`) au lieu des
+vrais champs du DTO (`valide`, `nombreJoursDelaisPaiement`, `factureNumero`) — 399 conventions
+affichées « Expirée » y compris celles valides jusqu'en 2029, bouton « Terminer » jamais affiché.
+Codé directement par Claude à la demande explicite du PO (dérogation ponctuelle). Voir
+`DONE_DETAIL/TASK-216-fix-champs-valide-delai-inexistants-grille-conventions.md`.
+
 ## 2026-08-12 — TASK-215 : fix colonnes DDP « Montant »/« Dépassement (j) » à 0 (bug live signalé par le PO)
 
 Chez un client, l'écran ① Sélection DDP affichait `0,00 MAD` sur toutes les lignes alors que le total
