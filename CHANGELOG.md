@@ -1,5 +1,44 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-08-09 — TASK-202 : refonte navigation clôturée sur scope réduit (décision PO)
+
+Le scope original (scission en 4 écrans stepper) avait été rejeté deux fois (cadrage 06/08/2026,
+retest réel 07/08/2026 avec 23/30 tests Playwright cassés). Lors de la session de correctifs directs
+du 09/08/2026 (dérogation PO), une nouvelle proposition de scission a été soumise deux fois et refusée
+explicitement par le PO (« je veux pas de gros chantier »). TASK-202 est clôturée sur la base de 4
+correctifs de densité vérifiés dans le code : onglets Achats/Ventes intégrés dans le `toolbarPrefix`
+de `DomainGrid`, code activité éditable en ligne dans la grille « Factures à déclarer », suppression
+de `AffectationsDrill.tsx` (doublon), correction du bug de cases à cocher dupliquées dans
+`DomainGrid.tsx`. Le scope structurel original (4 écrans, `drillFiltre` de `VerifierIntegrerPanel`,
+statut binaire backend) reste non réalisé, reporté à une itération ultérieure si requalifié en
+priorité par le PO. Voir `DONE_DETAIL/TASK-202-refonte-navigation-ecran-factures-recap.md` et
+`DONE_DETAIL/TASK-202_verify.md`.
+
+## 2026-08-09 — TASK-200 : écran ① Sélection vide par défaut clôturée (retest débloqué)
+
+Retest fonctionnel réel effectué après correction de la régression tierce qui le bloquait depuis
+le 07/08/2026 (double case à cocher AG Grid, `checkboxSelection` colDef legacy en collision avec
+`rowSelection` v36) — corrigée dans `ReglementsSelection.tsx` et `DomainGrid.tsx`. Parcours
+Playwright rejoué sur base réelle : écran vide par défaut, chargement sur clic « Intégrer »
+(129 règlements), zéro ligne pré-cochée. 7/7 critères de la TASK confirmés. Voir
+`DONE_DETAIL/TASK-200-ecran-selection-vide-par-defaut-bouton-integrer.md` et
+`DONE_DETAIL/TASK-200_verify.md`.
+
+## 2026-08-08 — TASK-204 : migration AG Grid Community validée après 9 rounds
+
+10 grilles migrées de composants maison vers AG Grid Community via `ApbsGrid.tsx`. Suite Playwright
+des 8 fichiers de test du périmètre AG Grid confirmée verte par 2 runs indépendants (8/8 passed,
+exit code 0). Dernier round : `task110.spec.ts` faisait échouer le process (exit code 1) via un
+`route.fetch()` encore en vol à la fin du test, malgré un reporter affichant "8 passed" — corrigé
+par `page.unrouteAll({ behavior: 'ignoreErrors' })`. Voir `DONE_DETAIL/TASK-204-migration-ag-grid-community.md`.
+
+## 2026-08-07 (nuit) — TASK-207 : fix régression `soId`/`societeId` (bug live signalé par le PO)
+
+`DeclarationList.tsx:133` envoyait `soId` au lieu de `societeId` à `GET /api/declarations`, cassant
+le chargement du dashboard pour tout utilisateur au login — régression introduite par le commit
+TASK-204 (`842f9ef`). Corrigé en une ligne, vérifié indépendamment (appel API direct, diff exact,
+aucun renommage collatéral). Voir `DONE_DETAIL/TASK-207-fix-parametre-soid-societeid-liste-declarations.md`.
+
 ## 2026-08-07 (soir) — retest réel sur base prod débloquée (`GR_EMA_DISTRIBUTION`), 6 VERIFY traités
 
 Accès SQL réel obtenu en cours de session (`DESKTOP-5BFKKEP`/`GR_EMA_DISTRIBUTION`), levant la

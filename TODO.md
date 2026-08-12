@@ -1,5 +1,30 @@
 # TODO — Module Déclaration TVA (GRF)
 
+## 🆕 TASK-211 — Écran de paramétrage société : login Sage + colonnes `F_COMPTET` (code activité, désignation document) (PO 09/08/2026)
+Socle pour TASK-212/213 : réutilise le login/mdp Sage déjà dynamique (`P_SOCIETE.SO_ErpUserApp`/
+`SO_ErpPasswdApp`, TASK-118) via un nouvel écran GRF, et stocke les 2 noms de colonnes `F_COMPTET`
+(code activité, désignation) dans une **nouvelle table dédiée GRF** (jamais dans `P_SOCIETE`,
+contrainte PO explicite déjà actée, `DeclarationTVA.sql:526-528`). Voir
+`TASKS/TASK-211-parametrage-societe-colonnes-fcomptet-login-sage.md`.
+
+## 🆕 TASK-212 — Code activité : remplacer `F_COMPTET.CT_APE` (en dur) par une colonne configurable par société (PO 09/08/2026, dépend de TASK-211)
+Rend configurable le niveau 2 de la cascade `CodeActiviteResolver`, aujourd'hui figé sur `CT_APE`
+(`SelectionExpliqueeService.cs:516-521`). À ne pas confondre avec le mécanisme distinct retiré par
+TASK-171/179 (colonne côté tiers, table winform). Voir
+`TASKS/TASK-212-code-activite-colonne-fcomptet-configurable.md`.
+
+## 🆕 TASK-213 — Désignation document : remplacer le placeholder fixe `<des>` par une colonne `F_COMPTET` configurable (PO 09/08/2026, dépend de TASK-211)
+Referme le point ouvert de TASK-181 (`Designation` jamais renseignée en amont, littéral fixe « Achat
+marchandise » en repli). Voir `TASKS/TASK-213-designation-document-colonne-fcomptet-configurable.md`.
+
+## 💡 IDÉE (non cadrée) — Tâche de nuit MCP : création automatique déclaration 02/2026 + détection/correction d'anomalies (PO 09/08/2026)
+Proposition PO en session : lancer une tâche planifiée (nuit, via MCP) qui crée la déclaration
+02/2026, détecte les anomalies (lignes non valorisées, écarts, codes activité manquants...) et tente
+de les corriger automatiquement. Non cadré : périmètre exact des corrections autorisées sans
+validation humaine, comportement si erreur/ambiguïté, traçabilité/log attendu, articulation avec les
+garde-fous existants (verrous OM, clôture, TASK-028/064). À transformer en TASK dûment cadrée avant
+implémentation — ne pas coder sans validation PO du périmètre.
+
 ## 🆕 TASK-206 — Action « Corriger la TVA » : saisie manuelle multi-taux sur une ligne intégrée (PO 07/08/2026)
 Cas réel factures de douane : la TVA lue depuis Sage n'est pas assise sur le HT facture (ex. HT=5 000,
 TVA=15 000). Décisions PO : action disponible sur **n'importe quelle** ligne intégrée (pas seulement
@@ -15,100 +40,33 @@ libre**, le garde-fou actuel (`montantTva > MontantAffecte`, `DeclarationWorkflo
 est **retiré**, pas étendu. Chaque bracket produit sa propre ligne. Voir
 `TASKS/TASK-205-solde-initial-plusieurs-taux.md`.
 
-## 🆕 TASK-204 — Migrer toutes les grilles vers AG Grid Community (PO 07/08/2026, précède TASK-201/202)
-Remplacer les grilles maison (`ExcelFilter`, `ColumnSelector`, virtualisation `@tanstack/react-virtual`)
-par AG Grid Community sur les 10 écrans qui les utilisent (`DomainGrid`, `ReglementsSelection`,
-`RapprochementInterrogation`, `AffectationsDrill`, `ControlGrid`, `DeclarationList`,
-`FactureInterrogation` + 3 écrans Délai de Paiement). Décisions : Community uniquement (pas
-d'Enterprise), migration des 10 écrans en une fois, export Excel client mutualisé via wrapper
-`xlsx` (déjà une dépendance). **Remplace TASK-201** (bug d'en-tête résolu nativement par AG Grid).
-**Précède TASK-202** (l'écran ② Factures à déclarer doit être construit directement en AG Grid,
-pas par extension de l'ancien `DomainGrid.tsx`). Package npm partagé (`@apbs/ui-grid`) discuté mais
-**hors périmètre** de cette TASK — décision transverse à formaliser séparément si confirmée. Voir
-`TASKS/TASK-204-migration-ag-grid-community.md`.
-
-> ❌ **REJETÉE de nouveau (07/08/2026, retest réel sur base prod `GR_EMA_DISTRIBUTION`)** — nettoyage
-> du code mort (`ExcelFilter.tsx`/`ColumnSelector.tsx`/`useColumnPrefs.ts`/`@tanstack/react-virtual`)
-> confirmé fait cette fois. Mais le retest fonctionnel réel désormais possible (accès SQL débloqué)
-> a été effectué par l'architecte et révèle une **régression réelle, pas seulement un manque de
-> preuve** : la pagination interne d'AG Grid injecte son propre `<input type="number">` (spinbutton
-> de page) qui **collisionne** avec le sélecteur générique `input[type="number"]` utilisé par le
-> parcours de création de déclaration (`declaration-tva-web/tests/declaration.spec.ts:30` et
-> l'helper partagé `creerDeclaration2026` de `task111.spec.ts` — probablement d'autres specs) :
-> `page.fill('input[type="number"]', '2026')` cible désormais en priorité l'input de pagination AG
-> Grid (non éditable), timeout 30s, le parcours de création de déclaration ne peut plus être testé
-> ni fiablement piloté au clavier. Suite Playwright complète rejouée : **23/30 tests échouent** contre
-> la vraie base. Deux régressions supplémentaires confirmées, propres à cette migration : (1)
-> `column-selector.spec.ts` — le masquage de colonne + persistance `localStorage['grf.cols.rapprochement']`
-> ne fonctionne plus (AG Grid a son propre mécanisme, jamais raccordé à l'ancienne clé) ; (2)
-> `task138.spec.ts` (alignement en-tête/lignes) — l'ancien sélecteur CSS (`.header-cell`/lignes) ne
-> trouve plus aucun en-tête (0 vs 9 colonnes), la structure DOM AG Grid n'a jamais été revalidée.
-> **Correction attendue avant nouvelle soumission** : (a) donner un identifiant stable (`id`/
-> `data-testid`) au champ année de création de déclaration pour lever la collision avec les contrôles
-> internes AG Grid ; (b) adapter ou retirer `column-selector.spec.ts` et `task138.spec.ts` pour
-> refléter la structure AG Grid réelle ; (c) rejouer la suite Playwright complète et fournir le
-> résultat dans le VERIFY (pas seulement `npm run build`). Voir
-> `IN_PROGRESS/TASK-204-migration-ag-grid-community.md` et `VERIFY/TASK-204_verify.md`.
-
-## 🆕 TASK-202 — Refonte navigation TVA : 4 écrans à responsabilité unique (PO 06/08/2026, remplace TASK-178)
-Le PO trouve l'écran ② « Vérifier & Intégrer » redondant et truffé d'écrans cachés (« Codes activité »
-et « Toutes les lignes / Resynchroniser » remplacent tout l'écran par `DomainGrid`, jamais visible par
-défaut). Cadrage arbitré en 2 rounds (06/08/2026) : ① Sélection inchangé ; ② nouvel écran persistant
-« Factures à déclarer » (actions en ligne fusionnées : resync, code activité, saisie TVA — statut de
-ligne devenu binaire Proposée/Intégrée, « Exclure »/« Reporter » retirés car redondants avec le fait de
-ne pas cocher le règlement en écran ①) ; ex-écran récap scindé en **③ Vérifier** (contrôles/anomalies,
-consultatif) et **④ Confirmer** (récap chiffré dédupliqué + bouton), le PO ayant jugé un seul écran
-« très compliqué » même sans doublons. **Remplace TASK-178**. Maquette détaillée (littérale, pas
-illustrative) : `TASKS/assets/TASK-202-maquette.html`. Voir
-`TASKS/TASK-202-refonte-navigation-ecran-factures-recap.md`.
-
-> ❌ **REJETÉE de nouveau (07/08/2026, retest réel sur base prod `GR_EMA_DISTRIBUTION`)** — points
-> précédents traités : (1) enveloppement de `DomainGrid.tsx` accepté (déjà 100% AG Grid depuis
-> TASK-204, plus de risque double-moteur) ; (2) `WorkstationPanel.tsx`/`mockServer.ts` supprimés
-> (confirmés morts) ; `EtatLigne.Exclue`/`Reportee`/`Ecartee` **conservés côté backend** sur décision
-> PO (07/08/2026) — logique de compatibilité de données historiques (`RevaliderLignesFigeesAsync`,
-> `GetCheckupAsync`) + 5 suites de tests en dépendent, suppression jugée hors bénéfice ; (3) point de
-> vigilance multi-facture correctement remonté, non résolu, accepté en l'état. **Mais le retest
-> fonctionnel réel désormais possible (accès SQL débloqué) révèle des régressions non détectées par
-> le seul build** : suite Playwright complète rejouée sur données réelles, 23/30 tests échouent, dont
-> au moins 3 directement liés à la navigation touchée par cette TASK et sans rapport avec la collision
-> AG Grid de TASK-204 : `task136.spec.ts` — l'entrée sidebar « Délai de paiement » n'est plus trouvée
-> du tout (`.sidebar-item:has-text("Délai de paiement")` introuvable) ; `task139.spec.ts` (cas B et C)
-> — le tableau `RecapSourceTable` (colonne « Écart ») ne s'affiche plus à l'écran ③ Vérifier
-> (`getByText('Écart')` introuvable, alors que ce test valide un comportement TASK-112/139 antérieur
-> non censé régresser) ; `task183.spec.ts` — navigation vers le drill Codes activité (fusionné dans
-> l'écran ②) time-out après 30s. **Correction attendue avant nouvelle soumission** : (a) expliquer
-> et corriger la disparition de l'entrée « Délai de paiement » ; (b) expliquer et corriger l'absence
-> du tableau « Écart » à l'étape ③ Vérifier ; (c) fiabiliser la navigation vers le drill Codes
-> activité depuis l'écran ② ; (d) rejouer la suite Playwright complète après correctifs et fournir
-> le résultat dans le VERIFY. Voir `IN_PROGRESS/TASK-202-refonte-navigation-ecran-factures-recap.md`
-> et `VERIFY/TASK-202_verify.md`.
-
 ## 🆕 TASK-201 — En-têtes de grille (écran ① Sélection + Rapprochement) : autoriser le retour à la ligne (PO 06/08/2026)
 Signalement PO (capture d'écran) : libellés d'en-tête forcés sur une seule ligne (`whiteSpace:
 'nowrap'`), se chevauchent avec les icônes de tri/filtre sur colonne étroite. Cause identifiée :
 `ReglementsSelection.tsx:571` et `RapprochementInterrogation.tsx:390`. Voir
 `TASKS/TASK-201-entete-grille-retour-a-la-ligne.md`.
 
-## 🆕 TASK-200 — Écran ① Sélection : liste vide par défaut + bouton « Intégrer » (PO 06/08/2026)
-Demande PO : l'écran ① Sélection (`ReglementsSelection.tsx`) charge et pré-coche automatiquement tous
-les règlements éligibles à l'ouverture ; le PO veut un écran vide par défaut, un bouton « Intégrer »
-déclenchant le calcul (filtré sur la période de la déclaration en cours, modifiable par l'utilisateur),
-puis une sélection 100 % manuelle — uniquement pour une déclaration **sans sélection déjà sauvegardée**.
-Décision PO confirmée : une déclaration existante avec des lignes déjà intégrées continue de s'afficher
-automatiquement (comportement actuel conservé, pas de bouton requis dans ce cas). Ajout/retrait de
-règlements après intégration restent inchangés (déjà possibles tant que non clôturée). Voir
-`TASKS/TASK-200-ecran-selection-vide-par-defaut-bouton-integrer.md`.
+> ⚠️ **À reconfirmer avant tout code** : le fichier TASK lui-même note ce statut comme remplacé par
+> TASK-204 (migration AG Grid, arbitrage PO 07/08/2026) — l'hypothèse était que AG Grid gère nativement
+> `wrapHeaderText`/`autoHeaderHeight` et ferait disparaître le bug sans correctif dédié. TASK-204 est
+> maintenant terminée et approuvée : à vérifier visuellement si le chevauchement persiste avant de
+> rouvrir cette TASK ou de la clore comme obsolète.
 
-> ⚠️ **TOUJOURS APPROUVÉE SOUS RÉSERVE (07/08/2026, mise à jour)** — code toujours conforme point par
-> point (écran vide par défaut, restauration gated sur sélection sauvegardée, aucune présélection
-> automatique, bouton « Intégrer »/« Rafraîchir » réutilisable). L'accès SQL réel a été débloqué
-> cette nuit et le retest fonctionnel exigé a été tenté, mais **bloqué par une régression tierce** :
-> le parcours de création de déclaration (prérequis pour exercer l'écran ① sur une déclaration
-> fraîche) échoue systématiquement à cause de la collision `input[type="number"]` introduite par
-> AG Grid (cf. **TASK-204 REJETÉE**, `declaration.spec.ts`/`task111.spec.ts`). Rien n'indique que
-> `ReglementsSelection.tsx` lui-même soit en cause. **Clôture toujours conditionnée au retest réel**,
-> mais désormais dépendante de la correction de TASK-204 pour être exécutable.
+## 🆕 TASK-208 — Filtres texte/nombre ignorés côté back sur `GET .../lignes` (`DomainGrid` + drills) (résidu TASK-183, 24/07/2026)
+Les filtres `factureNumero`/`tiers`/`montantHT`/`montantTVA`/`montantTTC` envoyés par `DomainGrid.tsx`
+sont silencieusement ignorés par `BuildLigneFilterWhere` (seuls `numeroRapprochement`/`source`/
+`tauxTVA`/`origine` fonctionnent réellement, TASK-067B) — affecte l'écran principal et les 4 kinds de
+drill. Voir `TASKS/TASK-208-filtres-drill-domaingrid-ignores-back.md`.
+
+## 🆕 TASK-209 — `Auth.tsx` : message « Serveur injoignable » affiché pour toute erreur, y compris 500 (résidu TASK-123, 19/07/2026)
+Message fixe trompeur qui avait retardé le diagnostic de TASK-123 — une vraie panne 500 s'affiche comme
+un problème de démarrage API ou d'identifiants incorrects. Voir
+`TASKS/TASK-209-message-erreur-generique-trompeur-auth.md`.
+
+## 🆕 TASK-210 — DDP : contrôle de chevauchement de période asymétrique (annuelle englobant des trimestrielles non détectée) (résidu TASK-132, 28/07/2026)
+`TrouverPeriodeEnConflit` ne détecte que le cas « existante englobe la nouvelle période » — le cas
+inverse (créer une annuelle alors que des trimestrielles existent déjà pour cet exercice) n'est jamais
+bloqué, reproduit tel quel du legacy. Voir `TASKS/TASK-210-asymetrie-controle-chevauchement-ddp.md`.
 
 ## 🗺️ ROADMAP — Afficher les Frais bancaires (et Dépenses) dans l'onglet Sélection (PO 05/08/2026, pas une TASK prête)
 Constat suite au diagnostic TASK-193/196/197 (frais bancaires) : l'onglet Sélection
@@ -598,6 +556,9 @@ TASK-155) avant de pouvoir livrer un cycle complet.
 > ⚠️ **Point ouvert non refermé** : la vraie source de désignation (`DM_LGTVA`/`LigneCandidate`,
 > `Designation` toujours `""` en amont) reste à trancher — ce placeholder n'est qu'un pis-aller assumé
 > par le PO en attendant cet arbitrage.
+> → **Tranché le 09/08/2026** : colonne `F_COMPTET` configurable par société. Voir
+> [TASK-213](TASKS/TASK-213-designation-document-colonne-fcomptet-configurable.md) (dépend de
+> [TASK-211](TASKS/TASK-211-parametrage-societe-colonnes-fcomptet-login-sage.md)).
 
 ## 🔐 Simplification `DeclarationTVA.sql` + exécution automatique par le setup (PO 19/07/2026)
 Décisions PO actées (session 19/07/2026) : (1) **retrait du login SQL dédié à moindre privilège**
@@ -708,7 +669,8 @@ production** :
    à 2 niveaux (TASK-134/136) ; modale partagée vs écran dédié pour la saisie de mise en route
    (TASK-134).
 5. **Asymétrie annuelle/trimestrielle du contrôle de chevauchement de déclarations** (TASK-132),
-   reproduite du legacy, non corrigée — documentée, non bloquante.
+   reproduite du legacy — transformée en task le 09/08/2026 :
+   [TASK-210](TASKS/TASK-210-asymetrie-controle-chevauchement-ddp.md).
 6. **`natureMarchandise`/`dateLivraisonMarchandise` toujours au fallback** (CDC §5.A-4, dette déjà
    assumée par TASK-133) — requalifiée en tâche planifiée le 28/07/2026 :
    [TASK-191](TASKS/TASK-191-cablage-nature-date-livraison-marchandise-ddp.md). Motivation PO : le module
