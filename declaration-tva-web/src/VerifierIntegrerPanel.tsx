@@ -566,7 +566,11 @@ export function VerifierIntegrerPanel({
     }, [checkup, selectedTab]);
 
     const hasAnyBloquant = useMemo(() => {
-        return (checkup?.alertes.filter(isBloquant) ?? []).length > 0;
+        const bloqs = checkup?.alertes.filter(isBloquant) ?? [];
+        if (bloqs.length > 0) {
+            console.log('BLOQUANT ALERTS:', JSON.stringify(bloqs));
+        }
+        return bloqs.length > 0;
     }, [checkup]);
 
     const hasBloquant = bloquants.length > 0;
@@ -1523,7 +1527,7 @@ function ChecklistCard({
                     </div>
                     {bloquants.map((a, i) => {
                         const hasDrill = !!(a.filtre && Object.keys(a.filtre).length > 0);
-                        const domaine = (a.domaine as DomaineTVA) || 'Décaissement';
+                        const domaine = (a.domaine as DomaineTVA) || 'Decaissement';
                         let displayMessage = a.message;
                         if (a.refLigne) {
                             if (a.message.includes("Ligne exclue :")) {
@@ -1590,7 +1594,7 @@ function ChecklistCard({
                     </button>
                     {avertissementsOuverts && avertissements.map((a, i) => {
                         const hasDrill = !!(a.filtre && Object.keys(a.filtre).length > 0);
-                        const domaine = (a.domaine as DomaineTVA) || 'Décaissement';
+                        const domaine = (a.domaine as DomaineTVA) || 'Decaissement';
                         let displayMessage = a.message;
                         if (a.refLigne) {
                             if (a.message.includes("Ligne exclue :")) {

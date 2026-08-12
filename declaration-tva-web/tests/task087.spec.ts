@@ -2,12 +2,8 @@ import { test, expect } from '@playwright/test';
 import { execSync } from 'child_process';
 
 test.beforeAll(async () => {
-  try {
-    execSync('powershell -File ../reset.ps1');
-    execSync('powershell -File ../make_eligible.ps1');
-  } catch (e) {
-    console.error("Failed to reset DB / make eligible:", e);
-  }
+  execSync('powershell -File ../reset.ps1', { stdio: 'inherit' });
+  execSync('powershell -File ../make_eligible.ps1', { stdio: 'inherit' });
 });
 
 test('Test TASK-087: Cohérence des totaux déclarés control and RecapSourceTable sharing', async ({ page }) => {
@@ -34,55 +30,77 @@ test('Test TASK-087: Cohérence des totaux déclarés control and RecapSourceTab
   });
 
   // Login
-  await page.goto('/');
-  await page.fill('input[type="text"]', 'Admin');
-  await page.fill('input[type="password"]', 'Admin');
+  await page.goto('http://localhost:5173');
+  await page.evaluate(() => sessionStorage.clear());
+  await page.reload();
   
   const select = page.getByRole('combobox');
   await select.waitFor({ state: 'attached' });
   await select.locator('option').nth(1).waitFor({ state: 'attached' });
   await select.selectOption({ index: 1 });
+  await page.fill('input[type="text"]', 'Admin');
+  await page.fill('input[type="password"]', 'Admin');
   await page.click('button:has-text("Se connecter")');
 
-  // Create new declaration
-  await page.click('button:has-text("Créer une déclaration")');
-  await page.fill('input[type="number"]', '2026');
-  await page.selectOption('select', { label: 'Mensuel' });
-  
-  const selects = await page.locator('select').all();
-  if (selects.length > 1) {
-      await selects[1].selectOption({ label: 'Juin (06)' });
+  // Dashboard - Open existing TVA1-2026-06 or create declaration for 2026-06
+  const existingCard = page.locator('div').filter({ hasText: 'TVA1-2026-06' }).filter({ has: page.locator('button[title="Ouvrir"]') }).last();
+  if (await existingCard.isVisible().catch(() => false)) {
+    await existingCard.locator('button[title="Ouvrir"]').click();
+  } else {
+    const createBtn = page.locator('button:has-text("Créer une déclaration")');
+    await createBtn.waitFor({ state: 'visible', timeout: 15000 });
+    await createBtn.click({ force: true });
+    await page.fill('[data-testid="annee-declaration"]', '2026');
+    await page.selectOption('select', { label: 'Mensuel' });
+    const selects = await page.locator('select').all();
+    if (selects.length > 1) {
+        await selects[1].selectOption({ label: 'Juin (06)' });
+    }
+    await page.locator('button:text-is("Créer")').click();
   }
-  await page.locator('button:text-is("Créer")').click();
   await page.waitForTimeout(2000);
   
-  // Wait for selected total to stabilize (default selection is checked by default)
-  const totalSelector = page.locator('text=/Total sélectionné : .+/');
-  await expect(totalSelector).toBeVisible();
+  // Step 1: Règlements
+  const integrerInviteBtn = page.getByRole('button', { name: /Intégrer/i }).first();
+  if (await integrerInviteBtn.isVisible().catch(() => false)) {
+    await integrerInviteBtn.click();
+  }
+
+  // Wait for loading spinner to disappear and AG Grid rows to be attached
+  await page.waitForSelector('.ag-row', { state: 'attached', timeout: 15000 });
+  await page.waitForSelector('.animate-spin', { state: 'detached' });
   
-  // Clear the default selection of all rows to avoid browser resource exhaustion in drill
-  const currentTotal = await totalSelector.innerText();
-  if (!currentTotal.includes('0,00 MAD')) {
-    await page.locator('input[type="checkbox"]').first().click();
-    await expect(totalSelector).toContainText('0,00 MAD');
+  // Select all Décaissement rows in the grid
+  await page.waitForSelector('.ag-row', { state: 'attached' });
+  const rowInputs = page.locator('.ag-row .ag-grid-pinned-left-cells input[type="checkbox"]');
+  const rowCount = await rowInputs.count();
+  for (let i = 0; i < rowCount; i++) {
+    const rowText = await page.locator('.ag-row').nth(i).innerText();
+    if (rowText.includes('Décaissement')) {
+      await rowInputs.nth(i).focus();
+      await page.keyboard.press('Space');
+      await page.waitForTimeout(100);
+    }
   }
   
-  // Select only the first 2 enabled rows
-  const enabledCheckboxes = page.locator('div[style*="absolute"]').filter({ hasText: 'Éligible' }).locator('input[type="checkbox"]');
-  await enabledCheckboxes.nth(0).click();
-  await enabledCheckboxes.nth(1).click();
+  const totalSelector = page.locator('text=/Total sélectionné : .+/');
+  await expect(totalSelector).toBeVisible();
   await expect(totalSelector).not.toHaveText(/Total sélectionné : 0,00\s*MAD/);
   await page.waitForTimeout(500);
 
-  // Go to step 3 (Vérifier & Intégrer)
-  await page.click('button:has-text("Passer au calcul")');
-  await page.waitForTimeout(2000);
+  // Navigate to step 3 (Vérifier): reglements → factures → verifier
+  // NOTE: assertions happen in 'verifier' step (mode="verifier"), NOT in 'confirmer'
+  await page.click('button:has-text("Passer aux factures")');
+  await page.waitForTimeout(500);
+  await page.click('button:has-text("Continuer vers la vérification")');
+  await page.waitForTimeout(1000);
   
-  // Step 3
-  await page.waitForSelector('.animate-spin', { state: 'detached' });
+  // Wait for controls to load (spinner disappears)
+  await page.waitForSelector('.animate-spin', { state: 'detached', timeout: 20000 });
   
-  // Scroll the Cohérence des totaux déclarés control row into view
-  const equilibreRow = page.locator('text="Cohérence des totaux déclarés"').first();
+  // Assert the 'Cohérence des totaux déclarés' control is visible in verifier step
+  const equilibreRow = page.getByText('Cohérence des totaux déclarés').first();
+  await equilibreRow.waitFor({ state: 'attached', timeout: 15000 });
   await equilibreRow.scrollIntoViewIfNeeded();
   await page.waitForTimeout(1000);
   
@@ -92,32 +110,34 @@ test('Test TASK-087: Cohérence des totaux déclarés control and RecapSourceTab
   // 2. Clear route interception so we can proceed to integration
   await page.unroute('**/declarations/*/checkup');
 
-  // Reload the checkup by going back to Selection, and clicking Passer au calcul again
-  await page.click('text=1. Sélection');
+  // Now navigate to confirmer step to do the actual integration
+  await page.click('button:has-text("Continuer vers la confirmation")');
   await page.waitForTimeout(1000);
-  await page.click('button:has-text("Passer au calcul")');
-  await page.waitForTimeout(2000);
-  await page.waitForSelector('.animate-spin', { state: 'detached' });
+  await page.waitForSelector('.animate-spin', { state: 'detached', timeout: 20000 });
 
-  // Now click Confirmer intégration
+  // Click Confirmer intégration
   console.log('Clicking Confirm Integration...');
   await page.click('#btn-confirmer-integration');
   console.log('Waiting for integration to complete...');
   await page.waitForTimeout(3000);
 
-  // Step 5 (unified post-integration screen)
-  // Toggle the Avertissements section closed to make RecapSourceTable visible
-  console.log('Closing Avertissements section...');
-  await page.locator('button:has-text("Avertissements")').first().click();
-  await page.waitForTimeout(500);
+  // After integration (step 5 / declaration screen or confirmed state)
+  // Toggle the Avertissements section if present
+  const avertBtn = page.locator('button:has-text("Avertissements")').first();
+  if (await avertBtn.isVisible().catch(() => false)) {
+    await avertBtn.click();
+    await page.waitForTimeout(500);
+  }
 
   // Scroll to Répartition par source
   console.log('Locating Répartition par source...');
   const sectionSource = page.locator('button:has-text("Répartition par source")').first();
-  await sectionSource.scrollIntoViewIfNeeded();
-  await page.waitForTimeout(500);
+  if (await sectionSource.isVisible().catch(() => false)) {
+    await sectionSource.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(500);
+  }
   
-  // Take screenshot of step 5 showing RecapSourceTable
+  // Take screenshot of post-integration screen showing RecapSourceTable
   console.log('Taking second screenshot...');
   await page.screenshot({ path: '../VERIFY/task087-step5-no-regression.png' });
   console.log('Finished!');

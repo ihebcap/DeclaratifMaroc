@@ -1,5 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* AG Grid : l'en-tête peut passer à la ligne entre mots (ex. "Rappr. banque"), mais jamais
+   couper un mot seul en deux (ex. "Point" -> "Poin"/"t") faute de largeur suffisante. */
+.ag-theme-alpine .ag-header-cell-text {
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
 :root {
   --bg-primary: #f5f7fa; /* Very light gray/blue for main background */
   --bg-secondary: #ffffff; /* White for cards */

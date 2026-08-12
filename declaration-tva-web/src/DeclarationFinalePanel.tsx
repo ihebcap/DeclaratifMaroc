@@ -700,7 +700,7 @@ function AnomalieRow({
 }) {
     const isBloquant = alerte.type === 'bloquant';
     const hasDrill = !!(alerte.filtre && Object.keys(alerte.filtre).length > 0);
-    const domaine = (alerte.domaine as DomaineTVA) || 'Décaissement';
+    const domaine = (alerte.domaine as DomaineTVA) || 'Decaissement';
 
     return (
         <div style={{

@@ -42,12 +42,13 @@ async function mockLignes(page: Page) {
 // coïncident (à 1px près) avec ceux de la cellule de la 1re ligne. C'est la preuve mesurée de
 // l'alignement, indépendante de toute lecture de code.
 async function assertAlignment(page: Page) {
-  const headers = page.getByRole('columnheader');
-  const firstRow = page.getByRole('row').filter({ has: page.getByRole('cell') }).first();
-  const cells = firstRow.getByRole('cell');
+  const headers = page.locator('.ag-header-cell:visible, [role="columnheader"]');
+  const firstRow = page.locator('.ag-center-cols-container .ag-row, .ag-row').first();
+  const cells = firstRow.locator('.ag-cell:visible, [role="cell"]');
 
   const nH = await headers.count();
   const nC = await cells.count();
+  expect(nH, 'même nombre de colonnes en-tête / corps').toBeGreaterThan(0);
   expect(nH, 'même nombre de colonnes en-tête / corps').toBe(nC);
 
   for (let i = 0; i < nH; i++) {
@@ -77,7 +78,7 @@ test('TASK-138 ② mode readonly (drill TVA1-2026-01, cas PO) — alignement en-
   await assertAlignment(page);
 
   // Non-régression TASK-110 : motif long tronqué (title complet), cellule bornée (pas de débordement).
-  const motifCell = page.getByRole('cell').filter({ hasText: 'Incohérence Sage' }).first();
+  const motifCell = page.locator('.ag-cell, [role="cell"]').filter({ hasText: 'Incohérence Sage' }).first();
   await expect(motifCell).toBeVisible();
   const box = await motifCell.boundingBox();
   expect(box!.width, 'colonne Motif bornée (~280px)').toBeLessThan(400);

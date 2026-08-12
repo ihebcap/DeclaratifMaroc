@@ -7,12 +7,11 @@ import api from './api';
 import { DeclarationFinalePanel } from './DeclarationFinalePanel';
 import { ReglementsSelection, periodeBounds } from './ReglementsSelection';
 import type { ReglementRow } from './ReglementsSelection';
-import { AffectationsDrill } from './AffectationsDrill';
 import { VerifierIntegrerPanel } from './VerifierIntegrerPanel';
 import { FacturesADeclarerPanel } from './FacturesADeclarerPanel';
 import { formatMoney, formatDate } from './utils';
 
-export type DomaineTVA = 'Décaissement' | 'Encaissement' | 'Dépense' | 'Frais bancaire';
+export type DomaineTVA = 'Decaissement' | 'Encaissement' | 'Dépense' | 'Frais bancaire';
 
 type StepId = 'reglements' | 'factures' | 'verifier' | 'confirmer' | 'declaration';
 
@@ -41,11 +40,10 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
     const [activeStep, setActiveStep] = useState<StepId>('reglements');
     const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
     const [selectedRows, setSelectedRows] = useState<ReglementRow[]>([]);
-    const [showDrill, setShowDrill] = useState(false);
     const [savedSelection, setSavedSelection] = useState<string[] | null>(null);
 
     const [facturesFilters, setFacturesFilters] = useState<Record<string, any> | undefined>(undefined);
-    const [facturesDomaine, setFacturesDomaine] = useState<DomaineTVA>('Décaissement');
+    const [facturesDomaine, setFacturesDomaine] = useState<DomaineTVA>('Decaissement');
 
     const fetchInfo = async () => {
         try {
@@ -79,23 +77,6 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
         try {
             await persisterSelection();
             goTo('factures');
-        } catch (e: any) {
-            console.error(e);
-            showToast(e?.response?.data?.message || 'Erreur lors de la sauvegarde de la sélection', 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleOuvrirDrill = async () => {
-        if (integree) {
-            setShowDrill(true);
-            return;
-        }
-        setLoading(true);
-        try {
-            await persisterSelection();
-            setShowDrill(true);
         } catch (e: any) {
             console.error(e);
             showToast(e?.response?.data?.message || 'Erreur lors de la sauvegarde de la sélection', 'error');
@@ -139,18 +120,6 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
             </span>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button
-                    onClick={handleOuvrirDrill}
-                    disabled={(!hasSelection && !integree) || loading}
-                    className="btn"
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        background: 'white', color: 'var(--text-primary)', border: '1px solid var(--border-color)',
-                        padding: '0.5rem 1rem', borderRadius: '4px', cursor: (!hasSelection && !integree) ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: '0.875rem',
-                    }}
-                >
-                    Détail des lignes
-                </button>
-                <button
                     onClick={handlePasserAuCalcul}
                     disabled={(!hasSelection && !integree) || loading}
                     className="btn btn-primary"
@@ -186,34 +155,6 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
             )}
         </div>
     );
-
-    if (showDrill) {
-        return (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-primary)' }}>
-                {integree && (
-                    <div style={{ padding: '0.5rem 1.5rem', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', color: 'var(--status-ok-text)', fontSize: '0.8125rem', fontWeight: 500, flexShrink: 0 }}>
-                        Déclaration intégrée — drill en lecture (lecture seule).
-                    </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'white', flexShrink: 0 }}>
-                    <button onClick={() => setShowDrill(false)} className="btn" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.4rem 0.8rem', fontSize: '0.8125rem', cursor: 'pointer', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'white' }}>
-                        <ChevronLeft size={16} /> Retour à la sélection
-                    </button>
-                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginLeft: '1rem' }}>
-                        Détail des affectations — {info.numero}
-                    </span>
-                </div>
-                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                    <AffectationsDrill
-                        declarationId={declarationId}
-                        selectedRows={selectedRows}
-                        readOnly={readOnlyStep}
-                        showToast={showToast}
-                    />
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-primary)' }}>

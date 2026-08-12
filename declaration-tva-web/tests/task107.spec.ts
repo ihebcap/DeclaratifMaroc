@@ -13,63 +13,79 @@ import { execSync } from 'child_process';
 // déclaration (lecture seule, retour possible).
 
 test.beforeAll(async () => {
-  try {
-    execSync('powershell -File ../reset.ps1');
-    execSync('powershell -File ../make_eligible.ps1');
-  } catch (e) {
-    console.error('Failed to reset DB / make eligible:', e);
-  }
+  execSync('powershell -File ../reset.ps1', { stdio: 'inherit' });
+  execSync('powershell -File ../make_eligible.ps1', { stdio: 'inherit' });
 });
 
 test('Test TASK-107: drill par source vers les factures/règlements réels', async ({ page }) => {
   page.on('console', msg => console.log('BROWSER:', msg.text()));
 
   // Login
-  await page.goto('/');
-  await page.fill('input[type="text"]', 'Admin');
-  await page.fill('input[type="password"]', 'Admin');
-
+  await page.goto('http://localhost:5173');
+  await page.evaluate(() => sessionStorage.clear());
+  await page.reload();
+  
   const select = page.getByRole('combobox');
   await select.waitFor({ state: 'attached' });
   await select.locator('option').nth(1).waitFor({ state: 'attached' });
   await select.selectOption({ index: 1 });
+  await page.fill('input[type="text"]', 'Admin');
+  await page.fill('input[type="password"]', 'Admin');
   await page.click('button:has-text("Se connecter")');
 
-  // Create new declaration (Juin 2026 — période marquée éligible par make_eligible.ps1)
-  await page.click('button:has-text("Créer une déclaration")');
-  await page.fill('input[type="number"]', '2026');
-  await page.selectOption('select', { label: 'Mensuel' });
-
-  const selects = await page.locator('select').all();
-  if (selects.length > 1) {
-    await selects[1].selectOption({ label: 'Juin (06)' });
+  // Dashboard - Open existing TVA1-2026-06 or create declaration for 2026-06
+  const existingCard = page.locator('div').filter({ hasText: 'TVA1-2026-06' }).filter({ has: page.locator('button[title="Ouvrir"]') }).last();
+  if (await existingCard.isVisible().catch(() => false)) {
+    await existingCard.locator('button[title="Ouvrir"]').click();
+  } else {
+    const createBtn = page.locator('button:has-text("Créer une déclaration")');
+    await createBtn.waitFor({ state: 'visible', timeout: 15000 });
+    await createBtn.click({ force: true });
+    await page.fill('[data-testid="annee-declaration"]', '2026');
+    await page.selectOption('select', { label: 'Mensuel' });
+    const selects = await page.locator('select').all();
+    if (selects.length > 1) {
+        await selects[1].selectOption({ label: 'Juin (06)' });
+    }
+    await page.locator('button:text-is("Créer")').click();
   }
-  await page.locator('button:text-is("Créer")').click();
   await page.waitForTimeout(2000);
+  
+  // Step 1: Règlements
+  const integrerInviteBtn = page.getByRole('button', { name: /Intégrer/i }).first();
+  if (await integrerInviteBtn.isVisible().catch(() => false)) {
+    await integrerInviteBtn.click();
+  }
 
+  // Wait for loading spinner to disappear and AG Grid rows to be attached
+  await page.waitForSelector('.ag-row', { state: 'attached', timeout: 15000 });
+  await page.waitForSelector('.animate-spin', { state: 'detached' });
+  
+  // Select all Décaissement rows in the grid
+  await page.waitForSelector('.ag-row', { state: 'attached' });
+  const rowInputs = page.locator('.ag-row .ag-grid-pinned-left-cells input[type="checkbox"]');
+  const rowCount = await rowInputs.count();
+  for (let i = 0; i < rowCount; i++) {
+    const rowText = await page.locator('.ag-row').nth(i).innerText();
+    if (rowText.includes('Décaissement')) {
+      await rowInputs.nth(i).focus();
+      await page.keyboard.press('Space');
+      await page.waitForTimeout(100);
+    }
+  }
+  
   const totalSelector = page.locator('text=/Total sélectionné : .+/');
   await expect(totalSelector).toBeVisible();
-
-  // Décoche tout, puis sélectionne plusieurs lignes réellement éligibles (multi-pièces)
-  const currentTotal = await totalSelector.innerText();
-  if (!currentTotal.includes('0,00 MAD')) {
-    await page.locator('input[type="checkbox"]').first().click();
-    await expect(totalSelector).toContainText('0,00 MAD');
-  }
-
-  const enabledCheckboxes = page.locator('div[style*="absolute"]').filter({ hasText: 'Éligible' }).locator('input[type="checkbox"]');
-  const nbEligibles = await enabledCheckboxes.count();
-  const nbASelectionner = Math.min(5, nbEligibles);
-  for (let i = 0; i < nbASelectionner; i++) {
-    await enabledCheckboxes.nth(i).click();
-  }
   await expect(totalSelector).not.toHaveText(/Total sélectionné : 0,00\s*MAD/);
   await page.waitForTimeout(500);
 
-  // Étape ③ Vérifier & Intégrer
-  await page.click('button:has-text("Passer au calcul")');
-  await page.waitForTimeout(2000);
-  await page.waitForSelector('.animate-spin', { state: 'detached' });
+  // Navigate to verifier step: reglements → factures → verifier
+  // IMPORTANT: ChecklistCard (controls + recapIncoherence table) is only in 'verifier' step
+  await page.click('button:has-text("Passer aux factures")');
+  await page.waitForTimeout(500);
+  await page.click('button:has-text("Continuer vers la vérification")');
+  await page.waitForTimeout(1000);
+  await page.waitForSelector('.animate-spin', { state: 'detached', timeout: 20000 });
 
   // Force l'affichage du détail d'écart (jeu de lignes valorisées RÉEL, seuls `equilibre` et
   // `recapIncoherence` sont forcés) — permet de démontrer le drill même quand TASK-108 a rendu
@@ -89,20 +105,23 @@ test('Test TASK-107: drill par source vers les factures/règlements réels', asy
     await route.fulfill({ json });
   });
 
-  // Recharge le checkup avec l'interception active
+  // Recharge le checkup avec l'interception active — go back to selection, then return to verifier
   await page.click('text=1. Sélection');
   await page.waitForTimeout(500);
-  await page.click('button:has-text("Passer au calcul")');
-  await page.waitForTimeout(1500);
-  await page.waitForSelector('.animate-spin', { state: 'detached' });
+  await page.click('button:has-text("Passer aux factures")');
+  await page.waitForTimeout(500);
+  await page.click('button:has-text("Continuer vers la vérification")');
+  await page.waitForTimeout(1000);
+  await page.waitForSelector('.animate-spin', { state: 'detached', timeout: 20000 });
 
-  const equilibreRow = page.locator('text="Cohérence des totaux déclarés"').first();
+  // 'Cohérence des totaux déclarés' is in the ChecklistCard visible in verifier mode
+  const equilibreRow = page.getByText('Cohérence des totaux déclarés').first();
+  await equilibreRow.waitFor({ state: 'attached', timeout: 15000 });
   await equilibreRow.scrollIntoViewIfNeeded();
-  await expect(page.locator('text=/Écart détecté/')).toBeVisible();
+  await expect(page.getByText('Écart détecté', { exact: false }).first()).toBeVisible();
 
   // Le tableau des lignes incohérentes est visible sous le contrôle en écart (table identifiée
-  // par son en-tête « Écart », distincte de la table « Sous-totaux par taux ») — TASK-112 :
-  // remplace l'axe Source (tautologique) par l'axe qui compose réellement l'écart.
+  // par son en-tête « Écart », distincte de la table « Sous-totaux par taux »)
   const recapIncoherenceTable = page.locator('table').filter({ has: page.locator('th', { hasText: 'Écart' }) });
   const incoherenteRow = recapIncoherenceTable.locator('tbody tr').first();
   await expect(incoherenteRow).toBeVisible();
@@ -116,8 +135,7 @@ test('Test TASK-107: drill par source vers les factures/règlements réels', asy
   await expect(page.locator('text=Drill écart :')).toBeVisible();
   await expect(page.locator('text=Lignes incohérentes (TTC ≠ HT+TVA)')).toBeVisible();
 
-  // La grille filtrée doit exposer un total de résultats (traçabilité honnête : même à 0,
-  // le compteur reste visible et explicite — jamais une grille muette)
+  // La grille filtrée doit exposer un total de résultats
   await expect(page.locator('text=/Total résultats : \\d+/')).toBeVisible();
   await page.screenshot({ path: '../VERIFY/task107-step3-drill-source.png' });
 
@@ -126,8 +144,9 @@ test('Test TASK-107: drill par source vers les factures/règlements réels', asy
 
   // Retour au contrôle — aucune action de figeage n'a eu lieu (lecture seule)
   await page.click('button:has-text("Retour au contrôle")');
-  await expect(page.locator('text="Cohérence des totaux déclarés"').first()).toBeVisible();
-  await expect(page.locator('#btn-confirmer-integration')).toBeVisible();
+  await expect(page.getByText('Cohérence des totaux déclarés').first()).toBeVisible();
+  // In verifier mode there's a "Continuer vers la confirmation" button, not #btn-confirmer-integration
+  await expect(page.locator('button:has-text("Continuer vers la confirmation")')).toBeVisible();
 
   console.log('Finished!');
 });

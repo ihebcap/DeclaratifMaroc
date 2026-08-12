@@ -269,19 +269,7 @@ function ListeDeclarationsDelaiPaiement({ societeId, showToast, onOuvrir }: {
         </div>
       </div>
 
-      <div style={{ padding: '0.4rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
-          <span>Déclarations : <strong>{visibleRows.length}</strong> / {rows.length}</span>
-        </div>
-        {Object.keys(filters).length > 0 && (
-          <button className="btn" onClick={() => setFilters({})} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0, fontSize: '0.8rem', cursor: 'pointer' }}>
-            Effacer filtres ({Object.keys(filters).length})
-          </button>
-        )}
-      </div>
-
-      <div style={{ flexGrow: 1, position: 'relative' }}>
+      <div style={{ flexGrow: 1, minHeight: 0, position: 'relative', padding: '0.4rem 1rem' }}>
         <ApbsGrid
           rowData={rows}
           columnDefs={columnDefsList}
@@ -290,6 +278,17 @@ function ListeDeclarationsDelaiPaiement({ societeId, showToast, onOuvrir }: {
           showColumnSelector={true}
           showExportButton={true}
           exportFileName="declarations_ddp.xlsx"
+          toolbarLeft={
+            <>
+              {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
+              <span>Déclarations : <strong>{visibleRows.length}</strong> / {rows.length}</span>
+              {Object.keys(filters).length > 0 && (
+                <button className="btn" onClick={() => setFilters({})} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0, fontSize: '0.8rem', cursor: 'pointer' }}>
+                  Effacer filtres ({Object.keys(filters).length})
+                </button>
+              )}
+            </>
+          }
         />
       </div>
 
@@ -862,7 +861,7 @@ function FicheDeclarationDelaiPaiement({ societeId, ddpId, showToast, onRetour }
       )}
 
       {/* Lignes intégrées */}
-      <div style={{ flexGrow: 1, position: 'relative' }}>
+      <div style={{ flexGrow: 1, minHeight: 0, position: 'relative', padding: '0.4rem 1rem' }}>
         <ApbsGrid
           rowData={lignes}
           columnDefs={columnDefsLignes}

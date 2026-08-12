@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { ColDef, GridApi, GridReadyEvent } from 'ag-grid-community';
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
+import type { ColDef, FilterChangedEvent, GridApi, GridReadyEvent } from 'ag-grid-community';
 import { ApbsGrid } from './grid/ApbsGrid';
 import { CustomListFilter } from './grid/CustomListFilter';
+import { agFilterModelToLegacy } from './grid/agGridFilterModel';
 import { formatMoney } from './utils';
 import api from './api';
 import { Loader2, CheckSquare, RefreshCw, Calculator, X } from 'lucide-react';
@@ -82,7 +83,8 @@ export function DomainGrid({
     columns,
     colsStorageKey: _colsStorageKey,
     codeActiviteOptions,
-    showResynchroniserAction
+    showResynchroniserAction,
+    toolbarPrefix
 }: {
     declarationId: string,
     domaine?: DomaineTVA,
@@ -94,7 +96,9 @@ export function DomainGrid({
     columns?: { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date', width?: string, derived?: boolean, editable?: boolean }[],
     colsStorageKey?: string,
     codeActiviteOptions?: { value: string, label: string }[],
-    showResynchroniserAction?: boolean
+    showResynchroniserAction?: boolean,
+    /** Contenu (ex. onglets Achats/Ventes) affiché en tout premier dans la barre d'outils, avant "Sélectionnées". */
+    toolbarPrefix?: ReactNode
 }) {
     const [data, setData] = useState<any[]>([]);
     const [total, setTotal] = useState(0);
@@ -108,6 +112,16 @@ export function DomainGrid({
 
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [selectAllFilters, setSelectAllFilters] = useState(false);
+
+    // Mise à jour directe d'une seule clé de `filters`, sans dépendre du cycle AG Grid
+    // filterChangedCallback → onFilterChanged → getFilterModel() (cf. CustomListFilter).
+    const setColumnFilter = useCallback((key: string, values: string[]) => {
+        setFilters(prev => {
+            const next = { ...prev };
+            if (values.length > 0) next[key] = values; else delete next[key];
+            return next;
+        });
+    }, []);
 
     const size = 100;
     const ligneEcart = (row: any) => Number(row?.montantHT || 0) + Number(row?.montantTVA || 0) - Number(row?.montantTTC || 0);
@@ -330,17 +344,10 @@ export function DomainGrid({
     };
 
     const columnDefs: ColDef[] = useMemo(() => {
+        // La case à cocher est rendue par `rowSelection.checkboxes` (API v36, cf. ApbsGrid ci-dessous)
+        // sur la première colonne — une colonne dédiée `checkboxSelection` (ancienne API) en plus
+        // produisait DEUX cases à cocher côte à côte (l'ancienne et celle injectée par rowSelection).
         const defs: ColDef[] = [];
-        if (!readonly) {
-            defs.push({
-                headerCheckboxSelection: true,
-                checkboxSelection: true,
-                width: 50,
-                pinned: 'left',
-                suppressHeaderMenuButton: true,
-                resizable: false,
-            });
-        }
 
         gridColumns.forEach((col) => {
             const isNumeric = ['montantHT', 'montantTVA', 'montantTTC', 'tauxTVA', 'ecart'].includes(col.key);
@@ -354,7 +361,8 @@ export function DomainGrid({
                 type: isNumeric ? 'numericColumn' : undefined,
                 filter: col.derived ? false : CustomListFilter,
                 filterParams: {
-                    options: (distincts[col.key] || []).map(v => ({ label: v, value: v }))
+                    options: (distincts[col.key] || []).map(v => ({ label: v, value: v })),
+                    onSelectionChange: (values: string[]) => setColumnFilter(col.key, values),
                 },
                 cellRenderer: (p: any) => {
                     const row = p.data;
@@ -402,27 +410,26 @@ export function DomainGrid({
         if (showResynchroniserAction) {
             defs.push({
                 headerName: 'Actions',
-                width: 250,
+                width: 90,
                 pinned: 'right',
                 suppressHeaderMenuButton: true,
                 cellRenderer: (p: any) => {
                     const row = p.data;
                     if (!row) return null;
                     return (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', height: '100%' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', height: '100%' }} onClick={(e) => e.stopPropagation()}>
                             {row.ecId > 0 && estSoldeInitialASaisir(row.motif) && (
                                 <button
                                     onClick={() => setSoldeInitialTarget(row)}
                                     title="Saisir le taux et le montant de TVA pour intégrer ce solde initial à la déclaration"
                                     style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                                        padding: '2px 9px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600,
+                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                        width: '22px', height: '22px', borderRadius: '6px',
                                         cursor: 'pointer', background: 'var(--accent-primary)', border: '1px solid var(--accent-primary)',
-                                        color: 'white', whiteSpace: 'nowrap',
+                                        color: 'white', flexShrink: 0,
                                     }}
                                 >
                                     <Calculator size={12} />
-                                    Saisir TVA
                                 </button>
                             )}
                             {row.ecId > 0 && (
@@ -431,15 +438,14 @@ export function DomainGrid({
                                     disabled={resynchronisant.has(row.id)}
                                     title="Relire cette ligne depuis Sage (ex. après correction d'un montant sur Sage)"
                                     style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                                        padding: '2px 9px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600,
+                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                        width: '22px', height: '22px', borderRadius: '6px',
                                         cursor: resynchronisant.has(row.id) ? 'default' : 'pointer',
                                         background: resynchronisant.has(row.id) ? 'var(--bg-secondary)' : 'white',
-                                        border: '1px solid var(--border-color)', color: 'var(--text-primary)', whiteSpace: 'nowrap',
+                                        border: '1px solid var(--border-color)', color: 'var(--text-primary)', flexShrink: 0,
                                     }}
                                 >
                                     <RefreshCw size={12} className={resynchronisant.has(row.id) ? 'animate-spin' : undefined} />
-                                    Resynchroniser
                                 </button>
                             )}
                         </div>
@@ -449,7 +455,16 @@ export function DomainGrid({
         }
 
         return defs;
-    }, [gridColumns, readonly, codeActiviteOptions, distincts, showResynchroniserAction, resynchronisant]);
+    }, [gridColumns, readonly, codeActiviteOptions, distincts, showResynchroniserAction, resynchronisant, setColumnFilter]);
+
+    // Écran server-side (pagination) : les filtres d'en-tête AG Grid doivent alimenter `filters`
+    // (state qui construit la requête, cf. fetchPage) plutôt que de ne filtrer que la page chargée.
+    // Garde-fou anti-boucle : agFilterModelToLegacy recrée un objet à chaque appel ; sans
+    // comparaison de contenu, un filterChanged réémis sans changement réel relance fetchPage en boucle.
+    const handleFilterChanged = useCallback((event: FilterChangedEvent) => {
+        const next = agFilterModelToLegacy(event.api.getFilterModel());
+        setFilters(prev => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+    }, []);
 
     const totalPages = Math.ceil(total / size);
     const nbSansCodeActivitePage = data.filter(r => !((r as unknown as Record<string, string>).codeActivite ?? '').trim()).length;
@@ -457,102 +472,98 @@ export function DomainGrid({
     return (
         <div style={{ background: 'white', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
 
-            {/* Toolbar */}
-            <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    {!readonly && (
-                        <>
-                            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                                Sélectionnées : {selectAllFilters ? total : selectedIds.size}
-                            </span>
-                            {(selectedIds.size > 0 || selectAllFilters) && (
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <button title="Ces lignes seront COMPTÉES dans la TVA de cette déclaration." onClick={() => doBulkAction('Intégrée')} className="btn" style={{ background: 'var(--status-ok-bg)', color: 'var(--status-ok-text)', border: '1px solid #bbf7d0', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><CheckSquare size={14}/> Intégrer</button>
-                                    <button title="Annule la décision manuelle : ces lignes repassent à l'état proposé par l'application." onClick={() => doBulkAction('Proposée')} className="btn" style={{ background: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>Réinitialiser</button>
-                                    {showResynchroniserAction && (
-                                        <button onClick={doBulkResynchroniser} disabled={resynchroMasseEnCours} className="btn" style={{ background: 'white', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', padding: '0.25rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}><RefreshCw size={14} className={resynchroMasseEnCours ? 'animate-spin' : ''}/> {resynchroMasseEnCours ? 'Resynchronisation…' : 'Resynchroniser la sélection'}</button>
-                                    )}
-                                </div>
-                            )}
-                            {codeActiviteOptions && (selectedIds.size > 0 || selectAllFilters) && (
-                                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', borderLeft: '1px solid var(--border-color)', paddingLeft: '0.75rem' }}>
-                                    <select
-                                        value={codeActiviteMasse}
-                                        onChange={(e) => setCodeActiviteMasse(e.target.value)}
-                                        style={{ fontSize: '0.75rem', padding: '0.2rem' }}
-                                    >
-                                        <option value="">Affecter un code activité…</option>
-                                        {codeActiviteOptions.map(o => (
-                                            <option key={o.value} value={o.value}>{o.label}</option>
-                                        ))}
-                                    </select>
-                                    <button
-                                        onClick={doBulkCodeActivite}
-                                        disabled={!codeActiviteMasse || affectationEnCours}
-                                        className="btn"
-                                        style={{ background: 'white', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}
-                                    >
-                                        {affectationEnCours ? 'Affectation…' : 'Affecter'}
-                                    </button>
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem' }}>
-                    {loading && <Loader2 size={16} className="animate-spin text-primary" />}
-                    <span>Total résultats : <strong>{total}</strong></span>
-                    {Object.keys(filters).length > 0 && (
-                        <button className="btn" onClick={() => setFilters({})} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0 }}>
-                            Effacer filtres
-                        </button>
-                    )}
-                </div>
-            </div>
-
             {codeActiviteOptions && !readonly && nbSansCodeActivitePage > 0 && (
-                <div style={{ padding: '0.5rem 1rem', background: '#fffbeb', color: 'var(--status-warning-text-alt, #92400e)', borderBottom: '1px solid var(--status-warning-border, #fde68a)', fontSize: '0.8rem', fontWeight: 600 }}>
-                    ⚠ {nbSansCodeActivitePage} ligne(s) sans code activité sur cette page — le relevé de déductions
-                    exige une désignation pour chaque ligne. Sélectionnez les lignes puis utilisez l'affectation groupée.
-                </div>
-            )}
-
-            {selectedIds.size === data.length && data.length > 0 && total > data.length && !selectAllFilters && (
-                <div style={{ padding: '0.5rem', background: '#eff6ff', color: '#1d4ed8', textAlign: 'center', borderBottom: '1px solid #bfdbfe', fontSize: '0.875rem' }}>
-                    Toutes les <strong>{data.length}</strong> lignes de cette page sont sélectionnées. 
-                    <button onClick={() => setSelectAllFilters(true)} style={{ marginLeft: '0.5rem', background: 'transparent', border: 'none', color: '#1d4ed8', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}>
-                        Sélectionner les {total} lignes correspondantes au filtre
-                    </button>
-                </div>
-            )}
-            {selectAllFilters && (
-                <div style={{ padding: '0.5rem', background: '#eff6ff', color: '#1d4ed8', textAlign: 'center', borderBottom: '1px solid #bfdbfe', fontSize: '0.875rem', fontWeight: 600 }}>
-                    Toutes les {total} lignes sont sélectionnées.
-                    <button onClick={() => { setSelectAllFilters(false); setSelectedIds(new Set()); }} style={{ marginLeft: '0.5rem', background: 'transparent', border: 'none', color: '#1d4ed8', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}>
-                        Annuler la sélection
-                    </button>
+                <div style={{ padding: '0.3rem 1rem', background: '#fffbeb', color: 'var(--status-warning-text-alt, #92400e)', borderBottom: '1px solid var(--status-warning-border, #fde68a)', fontSize: '0.78rem', fontWeight: 600 }}>
+                    ⚠ {nbSansCodeActivitePage} ligne(s) sans code activité — sélectionnez les lignes puis utilisez l'affectation groupée ci-dessous.
                 </div>
             )}
 
             {/* Grid Container */}
-            <div style={{ flexGrow: 1, position: 'relative' }}>
+            <div style={{ flexGrow: 1, minHeight: 0, position: 'relative', padding: '0.3rem 0.5rem' }}>
                 <ApbsGrid
                     rowData={data}
                     columnDefs={columnDefs}
+                    rowSelection={readonly ? undefined : { mode: 'multiRow', checkboxes: true, headerCheckbox: true }}
                     getRowId={(params) => params.data.id}
                     onSelectionChanged={handleSelectionChanged}
                     onRowClicked={(params) => onRowClick && onRowClick(params.data)}
                     onGridReady={onGridReady}
+                    onFilterChanged={handleFilterChanged}
                     height="100%"
                     showColumnSelector={true}
                     showExportButton={true}
                     exportFileName="domain_export.xlsx"
+                    storageKey={_colsStorageKey || 'grf.cols.domain'}
+                    toolbarLeft={
+                        <>
+                            {toolbarPrefix && (
+                                <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, borderRight: '1px solid var(--border-color)', paddingRight: '0.5rem', marginRight: '0.1rem' }}>
+                                    {toolbarPrefix}
+                                </div>
+                            )}
+                            {!readonly && (
+                                <>
+                                    <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                        Sélectionnées : {selectAllFilters ? total : selectedIds.size}
+                                    </span>
+                                    {selectedIds.size === data.length && data.length > 0 && total > data.length && !selectAllFilters && (
+                                        <button onClick={() => setSelectAllFilters(true)} style={{ background: 'transparent', border: 'none', color: '#1d4ed8', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', whiteSpace: 'nowrap', padding: 0, fontSize: '0.75rem' }}>
+                                            Tout sélectionner ({total})
+                                        </button>
+                                    )}
+                                    {selectAllFilters && (
+                                        <button onClick={() => { setSelectAllFilters(false); setSelectedIds(new Set()); }} style={{ background: 'transparent', border: 'none', color: '#1d4ed8', fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', whiteSpace: 'nowrap', padding: 0, fontSize: '0.75rem' }}>
+                                            Annuler la sélection
+                                        </button>
+                                    )}
+                                    {(selectedIds.size > 0 || selectAllFilters) && (
+                                        <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
+                                            <button title="Ces lignes seront COMPTÉES dans la TVA de cette déclaration." onClick={() => doBulkAction('Intégrée')} className="btn" style={{ background: 'var(--status-ok-bg)', color: 'var(--status-ok-text)', border: '1px solid #bbf7d0', padding: '0.2rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.72rem', whiteSpace: 'nowrap' }}><CheckSquare size={13}/> Intégrer</button>
+                                            <button title="Annule la décision manuelle : ces lignes repassent à l'état proposé par l'application." onClick={() => doBulkAction('Proposée')} className="btn" style={{ background: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '0.2rem 0.5rem', fontSize: '0.72rem', whiteSpace: 'nowrap' }}>Réinitialiser</button>
+                                            {showResynchroniserAction && (
+                                                <button title="Resynchroniser la sélection depuis Sage" onClick={doBulkResynchroniser} disabled={resynchroMasseEnCours} className="btn" style={{ background: 'white', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', padding: '0.2rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.72rem', whiteSpace: 'nowrap' }}><RefreshCw size={13} className={resynchroMasseEnCours ? 'animate-spin' : ''}/> {resynchroMasseEnCours ? 'Resync…' : 'Resynchroniser'}</button>
+                                            )}
+                                        </div>
+                                    )}
+                                    {codeActiviteOptions && (selectedIds.size > 0 || selectAllFilters) && (
+                                        <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', borderLeft: '1px solid var(--border-color)', paddingLeft: '0.5rem', flexShrink: 0 }}>
+                                            <select
+                                                value={codeActiviteMasse}
+                                                onChange={(e) => setCodeActiviteMasse(e.target.value)}
+                                                style={{ fontSize: '0.72rem', padding: '0.15rem', width: '150px' }}
+                                            >
+                                                <option value="">Code activité…</option>
+                                                {codeActiviteOptions.map(o => (
+                                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                onClick={doBulkCodeActivite}
+                                                disabled={!codeActiviteMasse || affectationEnCours}
+                                                className="btn"
+                                                style={{ background: 'white', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.2rem 0.5rem', fontSize: '0.72rem', whiteSpace: 'nowrap' }}
+                                            >
+                                                {affectationEnCours ? '…' : 'Affecter'}
+                                            </button>
+                                        </div>
+                                    )}
+                                    <div style={{ borderLeft: '1px solid var(--border-color)', height: '1.1rem', flexShrink: 0 }} />
+                                </>
+                            )}
+                            {loading && <Loader2 size={16} className="animate-spin text-primary" />}
+                            <span>Total résultats : <strong>{total}</strong></span>
+                            {Object.keys(filters).length > 0 && (
+                                <button className="btn" onClick={() => setFilters({})} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0 }}>
+                                    Effacer filtres
+                                </button>
+                            )}
+                        </>
+                    }
                 />
             </div>
 
             {/* Pagination */}
-            <div style={{ padding: '0.5rem 1rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white' }}>
+            <div style={{ padding: '0.3rem 1rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white' }}>
                 <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                     Page {page} sur {totalPages || 1}
                 </span>

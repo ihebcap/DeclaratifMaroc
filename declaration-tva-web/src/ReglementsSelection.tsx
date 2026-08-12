@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Loader2, CheckCircle2, AlertTriangle, XCircle, FileSpreadsheet, Play, RefreshCw } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertTriangle, XCircle, Play, RefreshCw } from 'lucide-react';
 import type { ColDef, GridApi, GridReadyEvent } from 'ag-grid-community';
 import { ApbsGrid } from './grid/ApbsGrid';
 import { CustomListFilter } from './grid/CustomListFilter';
@@ -25,8 +25,6 @@ export type ReglementRow = {
   origine: string;
   declare: boolean;
 };
-
-const estEspeces = (mode: string) => /esp[eè]ce|cash|caisse/i.test(mode ?? '');
 
 export const reglementKey = (row: ReglementRow) => `${row.numeroReglement}__${row.date}__${row.montant}`;
 
@@ -145,7 +143,6 @@ export function ReglementsSelection({
   const [allData, setAllData] = useState<ReglementRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
-  const [exportingControle, setExportingControle] = useState(false);
   const [modeOptions, setModeOptions] = useState<{ label: string; value: string }[]>([]);
   const [gridApi, setGridApi] = useState<GridApi | null>(null);
   const [displayedCount, setDisplayedCount] = useState(0);
@@ -313,36 +310,10 @@ export function ReglementsSelection({
     return selectedRows.reduce((sum, r) => sum + r.montant, 0);
   }, [selectedRows]);
 
-  const exporterControle = async () => {
-    setExportingControle(true);
-    try {
-      const res = await api.get(`/declarations/${declarationId}/export-controle`, { responseType: 'blob' });
-      const blobUrl = URL.createObjectURL(res.data);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = 'Export_controle.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(blobUrl);
-      showToast('Export de contrôle généré', 'success');
-    } catch (e: any) {
-      console.error(e);
-      showToast(e?.response?.data?.message || e?.response?.data?.Message || 'Erreur lors de l\'export de contrôle', 'error');
-    } finally {
-      setExportingControle(false);
-    }
-  };
-
+  // La case à cocher est rendue par `rowSelection.checkboxes` (API v36, cf. ApbsGrid ci-dessous) +
+  // `isRowSelectable` — une colonne dédiée `checkboxSelection` (ancienne API) en plus produisait
+  // DEUX cases à cocher côte à côte (cf. même correctif dans DomainGrid.tsx).
   const columnDefs: ColDef<ReglementRow>[] = useMemo(() => [
-    {
-      headerCheckboxSelection: true,
-      checkboxSelection: (params) => statutDe(params.data) !== 'bloque',
-      width: 50,
-      pinned: 'left',
-      suppressHeaderMenuButton: true,
-      resizable: false,
-    },
     {
       field: 'numeroReglement',
       headerName: 'N° Règlement',
@@ -369,13 +340,6 @@ export function ReglementsSelection({
       width: 110,
       filter: CustomListFilter,
       filterParams: { options: modeOptions },
-    },
-    {
-      colId: 'dateReglementEspeces',
-      headerName: 'Date règlement (espèces)',
-      width: 160,
-      filter: 'agDateColumnFilter',
-      cellRenderer: (p: any) => (estEspeces(p.data?.mode) ? formatDate(p.data?.date) : <span style={{ color: 'var(--text-secondary)' }}>—</span>),
     },
     {
       field: 'domaine',
@@ -478,7 +442,7 @@ export function ReglementsSelection({
           <ApbsGrid<ReglementRow>
             rowData={allData}
             columnDefs={columnDefs}
-            rowSelection={{ mode: 'multiRow', checkboxes: true }}
+            rowSelection={{ mode: 'multiRow', checkboxes: true, headerCheckbox: true }}
             getRowId={(params) => reglementKey(params.data)}
             isRowSelectable={(node) => statutDe(node.data) !== 'bloque'}
             onSelectionChanged={handleSelectionChanged}
@@ -517,20 +481,6 @@ export function ReglementsSelection({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Total sélectionné : {formatMoney(selectedTotal)}</span>
-          <button
-            onClick={exporterControle}
-            disabled={exportingControle}
-            title="Exporter en Excel les règlements sélectionnés, les factures à déclarer et le détail TVA"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-              background: 'white', border: '1px solid var(--border-color)',
-              borderRadius: 'var(--radius-md)', padding: '0.4rem 0.75rem',
-              cursor: exportingControle ? 'not-allowed' : 'pointer', opacity: exportingControle ? 0.6 : 1,
-              fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)',
-            }}
-          >
-            {exportingControle ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />} Export de contrôle (Excel)
-          </button>
         </div>
       </div>
     </div>

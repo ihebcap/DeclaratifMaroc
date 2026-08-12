@@ -7,17 +7,41 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+    if (config.url === '/societes' || config.url?.endsWith('/societes')) {
+        if (config.headers) {
+            if (typeof (config.headers as any).delete === 'function') {
+                (config.headers as any).delete('Authorization');
+                (config.headers as any).delete('authorization');
+            }
+            delete (config.headers as any).Authorization;
+            delete (config.headers as any).authorization;
+        }
+        return config;
+    }
     const token = sessionStorage.getItem('tva_user');
     if (token) {
         try {
             const user = JSON.parse(token);
-            if (user.token) {
+            if (user.token && config.headers) {
                 config.headers.Authorization = `Bearer ${user.token}`;
             }
         } catch (e) {}
     }
     return config;
 });
+
+// Token expiré/invalide (401) : la session en sessionStorage est obsolète, on la purge et on
+// recharge pour retomber sur l'écran de login plutôt que de laisser l'app en échec silencieux.
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            sessionStorage.removeItem('tva_user');
+            window.location.reload();
+        }
+        return Promise.reject(error);
+    }
+);
 
 export default api;
 

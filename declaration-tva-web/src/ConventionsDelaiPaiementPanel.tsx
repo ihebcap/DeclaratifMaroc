@@ -211,14 +211,7 @@ export function ConventionsDelaiPaiementPanel({ societeId, showToast }: {
       </div>
 
       {/* Barre d'info */}
-      <div style={{ padding: '0.4rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
-          <span>Conventions : <strong>{rows.length}</strong></span>
-        </div>
-      </div>
-
-      <div style={{ flexGrow: 1, position: 'relative' }}>
+      <div style={{ flexGrow: 1, minHeight: 0, position: 'relative', padding: '0.4rem 1rem' }}>
         <ApbsGrid
           rowData={rows}
           columnDefs={columnDefs}
@@ -226,6 +219,12 @@ export function ConventionsDelaiPaiementPanel({ societeId, showToast }: {
           showColumnSelector={true}
           showExportButton={true}
           exportFileName="conventions_ddp.xlsx"
+          toolbarLeft={
+            <>
+              {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
+              <span>Conventions : <strong>{rows.length}</strong></span>
+            </>
+          }
         />
       </div>
 

@@ -209,39 +209,6 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
         </div>
       </div>
 
-      {/* Bornes CALCULÉES par le serveur, affichées en lecture seule */}
-      <div style={{ padding: '0.4rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', gap: '1rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
-          {resultat && (
-            <span>
-              Période calculée : <strong data-testid="periode-calculee">{formatDate(resultat.dateDebutPeriode)} → {formatDate(resultat.dateFinPeriode)}</strong>
-            </span>
-          )}
-          <span>Lignes : <strong>{toutesLignes.length}</strong></span>
-          {resultat && resultat.lignesRepriseManuelleRequise.length > 0 && (
-            <span style={{ color: 'var(--status-blocking-text)' }}>
-              dont <strong>{resultat.lignesRepriseManuelleRequise.length}</strong> en reprise manuelle requise
-            </span>
-          )}
-          {resultat && <span style={{ color: 'var(--text-secondary)' }}>{resultat.nombreEcheancesExaminees} échéance(s) examinée(s)</span>}
-          {resultat && resultat.nombreEcheancesDejaDeclarees > 0 && (
-            <span
-              style={{ color: 'var(--text-secondary)' }}
-              title="Ces échéances figurent déjà dans une déclaration antérieure : leur retard a été compté une première fois et n'est plus recompté ici (anti-double-déclaration)."
-            >
-              dont <strong>{resultat.nombreEcheancesDejaDeclarees}</strong> déjà déclarée(s)
-              {resultat.derniereBorneDejaDeclaree ? ` jusqu'au ${formatDate(resultat.derniereBorneDejaDeclaree)}` : ''}
-            </span>
-          )}
-        </div>
-        {Object.keys(filters).length > 0 && (
-          <button className="btn" onClick={() => setFilters({})} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0, fontSize: '0.8rem', cursor: 'pointer' }}>
-            Effacer filtres ({Object.keys(filters).length})
-          </button>
-        )}
-      </div>
-
       {erreur && <div style={{ padding: '0.75rem 1rem' }}><BandeauErreur message={erreur} /></div>}
 
       {resultat && resultat.dateMiseEnRouteSociete == null && (
@@ -257,7 +224,7 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
         </div>
       )}
 
-      <div style={{ flexGrow: 1, position: 'relative' }}>
+      <div style={{ flexGrow: 1, minHeight: 0, position: 'relative', padding: '0.4rem 1rem' }}>
         <ApbsGrid
           rowData={toutesLignes}
           columnDefs={columnDefs}
@@ -265,6 +232,37 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
           showColumnSelector={true}
           showExportButton={true}
           exportFileName="controle_lignes_ddp.xlsx"
+          toolbarLeft={
+            <>
+              {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
+              {resultat && (
+                <span>
+                  Période calculée : <strong data-testid="periode-calculee">{formatDate(resultat.dateDebutPeriode)} → {formatDate(resultat.dateFinPeriode)}</strong>
+                </span>
+              )}
+              <span>Lignes : <strong>{toutesLignes.length}</strong></span>
+              {resultat && resultat.lignesRepriseManuelleRequise.length > 0 && (
+                <span style={{ color: 'var(--status-blocking-text)' }}>
+                  dont <strong>{resultat.lignesRepriseManuelleRequise.length}</strong> en reprise manuelle requise
+                </span>
+              )}
+              {resultat && <span style={{ color: 'var(--text-secondary)' }}>{resultat.nombreEcheancesExaminees} échéance(s) examinée(s)</span>}
+              {resultat && resultat.nombreEcheancesDejaDeclarees > 0 && (
+                <span
+                  style={{ color: 'var(--text-secondary)' }}
+                  title="Ces échéances figurent déjà dans une déclaration antérieure : leur retard a été compté une première fois et n'est plus recompté ici (anti-double-déclaration)."
+                >
+                  dont <strong>{resultat.nombreEcheancesDejaDeclarees}</strong> déjà déclarée(s)
+                  {resultat.derniereBorneDejaDeclaree ? ` jusqu'au ${formatDate(resultat.derniereBorneDejaDeclaree)}` : ''}
+                </span>
+              )}
+              {Object.keys(filters).length > 0 && (
+                <button className="btn" onClick={() => setFilters({})} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0, fontSize: '0.8rem', cursor: 'pointer' }}>
+                  Effacer filtres ({Object.keys(filters).length})
+                </button>
+              )}
+            </>
+          }
         />
       </div>
 

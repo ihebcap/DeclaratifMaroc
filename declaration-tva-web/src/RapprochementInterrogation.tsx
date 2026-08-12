@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Loader2, Landmark, X, CheckCircle2, Circle, AlertTriangle } from 'lucide-react';
-import type { ColDef } from 'ag-grid-community';
+import { Loader2, Landmark, X, CheckCircle2, AlertTriangle } from 'lucide-react';
+import type { ColDef, FilterChangedEvent } from 'ag-grid-community';
 import { ApbsGrid } from './grid/ApbsGrid';
 import { CustomListFilter } from './grid/CustomListFilter';
+import { agFilterModelToLegacy } from './grid/agGridFilterModel';
 import { formatMoney, formatDate } from './utils';
 import api from './api';
 
@@ -27,7 +28,6 @@ const COLUMNS: Col[] = [
   { key: 'tiers', label: 'Tiers', filterType: 'text' },
   { key: 'montant', label: 'Montant', align: 'right', sortKey: 'montant', filterType: 'number', width: '130px' },
   { key: 'rapprocheBanque', label: 'Rappr. banque', align: 'center', filterType: 'list', width: '130px' },
-  { key: 'point', label: 'Point', align: 'center', filterType: 'list', width: '80px' },
   { key: 'dateRapprochement', label: 'Date rappro', filterType: 'date', width: '110px' },
   { key: 'numeroExtrait', label: 'N° extrait', filterType: 'list', width: '110px' },
   { key: 'echeance', label: 'Échéance', filterType: 'date', width: '100px' },
@@ -46,8 +46,7 @@ const yearStartIso = () => `${new Date().getFullYear()}-01-01`;
 function OuiNonBadge({ value, trueColor = { bg: 'var(--status-ok-bg)', text: 'var(--status-ok-text)' } }: { value: boolean, trueColor?: { bg: string, text: string } }) {
   const c = value ? trueColor : { bg: '#f3f4f6', text: '#6b7280' };
   return (
-    <span style={{ background: c.bg, color: c.text, padding: '2px 8px', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-      {value ? <CheckCircle2 size={11} /> : <Circle size={11} />}
+    <span style={{ background: c.bg, color: c.text, padding: '1px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
       {value ? 'Oui' : 'Non'}
     </span>
   );
@@ -162,8 +161,6 @@ export function RapprochementInterrogation({
       if (typeof tiers === 'string' && tiers.trim() !== '') params.tiers = tiers.trim();
       const rb = filters['rapprocheBanque'];
       if (Array.isArray(rb) && rb.length > 0) params.rapprocheBanque = rb[0] === 'true';
-      const pt = filters['point'];
-      if (Array.isArray(pt) && pt.length > 0) params.point = pt[0] === 'true';
       const ext = filters['numeroExtrait'];
       if (Array.isArray(ext) && ext.length > 0) params.numeroExtrait = ext;
       const bq = filters['banqueCode'];
@@ -225,7 +222,6 @@ export function RapprochementInterrogation({
             )}
           </span>
         );
-      case 'point': return <OuiNonBadge value={!!v} />;
       case 'declare': return <DeclareBadge numero={row.numeroDeclaration} declare={!!v} />;
       case 'origine': return <OrigineChip origine={v} />;
       case 'domaine': return <DomaineChip domaine={v} />;
@@ -256,6 +252,16 @@ export function RapprochementInterrogation({
     }
   };
 
+  // Mise à jour directe d'une seule clé de `filters`, sans dépendre du cycle AG Grid
+  // filterChangedCallback → onFilterChanged → getFilterModel() (cf. CustomListFilter).
+  const setColumnFilter = useCallback((key: string, values: string[]) => {
+    setFilters(prev => {
+      const next = { ...prev };
+      if (values.length > 0) next[key] = values; else delete next[key];
+      return next;
+    });
+  }, []);
+
   const columnDefs: ColDef[] = useMemo(() => {
     return COLUMNS.map((col) => {
       const isNumeric = ['montant', 'nbFacturesAffectees', 'resteAAffecter', 'montantTva'].includes(col.key);
@@ -272,9 +278,10 @@ export function RapprochementInterrogation({
         else if (col.key === 'numeroReglement') filterParams = { options: numeroOptions.map(v => ({ label: v, value: v })) };
         else if (col.key === 'numeroExtrait') filterParams = { options: extraitOptions.map(v => ({ label: v, value: v })) };
         else if (col.key === 'banqueCode') filterParams = { options: banqueOptions.map(v => ({ label: v, value: v })) };
-        else if (col.key === 'rapprocheBanque' || col.key === 'point' || col.key === 'declare') {
+        else if (col.key === 'rapprocheBanque' || col.key === 'declare') {
           filterParams = { options: [{ label: 'Oui', value: 'true' }, { label: 'Non', value: 'false' }] };
         }
+        filterParams = { ...filterParams, onSelectionChange: (values: string[]) => setColumnFilter(col.key, values) };
       } else if (col.filterType === 'text') {
         filterComponent = 'agTextColumnFilter';
       } else if (col.filterType === 'number') {
@@ -293,50 +300,59 @@ export function RapprochementInterrogation({
         cellRenderer: (p: any) => p.data ? renderCell(col.key, p.data) : null,
       };
     });
-  }, [modeOptions, domaineOptions, origineOptions, numeroOptions, extraitOptions, banqueOptions]);
+  }, [modeOptions, domaineOptions, origineOptions, numeroOptions, extraitOptions, banqueOptions, setColumnFilter]);
+
+  // Les filtres d'en-tête AG Grid ne filtrent QUE la page déjà chargée par défaut — cet écran
+  // interroge le serveur (pagination), il faut donc reporter le modèle de filtre AG Grid dans
+  // l'état `filters` qui construit la requête (cf. fetchPage ci-dessus).
+  // AG Grid peut réémettre filterChanged (ex. après un rechargement de rowData) sans que le
+  // modèle de filtre ait réellement changé. `agFilterModelToLegacy` reconstruit un nouvel objet
+  // à chaque appel : sans ce garde-fou, la nouvelle référence relance fetchPage → nouvelles
+  // données → nouveau filterChanged → boucle infinie de requêtes.
+  const handleFilterChanged = useCallback((event: FilterChangedEvent) => {
+    const next = agFilterModelToLegacy(event.api.getFilterModel());
+    setFilters(prev => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+  }, []);
 
   const totalPages = Math.ceil(total / size) || 1;
   const activeFilterCount = Object.keys(filters).length;
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <Landmark size={20} style={{ color: 'var(--accent-primary)' }} />
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Rapprochement bancaire</h2>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Interrogation globale — pivot règlement, lecture seule</div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
-          <label style={{ color: 'var(--text-secondary)' }}>Du</label>
-          <input type="date" value={debut} max={fin} onChange={e => setDebut(e.target.value)} className="form-input" style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }} />
-          <label style={{ color: 'var(--text-secondary)' }}>Au</label>
-          <input type="date" value={fin} min={debut} onChange={e => setFin(e.target.value)} className="form-input" style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }} />
+      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'white', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <Landmark size={20} style={{ color: 'var(--accent-primary)' }} />
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Rapprochement bancaire</h2>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Interrogation globale — pivot règlement, lecture seule</div>
         </div>
       </div>
 
-      <div style={{ padding: '0.4rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
-          <span>Règlements : <strong>{total}</strong></span>
-        </div>
-        {activeFilterCount > 0 && (
-          <button className="btn" onClick={() => setFilters({})} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0, fontSize: '0.8rem', cursor: 'pointer' }}>
-            Effacer filtres ({activeFilterCount})
-          </button>
-        )}
-      </div>
-
-      <div style={{ flexGrow: 1, position: 'relative' }}>
+      <div style={{ flexGrow: 1, minHeight: 0, position: 'relative', padding: '0.4rem 1rem' }}>
         <ApbsGrid
           rowData={data}
           columnDefs={columnDefs}
           onRowClicked={(params) => setDetailRow(params.data)}
+          onFilterChanged={handleFilterChanged}
           height="100%"
           showColumnSelector={true}
           showExportButton={true}
           exportFileName="rapprochement_interrogation.xlsx"
+          storageKey="grf.cols.rapprochement"
+          toolbarLeft={
+            <>
+              <label style={{ color: 'var(--text-secondary)' }}>Du</label>
+              <input type="date" value={debut} max={fin} onChange={e => setDebut(e.target.value)} className="form-input" style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }} />
+              <label style={{ color: 'var(--text-secondary)' }}>Au</label>
+              <input type="date" value={fin} min={debut} onChange={e => setFin(e.target.value)} className="form-input" style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }} />
+              {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
+              <span>Règlements : <strong>{total}</strong></span>
+              {activeFilterCount > 0 && (
+                <button className="btn" onClick={() => setFilters({})} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0, fontSize: '0.8rem', cursor: 'pointer' }}>
+                  Effacer filtres ({activeFilterCount})
+                </button>
+              )}
+            </>
+          }
         />
       </div>
 

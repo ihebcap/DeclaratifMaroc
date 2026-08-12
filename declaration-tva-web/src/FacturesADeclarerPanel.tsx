@@ -2,14 +2,28 @@ import { useState, useEffect } from 'react';
 import { DomainGrid } from './DomainGrid';
 import type { DomaineTVA } from './DeclarationStepper';
 import api from './api';
-import { FileText, ArrowLeftRight } from 'lucide-react';
+
+// Code activité rendu éditable en ligne (select, cf. DomainGrid) — TASK-202 §2 : sur cet écran,
+// l'affectation ne doit pas dépendre d'un aller-retour par le drill de l'étape « Vérifier ».
+const FACTURES_COLUMNS: { key: string, label: string, filterType: 'list' | 'text' | 'number' | 'date', width?: string, derived?: boolean, editable?: boolean }[] = [
+    { key: 'factureNumero', label: 'N° Facture', filterType: 'text' },
+    { key: 'tiers', label: 'Tiers', filterType: 'text' },
+    { key: 'origine', label: 'Origine', filterType: 'list' },
+    { key: 'montantHT', label: 'Montant HT', filterType: 'number' },
+    { key: 'tauxTVA', label: 'Taux TVA', filterType: 'list' },
+    { key: 'montantTTC', label: 'Montant TTC', filterType: 'number' },
+    { key: 'codeActivite', label: 'Code activité', filterType: 'text', width: '220px', editable: true },
+    { key: 'source', label: 'Source', filterType: 'list' },
+    { key: 'statutLigne', label: 'Statut', filterType: 'list' },
+    { key: 'motif', label: 'Motif Écartement', filterType: 'text', width: '280px' },
+];
 
 export function FacturesADeclarerPanel({
     declarationId,
     readOnly = false,
     showToast,
     initialFilters,
-    initialDomaine = 'Décaissement',
+    initialDomaine = 'Decaissement',
     onActionDone,
 }: {
     declarationId: string;
@@ -46,78 +60,64 @@ export function FacturesADeclarerPanel({
         return () => { cancelled = true; };
     }, [domaine]);
 
+    const onglets = (
+        <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border-color)' }} title="Lignes candidates sélectionnées pour cette déclaration">
+            <button
+                onClick={() => setDomaine('Decaissement')}
+                style={{
+                    padding: '0.2rem 0.6rem',
+                    fontSize: '0.75rem',
+                    fontWeight: domaine === 'Decaissement' ? 600 : 500,
+                    border: 'none',
+                    borderRadius: '4px',
+                    background: domaine === 'Decaissement' ? 'white' : 'transparent',
+                    color: domaine === 'Decaissement' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    boxShadow: domaine === 'Decaissement' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s'
+                }}
+            >
+                Achats
+            </button>
+            <button
+                onClick={() => setDomaine('Encaissement')}
+                style={{
+                    padding: '0.2rem 0.6rem',
+                    fontSize: '0.75rem',
+                    fontWeight: domaine === 'Encaissement' ? 600 : 500,
+                    border: 'none',
+                    borderRadius: '4px',
+                    background: domaine === 'Encaissement' ? 'white' : 'transparent',
+                    color: domaine === 'Encaissement' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    boxShadow: domaine === 'Encaissement' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s'
+                }}
+            >
+                Ventes
+            </button>
+        </div>
+    );
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--bg-primary)' }}>
-            {/* Header Onglets Achats / Ventes */}
-            <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '0.6rem 1rem', background: 'white', borderBottom: '1px solid var(--border-color)',
-                flexShrink: 0
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        <FileText size={18} className="text-primary" />
-                        <span>Factures à déclarer</span>
-                    </div>
-                    <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                        <button
-                            onClick={() => setDomaine('Décaissement')}
-                            style={{
-                                padding: '0.35rem 0.85rem',
-                                fontSize: '0.8125rem',
-                                fontWeight: domaine === 'Décaissement' ? 600 : 500,
-                                border: 'none',
-                                borderRadius: '4px',
-                                background: domaine === 'Décaissement' ? 'white' : 'transparent',
-                                color: domaine === 'Décaissement' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                                boxShadow: domaine === 'Décaissement' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s'
-                            }}
-                        >
-                            TVA Déductible (Achats)
-                        </button>
-                        <button
-                            onClick={() => setDomaine('Encaissement')}
-                            style={{
-                                padding: '0.35rem 0.85rem',
-                                fontSize: '0.8125rem',
-                                fontWeight: domaine === 'Encaissement' ? 600 : 500,
-                                border: 'none',
-                                borderRadius: '4px',
-                                background: domaine === 'Encaissement' ? 'white' : 'transparent',
-                                color: domaine === 'Encaissement' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                                boxShadow: domaine === 'Encaissement' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s'
-                            }}
-                        >
-                            TVA Collective (Ventes)
-                        </button>
-                    </div>
-                </div>
-
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <ArrowLeftRight size={14} />
-                    <span>Lignes candidates sélectionnées pour cette déclaration</span>
-                </div>
-            </div>
-
-            {/* Corps Grille AG Grid */}
-            <div style={{ flex: 1, overflow: 'hidden', padding: '0.75rem' }}>
-                <DomainGrid
-                    declarationId={declarationId}
-                    domaine={domaine}
-                    readonly={readOnly}
-                    showToast={showToast}
-                    initialFilters={initialFilters}
-                    codeActiviteOptions={codeActiviteOptions}
-                    showResynchroniserAction={!readOnly}
-                    onActionDone={() => {
-                        if (onActionDone) onActionDone();
-                    }}
-                />
-            </div>
+            <DomainGrid
+                declarationId={declarationId}
+                domaine={domaine}
+                readonly={readOnly}
+                showToast={showToast}
+                initialFilters={initialFilters}
+                columns={FACTURES_COLUMNS}
+                colsStorageKey="grf.cols.domain.factures"
+                codeActiviteOptions={codeActiviteOptions}
+                showResynchroniserAction={!readOnly}
+                toolbarPrefix={onglets}
+                onActionDone={() => {
+                    if (onActionDone) onActionDone();
+                }}
+            />
         </div>
     );
 }

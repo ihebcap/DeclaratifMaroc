@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Loader2, FileText, X, AlertTriangle, HelpCircle, RefreshCw } from 'lucide-react';
-import type { ColDef } from 'ag-grid-community';
+import type { ColDef, FilterChangedEvent } from 'ag-grid-community';
 import { ApbsGrid } from './grid/ApbsGrid';
 import { CustomListFilter } from './grid/CustomListFilter';
+import { agFilterModelToLegacy } from './grid/agGridFilterModel';
 import { formatMoney, formatDate } from './utils';
 import api from './api';
 import { agregerErreursValorisation, CODE_METADATA_VALORISATION, type MotifValorisation } from './valorisationErreurs';
@@ -289,6 +290,16 @@ export function FactureInterrogation({
     }
   };
 
+  // Mise à jour directe d'une seule clé de `filters`, sans dépendre du cycle AG Grid
+  // filterChangedCallback → onFilterChanged → getFilterModel() (cf. CustomListFilter).
+  const setColumnFilter = useCallback((key: string, values: string[]) => {
+    setFilters(prev => {
+      const next = { ...prev };
+      if (values.length > 0) next[key] = values; else delete next[key];
+      return next;
+    });
+  }, []);
+
   const columnDefs: ColDef[] = useMemo(() => {
     return COLUMNS.map((col) => {
       const isNumeric = ['montantHT', 'montantTVA', 'autreTaxe', 'ecart', 'escompte', 'montantTTC', 'regle', 'declare', 'resteADeclarer', 'soldeFacture', 'ecartJours'].includes(col.key);
@@ -308,6 +319,7 @@ export function FactureInterrogation({
         } else if (col.key === 'reference') {
           filterParams = { options: referenceOptions.map(v => ({ label: v, value: v })) };
         }
+        filterParams = { ...filterParams, onSelectionChange: (values: string[]) => setColumnFilter(col.key, values) };
       } else if (col.filterType === 'text') {
         filterComponent = 'agTextColumnFilter';
       }
@@ -322,60 +334,65 @@ export function FactureInterrogation({
         cellRenderer: (p: any) => p.data ? renderCell(col.key, p.data) : null,
       };
     });
-  }, [origineOptions, numeroOptions, referenceOptions]);
+  }, [origineOptions, numeroOptions, referenceOptions, setColumnFilter]);
+
+  // Écran server-side (pagination) : les filtres d'en-tête AG Grid doivent alimenter `filters`
+  // (state qui construit la requête, cf. fetchPage) plutôt que de ne filtrer que la page chargée.
+  // Garde-fou anti-boucle : agFilterModelToLegacy recrée un objet à chaque appel ; sans
+  // comparaison de contenu, un filterChanged réémis sans changement réel relance fetchPage en boucle.
+  const handleFilterChanged = useCallback((event: FilterChangedEvent) => {
+    const next = agFilterModelToLegacy(event.api.getFilterModel());
+    setFilters(prev => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+  }, []);
 
   const totalPages = Math.ceil(total / size) || 1;
   const activeFilterCount = Object.keys(filters).length;
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <FileText size={20} style={{ color: 'var(--accent-primary)' }} />
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Factures</h2>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Interrogation — pivot facture, lecture seule (période obligatoire)</div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
-          <label style={{ color: 'var(--text-secondary)' }}>Du</label>
-          <input type="date" value={debut} max={fin} onChange={e => anneeEstPlausible(e.target.value) && setDebut(e.target.value)} className="form-input" style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }} />
-          <label style={{ color: 'var(--text-secondary)' }}>Au</label>
-          <input type="date" value={fin} min={debut} onChange={e => anneeEstPlausible(e.target.value) && setFin(e.target.value)} className="form-input" style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }} />
-          <button
-            className="btn"
-            onClick={handleRefreshValorisation}
-            disabled={refreshing}
-            title="Lit les OM Sage pour la période et remplit le cache de valorisation TVA (famille B)"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', padding: '0.25rem 0.6rem', marginLeft: '0.25rem' }}
-          >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : undefined} />
-            {refreshing ? 'Valorisation…' : 'Rafraîchir valorisation'}
-          </button>
+      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'white', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <FileText size={20} style={{ color: 'var(--accent-primary)' }} />
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Factures</h2>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Interrogation — pivot facture, lecture seule (période obligatoire)</div>
         </div>
       </div>
 
-      <div style={{ padding: '0.4rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
-          <span>Factures : <strong>{total}</strong></span>
-        </div>
-        {activeFilterCount > 0 && (
-          <button className="btn" onClick={() => setFilters({})} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0, fontSize: '0.8rem', cursor: 'pointer' }}>
-            Effacer filtres ({activeFilterCount})
-          </button>
-        )}
-      </div>
-
-      <div style={{ flexGrow: 1, position: 'relative' }}>
+      <div style={{ flexGrow: 1, minHeight: 0, position: 'relative', padding: '0.4rem 1rem' }}>
         <ApbsGrid
           rowData={data}
           columnDefs={columnDefs}
           onRowClicked={(params) => setDetailRow(params.data)}
+          onFilterChanged={handleFilterChanged}
           height="100%"
           showColumnSelector={true}
           showExportButton={true}
           exportFileName="factures_interrogation.xlsx"
+          toolbarLeft={
+            <>
+              <label style={{ color: 'var(--text-secondary)' }}>Du</label>
+              <input type="date" value={debut} max={fin} onChange={e => anneeEstPlausible(e.target.value) && setDebut(e.target.value)} className="form-input" style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }} />
+              <label style={{ color: 'var(--text-secondary)' }}>Au</label>
+              <input type="date" value={fin} min={debut} onChange={e => anneeEstPlausible(e.target.value) && setFin(e.target.value)} className="form-input" style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }} />
+              <button
+                className="btn"
+                onClick={handleRefreshValorisation}
+                disabled={refreshing}
+                title="Lit les OM Sage pour la période et remplit le cache de valorisation TVA (famille B)"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', padding: '0.25rem 0.6rem' }}
+              >
+                <RefreshCw size={14} className={refreshing ? 'animate-spin' : undefined} />
+                {refreshing ? 'Valorisation…' : 'Rafraîchir valorisation'}
+              </button>
+              {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
+              <span>Factures : <strong>{total}</strong></span>
+              {activeFilterCount > 0 && (
+                <button className="btn" onClick={() => setFilters({})} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', textDecoration: 'underline', padding: 0, fontSize: '0.8rem', cursor: 'pointer' }}>
+                  Effacer filtres ({activeFilterCount})
+                </button>
+              )}
+            </>
+          }
         />
       </div>
 

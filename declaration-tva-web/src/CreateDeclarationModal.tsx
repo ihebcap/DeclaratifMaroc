@@ -34,7 +34,7 @@ export function CreateDeclarationModal({
             });
             onSuccess(res.data.id);
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message);
+            setError(err.response?.data?.Message || err.response?.data?.message || err.message);
         } finally {
             setLoading(false);
         }
@@ -72,6 +72,8 @@ export function CreateDeclarationModal({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
                             <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>Exercice</label>
                             <input 
+                                id="annee-declaration"
+                                data-testid="annee-declaration"
                                 type="number" 
                                 value={exercice} 
                                 onChange={e => setExercice(Number(e.target.value))} 

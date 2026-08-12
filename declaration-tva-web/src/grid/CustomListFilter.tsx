@@ -1,31 +1,51 @@
-import { forwardRef, useImperativeHandle, useState, useMemo } from 'react';
-import type { IFilterParams } from 'ag-grid-community';
+import { useMemo, useState } from 'react';
+import type { CustomFilterProps } from 'ag-grid-react';
+import { useGridFilter } from 'ag-grid-react';
 
-export interface CustomListFilterParams extends IFilterParams {
-  options?: { label: string; value: string }[];
+export interface CustomListFilterModel {
+  filterType: 'customList';
+  values: string[];
 }
 
-export const CustomListFilter = forwardRef((props: CustomListFilterParams, ref) => {
-  const [selectedValues, setSelectedValues] = useState<string[]>([]);
+export interface CustomListFilterParams {
+  options?: { label: string; value: string }[];
+  /**
+   * Écrans server-side (pagination + filtres envoyés en paramètres de requête) : appelé
+   * directement à chaque changement de sélection, en plus du modèle AG Grid standard
+   * (`onModelChange` → `getFilterModel()`). Évite de dépendre de ce cycle pour mettre à jour
+   * l'état qui construit la requête serveur.
+   */
+  onSelectionChange?: (values: string[]) => void;
+}
+
+// AG Grid 36 (ag-grid-react) attend des filtres React construits avec le hook `useGridFilter` —
+// les props exposent directement `model`/`onModelChange` (AG Grid porte l'état du modèle), et
+// `filterChangedCallback` n'existe plus (le wrapper interne le supprime des props). L'ancien
+// patron `forwardRef` + `useImperativeHandle` (getModel/setModel/isFilterActive/doesFilterPass)
+// ne déclenchait donc jamais rien : `isFilterActive()` restait toujours `false` côté wrapper,
+// `doesFilterPass` n'était jamais appelé.
+export function CustomListFilter(
+  props: CustomFilterProps<any, any, CustomListFilterModel> & CustomListFilterParams
+) {
+  const { model, onModelChange, options, onSelectionChange, getValue, api } = props;
   const [search, setSearch] = useState('');
+  const selectedValues = model?.values ?? [];
 
   const distinctOptions = useMemo(() => {
-    if (props.options && props.options.length > 0) {
-      return props.options;
+    if (options && options.length > 0) {
+      return options;
     }
     const set = new Set<string>();
-    if (props.api) {
-      props.api.forEachNode((node) => {
-        if (node.data) {
-          const val = props.getValue(node);
-          if (val !== undefined && val !== null && val !== '') {
-            set.add(String(val));
-          }
+    api.forEachNode((node) => {
+      if (node.data) {
+        const val = getValue(node);
+        if (val !== undefined && val !== null && val !== '') {
+          set.add(String(val));
         }
-      });
-    }
+      }
+    });
     return Array.from(set).map((v) => ({ label: v, value: v }));
-  }, [props.api, props.options, props.getValue]);
+  }, [api, options, getValue]);
 
   const filteredOptions = useMemo(() => {
     if (!search.trim()) return distinctOptions;
@@ -33,45 +53,33 @@ export const CustomListFilter = forwardRef((props: CustomListFilterParams, ref) 
     return distinctOptions.filter((opt) => opt.label.toLowerCase().includes(lower));
   }, [distinctOptions, search]);
 
-  useImperativeHandle(ref, () => ({
-    isFilterActive() {
-      return selectedValues.length > 0;
-    },
-    doesFilterPass(params: any) {
+  useGridFilter({
+    doesFilterPass(params) {
       if (selectedValues.length === 0) return true;
-      const val = props.getValue(params.node);
+      const val = getValue(params.node);
       const strVal = val !== undefined && val !== null ? String(val) : '';
       return selectedValues.includes(strVal);
     },
-    getModel() {
-      if (selectedValues.length === 0) return null;
-      return { filterType: 'customList', values: selectedValues };
-    },
-    setModel(model: any) {
-      if (model && Array.isArray(model.values)) {
-        setSelectedValues(model.values);
-      } else {
-        setSelectedValues([]);
-      }
-    },
-  }));
+  });
+
+  const applySelection = (next: string[]) => {
+    onModelChange(next.length > 0 ? { filterType: 'customList', values: next } : null);
+    onSelectionChange?.(next);
+  };
 
   const toggleValue = (val: string) => {
     const next = selectedValues.includes(val)
       ? selectedValues.filter((v) => v !== val)
       : [...selectedValues, val];
-    setSelectedValues(next);
-    props.filterChangedCallback();
+    applySelection(next);
   };
 
   const selectAll = () => {
-    setSelectedValues(filteredOptions.map((o) => o.value));
-    props.filterChangedCallback();
+    applySelection(filteredOptions.map((o) => o.value));
   };
 
   const clearAll = () => {
-    setSelectedValues([]);
-    props.filterChangedCallback();
+    applySelection([]);
   };
 
   return (
@@ -120,5 +128,4 @@ export const CustomListFilter = forwardRef((props: CustomListFilterParams, ref) 
       </div>
     </div>
   );
-});
-CustomListFilter.displayName = 'CustomListFilter';
+}

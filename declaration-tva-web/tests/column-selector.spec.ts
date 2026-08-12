@@ -19,7 +19,7 @@ test('Sélecteur de colonnes — masquage + persistance (Rapprochement bancaire)
   await page.click('.sidebar-item:has-text("Rapprochement bancaire")');
   await page.waitForSelector('.animate-spin', { state: 'detached' });
 
-  const header = page.locator('div[style*="sticky"]').first();
+  const header = page.locator('.ag-header, div[style*="sticky"]').first();
   await expect(header.getByText('Tiers', { exact: true })).toBeVisible();
 
   // Ouvre le sélecteur de colonnes et masque « Tiers ».
@@ -35,7 +35,7 @@ test('Sélecteur de colonnes — masquage + persistance (Rapprochement bancaire)
   await page.waitForSelector('.animate-spin', { state: 'detached' });
   await page.click('.sidebar-item:has-text("Rapprochement bancaire")');
   await page.waitForSelector('.animate-spin', { state: 'detached' });
-  const headerAfterReload = page.locator('div[style*="sticky"]').first();
+  const headerAfterReload = page.locator('.ag-header, div[style*="sticky"]').first();
   await expect(headerAfterReload.getByText('Tiers', { exact: true })).not.toBeVisible();
 
   // Vérifie la clé localStorage dédiée à cet écran.

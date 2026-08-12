@@ -130,7 +130,7 @@ export function DeclarationList({ societeId, onSelectDeclaration, onCreateNew, s
     const fetchDeclarations = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/declarations', { params: { soId: societeId } });
+            const res = await api.get('/declarations', { params: { societeId } });
             const list = res.data.items || res.data || [];
             setDeclarations(list);
         } catch (e) {
@@ -267,6 +267,7 @@ export function DeclarationList({ societeId, onSelectDeclaration, onCreateNew, s
                                 className="btn btn-primary"
                                 style={btnStyle}
                                 onClick={() => onSelectDeclaration(dec.id)}
+                                title="Ouvrir"
                             >
                                 Ouvrir
                             </button>
@@ -314,14 +315,7 @@ export function DeclarationList({ societeId, onSelectDeclaration, onCreateNew, s
                 </div>
             </div>
 
-            <div style={{ padding: '0.4rem 1rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
-                    <span>Déclarations : <strong>{declarations.length}</strong></span>
-                </div>
-            </div>
-
-            <div style={{ flexGrow: 1, position: 'relative' }}>
+            <div style={{ flexGrow: 1, minHeight: 0, position: 'relative', padding: '0.4rem 1rem' }}>
                 <ApbsGrid
                     rowData={declarations}
                     columnDefs={columnDefs}
@@ -329,6 +323,12 @@ export function DeclarationList({ societeId, onSelectDeclaration, onCreateNew, s
                     showColumnSelector={true}
                     showExportButton={true}
                     exportFileName="declarations_tva.xlsx"
+                    toolbarLeft={
+                        <>
+                            {loading && <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />}
+                            <span>Déclarations : <strong>{declarations.length}</strong></span>
+                        </>
+                    }
                 />
             </div>
 
