@@ -628,14 +628,14 @@ function FicheDeclarationDelaiPaiement({ societeId, ddpId, showToast, onRetour }
     { field: 'ice', headerName: 'ICE', width: 130, valueGetter: (p) => p.data?.tiersICE || '—' },
     { field: 'montantLigne', headerName: 'Montant', width: 120, type: 'numericColumn', valueGetter: (p) => p.data ? formatMoney(p.data.montantAffecte ?? p.data.soldeEcheance) : '' },
     { field: 'depassement', headerName: 'Dépassement (j)', width: 130, type: 'numericColumn', valueGetter: (p) => p.data?.depassement ?? 0 },
-    {
+    ...(declaration?.actions?.peutIntegrerLignes ? [{
       headerName: 'Action',
       width: 90,
-      pinned: 'right',
+      pinned: 'right' as const,
       suppressHeaderMenuButton: true,
       cellRenderer: (p: any) => {
         const row = p.data;
-        if (!row || !declaration?.actions?.peutIntegrerLignes) return null;
+        if (!row) return null;
         return (
           <button
             className="btn"
@@ -648,7 +648,7 @@ function FicheDeclarationDelaiPaiement({ societeId, ddpId, showToast, onRetour }
           </button>
         );
       }
-    }
+    }] : []),
   ], [declaration?.actions?.peutIntegrerLignes, busy, handleSupprimerLigne]);
 
   if (loading && !declaration) {

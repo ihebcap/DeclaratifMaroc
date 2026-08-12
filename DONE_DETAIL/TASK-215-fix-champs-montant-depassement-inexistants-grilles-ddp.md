@@ -57,6 +57,15 @@ correctif, 0 occurrence résiduelle).
 - `grep -r "montantPart|depassementJours" declaration-tva-web/src` : aucune occurrence résiduelle.
 - Confirmation PO : correctif rebuild + redéployé chez le client concerné.
 
+## Amélioration complémentaire (même session, demande PO après validation visuelle)
+
+La colonne « Action » (bouton « Retirer cette ligne ») restait affichée, vide, sur une déclaration
+Clôturée (le `cellRenderer` renvoyait déjà `null` par ligne, donc aucun bouton n'apparaissait — mais
+la colonne elle-même occupait toujours une place dans la grille). Demande PO : la masquer entièrement
+dans ce cas plutôt que de laisser une colonne systématiquement vide. Corrigé en excluant l'entrée de
+colonne du tableau `columnDefsLignes` (au lieu de la garder avec un `cellRenderer` qui renvoie `null`)
+quand `!declaration.actions.peutIntegrerLignes`.
+
 ## Note process
 
 Corrigé directement par Claude à la demande explicite du PO (dérogation ponctuelle au workflow
