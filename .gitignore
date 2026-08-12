@@ -34,3 +34,7 @@ DONE_DETAIL/xml-genere/
 
 # Claude Code local config
 .claude/
+
+# ---- Payloads de déploiement générés (binaires, régénérables) ----
+obj-payload-staging/
+Declaration.Setup/payload.zip
