@@ -29,9 +29,22 @@ d'où l'incohérence visible total ≠ somme des lignes affichées.
 
 ## Correctif appliqué
 
-Renommage des 2 champs lus par les 4 `valueGetter` concernés (`montantPart` → `montantLigne`,
-`depassementJours` → `depassement`), dans les 2 fichiers. Aucun autre fichier ne référençait ces 2
-noms de champs erronés (`grep` de contrôle après correctif, 0 occurrence résiduelle).
+Renommage des 4 `valueGetter` concernés, avec une nuance découverte après un premier essai
+insuffisant : les deux écrans ne consomment pas le même DTO.
+
+- `ControleLignesDelaiPaiementPanel.tsx` (modal de sélection) lie `LigneSelectionDdpDto`, qui expose
+  bien `montantLigne`/`depassement` → `montantPart` → `montantLigne`, `depassementJours` → `depassement`.
+- `DeclarationsDelaiPaiementPanel.tsx` (grille des lignes déjà intégrées, celle de la capture d'écran
+  du PO) lie **`LigneIntegreeDdpDto`, qui n'a pas de champ `montantLigne` du tout** (`api.ts:344-365` :
+  `montantAffecte`/`soldeEcheance`/`depassement`, jamais `montantLigne`). Un premier correctif y avait
+  remplacé `montantPart` par `montantLigne` par erreur (copié-collé de l'autre écran sans revérifier le
+  DTO réellement lié) — toujours `undefined`, donc toujours 0,00 MAD affiché en pratique. Corrigé en
+  reprenant exactement la même formule que le total d'en-tête déjà correct (ligne 688) :
+  `p.data.montantAffecte ?? p.data.soldeEcheance`. `depassementJours` → `depassement` était en revanche
+  correct du premier coup (`LigneIntegreeDdpDto.depassement` existe bien).
+
+Aucun autre fichier ne référençait les 2 noms de champs erronés d'origine (`grep` de contrôle après
+correctif, 0 occurrence résiduelle).
 
 ## Fichiers livrés
 
