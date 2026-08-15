@@ -1,5 +1,11 @@
 # TODO — Module Déclaration TVA (GRF)
 
+## 🆕 TASK-214 — Automatiser la récupération de `WinSW.exe` dans `Deploy-All.ps1` (plus d'étape manuelle) (PO 12/08/2026)
+Signalement PO : échec `FileNotFoundException` au clic « Installer » (`WinSW.exe absent`), et refus
+explicite de toute étape manuelle (« je ne fais rien manuellement ») — `Publish-Setup.ps1` se contente
+aujourd'hui d'un `Write-Warning` non bloquant si `WinSW.exe` est absent, l'échec n'apparaissant que
+côté client. Voir `TASKS/TASK-214-automatiser-recuperation-winsw-pipeline-build.md`.
+
 ## 🆕 TASK-211 — Écran de paramétrage société : login Sage + colonnes `F_COMPTET` (code activité, désignation document) (PO 09/08/2026)
 Socle pour TASK-212/213 : réutilise le login/mdp Sage déjà dynamique (`P_SOCIETE.SO_ErpUserApp`/
 `SO_ErpPasswdApp`, TASK-118) via un nouvel écran GRF, et stocke les 2 noms de colonnes `F_COMPTET`
