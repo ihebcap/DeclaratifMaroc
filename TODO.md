@@ -1,13 +1,5 @@
 # TODO — Module Déclaration TVA (GRF)
 
-## 🆕 TASK-220 — Exclure toute facture dont la date de facture précède la mise en route (écran Contrôle DDP) (PO 10/09/2026)
-Décision PO : le critère de bascule du garde-fou TASK-128 passe de l'échéance légale à la **date de
-facture** (`DO_Date`), et le comportement passe de « bloqué en attente de reprise manuelle » à
-**exclusion pure** — même si l'échéance légale tombe après la mise en route. Supprime de fait le
-mécanisme de reprise manuelle (saisie du retard initial), le bouton associé et le statut
-`RepriseManuelleRequise`. **Impacte TASK-219** (badge « Reprise manuelle » devient un état mort — à
-coordonner). Voir `TASKS/TASK-220_exclusion-facture-anterieure-mise-en-route-controle-ddp_2026-09-10.md`.
-
 ## 🆕 TASK-217 — Renommage + tooltips des colonnes de bornes + n° jours dans Origine du délai (écran Contrôle DDP) (PO 10/09/2026)
 Signalement PO en préparation du dépôt T3 2026 : « Déjà déclaré au » / « Constaté au » incompréhensibles
 sans lire le code → renommées **Dernière déclaration** / **Constaté le** (sans collision avec les

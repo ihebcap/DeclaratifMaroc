@@ -1,5 +1,23 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-09-10 — TASK-220 : exclusion des factures antérieures à la mise en route (critère `DoDate`, écran Contrôle DDP)
+
+Remplacement du garde-fou TASK-128 : critère de bascule passé de l'échéance légale calculée à la
+**date de facture** (`DO_Date`), comportement passé de « bloqué en attente de reprise manuelle » à
+**exclusion pure et simple** (même si l'échéance légale calculée tombe après la mise en route —
+décision PO explicite). Suppression complète du mécanisme de reprise manuelle devenu obsolète
+(`DelaiPaiementBootstrapGuard`, `IRepriseDelaiPaiementRepository`, endpoints
+`/delai-paiement/reprise/*`, bouton et badge front, DTO associés) ; `DM_REPRISE_DELAIPAIEMENT` non
+touchée (schéma/données, contrainte absolue du projet), devient fonctionnellement inutilisée.
+Coordination TASK-219 : la valeur de badge « Reprise manuelle » retirée de `OrigineBorneReference`,
+ne peut plus apparaître. Cas société sans date de mise en route configurée : aucune exclusion
+appliquée (à confirmer par le PO si ce n'était pas son intention). Preuve chiffrée sur données
+réelles (`SO_Id=1`, pipeline de production réel, lecture seule) : 418/1408 échéances candidates
+(~30 %) basculent de calcul automatique vers exclusion, 0 bascule inverse — **impact significatif,
+à confirmer explicitement par le PO avant bascule en production** (dépôt T3 2026). Voir
+`DONE_DETAIL/TASK-220-exclusion-facture-anterieure-mise-en-route-controle-ddp.md` et
+`DONE_DETAIL/TASK-220_verify.md`.
+
 ## 2026-09-10 — TASK-219 : badge d'origine de la borne de référence par ligne (écran Contrôle DDP)
 
 Complémentaire à TASK-217/218 : nouvelle colonne « Origine » dans `ControleLignesDelaiPaiementPanel.tsx`,
