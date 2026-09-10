@@ -9,13 +9,9 @@ mécanisme de reprise manuelle (saisie du retard initial), le bouton associé et
 coordonner). Voir `TASKS/TASK-220_exclusion-facture-anterieure-mise-en-route-controle-ddp_2026-09-10.md`.
 
 ## 🆕 TASK-219 — Badge « déjà déclarée / 1re déclaration / reprise manuelle » par ligne (écran Contrôle DDP) (PO 10/09/2026)
-⚠️ **Voir TASK-220** : le 3ᵉ état « Reprise manuelle » de ce badge devient obsolète suite à la décision
-PO du 10/09/2026 (exclusion pure des factures antérieures à la mise en route, plus de mécanisme de
-reprise manuelle). Si TASK-219 est implémentée avant TASK-220, ne garder que 2 états utiles
-(Déjà déclarée / 1re déclaration) ou coordonner l'ordre de livraison avec le WORKER.
 Complémentaire à TASK-217/218 : badge visuel dérivé de `OrigineBorneReference` (déjà calculé côté
-backend, aucun nouveau calcul) — filtrable, distinct du badge Statut existant. Voir
-`TASKS/TASK-219-badge-origine-borne-controle-ddp.md`.
+backend, aucun nouveau calcul) — 3 états (Déjà déclarée / 1re déclaration / Reprise manuelle),
+filtrable, distinct du badge Statut existant. Voir `TASKS/TASK-219-badge-origine-borne-controle-ddp.md`.
 
 ## 🆕 TASK-218 — Commentaire généré automatiquement expliquant chaque ligne (écran Contrôle DDP) (PO 10/09/2026)
 Complémentaire à TASK-217 : au lieu de recomposer mentalement 5-6 colonnes, un texte généré par ligne
