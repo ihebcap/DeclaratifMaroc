@@ -53,13 +53,11 @@ builder.Services.AddScoped<IRapprochementTvaService>(sp => RapprochementTvaServi
 builder.Services.AddScoped<ISelectionExpliqueeService, SelectionExpliqueeService>();
 builder.Services.AddScoped<DeclarationWorkflowService>();
 
-// TASK-128 : bootstrap Delai de Paiement Maroc (parametre "date de mise en route" par societe +
-// reprise manuelle par echeance). Independant du socle TASK-127 (IConventionDelaiPaiementRepository
-// / DelaiPaiementService NE SONT PAS enregistres ici -- cable par TASK-129, cf. TASK-127 §Reste a
-// valider). DelaiPaiementBootstrapRepository implemente les 2 interfaces (meme pattern que
-// DelaiPaiementReferentielRepository pour IJoursReposRepository/IDelaiPaiementParametrageRepository).
+// TASK-128 : bootstrap Delai de Paiement Maroc (parametre "date de mise en route" par societe).
+// Independant du socle TASK-127 (IConventionDelaiPaiementRepository / DelaiPaiementService NE SONT
+// PAS enregistres ici -- cable par TASK-129, cf. TASK-127 §Reste a valider). Depuis TASK-220, la
+// reprise manuelle par echeance (ex-IRepriseDelaiPaiementRepository) est supprimee.
 builder.Services.AddScoped<IParametrageDelaiPaiementSocieteRepository, DelaiPaiementBootstrapRepository>();
-builder.Services.AddScoped<IRepriseDelaiPaiementRepository, DelaiPaiementBootstrapRepository>();
 builder.Services.AddScoped<IDelaiPaiementBootstrapService, DelaiPaiementBootstrapService>();
 
 // TASK-129 : cablage DI complet du socle TASK-127 (volontairement laisse ouvert par TASK-127, cf.

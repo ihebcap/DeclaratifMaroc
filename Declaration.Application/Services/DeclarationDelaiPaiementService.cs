@@ -51,9 +51,9 @@ public sealed class CreerDeclarationDelaiPaiementRequest
 /// lectures/écritures.
 ///
 /// L'intégration de lignes consomme <see cref="ISelectionDelaiPaiementService"/> (TASK-131) et
-/// n'intègre QUE ses <c>Lignes</c> — les <c>LignesRepriseManuelleRequise</c> sont REFUSÉES à
-/// l'intégration (aucun <c>Depassement</c> calculé, décision PO) tout en restant comptées dans le
-/// compte rendu pour l'écran (TASK-134).
+/// intègre ses <c>Lignes</c> — depuis TASK-220, toute facture antérieure à la mise en route de sa
+/// société est exclue en amont par le calculateur, il n'existe donc plus de lignes "refusées" à
+/// ce niveau.
 ///
 /// <b>Hors périmètre STRICT et donc absents ici</b> : la génération XML/ZIP elle-même (TASK-133 —
 /// ce service se contente d'AUTORISER puis de poser <c>DDP_IsGeneretedFile</c>) et l'UI/les endpoints
@@ -270,14 +270,10 @@ public sealed class DeclarationDelaiPaiementService : IDeclarationDelaiPaiementS
             candidatesParCle.TryAdd(new CleLigneDelaiPaiement(ligne.EcId, ligne.AfId), ligne);
         }
 
-        var clesRepriseManuelle = new HashSet<CleLigneDelaiPaiement>(
-            resultatSelection.LignesRepriseManuelleRequise.Select(l => new CleLigneDelaiPaiement(l.EcId, l.AfId)));
-
         var dejaIntegrees = new HashSet<CleLigneDelaiPaiement>(await _repository.GetClesLignesAsync(ddpId));
 
         var aIntegrer = new List<LigneSelectionDelaiPaiement>();
         var clesDejaIntegrees = new List<CleLigneDelaiPaiement>();
-        var clesRefusees = new List<CleLigneDelaiPaiement>();
         var clesIntrouvables = new List<CleLigneDelaiPaiement>();
 
         if (selection == null)
@@ -293,9 +289,6 @@ public sealed class DeclarationDelaiPaiementService : IDeclarationDelaiPaiementS
             foreach (var cle in selection.Distinct())
             {
                 if (dejaIntegrees.Contains(cle)) { clesDejaIntegrees.Add(cle); continue; }
-
-                // Garde-fou TASK-128/131 : jamais intégrable sans Depassement calculé (décision PO).
-                if (clesRepriseManuelle.Contains(cle)) { clesRefusees.Add(cle); continue; }
 
                 if (candidatesParCle.TryGetValue(cle, out var ligne)) aIntegrer.Add(ligne);
                 else clesIntrouvables.Add(cle);
@@ -332,9 +325,7 @@ public sealed class DeclarationDelaiPaiementService : IDeclarationDelaiPaiementS
             NombreCandidates = candidatesParCle.Count,
             NombreIntegrees = nombreIntegrees,
             ClesDejaIntegrees = clesDejaIntegrees,
-            ClesRefuseesRepriseManuelleRequise = clesRefusees,
             ClesIntrouvablesDansSelection = clesIntrouvables,
-            NombreRepriseManuelleRequiseDisponibles = resultatSelection.LignesRepriseManuelleRequise.Count,
             DateMiseEnRouteSociete = resultatSelection.DateMiseEnRouteSociete
         };
     }

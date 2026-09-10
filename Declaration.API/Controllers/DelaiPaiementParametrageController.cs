@@ -9,11 +9,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace Declaration.API.Controllers;
 
 /// <summary>
-/// TASK-128 : endpoints minimaux de paramétrage du bootstrap Délai de Paiement Maroc — date de
-/// mise en route par société (<c>DM_PARAM_DELAIPAIEMENT_SOCIETE</c>) et reprise manuelle par
-/// échéance (<c>DM_REPRISE_DELAIPAIEMENT</c>). Périmètre STRICT de cette tâche : back uniquement
-/// (lecture/écriture) — l'écran de saisie est porté par TASK-134, l'algorithme de sélection qui
-/// consomme cette donnée par TASK-131.
+/// TASK-128 : endpoint minimal de paramétrage du bootstrap Délai de Paiement Maroc — date de
+/// mise en route par société (<c>DM_PARAM_DELAIPAIEMENT_SOCIETE</c>). L'écran de saisie est porté
+/// par TASK-134, l'algorithme de sélection qui consomme cette donnée par TASK-131.
+///
+/// Depuis TASK-220, ne porte plus les endpoints de reprise manuelle par échéance (mécanisme
+/// supprimé) — cf. <see cref="Declaration.Application.Services.IDelaiPaiementBootstrapService"/>.
 ///
 /// Protection cohérente avec le reste des endpoints de paramétrage GRF (TASK-074) : <c>[Authorize]</c>
 /// + garde société (claim "UT_Admin"=1 ou société présente dans le claim CSV "Societes").
@@ -85,54 +86,9 @@ public class DelaiPaiementParametrageController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>
-    /// Reprise manuelle saisie pour cette échéance précise, ou 404 si aucune reprise n'a été
-    /// saisie (l'échéance reste alors "Antérieure à la mise en route — retard réel inconnu",
-    /// non intégrable à une déclaration — cf. TASK-128 §Règle de bascule).
-    /// </summary>
-    [HttpGet("reprise/{soId:int}/{ecId:int}")]
-    public async Task<IActionResult> GetReprise(int soId, int ecId)
-    {
-        if (soId <= 0 || ecId <= 0)
-            return BadRequest(new { Message = "'soId' et 'ecId' sont obligatoires." });
-        if (!EstSocieteAutorisee(soId))
-            return Forbid();
-
-        var reprise = await _service.GetRepriseAsync(soId, ecId);
-        if (reprise == null)
-            return NotFound(new { Message = $"Aucune reprise saisie pour SO_Id={soId}, EC_Id={ecId}." });
-        return Ok(reprise);
-    }
-
-    /// <summary>
-    /// Saisie de la reprise manuelle "retard déjà connu/déclaré jusqu'au [date]" pour une échéance
-    /// précise. Équivalent d'un solde d'ouverture comptable : initialise la borne du calcul
-    /// incrémental futur pour CETTE échéance (consommé par TASK-131), sans jamais recalculer un
-    /// retard cumulé silencieux depuis la date de facture.
-    /// </summary>
-    [HttpPost("reprise")]
-    public async Task<IActionResult> SetReprise([FromBody] SetRepriseRequest request)
-    {
-        if (request.SoId <= 0 || request.EcId <= 0)
-            return BadRequest(new { Message = "'soId' et 'ecId' sont obligatoires." });
-        if (!EstSocieteAutorisee(request.SoId))
-            return Forbid();
-        if (request.DateDejaDeclareeJusquau == default)
-            return BadRequest(new { Message = "'dateDejaDeclareeJusquau' est obligatoire." });
-
-        await _service.SetRepriseAsync(request.SoId, request.EcId, request.DateDejaDeclareeJusquau, UtilisateurCourantId());
-        return NoContent();
-    }
 }
 
 public class SetDateMiseEnRouteRequest
 {
     public DateTime DateMiseEnRoute { get; set; }
-}
-
-public class SetRepriseRequest
-{
-    public int SoId { get; set; }
-    public int EcId { get; set; }
-    public DateTime DateDejaDeclareeJusquau { get; set; }
 }

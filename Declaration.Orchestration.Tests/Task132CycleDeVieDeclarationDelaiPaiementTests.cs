@@ -51,16 +51,14 @@ public class Task132CycleDeVieDeclarationDelaiPaiementTests
         var sansLigne = await Assert.ThrowsAsync<InvalidOperationException>(() => service.CloturerAsync(ddpId, UtId));
         Assert.Equal("La déclaration ne contient aucune ligne.", sansLigne.Message);
 
-        // ── 3. Intégration : 2 candidates écrites, la ligne « reprise manuelle requise » jamais écrite.
+        // ── 3. Intégration : 2 candidates écrites.
         selection.Candidates.Add(Candidate(ecId: 100, afId: 500, depassement: 12));
         selection.Candidates.Add(Candidate(ecId: 101, afId: null, depassement: 30));
-        selection.RepriseManuelle.Add(Candidate(ecId: 102, afId: null, depassement: null));
 
         var integration = await service.IntegrerLignesAsync(ddpId, UtId);
 
         Assert.Equal(2, integration.NombreCandidates);
         Assert.Equal(2, integration.NombreIntegrees);
-        Assert.Equal(1, integration.NombreRepriseManuelleRequiseDisponibles);
         Assert.Empty(integration.ClesDejaIntegrees);
 
         // Les bornes passées à TASK-131 sont celles de la déclaration, jamais une plage libre.
@@ -211,7 +209,7 @@ public class Task132CycleDeVieDeclarationDelaiPaiementTests
     // ─── Intégration sélective ────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Integration_SelectionExplicite_RefuseLesLignesEnRepriseManuelleRequise()
+    public async Task Integration_SelectionExplicite_SignaleLesClesIntrouvables()
     {
         var repository = new FauxRepository();
         var selection = new FausseSelection();
@@ -219,41 +217,38 @@ public class Task132CycleDeVieDeclarationDelaiPaiementTests
         var ddpId = await service.CreerAsync(RequeteT1());
 
         selection.Candidates.Add(Candidate(ecId: 100, afId: null, depassement: 5));
-        selection.RepriseManuelle.Add(Candidate(ecId: 200, afId: null, depassement: null));
 
         var resultat = await service.IntegrerLignesAsync(ddpId, UtId, new[]
         {
             new CleLigneDelaiPaiement(100, null),
-            new CleLigneDelaiPaiement(200, null),   // reprise manuelle requise → refusée
             new CleLigneDelaiPaiement(999, null)    // absente de la sélection → signalée
         });
 
         Assert.Equal(1, resultat.NombreIntegrees);
-        Assert.Equal(new[] { new CleLigneDelaiPaiement(200, null) }, resultat.ClesRefuseesRepriseManuelleRequise);
         Assert.Equal(new[] { new CleLigneDelaiPaiement(999, null) }, resultat.ClesIntrouvablesDansSelection);
         Assert.Single(repository.Lignes);
         Assert.Equal(100, repository.Lignes[0].EcId);
     }
 
     [Fact]
-    public async Task Integration_SocieteNonConfiguree_AucuneLigneEcrite_MaisInformationRestituee()
+    public async Task Integration_SocieteNonConfiguree_ResultatRestitueSansExclusion()
     {
-        // Comportement AMONT de TASK-131 (garde-fou TASK-128) : sans date de mise en route, toutes les
-        // lignes sont en « reprise manuelle requise » ⇒ 0 candidate. Documenté, pas corrigé ici.
+        // Depuis TASK-220 : société non configurée => AUCUNE exclusion en amont (TASK-131/Core),
+        // le calcul automatique reste actif. Ce test vérifie seulement que la valeur
+        // DateMiseEnRouteSociete=null est bien répercutée jusqu'au compte rendu d'intégration.
         var repository = new FauxRepository();
         var selection = new FausseSelection { DateMiseEnRoute = null };
         var service = new DeclarationDelaiPaiementService(repository, selection);
         var ddpId = await service.CreerAsync(RequeteT1());
 
-        selection.RepriseManuelle.Add(Candidate(ecId: 300, afId: null, depassement: null));
+        selection.Candidates.Add(Candidate(ecId: 300, afId: null, depassement: 10));
 
         var resultat = await service.IntegrerLignesAsync(ddpId, UtId);
 
-        Assert.Equal(0, resultat.NombreIntegrees);
-        Assert.Equal(0, resultat.NombreCandidates);
-        Assert.Equal(1, resultat.NombreRepriseManuelleRequiseDisponibles);
+        Assert.Equal(1, resultat.NombreIntegrees);
+        Assert.Equal(1, resultat.NombreCandidates);
         Assert.Null(resultat.DateMiseEnRouteSociete);
-        Assert.Empty(repository.Lignes);
+        Assert.Single(repository.Lignes);
     }
 
     // ─── Suppression ──────────────────────────────────────────────────────────────────────────────
@@ -356,7 +351,7 @@ public class Task132CycleDeVieDeclarationDelaiPaiementTests
     {
         EcId = ecId,
         AfId = afId,
-        Statut = depassement.HasValue ? StatutLigneDelaiPaiement.Candidate : StatutLigneDelaiPaiement.RepriseManuelleRequise,
+        Statut = StatutLigneDelaiPaiement.Candidate,
         Depassement = depassement,
         EcheanceLegale = new DateTime(2025, 12, 1),
         TiersNo = ecId,
@@ -367,7 +362,6 @@ public class Task132CycleDeVieDeclarationDelaiPaiementTests
     private sealed class FausseSelection : ISelectionDelaiPaiementService
     {
         public List<LigneSelectionDelaiPaiement> Candidates { get; } = new();
-        public List<LigneSelectionDelaiPaiement> RepriseManuelle { get; } = new();
         public DateTime? DateMiseEnRoute { get; init; } = new DateTime(2020, 1, 1);
         public (int SoId, DateTime Debut, DateTime Fin)? DernierAppel { get; private set; }
 
@@ -380,8 +374,7 @@ public class Task132CycleDeVieDeclarationDelaiPaiementTests
                 DateFinPeriode = dateFinPeriode,
                 DateMiseEnRouteSociete = DateMiseEnRoute,
                 Lignes = Candidates.ToList(),
-                LignesRepriseManuelleRequise = RepriseManuelle.ToList(),
-                NombreEcheancesExaminees = Candidates.Count + RepriseManuelle.Count
+                NombreEcheancesExaminees = Candidates.Count
             });
         }
     }

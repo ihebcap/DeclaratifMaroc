@@ -1072,11 +1072,6 @@ function SelectionLignesModal({ societeId, declaration, onClose, onIntegre }: {
               </button>
               <span>Candidates : <strong>{selection.lignes.length}</strong></span>
               <span>Sélectionnées : <strong data-testid="nb-cochees">{cochees.size}</strong></span>
-              {selection.lignesRepriseManuelleRequise.length > 0 && (
-                <span style={{ color: 'var(--status-blocking-text)' }}>
-                  Non intégrables (reprise manuelle requise) : <strong>{selection.lignesRepriseManuelleRequise.length}</strong>
-                </span>
-              )}
             </div>
 
             <div style={{ flex: 1, minHeight: '220px', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '4px' }}>
@@ -1092,19 +1087,6 @@ function SelectionLignesModal({ societeId, declaration, onClose, onIntegre }: {
                 </div>
               )}
 
-              {selection.lignesRepriseManuelleRequise.length > 0 && (
-                <>
-                  <div style={{ padding: '0.45rem 0.75rem', background: 'var(--status-blocking-bg)', color: 'var(--status-blocking-text)', fontWeight: 600, fontSize: '0.78rem', borderTop: '1px solid var(--border-color)' }}>
-                    Antérieures à la mise en route — retard réel inconnu (non intégrables)
-                  </div>
-                  <LignesSelectionTable
-                    lignes={selection.lignesRepriseManuelleRequise}
-                    cochees={new Set()}
-                    cle={cle}
-                    onBasculer={undefined}
-                  />
-                </>
-              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', paddingBottom: '0.5rem' }}>
@@ -1164,7 +1146,6 @@ function LignesSelectionTable({ lignes, cochees, cle, onBasculer }: {
       </div>
       {lignes.map(l => {
         const k = cle(l);
-        const bloquee = l.statut === 'RepriseManuelleRequise';
         return (
           <div
             key={k}
@@ -1188,10 +1169,7 @@ function LignesSelectionTable({ lignes, cochees, cle, onBasculer }: {
             </div>
             <div style={{ flex: '0 0 115px', padding: '0.35rem 0.6rem' }}>{formatDate(l.borneActuelle)}</div>
             <div style={{ flex: '0 0 125px', padding: '0.35rem 0.6rem', textAlign: 'right' }}>
-              {/* Jamais un 0 ni un chiffre calculé pour une ligne bloquée : un badge explicite. */}
-              {bloquee
-                ? <Badge texte="retard inconnu" ton="block" />
-                : <strong>{l.depassement}</strong>}
+              <strong>{l.depassement}</strong>
             </div>
             <div style={{ flex: '0 0 130px', padding: '0.35rem 0.6rem', textAlign: 'right' }}>{formatMoney(l.montantLigne)}</div>
           </div>

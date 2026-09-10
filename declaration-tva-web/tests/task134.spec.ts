@@ -14,15 +14,15 @@ import { test, expect, type Page, type Route } from '@playwright/test';
 //
 // Couverture : cycle complet création → sélection → intégration → clôture → génération BLOQUÉE par
 // IF/ICE manquant (message + fournisseurs fautifs affichés) → correction → génération réussie →
-// dépôt ; plus le critère structurant « aucun filtre de date libre » sur les deux écrans, et le
-// badge + la saisie manuelle de reprise sur l'écran de contrôle.
+// dépôt ; plus le critère structurant « aucun filtre de date libre » sur les deux écrans, et
+// (depuis TASK-220) l'absence de tout mécanisme de reprise manuelle : une facture antérieure à la
+// mise en route est exclue en amont par le backend, jamais affichée bloquée côté front.
 
 type Etat = {
   declaration: any | null;
   lignes: any[];
   ifIceConforme: boolean;
   dateMiseEnRoute: string | null;
-  reprises: { ecId: number, date: string }[];
   clotures: number;
   depots: number;
 };
@@ -45,7 +45,11 @@ const MESSAGE_BLOQUANT =
   + 'fiscal de 8 caractères sans espace, ICE de 15 caractères sans espace). Corrigez la fiche tiers '
   + 'dans l\'ERP puis relancez la génération.';
 
-/** Deux candidates + une ligne « antérieure à la mise en route » (Depassement null, JAMAIS 0). */
+/**
+ * Deux candidates. Depuis TASK-220, une facture antérieure à la mise en route de sa société est
+ * exclue en amont par le backend (aucune ligne produite) : elle n'apparaît donc JAMAIS dans cette
+ * liste, contrairement à l'ancien mécanisme de reprise manuelle (ligne bloquée mais visible).
+ */
 function lignesSelection() {
   return {
     dateDebutPeriode: '2026-01-01T00:00:00',
@@ -73,18 +77,6 @@ function lignesSelection() {
         tiersNo: 42, tiersCode: 'FOUBREL', tiersIntitule: 'Tiers à créer',
         typeReglement: 'Cheque', dateReglement: '2026-02-20T00:00:00',
         dateRapprochement: '2026-02-25T00:00:00', reglementPiece: 'CHQ-778',
-      },
-    ],
-    lignesRepriseManuelleRequise: [
-      {
-        ecId: 17001, afId: null, bucket: 'HorsPeriodePartNonAffectee', statut: 'RepriseManuelleRequise',
-        echeanceLegale: '2023-05-10T00:00:00', nombreJoursDelaiApplique: 60, origineDelai: 'Defaut',
-        borneActuelle: '2026-03-31T00:00:00', borneReference: null,
-        origineBorneReference: 'Indeterminee', depassement: null, montantLigne: 25000,
-        doNumero: 'FA230001', doDate: '2023-03-11T00:00:00', doReference: null,
-        echeanceContractuelle: '2023-04-10T00:00:00', montantEcheance: 25000, soldeEcheance: 25000,
-        tiersNo: 43, tiersCode: 'FOUANC', tiersIntitule: 'Fournisseur ancien',
-        typeReglement: null, dateReglement: null, dateRapprochement: null, reglementPiece: null,
       },
     ],
   };
@@ -117,18 +109,13 @@ async function installMock(page: Page, etat: Etat) {
     const p = url.pathname.replace(/^.*\/api/, '');
     const method = route.request().method();
 
-    // ── TASK-128 : paramétrage « date de mise en route » + reprise manuelle ──
+    // ── TASK-128 : paramétrage « date de mise en route » (critère d'exclusion revu TASK-220) ──
     if (p.startsWith('/delai-paiement/parametrage/')) {
       if (method === 'GET') return route.fulfill({ json: { soId: 1, dateMiseEnRoute: etat.dateMiseEnRoute } });
       if (method === 'PUT') {
         etat.dateMiseEnRoute = route.request().postDataJSON()?.dateMiseEnRoute ?? null;
         return route.fulfill({ status: 204, body: '' });
       }
-    }
-    if (p === '/delai-paiement/reprise' && method === 'POST') {
-      const body = route.request().postDataJSON();
-      etat.reprises.push({ ecId: body.ecId, date: body.dateDejaDeclareeJusquau });
-      return route.fulfill({ status: 204, body: '' });
     }
 
     // ── TASK-134 : domaine déclaration DDP ──
@@ -146,15 +133,12 @@ async function installMock(page: Page, etat: Etat) {
         : trimestre === '2'
           ? { debut: '2026-04-01T00:00:00', fin: '2026-06-30T23:59:59' }
           : { debut: '2026-01-01T00:00:00', fin: '2026-03-31T23:59:59' };
-      // Une reprise saisie fait basculer la ligne bloquée côté serveur (comportement TASK-131).
-      const bloquees = etat.reprises.some(r => r.ecId === 17001) ? [] : base.lignesRepriseManuelleRequise;
       return route.fulfill({
         json: {
           ...base,
           dateDebutPeriode: bornes.debut,
           dateFinPeriode: bornes.fin,
           dateMiseEnRouteSociete: etat.dateMiseEnRoute,
-          lignesRepriseManuelleRequise: bloquees,
         },
       });
     }
@@ -212,8 +196,8 @@ async function installMock(page: Page, etat: Etat) {
       return route.fulfill({
         json: {
           ddpId: 1, nombreCandidates: candidates.length, nombreIntegrees: integrees,
-          clesDejaIntegrees: [], clesRefuseesRepriseManuelleRequise: [], clesIntrouvablesDansSelection: [],
-          nombreRepriseManuelleRequiseDisponibles: 1, dateMiseEnRouteSociete: etat.dateMiseEnRoute,
+          clesDejaIntegrees: [], clesIntrouvablesDansSelection: [],
+          dateMiseEnRouteSociete: etat.dateMiseEnRoute,
         },
       });
     }
@@ -258,7 +242,7 @@ async function installMock(page: Page, etat: Etat) {
 function etatInitial(overrides: Partial<Etat> = {}): Etat {
   return {
     declaration: null, lignes: [], ifIceConforme: false,
-    dateMiseEnRoute: '2023-07-01T00:00:00', reprises: [], clotures: 0, depots: 0,
+    dateMiseEnRoute: '2023-07-01T00:00:00', clotures: 0, depots: 0,
     ...overrides,
   };
 }
@@ -299,11 +283,6 @@ test('TASK-134 A — cycle complet : création → sélection → intégration �
   // Critère STRUCTURANT : aucun champ de date libre dans la popup.
   const popup = page.locator('div').filter({ has: page.getByTestId('periode-selection') });
   await expect(popup.locator('input[type="date"]')).toHaveCount(0);
-
-  // La ligne bloquée est visible, badgée « retard inconnu », et N'A PAS de case à cocher.
-  await expect(page.getByText('Antérieures à la mise en route — retard réel inconnu (non intégrables)')).toBeVisible();
-  await expect(page.getByText('retard inconnu')).toBeVisible();
-  await expect(page.getByTestId('ligne-selection-17001|').locator('input[type="checkbox"]')).toHaveCount(0);
 
   // ── 4. Intégration manuelle multi-sélection (2 candidates).
   await page.getByRole('button', { name: 'Tout cocher' }).click();
@@ -355,7 +334,7 @@ test('TASK-134 A — cycle complet : création → sélection → intégration �
   await page.screenshot({ path: '../VERIFY/task134-A3-deposee.png', fullPage: true });
 });
 
-test('TASK-134 B — écran de contrôle : période RAISONNÉE (aucune date libre), badge + saisie manuelle de reprise', async ({ page }) => {
+test('TASK-134 B — écran de contrôle : période RAISONNÉE (aucune date libre), aucune intégration possible', async ({ page }) => {
   const etat = etatInitial();
   const requetesControle: string[] = [];
   await installMock(page, etat);
@@ -387,42 +366,29 @@ test('TASK-134 B — écran de contrôle : période RAISONNÉE (aucune date libr
     expect(u).toMatch(/exercice=2026/);
   }
 
-  // Badge explicite + action de saisie manuelle sur la ligne antérieure à la mise en route ;
-  // le dépassement n'est JAMAIS calculé pour cette ligne.
-  await expect(page.getByTestId('badge-reprise-manuelle')).toBeVisible();
-  await expect(page.getByText('inconnu')).toBeVisible();
-  await expect(page.getByText('FA230001')).toBeVisible();
-
   // Cet écran ne permet AUCUNE intégration (rôle strictement séparé de la popup de sélection).
   await expect(page.getByRole('button', { name: /Intégrer/ })).toHaveCount(0);
   await expect(page.locator('input[type="checkbox"]')).toHaveCount(0);
 
   await page.screenshot({ path: '../VERIFY/task134-B1-controle-periode-raisonnee.png', fullPage: true });
-
-  // Saisie de la reprise manuelle → la ligne quitte le statut bloqué (comportement serveur TASK-131).
-  await page.getByRole('button', { name: /Saisie manuelle/ }).click();
-  await expect(page.getByRole('heading', { name: /Reprise manuelle — facture FA230001/ })).toBeVisible();
-  await page.locator('input[type="date"]').fill('2025-12-31');
-  await page.getByRole('button', { name: /Enregistrer la reprise/ }).click();
-
-  await expect(page.getByRole('heading', { name: /Reprise manuelle/ })).toHaveCount(0);
-  expect(etat.reprises).toEqual([{ ecId: 17001, date: '2025-12-31' }]);
-  await expect(page.getByTestId('badge-reprise-manuelle')).toHaveCount(0);
-
-  await page.screenshot({ path: '../VERIFY/task134-B2-reprise-manuelle-saisie.png', fullPage: true });
 });
 
-test('TASK-134 C — société sans date de mise en route : alerte explicite + accès direct à la saisie', async ({ page }) => {
-  // Cas réel constaté en base (VERIFY TASK-131 §9 n°3) : sans date de mise en route, 0 candidate et
-  // toutes les lignes en « reprise manuelle requise ». L'écran doit l'EXPLIQUER, pas apparaître vide.
+test('TASK-134 C — société sans date de mise en route : aucune exclusion, lignes affichées normalement', async ({ page }) => {
+  // Depuis TASK-220 : sans date de mise en route configurée, AUCUNE exclusion n'est appliquée
+  // (position la plus sûre) — les lignes candidates s'affichent normalement, contrairement à
+  // l'ancien comportement (toutes bloquées en « reprise manuelle requise »).
   const etat = etatInitial({ dateMiseEnRoute: null });
   await installMock(page, etat);
 
   await page.goto('/task134.html');
   await page.getByRole('button', { name: 'Contrôle lignes hors délai' }).click();
 
-  await expect(page.getByTestId('alerte-mise-en-route')).toBeVisible();
-  await page.getByRole('button', { name: /Saisir la date/ }).click();
+  await expect(page.getByRole('heading', { name: /Contrôle des lignes hors délai/ })).toBeVisible();
+  await expect(page.getByText('FA250015')).toBeVisible();
+  await expect(page.getByText('FA260007')).toBeVisible();
+
+  // La saisie de la date de mise en route reste accessible depuis cet écran.
+  await page.getByRole('button', { name: /Date de mise en route/ }).click();
   await expect(page.getByRole('heading', { name: /Date de mise en route/ })).toBeVisible();
   await expect(page.getByText('non configurée')).toBeVisible();
 
@@ -431,7 +397,6 @@ test('TASK-134 C — société sans date de mise en route : alerte explicite + a
 
   await expect(page.getByRole('heading', { name: /Date de mise en route — Délai/ })).toHaveCount(0);
   expect(etat.dateMiseEnRoute).toBe('2023-07-01');
-  await expect(page.getByTestId('alerte-mise-en-route')).toHaveCount(0);
 
   await page.screenshot({ path: '../VERIFY/task134-C-mise-en-route.png', fullPage: true });
 });

@@ -301,7 +301,7 @@ export interface LigneSelectionDdpDto {
   ecId: number;
   afId: number | null;
   bucket: string;
-  statut: 'Candidate' | 'RepriseManuelleRequise';
+  statut: 'Candidate';
   echeanceLegale: string;
   nombreJoursDelaiApplique: number;
   origineDelai: string;
@@ -330,7 +330,7 @@ export interface LigneSelectionDdpDto {
 export interface SelectionDdpDto {
   dateDebutPeriode: string;
   dateFinPeriode: string;
-  /** null = société non configurée (TASK-128) ⇒ 0 candidate, tout en reprise manuelle requise. */
+  /** null = société non configurée (TASK-128) ⇒ aucune exclusion appliquée (position la plus sûre). */
   dateMiseEnRouteSociete: string | null;
   nombreEcheancesExaminees: number;
   /** Échéances de la période déjà portées par une déclaration antérieure (anti-double-déclaration). */
@@ -338,7 +338,6 @@ export interface SelectionDdpDto {
   /** Borne la plus récente déjà déclarée (max DDP_DateFin) ; null si aucune. */
   derniereBorneDejaDeclaree: string | null;
   lignes: LigneSelectionDdpDto[];
-  lignesRepriseManuelleRequise: LigneSelectionDdpDto[];
 }
 
 export interface LigneIntegreeDdpDto {
@@ -374,9 +373,7 @@ export interface ResultatIntegrationDdpDto {
   nombreCandidates: number;
   nombreIntegrees: number;
   clesDejaIntegrees: CleLigneDdp[];
-  clesRefuseesRepriseManuelleRequise: CleLigneDdp[];
   clesIntrouvablesDansSelection: CleLigneDdp[];
-  nombreRepriseManuelleRequiseDisponibles: number;
   dateMiseEnRouteSociete: string | null;
 }
 
@@ -502,9 +499,7 @@ export async function getControleLignesDdp(
   return res.data as SelectionDdpDto;
 }
 
-// ─── TASK-128 : paramétrage « date de mise en route » + reprise manuelle (endpoints DÉJÀ livrés) ──
-// Aucun front ne les consommait avant TASK-134 : sans la date de mise en route, TASK-131 renvoie
-// 0 ligne intégrable (constaté sur données réelles) et l'écran apparaîtrait vide sans explication.
+// ─── TASK-128 : paramétrage « date de mise en route » (critère d'exclusion revu par TASK-220) ────
 
 export async function getDateMiseEnRouteDdp(soId: number): Promise<{ dateMiseEnRoute: string | null }> {
   const res = await api.get(`/delai-paiement/parametrage/${soId}`);
@@ -513,9 +508,4 @@ export async function getDateMiseEnRouteDdp(soId: number): Promise<{ dateMiseEnR
 
 export async function setDateMiseEnRouteDdp(soId: number, dateMiseEnRoute: string): Promise<void> {
   await api.put(`/delai-paiement/parametrage/${soId}`, { dateMiseEnRoute });
-}
-
-/** Reprise manuelle « déjà déclaré jusqu'au [date] » pour UNE échéance (solde d'ouverture, TASK-128). */
-export async function setRepriseManuelleDdp(soId: number, ecId: number, dateDejaDeclareeJusquau: string): Promise<void> {
-  await api.post('/delai-paiement/reprise', { soId, ecId, dateDejaDeclareeJusquau });
 }

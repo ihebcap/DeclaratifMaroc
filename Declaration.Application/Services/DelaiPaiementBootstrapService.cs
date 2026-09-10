@@ -1,19 +1,17 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using Declaration.Application.Entities;
 using Declaration.Application.Interfaces;
-using Declaration.Core;
 
 namespace Declaration.Application.Services;
 
 /// <summary>
-/// TASK-128 : service d'orchestration du paramètre "date de mise en route" + de la reprise
-/// manuelle par échéance. Aucune logique métier dupliquée : la classification est déléguée au
-/// calculateur pur <see cref="DelaiPaiementBootstrapGuard"/> (Declaration.Core), ce service ne fait
-/// que résoudre les deux lectures nécessaires (paramétrage société + reprise éventuelle) avant de
-/// lui déléguer. Destiné aux consommateurs TASK-131 (sélection des lignes hors délai) et
+/// TASK-128 : service d'orchestration du paramètre "date de mise en route" du module Délai de
+/// Paiement Maroc. Destiné aux consommateurs TASK-131 (sélection des lignes hors délai) et
 /// TASK-134 (écran de contrôle).
+///
+/// Depuis TASK-220, ne porte plus la reprise manuelle par échéance (mécanisme supprimé : le
+/// critère de bascule TASK-131 compare désormais directement <c>DoDate</c> à
+/// <see cref="GetDateMiseEnRouteAsync"/>, sans état intermédiaire "reprise requise").
 /// </summary>
 public interface IDelaiPaiementBootstrapService
 {
@@ -22,45 +20,16 @@ public interface IDelaiPaiementBootstrapService
 
     /// <summary>Saisie (une fois, par société) de la date de mise en route.</summary>
     Task SetDateMiseEnRouteAsync(int societeId, DateTime dateMiseEnRoute, int? utilisateurId);
-
-    /// <summary>Reprise manuelle saisie pour cette échéance précise, ou null si aucune.</summary>
-    Task<RepriseDelaiPaiement?> GetRepriseAsync(int societeId, int ecId);
-
-    /// <summary>
-    /// TASK-131 (ajout additif) : TOUTES les reprises saisies de la société, en une lecture — la
-    /// sélection DDP évalue le garde-fou sur des centaines d'échéances par période et ne peut pas
-    /// appeler <see cref="GetRepriseAsync"/> une fois par échéance (N+1).
-    /// </summary>
-    Task<IReadOnlyList<RepriseDelaiPaiement>> GetToutesReprisesAsync(int societeId);
-
-    /// <summary>Saisie de la reprise manuelle "retard déjà connu/déclaré jusqu'au [date]" pour une échéance précise.</summary>
-    Task SetRepriseAsync(int societeId, int ecId, DateTime dateDejaDeclareeJusquau, int? utilisateurId);
-
-    /// <summary>
-    /// Résout le statut de bascule d'une échéance déjà résolue (échéance légale connue), en
-    /// combinant le paramétrage société et l'éventuelle reprise manuelle. L'indicateur d'historique
-    /// legacy (<c>RT_DECLARATIONDELAISPAIEMENTLG</c>) est fourni par l'appelant (TASK-131) — sa
-    /// lecture relève de l'algorithme de sélection, hors périmètre STRICT de TASK-128.
-    /// </summary>
-    Task<ResultatBasculeEcheance> ResoudreBasculeAsync(
-        int societeId,
-        int ecId,
-        DateTime echeanceLegale,
-        bool aHistoriqueDeclarationLegacy);
 }
 
 /// <inheritdoc cref="IDelaiPaiementBootstrapService"/>
 public sealed class DelaiPaiementBootstrapService : IDelaiPaiementBootstrapService
 {
     private readonly IParametrageDelaiPaiementSocieteRepository _parametrage;
-    private readonly IRepriseDelaiPaiementRepository _reprise;
 
-    public DelaiPaiementBootstrapService(
-        IParametrageDelaiPaiementSocieteRepository parametrage,
-        IRepriseDelaiPaiementRepository reprise)
+    public DelaiPaiementBootstrapService(IParametrageDelaiPaiementSocieteRepository parametrage)
     {
         _parametrage = parametrage ?? throw new ArgumentNullException(nameof(parametrage));
-        _reprise = reprise ?? throw new ArgumentNullException(nameof(reprise));
     }
 
     public async Task<DateTime?> GetDateMiseEnRouteAsync(int societeId)
@@ -71,29 +40,4 @@ public sealed class DelaiPaiementBootstrapService : IDelaiPaiementBootstrapServi
 
     public Task SetDateMiseEnRouteAsync(int societeId, DateTime dateMiseEnRoute, int? utilisateurId)
         => _parametrage.SetAsync(societeId, dateMiseEnRoute, utilisateurId);
-
-    public Task<RepriseDelaiPaiement?> GetRepriseAsync(int societeId, int ecId)
-        => _reprise.GetAsync(societeId, ecId);
-
-    public Task<IReadOnlyList<RepriseDelaiPaiement>> GetToutesReprisesAsync(int societeId)
-        => _reprise.GetAllAsync(societeId);
-
-    public Task SetRepriseAsync(int societeId, int ecId, DateTime dateDejaDeclareeJusquau, int? utilisateurId)
-        => _reprise.SetAsync(societeId, ecId, dateDejaDeclareeJusquau, utilisateurId);
-
-    public async Task<ResultatBasculeEcheance> ResoudreBasculeAsync(
-        int societeId,
-        int ecId,
-        DateTime echeanceLegale,
-        bool aHistoriqueDeclarationLegacy)
-    {
-        var dateMiseEnRoute = await GetDateMiseEnRouteAsync(societeId);
-        var reprise = await _reprise.GetAsync(societeId, ecId);
-
-        return DelaiPaiementBootstrapGuard.Resoudre(
-            echeanceLegale,
-            dateMiseEnRoute,
-            aHistoriqueDeclarationLegacy,
-            reprise?.DateDejaDeclareeJusquau);
-    }
 }

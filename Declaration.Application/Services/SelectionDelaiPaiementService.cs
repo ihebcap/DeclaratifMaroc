@@ -9,8 +9,6 @@ namespace Declaration.Application.Services;
 
 /// <summary>
 /// TASK-131 : résultat de la sélection des lignes hors délai pour UNE période de déclaration.
-/// Sépare explicitement les lignes exploitables des lignes bloquées par le garde-fou de mise en
-/// route (TASK-128) — aucune ligne n'est supprimée silencieusement.
 /// </summary>
 public sealed class ResultatSelectionDelaiPaiement
 {
@@ -22,16 +20,11 @@ public sealed class ResultatSelectionDelaiPaiement
 
     /// <summary>
     /// Lignes exploitables : <c>Depassement</c> incrémental calculé et strictement positif.
-    /// Consommées par l'intégration (TASK-132).
+    /// Consommées par l'intégration (TASK-132). Depuis TASK-220, toute facture antérieure à la
+    /// mise en route de sa société (<c>DoDate</c>) est exclue en amont par le calculateur — cette
+    /// liste ne contient donc plus jamais de ligne « en attente de reprise manuelle ».
     /// </summary>
     public IReadOnlyList<LigneSelectionDelaiPaiement> Lignes { get; init; } = Array.Empty<LigneSelectionDelaiPaiement>();
-
-    /// <summary>
-    /// Lignes signalées « Antérieure à la mise en route — retard réel inconnu » (TASK-128) : AUCUN
-    /// <c>Depassement</c> calculé, à afficher dans l'écran de contrôle (TASK-134) mais JAMAIS
-    /// intégrables tant que la reprise manuelle n'est pas saisie.
-    /// </summary>
-    public IReadOnlyList<LigneSelectionDelaiPaiement> LignesRepriseManuelleRequise { get; init; } = Array.Empty<LigneSelectionDelaiPaiement>();
 
     /// <summary>Nombre d'échéances lues après application des seuils légaux + devise société (traçabilité).</summary>
     public int NombreEcheancesExaminees { get; init; }
@@ -62,7 +55,7 @@ public sealed class ResultatSelectionDelaiPaiement
 /// <item>affectations + règlements des échéances retenues ;</item>
 /// <item>historique <c>RT_DECLARATIONDELAISPAIEMENTLG</c> (bornes déjà déclarées) ;</item>
 /// <item>référentiel de délai (TASK-127, chargé UNE fois) puis échéance légale par échéance ;</item>
-/// <item>garde-fou de mise en route + reprises manuelles (TASK-128, lus en lot).</item>
+/// <item>date de mise en route de la société (TASK-128, critère TASK-220 : comparée à <c>DoDate</c>).</item>
 /// </list>
 /// Tout le métier (3 cas de figure corrigés + calcul incrémental) vit dans le calculateur PUR
 /// <see cref="SelectionDelaiPaiementCalculator"/> (Declaration.Core), testable hors base.
@@ -138,12 +131,8 @@ public sealed class SelectionDelaiPaiementService : ISelectionDelaiPaiementServi
             e => e.EcId,
             e => contexte.Resoudre(e.DoDate, e.TiersNo, e.DoNumero));
 
-        // ── 4. Garde-fou de mise en route + reprises manuelles (TASK-128), lus en lot.
+        // ── 4. Date de mise en route de la société (TASK-128).
         var dateMiseEnRoute = await _bootstrap.GetDateMiseEnRouteAsync(soId);
-        var reprises = await _bootstrap.GetToutesReprisesAsync(soId);
-        var reprisesParEcheance = reprises
-            .GroupBy(r => r.EcId)
-            .ToDictionary(g => g.Key, g => g.Max(r => r.DateDejaDeclareeJusquau));
 
         // ── 5. Métier PUR : 3 cas de figure corrigés + calcul incrémental.
         var lignes = SelectionDelaiPaiementCalculator.Selectionner(new ParametresSelectionDelaiPaiement
@@ -154,8 +143,7 @@ public sealed class SelectionDelaiPaiementService : ISelectionDelaiPaiementServi
             Affectations = affectations,
             EcheancesLegales = echeancesLegales,
             DernieresBornesDeclarees = dernieresBornes,
-            DateMiseEnRouteSociete = dateMiseEnRoute,
-            ReprisesManuelles = reprisesParEcheance
+            DateMiseEnRouteSociete = dateMiseEnRoute
         });
 
         return new ResultatSelectionDelaiPaiement
@@ -163,8 +151,7 @@ public sealed class SelectionDelaiPaiementService : ISelectionDelaiPaiementServi
             DateDebutPeriode = dateDebut,
             DateFinPeriode = dateFin,
             DateMiseEnRouteSociete = dateMiseEnRoute,
-            Lignes = lignes.Where(l => l.Statut == StatutLigneDelaiPaiement.Candidate).ToList(),
-            LignesRepriseManuelleRequise = lignes.Where(l => l.Statut == StatutLigneDelaiPaiement.RepriseManuelleRequise).ToList(),
+            Lignes = lignes,
             NombreEcheancesExaminees = echeances.Count,
             // Traçabilité du calcul incrémental : combien d'échéances de cette période ont DÉJÀ été
             // déclarées (leur retard ne peut plus être compté) et jusqu'à quelle date.

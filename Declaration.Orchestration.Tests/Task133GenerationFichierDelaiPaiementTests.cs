@@ -343,7 +343,6 @@ public class Task133GenerationFichierDelaiPaiementTests : IDisposable
                 DateFinPeriode = dateFinPeriode,
                 DateMiseEnRouteSociete = DateMiseEnRoute,
                 Lignes = Candidates.ToList(),
-                LignesRepriseManuelleRequise = new List<LigneSelectionDelaiPaiement>(),
                 NombreEcheancesExaminees = Candidates.Count
             });
     }

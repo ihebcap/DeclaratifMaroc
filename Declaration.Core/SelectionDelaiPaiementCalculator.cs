@@ -176,15 +176,7 @@ namespace Declaration.Core
     public enum StatutLigneDelaiPaiement
     {
         /// <summary>Ligne candidate exploitable : <c>Depassement</c> incrémental calculé et strictement positif.</summary>
-        Candidate,
-
-        /// <summary>
-        /// Garde-fou TASK-128 : échéance antérieure à la date de mise en route de la société (ou
-        /// société non encore configurée), sans historique de déclaration et sans reprise manuelle
-        /// saisie. AUCUN <c>Depassement</c> calculé (jamais un chiffre silencieusement faux) ; ligne
-        /// RESTITUÉE pour l'écran de contrôle (TASK-134) mais NON INTÉGRABLE (TASK-132).
-        /// </summary>
-        RepriseManuelleRequise
+        Candidate
     }
 
     /// <summary>TASK-131 : origine de la borne de référence du calcul incrémental (traçabilité).</summary>
@@ -194,13 +186,7 @@ namespace Declaration.Core
         DerniereDeclaration,
 
         /// <summary>Aucune déclaration antérieure : borne = échéance légale (« première déclaration »).</summary>
-        EcheanceLegale,
-
-        /// <summary>Reprise manuelle saisie (<c>DM_REPRISE_DELAIPAIEMENT</c>, TASK-128) = solde d'ouverture.</summary>
-        RepriseManuelle,
-
-        /// <summary>Indéterminée : garde-fou de mise en route non levé (reprise manuelle requise).</summary>
-        Indeterminee
+        EcheanceLegale
     }
 
     /// <summary>
@@ -229,17 +215,14 @@ namespace Declaration.Core
         /// </summary>
         public DateTime BorneActuelle { get; init; }
 
-        /// <summary>
-        /// Borne de RÉFÉRENCE : jusqu'à quelle date le retard a DÉJÀ été déclaré. Null uniquement
-        /// quand <see cref="Statut"/> == <see cref="StatutLigneDelaiPaiement.RepriseManuelleRequise"/>.
-        /// </summary>
+        /// <summary>Borne de RÉFÉRENCE : jusqu'à quelle date le retard a DÉJÀ été déclaré.</summary>
         public DateTime? BorneReference { get; init; }
 
         public OrigineBorneReference OrigineBorneReference { get; init; }
 
         /// <summary>
         /// Dépassement INCRÉMENTAL en jours = <see cref="BorneActuelle"/> − <see cref="BorneReference"/>,
-        /// strictement positif. Null quand une reprise manuelle est requise (jamais 0, jamais négatif).
+        /// strictement positif.
         /// </summary>
         public int? Depassement { get; init; }
 
@@ -296,17 +279,19 @@ namespace Declaration.Core
         /// </summary>
         public IReadOnlyDictionary<int, DateTime> DernieresBornesDeclarees { get; init; } = new Dictionary<int, DateTime>();
 
-        /// <summary>Date de mise en route du module pour la société (TASK-128) ; null = pas encore configurée.</summary>
+        /// <summary>
+        /// Date de mise en route du module pour la société (TASK-128, critère revu par TASK-220) ;
+        /// null = pas encore configurée — dans ce cas AUCUNE exclusion n'est appliquée (position la
+        /// plus sûre : le calcul automatique reste actif tant que le PO n'a pas configuré la date,
+        /// plutôt qu'une date arbitraire).
+        /// </summary>
         public DateTime? DateMiseEnRouteSociete { get; init; }
-
-        /// <summary>Reprises manuelles saisies (TASK-128) par <c>EC_Id</c> : « retard déjà déclaré jusqu'au […] ».</summary>
-        public IReadOnlyDictionary<int, DateTime> ReprisesManuelles { get; init; } = new Dictionary<int, DateTime>();
     }
 
     /// <summary>
     /// TASK-131 — Cœur métier de la Déclaration Délai de Paiement Maroc : sélection des lignes hors
     /// délai + calcul INCRÉMENTAL anti-double-déclaration. Calculateur PUR (hors DB), testable comme
-    /// <see cref="EcheanceLegaleCalculator"/> / <see cref="DelaiPaiementBootstrapGuard"/>.
+    /// <see cref="EcheanceLegaleCalculator"/>.
     ///
     /// Porte les 3 cas de figure du legacy
     /// (<c>LigneControleDelaisPaiementController.GetAll</c>, l.60-293) AVEC les 3 corrections décidées
@@ -333,11 +318,12 @@ namespace Declaration.Core
     /// déjà <c>echeanceLegale &lt; dateDebut</c> : le retard valait TOUJOURS la longueur de la période.
     /// Remplacé par le calcul incrémental ci-dessus.
     ///
-    /// <b>Garde-fou de mise en route (TASK-128).</b> Délégué à
-    /// <see cref="DelaiPaiementBootstrapGuard"/> : une échéance antérieure à la mise en route, sans
-    /// historique et sans reprise saisie, est marquée
-    /// <see cref="StatutLigneDelaiPaiement.RepriseManuelleRequise"/> — restituée pour l'écran de
-    /// contrôle mais SANS <c>Depassement</c> calculé, donc non intégrable (TASK-132).
+    /// <b>Garde-fou de mise en route (TASK-128, critère revu par TASK-220).</b> Toute échéance dont la
+    /// DATE DE FACTURE (<c>DoDate</c>) est antérieure à la date de mise en route de sa société est
+    /// EXCLUE PURE ET SIMPLE de la sélection (aucune ligne produite, quel que soit son bucket), même
+    /// si son échéance légale calculée tombe après la mise en route. Remplace l'ancien mécanisme de
+    /// "reprise manuelle" (blocage + saisie du retard initial), supprimé (décision PO explicite,
+    /// TASK-220 : pas de variante "gardé mais recentré").
     ///
     /// LECTURE SEULE : ce calculateur n'écrit rien et ne connaît aucune base.
     /// </summary>
@@ -375,43 +361,23 @@ namespace Declaration.Core
                 // qui ne retient que « dans la période » ou « avant la période »).
                 if (echeanceLegale > dateFin) continue;
 
-                // ── Borne de référence (par échéance) : anti-double-déclaration + garde-fou TASK-128.
+                // ── Garde-fou de mise en route (TASK-128, critère DoDate depuis TASK-220) : facture
+                // antérieure à la mise en route de sa société ⇒ EXCLUE, aucune ligne produite, quel
+                // que soit son bucket ni son échéance légale. Pas de date configurée ⇒ pas d'exclusion.
+                if (parametres.DateMiseEnRouteSociete.HasValue
+                    && echeance.DoDate.Date < parametres.DateMiseEnRouteSociete.Value.Date)
+                {
+                    continue;
+                }
+
+                // ── Borne de référence (par échéance) : anti-double-déclaration (TASK-131).
+                // Historique prioritaire sur l'échéance légale (règle PO : max DDP_DateFin) ; à défaut
+                // « première déclaration » = cumul depuis l'échéance légale.
                 parametres.DernieresBornesDeclarees.TryGetValue(echeance.EcId, out var derniereBorneDeclaree);
                 var aHistorique = parametres.DernieresBornesDeclarees.ContainsKey(echeance.EcId);
-                DateTime? repriseManuelle = parametres.ReprisesManuelles.TryGetValue(echeance.EcId, out var rep) ? rep : (DateTime?)null;
-
-                var bascule = DelaiPaiementBootstrapGuard.Resoudre(
-                    echeanceLegale,
-                    parametres.DateMiseEnRouteSociete,
-                    aHistorique,
-                    repriseManuelle);
-
-                DateTime? borneReference;
-                OrigineBorneReference origineBorne;
-                StatutLigneDelaiPaiement statut;
-
-                switch (bascule.Statut)
-                {
-                    case StatutBasculeEcheance.CalculAutomatique:
-                        // Historique prioritaire sur l'échéance légale (règle PO : max DDP_DateFin) ;
-                        // à défaut « première déclaration » = cumul depuis l'échéance légale.
-                        borneReference = aHistorique ? derniereBorneDeclaree.Date : echeanceLegale;
-                        origineBorne = aHistorique ? OrigineBorneReference.DerniereDeclaration : OrigineBorneReference.EcheanceLegale;
-                        statut = StatutLigneDelaiPaiement.Candidate;
-                        break;
-
-                    case StatutBasculeEcheance.AnterieureAvecRepriseSaisie:
-                        borneReference = bascule.BorneReprise!.Value.Date;
-                        origineBorne = OrigineBorneReference.RepriseManuelle;
-                        statut = StatutLigneDelaiPaiement.Candidate;
-                        break;
-
-                    default: // AnterieureRetardInconnu
-                        borneReference = null;
-                        origineBorne = OrigineBorneReference.Indeterminee;
-                        statut = StatutLigneDelaiPaiement.RepriseManuelleRequise;
-                        break;
-                }
+                var borneReference = aHistorique ? derniereBorneDeclaree.Date : echeanceLegale;
+                var origineBorne = aHistorique ? OrigineBorneReference.DerniereDeclaration : OrigineBorneReference.EcheanceLegale;
+                const StatutLigneDelaiPaiement statut = StatutLigneDelaiPaiement.Candidate;
 
                 var affectations = affectationsParEcheance.TryGetValue(echeance.EcId, out var affs)
                     ? affs
@@ -515,10 +481,9 @@ namespace Declaration.Core
         }
 
         /// <summary>
-        /// Construit et ajoute la ligne, en appliquant le calcul incrémental : une ligne candidate
-        /// n'est retenue que si <c>BorneActuelle − BorneReference &gt; 0</c>. Les lignes bloquées par le
-        /// garde-fou TASK-128 sont ajoutées SANS <c>Depassement</c> (visibilité TASK-134, non
-        /// intégrables TASK-132) — jamais un chiffre inventé, jamais une suppression silencieuse.
+        /// Construit et ajoute la ligne, en appliquant le calcul incrémental : une ligne n'est
+        /// retenue que si <c>BorneActuelle − BorneReference &gt; 0</c> (jamais un <c>Depassement</c> nul
+        /// ou négatif, jamais une suppression silencieuse).
         /// </summary>
         private static void AjouterLigne(
             List<LigneSelectionDelaiPaiement> lignes,
@@ -531,24 +496,9 @@ namespace Declaration.Core
             DateTime? borneReference,
             OrigineBorneReference origineBorne)
         {
-            int? depassement = null;
-
-            if (statut == StatutLigneDelaiPaiement.Candidate)
-            {
-                var jours = (int)(borneActuelle - borneReference!.Value).TotalDays;
-                if (jours <= 0) return;   // rien de nouveau à déclarer depuis la dernière borne
-                depassement = jours;
-            }
-            else if (borneActuelle <= resultatDelai.EcheanceLegale.Date)
-            {
-                // Ligne bloquée par le garde-fou TASK-128 : aucun Depassement ne peut être calculé,
-                // mais on peut affirmer SANS rien inventer qu'il n'y a AUCUN retard à déclarer —
-                // la borne actuelle n'atteint même pas l'échéance légale (facture réglée dans les
-                // délais). Inutile de la signaler comme "reprise manuelle requise" : elle n'aurait
-                // rien produit de toute façon. Aucune information n'est perdue (le legacy la filtrait
-                // aussi via son Depassement > 0).
-                return;
-            }
+            var jours = (int)(borneActuelle - borneReference!.Value).TotalDays;
+            if (jours <= 0) return;   // rien de nouveau à déclarer depuis la dernière borne
+            var depassement = jours;
 
             var estPartAffectee = affectation != null;
 

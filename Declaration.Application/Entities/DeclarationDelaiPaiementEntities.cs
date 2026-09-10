@@ -150,20 +150,8 @@ public sealed class ResultatIntegrationLignesDelaiPaiement
     /// </summary>
     public IReadOnlyList<CleLigneDelaiPaiement> ClesDejaIntegrees { get; init; } = Array.Empty<CleLigneDelaiPaiement>();
 
-    /// <summary>
-    /// Lignes explicitement demandées mais REFUSÉES car en « reprise manuelle requise » (garde-fou
-    /// TASK-128/131 : aucun <c>Depassement</c> calculable, décision PO).
-    /// </summary>
-    public IReadOnlyList<CleLigneDelaiPaiement> ClesRefuseesRepriseManuelleRequise { get; init; } = Array.Empty<CleLigneDelaiPaiement>();
-
     /// <summary>Lignes explicitement demandées mais absentes de la sélection courante (périmées / déjà déclarées ailleurs).</summary>
     public IReadOnlyList<CleLigneDelaiPaiement> ClesIntrouvablesDansSelection { get; init; } = Array.Empty<CleLigneDelaiPaiement>();
-
-    /// <summary>
-    /// Lignes visibles en « reprise manuelle requise » pour cette période (information, TASK-134) —
-    /// jamais intégrables tant que la reprise n'est pas saisie.
-    /// </summary>
-    public int NombreRepriseManuelleRequiseDisponibles { get; init; }
 
     /// <summary>Date de mise en route de la société (TASK-128) ; <c>null</c> = société non configurée ⇒ 0 candidate.</summary>
     public DateTime? DateMiseEnRouteSociete { get; init; }

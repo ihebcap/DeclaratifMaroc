@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using Declaration.Application.Entities;
@@ -9,15 +7,18 @@ using Declaration.Application.Interfaces;
 namespace Declaration.Infrastructure.Repositories;
 
 /// <summary>
-/// TASK-128 : accès aux deux tables neuves du bootstrap Délai de Paiement Maroc
-/// (<c>DM_PARAM_DELAIPAIEMENT_SOCIETE</c>, <c>DM_REPRISE_DELAIPAIEMENT</c>) — propriété exclusive
-/// GRF, base de persistance (<see cref="IDbConnectionFactory.CreatePersistenceConnection"/>, même
-/// connexion que DM_ENTTVA/DM_LGTVA). Upsert idempotent via <c>MERGE</c> (même pattern que
+/// TASK-128 : accès à la table <c>DM_PARAM_DELAIPAIEMENT_SOCIETE</c> (date de mise en route par
+/// société) — propriété exclusive GRF, base de persistance
+/// (<see cref="IDbConnectionFactory.CreatePersistenceConnection"/>, même connexion que
+/// DM_ENTTVA/DM_LGTVA). Upsert idempotent via <c>MERGE</c> (même pattern que
 /// <c>VentilationSageCacheRepository.UpsertEntries</c>, TASK-072/076).
+///
+/// Ne porte plus (depuis TASK-220) la reprise manuelle par échéance
+/// (<c>DM_REPRISE_DELAIPAIEMENT</c>, ex-<c>IRepriseDelaiPaiementRepository</c>) : le mécanisme de
+/// reprise manuelle est supprimé, la table reste en base (aucune modification de schéma/donnée
+/// autorisée) mais devient fonctionnellement inutilisée.
 /// </summary>
-public sealed class DelaiPaiementBootstrapRepository :
-    IParametrageDelaiPaiementSocieteRepository,
-    IRepriseDelaiPaiementRepository
+public sealed class DelaiPaiementBootstrapRepository : IParametrageDelaiPaiementSocieteRepository
 {
     private readonly IDbConnectionFactory _connectionFactory;
 
@@ -48,43 +49,5 @@ public sealed class DelaiPaiementBootstrapRepository :
                   INSERT (SO_Id, DateMiseEnRoute, UT_Id, DateSaisie)
                   VALUES (@SocieteId, @DateMiseEnRoute, @UtilisateurId, SYSUTCDATETIME());",
             new { SocieteId = societeId, DateMiseEnRoute = dateMiseEnRoute, UtilisateurId = utilisateurId });
-    }
-
-    public async Task<RepriseDelaiPaiement?> GetAsync(int societeId, int ecId)
-    {
-        using var connection = _connectionFactory.CreatePersistenceConnection();
-        return await connection.QuerySingleOrDefaultAsync<RepriseDelaiPaiement>(
-            @"SELECT SO_Id AS SoId, EC_Id AS EcId, DateDejaDeclareeJusquau, UT_Id AS UtId, DateSaisie
-              FROM DM_REPRISE_DELAIPAIEMENT WHERE SO_Id = @SocieteId AND EC_Id = @EcId",
-            new { SocieteId = societeId, EcId = ecId });
-    }
-
-    /// <summary>
-    /// TASK-131 : lecture en lot des reprises d'une société (évite un N+1 dans la sélection DDP).
-    /// SELECT seul, mêmes colonnes que <see cref="GetAsync(int,int)"/>.
-    /// </summary>
-    public async Task<IReadOnlyList<RepriseDelaiPaiement>> GetAllAsync(int societeId)
-    {
-        using var connection = _connectionFactory.CreatePersistenceConnection();
-        var rows = await connection.QueryAsync<RepriseDelaiPaiement>(
-            @"SELECT SO_Id AS SoId, EC_Id AS EcId, DateDejaDeclareeJusquau, UT_Id AS UtId, DateSaisie
-              FROM DM_REPRISE_DELAIPAIEMENT WHERE SO_Id = @SocieteId",
-            new { SocieteId = societeId });
-        return rows.ToList();
-    }
-
-    public async Task SetAsync(int societeId, int ecId, DateTime dateDejaDeclareeJusquau, int? utilisateurId)
-    {
-        using var connection = _connectionFactory.CreatePersistenceConnection();
-        await connection.ExecuteAsync(
-            @"MERGE DM_REPRISE_DELAIPAIEMENT AS target
-              USING (SELECT @SocieteId AS SO_Id, @EcId AS EC_Id) AS source
-                 ON target.SO_Id = source.SO_Id AND target.EC_Id = source.EC_Id
-              WHEN MATCHED THEN
-                  UPDATE SET DateDejaDeclareeJusquau = @DateDejaDeclareeJusquau, UT_Id = @UtilisateurId, DateSaisie = SYSUTCDATETIME()
-              WHEN NOT MATCHED THEN
-                  INSERT (SO_Id, EC_Id, DateDejaDeclareeJusquau, UT_Id, DateSaisie)
-                  VALUES (@SocieteId, @EcId, @DateDejaDeclareeJusquau, @UtilisateurId, SYSUTCDATETIME());",
-            new { SocieteId = societeId, EcId = ecId, DateDejaDeclareeJusquau = dateDejaDeclareeJusquau, UtilisateurId = utilisateurId });
     }
 }

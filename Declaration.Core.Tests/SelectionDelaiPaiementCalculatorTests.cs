@@ -9,15 +9,15 @@ namespace Declaration.Core.Tests
     /// <summary>
     /// TASK-131 — Cœur métier DDP : sélection des lignes hors délai + calcul INCRÉMENTAL
     /// anti-double-déclaration. Tests PURS, hors base (mêmes standards que
-    /// <see cref="EcheanceLegaleCalculatorTests"/> / <see cref="DelaiPaiementBootstrapGuardTests"/>).
+    /// <see cref="EcheanceLegaleCalculatorTests"/>).
     ///
     /// Couvre les 3 anomalies legacy corrigées (décision PO 19/07/2026) + le garde-fou de bascule
-    /// TASK-128 :
+    /// TASK-128 (critère <c>DoDate</c> depuis TASK-220) :
     /// <list type="number">
     /// <item>anti-double-déclaration (scénario T1/T2 du PO : 60 jours puis 15, jamais 75) ;</item>
     /// <item>affectation partielle scindée part affectée / part non affectée ;</item>
     /// <item>Depassement du cas 1 non plus constant (= longueur de période) mais incrémental ;</item>
-    /// <item>garde-fou de mise en route, avec et sans reprise manuelle.</item>
+    /// <item>garde-fou de mise en route : exclusion pure sur <c>DoDate &lt; DateMiseEnRouteSociete</c>.</item>
     /// </list>
     /// </summary>
     public class SelectionDelaiPaiementCalculatorTests
@@ -116,8 +116,7 @@ namespace Declaration.Core.Tests
             IReadOnlyDictionary<int, ResultatDelaiPaiement> legales,
             IEnumerable<AffectationDelaiPaiement>? affectations = null,
             IReadOnlyDictionary<int, DateTime>? bornesDeclarees = null,
-            DateTime? miseEnRoute = null,
-            IReadOnlyDictionary<int, DateTime>? reprises = null)
+            DateTime? miseEnRoute = null)
             => new ParametresSelectionDelaiPaiement
             {
                 DateDebutPeriode = dateDebut,
@@ -126,8 +125,7 @@ namespace Declaration.Core.Tests
                 Affectations = (affectations ?? Enumerable.Empty<AffectationDelaiPaiement>()).ToList(),
                 EcheancesLegales = legales,
                 DernieresBornesDeclarees = bornesDeclarees ?? new Dictionary<int, DateTime>(),
-                DateMiseEnRouteSociete = miseEnRoute ?? MiseEnRouteAncienne,
-                ReprisesManuelles = reprises ?? new Dictionary<int, DateTime>()
+                DateMiseEnRouteSociete = miseEnRoute ?? MiseEnRouteAncienne
             };
 
         // ══ ANOMALIE 1 — anti-double-déclaration (scénario T1/T2 validé par le PO) ══════════════
@@ -348,59 +346,74 @@ namespace Declaration.Core.Tests
             Assert.NotEqual(longueurPeriode, ligneRecente.Depassement);
         }
 
-        // ══ GARDE-FOU DE MISE EN ROUTE (TASK-128) ══════════════════════════════════════════════
+        // ══ GARDE-FOU DE MISE EN ROUTE (TASK-128, critère DoDate depuis TASK-220) ═══════════════
 
         [Fact]
-        public void GardeFou_EcheanceAnterieureALaMiseEnRoute_SansReprise_LigneSignaleeSansChiffre()
+        public void GardeFou_FactureAnterieureALaMiseEnRoute_Exclue()
         {
+            // DoDate < DateMiseEnRouteSociete => exclusion pure, aucune ligne produite.
             var echeanceLegale = new DateTime(2024, 6, 30);
-            var ec = Echeance(1, new DateTime(2024, 4, 30));
+            var ec = Echeance(1, new DateTime(2024, 4, 30));   // DoDate antérieure à la mise en route
 
             var lignes = SelectionDelaiPaiementCalculator.Selectionner(Parametres(
                 new DateTime(2025, 1, 1), new DateTime(2025, 3, 31),
                 new[] { ec }, Legale((1, echeanceLegale)),
                 miseEnRoute: new DateTime(2025, 1, 1)));
 
-            var ligne = Assert.Single(lignes);
-            Assert.Equal(StatutLigneDelaiPaiement.RepriseManuelleRequise, ligne.Statut);
-            Assert.Null(ligne.Depassement);          // JAMAIS un chiffre silencieusement faux
-            Assert.Null(ligne.BorneReference);
-            Assert.Equal(OrigineBorneReference.Indeterminee, ligne.OrigineBorneReference);
+            Assert.Empty(lignes);
         }
 
         [Fact]
-        public void GardeFou_EcheanceAnterieureALaMiseEnRoute_AvecReprise_CalculDepuisLaBorneDeReprise()
+        public void GardeFou_FacturePosterieureALaMiseEnRoute_CalculAutomatiqueNormal()
         {
+            // DoDate >= DateMiseEnRouteSociete => calcul automatique normal, inchangé.
             var echeanceLegale = new DateTime(2024, 6, 30);
             var ec = Echeance(1, new DateTime(2024, 4, 30));
-            var borneReprise = new DateTime(2024, 12, 31);
 
             var lignes = SelectionDelaiPaiementCalculator.Selectionner(Parametres(
                 new DateTime(2025, 1, 1), new DateTime(2025, 3, 31),
                 new[] { ec }, Legale((1, echeanceLegale)),
-                miseEnRoute: new DateTime(2025, 1, 1),
-                reprises: new Dictionary<int, DateTime> { [1] = borneReprise }));
+                miseEnRoute: new DateTime(2024, 1, 1)));   // mise en route AVANT la facture
 
             var ligne = Assert.Single(lignes);
             Assert.Equal(StatutLigneDelaiPaiement.Candidate, ligne.Statut);
-            Assert.Equal(OrigineBorneReference.RepriseManuelle, ligne.OrigineBorneReference);
-            Assert.Equal(borneReprise, ligne.BorneReference);
-            Assert.Equal((int)(new DateTime(2025, 3, 31) - borneReprise).TotalDays, ligne.Depassement);
+            Assert.Equal(OrigineBorneReference.EcheanceLegale, ligne.OrigineBorneReference);
+            Assert.Equal(echeanceLegale, ligne.BorneReference);
+        }
+
+        [Fact]
+        public void GardeFou_FactureAnterieureMaisEcheanceLegalePosterieure_ExclueQuandMeme()
+        {
+            // Décision PO explicite (TASK-220) : le critère est STRICTEMENT DoDate, même si
+            // l'échéance légale calculée tombe après la mise en route (ex. facture du 20/06/2024,
+            // échéance à 90 j = 18/09/2024, mise en route au 01/07/2024 => exclue quand même).
+            var doDate = new DateTime(2024, 6, 20);
+            var echeanceLegale = new DateTime(2024, 9, 18);
+            var ec = Echeance(1, doDate);
+
+            var lignes = SelectionDelaiPaiementCalculator.Selectionner(Parametres(
+                new DateTime(2025, 1, 1), new DateTime(2025, 3, 31),
+                new[] { ec }, Legale((1, echeanceLegale)),
+                miseEnRoute: new DateTime(2024, 7, 1)));
+
+            Assert.Empty(lignes);
         }
 
         [Fact]
         public void GardeFou_EcheanceAnterieureMaisDejaHistorisee_CalculAutomatiqueDepuisLHistorique()
         {
-            // Historique présent (déclaration passée, y compris via l'ancien applicatif) : la borne de
-            // référence est l'historique, la reprise manuelle n'est pas requise.
+            // Historique présent (déclaration passée, y compris via l'ancien applicatif) : la borne
+            // de référence est l'historique — mais le critère d'exclusion (DoDate) reste évalué
+            // avant, indépendamment de l'historique.
             var echeanceLegale = new DateTime(2024, 6, 30);
-            var ec = Echeance(1, new DateTime(2024, 4, 30));
+            var doDate = new DateTime(2024, 4, 30);
+            var ec = Echeance(1, doDate);
 
             var lignes = SelectionDelaiPaiementCalculator.Selectionner(Parametres(
                 new DateTime(2025, 1, 1), new DateTime(2025, 3, 31),
                 new[] { ec }, Legale((1, echeanceLegale)),
                 bornesDeclarees: new Dictionary<int, DateTime> { [1] = new DateTime(2024, 12, 31) },
-                miseEnRoute: new DateTime(2025, 1, 1)));
+                miseEnRoute: doDate));   // mise en route == DoDate => pas exclue (>=)
 
             var ligne = Assert.Single(lignes);
             Assert.Equal(StatutLigneDelaiPaiement.Candidate, ligne.Statut);
@@ -409,10 +422,10 @@ namespace Declaration.Core.Tests
         }
 
         [Fact]
-        public void GardeFou_SocieteSansDateDeMiseEnRoute_AucuneLigneChiffree()
+        public void GardeFou_SocieteSansDateDeMiseEnRoute_AucuneExclusion()
         {
-            // Décision TASK-128 (documentée) : société non configurée => calcul automatique désactivé
-            // INCONDITIONNELLEMENT, même avec un historique. Les lignes restent visibles mais sans chiffre.
+            // Position la plus sûre (TASK-220 §Risques) : société non configurée => AUCUNE exclusion
+            // n'est appliquée, le calcul automatique reste actif (plutôt qu'une date arbitraire).
             var ec = Echeance(1, new DateTime(2024, 10, 10));
 
             var lignes = SelectionDelaiPaiementCalculator.Selectionner(new ParametresSelectionDelaiPaiement
@@ -426,45 +439,8 @@ namespace Declaration.Core.Tests
             });
 
             var ligne = Assert.Single(lignes);
-            Assert.Equal(StatutLigneDelaiPaiement.RepriseManuelleRequise, ligne.Statut);
-            Assert.Null(ligne.Depassement);
-        }
-
-        [Fact]
-        public void GardeFou_LigneSansAucunRetardReel_NonSignaleeCommeRepriseRequise()
-        {
-            // Garde-fou actif, MAIS la borne actuelle n'atteint pas l'échéance légale : il n'y a
-            // aucun retard, quelle que soit la borne de référence. Inutile de polluer l'écran de
-            // contrôle avec une « reprise manuelle requise » qui n'aurait rien produit.
-            var echeanceLegale = new DateTime(2025, 3, 20);
-            var ec = Echeance(1, new DateTime(2025, 1, 19), solde: 0m,
-                etat: EtatEcheanceDelaiPaiement.TotalementPaye);
-
-            var lignes = SelectionDelaiPaiementCalculator.Selectionner(Parametres(
-                new DateTime(2025, 1, 1), new DateTime(2025, 3, 31),
-                new[] { ec }, Legale((1, echeanceLegale)),
-                affectations: new[] { AffectationEspece(10, 1, 50_000m, new DateTime(2025, 3, 10), comptabilise: false) },
-                miseEnRoute: new DateTime(2026, 1, 1)));   // échéance très antérieure => garde-fou actif
-
-            Assert.Empty(lignes);
-        }
-
-        [Fact]
-        public void GardeFou_LigneAvecRetardReel_ResteSignaleeCommeRepriseRequise()
-        {
-            // Contrôle du garde-fou précédent : dès qu'un retard existe (borne actuelle > échéance
-            // légale), la ligne DOIT rester visible — jamais de suppression silencieuse.
-            var echeanceLegale = new DateTime(2025, 2, 10);
-            var ec = Echeance(1, new DateTime(2024, 12, 12));
-
-            var lignes = SelectionDelaiPaiementCalculator.Selectionner(Parametres(
-                new DateTime(2025, 1, 1), new DateTime(2025, 3, 31),
-                new[] { ec }, Legale((1, echeanceLegale)),
-                miseEnRoute: new DateTime(2026, 1, 1)));
-
-            var ligne = Assert.Single(lignes);
-            Assert.Equal(StatutLigneDelaiPaiement.RepriseManuelleRequise, ligne.Statut);
-            Assert.Null(ligne.Depassement);
+            Assert.Equal(StatutLigneDelaiPaiement.Candidate, ligne.Statut);
+            Assert.Equal(90, ligne.Depassement);   // 31/12/2024 -> 31/03/2025
         }
 
         // ══ CAS 3 (échéance légale DANS la période) ════════════════════════════════════════════

@@ -18,22 +18,3 @@ public sealed class ParametrageDelaiPaiementSociete
     public int? UtId { get; set; }
     public DateTime DateSaisie { get; set; } = DateTime.UtcNow;
 }
-
-/// <summary>
-/// TASK-128 : reprise manuelle ponctuelle "retard déjà connu/déclaré jusqu'au [date]" pour UNE
-/// échéance précise antérieure à la mise en route de sa société et sans historique dans
-/// <c>RT_DECLARATIONDELAISPAIEMENTLG</c>. Table neuve <c>DM_REPRISE_DELAIPAIEMENT</c>. Équivalent
-/// d'un solde d'ouverture comptable : initialise la borne du calcul incrémental futur (TASK-131)
-/// pour CETTE échéance uniquement, sans jamais recalculer/estimer silencieusement un retard cumulé
-/// depuis la date de facture.
-/// </summary>
-public sealed class RepriseDelaiPaiement
-{
-    public int SoId { get; set; }
-    public int EcId { get; set; }
-    public DateTime DateDejaDeclareeJusquau { get; set; }
-
-    /// <summary>Utilisateur ayant saisi la reprise (P_UTILISATEUR.UT_Id, claim JWT "UT_Id"). Null si inconnu.</summary>
-    public int? UtId { get; set; }
-    public DateTime DateSaisie { get; set; } = DateTime.UtcNow;
-}

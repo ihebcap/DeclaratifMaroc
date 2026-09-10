@@ -93,7 +93,7 @@ namespace Declaration.Core
 
     /// <summary>
     /// TASK-132 — Cycle de vie PUR de la déclaration Délai de Paiement Maroc (hors DB, testable comme
-    /// <see cref="ConventionDelaiPaiementValidator"/> / <see cref="DelaiPaiementBootstrapGuard"/>).
+    /// <see cref="ConventionDelaiPaiementValidator"/>).
     ///
     /// Reproduit à l'identique <c>SocieteManager.Complement.cs:601-969</c>
     /// (<c>DeclarationDelaisPaiementCreate</c>/<c>Update</c>/<c>Cloture</c>/<c>AnnulerCloture</c>/

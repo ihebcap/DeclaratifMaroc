@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CalendarSearch, Loader2, PencilLine, Settings2 } from 'lucide-react';
+import { CalendarSearch, Loader2, Settings2 } from 'lucide-react';
 import type { ColDef } from 'ag-grid-community';
 import { ApbsGrid } from './grid/ApbsGrid';
 import { CustomListFilter } from './grid/CustomListFilter';
 import { formatDate, formatMoney } from './utils';
-import { MiseEnRouteDelaiPaiementModal, RepriseManuelleLigneModal, BandeauErreur } from './MiseEnRouteDelaiPaiementModal';
+import { MiseEnRouteDelaiPaiementModal, BandeauErreur } from './MiseEnRouteDelaiPaiementModal';
 import { getControleLignesDdp, getParametrageTypeDdp } from './api';
 import type { LigneSelectionDdpDto, SelectionDdpDto } from './api';
 
@@ -12,8 +12,7 @@ import type { LigneSelectionDdpDto, SelectionDdpDto } from './api';
 //
 // Écran de SIMPLE VISIBILITÉ / REPORTING, strictement séparé du workflow d'intégration : il n'offre
 // AUCUN moyen de rattacher une ligne à une déclaration (aucun appel à POST .../lignes n'existe dans
-// ce fichier — l'intégration passe exclusivement par la popup de la fiche déclaration). Le seul
-// bouton d'écriture ici est la reprise manuelle TASK-128, qui ne touche pas aux déclarations.
+// ce fichier — l'intégration passe exclusivement par la popup de la fiche déclaration).
 //
 // FILTRE DE PÉRIODE RAISONNÉ (point corrigé PO du 19/07/2026) : exercice + type (+ trimestre). Les
 // bornes exactes sont CALCULÉES côté serveur par DeclarationDelaiPaiementCycleDeVie.CalculerPeriode —
@@ -62,20 +61,17 @@ const LIBELLES_ORIGINE_DELAI: Record<string, string> = {
 
 /**
  * TASK-219 — badge d'origine de la borne de référence, dérivé de `origineBorneReference` (déjà
- * calculé côté backend, aucun nouveau calcul). `Indeterminee` n'a volontairement pas de libellé
- * ici : ce cas n'apparaît que sur les lignes `RepriseManuelleRequise`, déjà signalées par le badge
- * Statut existant (colonne `statut`) — pas de doublon.
+ * calculé côté backend, aucun nouveau calcul). Depuis TASK-220 (suppression de la reprise
+ * manuelle), seules ces 2 valeurs existent encore.
  */
 const LIBELLES_ORIGINE_BORNE: Record<string, string> = {
   DerniereDeclaration: 'Déjà déclarée',
   EcheanceLegale: '1re déclaration',
-  RepriseManuelle: 'Reprise manuelle',
 };
 
 const COULEURS_ORIGINE_BORNE: Record<string, string> = {
   DerniereDeclaration: 'var(--status-ok-text)',
   EcheanceLegale: 'var(--status-warning-text)',
-  RepriseManuelle: 'var(--status-warning-text-alt)',
 };
 
 /**
@@ -88,12 +84,10 @@ const COULEURS_ORIGINE_BORNE: Record<string, string> = {
  * depuis TASK-217.
  *
  * Un gabarit distinct par cas réel du calculateur (jamais un texte générique) :
- *   - RepriseManuelleRequise (tout bucket confondu : le garde-fou TASK-128 s'applique avant la
- *     distinction hors/dans période) ;
- *   - Candidate + bucket "part affectée" (Dans/HorsPeriodePartAffectee) = ligne payée ;
- *   - Candidate + bucket "part non affectée" (Dans/HorsPeriodePartNonAffectee) = ligne non payée.
- * Le sous-texte de la borne de référence (déjà déclarée / 1ʳᵉ déclaration / reprise manuelle
- * antérieure) varie lui-même selon origineBorneReference, pour rester fidèle au cas réel.
+ *   - bucket "part affectée" (Dans/HorsPeriodePartAffectee) = ligne payée ;
+ *   - bucket "part non affectée" (Dans/HorsPeriodePartNonAffectee) = ligne non payée.
+ * Le sous-texte de la borne de référence (déjà déclarée / 1ʳᵉ déclaration) varie lui-même selon
+ * origineBorneReference, pour rester fidèle au cas réel.
  */
 function phraseOrigineDelai(l: LigneSelectionDdpDto): string {
   const libelleOrigine = LIBELLES_ORIGINE_DELAI[l.origineDelai] || l.origineDelai;
@@ -105,19 +99,12 @@ function phraseBorneReference(l: LigneSelectionDdpDto, contexteFin: string): str
   switch (l.origineBorneReference) {
     case 'DerniereDeclaration':
       return `Déjà déclarée jusqu'au ${formatDate(l.borneReference!)} → ${jours} jour(s) de retard nouveaux comptés ${contexteFin}.`;
-    case 'RepriseManuelle':
-      return `Retard antérieur repris manuellement jusqu'au ${formatDate(l.borneReference!)} → ${jours} jour(s) de retard nouveaux comptés ${contexteFin}.`;
     default: // EcheanceLegale
       return `1ʳᵉ déclaration pour cette échéance → ${jours} jour(s) de retard comptés depuis l'échéance légale.`;
   }
 }
 
 function genererCommentaireLigne(l: LigneSelectionDdpDto): string {
-  if (l.statut === 'RepriseManuelleRequise') {
-    return `${phraseOrigineDelai(l)}, antérieure à la date de mise en route du module et sans historique de ` +
-      `déclaration : le retard déjà couvert doit être saisi manuellement (bouton « Reprise manuelle ») avant toute intégration.`;
-  }
-
   const estPartAffectee = l.bucket === 'DansPeriodePartAffectee' || l.bucket === 'HorsPeriodePartAffectee';
 
   if (estPartAffectee) {
@@ -170,7 +157,6 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
   const [erreur, setErreur] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<string, string | string[]>>({});
   const [showMiseEnRoute, setShowMiseEnRoute] = useState(false);
-  const [repriseCible, setRepriseCible] = useState<LigneSelectionDdpDto | null>(null);
 
   // Type par défaut de la société (proposition, jamais une contrainte).
   useEffect(() => {
@@ -212,13 +198,10 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
 
   useEffect(() => { charger(); }, [charger]);
 
-  const toutesLignes = useMemo(
-    () => (resultat ? [...resultat.lignes, ...resultat.lignesRepriseManuelleRequise] : []),
-    [resultat],
-  );
+  const toutesLignes = useMemo(() => resultat?.lignes ?? [], [resultat]);
 
   const columnDefs: ColDef[] = useMemo(() => [
-    { field: 'statut', headerName: 'Statut', width: 165, filter: CustomListFilter, cellRenderer: (p: any) => p.data ? (p.data.estRepriseManuelleRequise ? <span style={{ color: '#b45309', fontWeight: 600 }}>Reprise manuelle requise</span> : <span style={{ color: 'var(--status-ok-text)', fontWeight: 600 }}>Retard calculé</span>) : null },
+    { field: 'statut', headerName: 'Statut', width: 165, filter: CustomListFilter, cellRenderer: (p: any) => p.data ? <span style={{ color: 'var(--status-ok-text)', fontWeight: 600 }}>Retard calculé</span> : null },
     { field: 'tiers', headerName: 'Fournisseur', filter: 'agTextColumnFilter', valueGetter: (p) => p.data ? `${p.data.tiersCode || ''} · ${p.data.tiersIntitule || ''}` : '' },
     { field: 'facture', headerName: 'Facture', width: 140, filter: CustomListFilter, valueGetter: (p) => p.data?.doNumero || '' },
     { field: 'doDate', headerName: 'Date facture', width: 110, valueGetter: (p) => p.data ? formatDate(p.data.doDate) : '' },
@@ -256,25 +239,6 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
         </span>
       ) : null,
     },
-    {
-      headerName: 'Action',
-      width: 150,
-      pinned: 'right',
-      suppressHeaderMenuButton: true,
-      cellRenderer: (p: any) => {
-        const l = p.data;
-        if (!l || !l.estRepriseManuelleRequise) return null;
-        return (
-          <button
-            className="btn btn-primary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', padding: '0.3rem 0.6rem' }}
-            onClick={() => setRepriseCible(l)}
-          >
-            <PencilLine size={13} /> Reprise manuelle
-          </button>
-        );
-      }
-    }
   ], []);
 
   return (
@@ -316,19 +280,6 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
 
       {erreur && <div style={{ padding: '0.75rem 1rem' }}><BandeauErreur message={erreur} /></div>}
 
-      {resultat && resultat.dateMiseEnRouteSociete == null && (
-        <div style={{ margin: '0.6rem 1rem', padding: '0.6rem 0.85rem', background: 'var(--status-blocking-bg)', color: 'var(--status-blocking-text)', borderRadius: '4px', fontSize: '0.82rem', display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <AlertTriangle size={16} />
-          <span data-testid="alerte-mise-en-route">
-            Aucune date de mise en route n'est configurée pour cette société : aucun dépassement n'est
-            calculé, toutes les lignes restent en « reprise manuelle requise ».
-          </span>
-          <button className="btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', padding: '0.25rem 0.55rem' }} onClick={() => setShowMiseEnRoute(true)}>
-            <Settings2 size={14} /> Saisir la date
-          </button>
-        </div>
-      )}
-
       <div style={{ flexGrow: 1, minHeight: 0, position: 'relative', padding: '0.4rem 1rem' }}>
         <ApbsGrid
           rowData={toutesLignes}
@@ -346,11 +297,6 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
                 </span>
               )}
               <span>Lignes : <strong>{toutesLignes.length}</strong></span>
-              {resultat && resultat.lignesRepriseManuelleRequise.length > 0 && (
-                <span style={{ color: 'var(--status-blocking-text)' }}>
-                  dont <strong>{resultat.lignesRepriseManuelleRequise.length}</strong> en reprise manuelle requise
-                </span>
-              )}
               {resultat && <span style={{ color: 'var(--text-secondary)' }}>{resultat.nombreEcheancesExaminees} échéance(s) examinée(s)</span>}
               {resultat && resultat.nombreEcheancesDejaDeclarees > 0 && (
                 <span
@@ -376,17 +322,6 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
           societeId={societeId}
           onClose={() => setShowMiseEnRoute(false)}
           onSaved={async () => { setShowMiseEnRoute(false); showToast('Date de mise en route enregistrée', 'success'); await charger(); }}
-        />
-      )}
-
-      {repriseCible && (
-        <RepriseManuelleLigneModal
-          societeId={societeId}
-          ecId={repriseCible.ecId}
-          doNumero={repriseCible.doNumero}
-          echeanceLegale={repriseCible.echeanceLegale}
-          onClose={() => setRepriseCible(null)}
-          onSaved={async () => { setRepriseCible(null); showToast('Reprise manuelle enregistrée', 'success'); await charger(); }}
         />
       )}
     </div>

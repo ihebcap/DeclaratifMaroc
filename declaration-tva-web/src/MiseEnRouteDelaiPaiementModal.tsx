@@ -2,17 +2,15 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, Loader2, X } from 'lucide-react';
 import { formatDate } from './utils';
 import {
-  getDateMiseEnRouteDdp, setDateMiseEnRouteDdp, setRepriseManuelleDdp,
+  getDateMiseEnRouteDdp, setDateMiseEnRouteDdp,
 } from './api';
 
-// ─── TASK-134 — Reprise manuelle « date de mise en route » (TASK-128) ───────────────────────────
+// ─── TASK-134 — Paramétrage « date de mise en route » (TASK-128, critère revu TASK-220) ─────────
 //
-// POURQUOI CET ÉCRAN EXISTE (ce n'est pas un ajout de confort) : tant qu'une société n'a pas de date
-// de mise en route configurée, la sélection TASK-131 renvoie 0 ligne intégrable — constaté sur la
-// base réelle (0 candidate / 498 lignes en « reprise manuelle requise »). Une déclaration créée dans
-// cet état ne peut donc JAMAIS être clôturée. Les VERIFY TASK-131 §9 n°3 et TASK-132 §9 n°2 exigent
-// donc explicitement que TASK-134 expose la saisie de cette date, sinon l'écran apparaît vide et
-// bloqué sans qu'un utilisateur puisse comprendre pourquoi.
+// POURQUOI CET ÉCRAN EXISTE (ce n'est pas un ajout de confort) : la date de mise en route détermine
+// quelles factures sont exclues du contrôle DDP (DoDate < DateMiseEnRouteSociete, TASK-220). Tant
+// que cette date n'est pas configurée, aucune exclusion n'est appliquée (position la plus sûre :
+// calcul automatique actif pour toutes les échéances).
 //
 // Choix retenu (documenté en VERIFY) : une MODALE dédiée réutilisée par les deux écrans DDP (fiche
 // déclaration + écran de contrôle) plutôt qu'un écran de paramétrage à part entière — le branchement
@@ -67,9 +65,9 @@ export function MiseEnRouteDelaiPaiementModal({ societeId, onClose, onSaved }: {
         {erreur && <BandeauErreur message={erreur} />}
 
         <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-          Tant que cette date n'est pas saisie, aucune ligne n'est intégrable à une déclaration : les
-          factures antérieures apparaissent en <strong>« antérieure à la mise en route — retard réel
-          inconnu »</strong> et aucun dépassement n'est calculé (jamais un chiffre supposé).
+          Toute facture dont la <strong>date de facture</strong> est antérieure à cette date est
+          exclue du contrôle DDP (non affichée, non intégrable), même si son échéance légale tombe
+          après. Tant que cette date n'est pas configurée, aucune exclusion n'est appliquée.
         </div>
 
         {loading ? (
@@ -89,66 +87,6 @@ export function MiseEnRouteDelaiPaiementModal({ societeId, onClose, onSaved }: {
         )}
 
         <BoutonsModale onClose={onClose} submitting={submitting} libelle="Enregistrer" />
-      </form>
-    </ModalShell>
-  );
-}
-
-// ─── Reprise manuelle par échéance (« déjà déclaré jusqu'au [date] ») ──────────────────────────
-//
-// Action de l'écran de contrôle sur une ligne badgée « antérieure à la mise en route ». Équivalent
-// d'un solde d'ouverture comptable : initialise la borne du calcul incrémental pour CETTE échéance
-// (consommée par TASK-131). Aucun dépassement n'est calculé pour la ligne tant que la reprise n'a
-// pas été saisie — c'est exactement la garantie que cette action lève, ligne par ligne.
-
-export function RepriseManuelleLigneModal({ societeId, ecId, doNumero, echeanceLegale, onClose, onSaved }: {
-  societeId: number,
-  ecId: number,
-  doNumero: string | null,
-  echeanceLegale: string,
-  onClose: () => void,
-  onSaved: () => void,
-}) {
-  const [date, setDate] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [erreur, setErreur] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErreur(null);
-    if (!date) { setErreur('La date « déjà déclaré jusqu\'au » est obligatoire.'); return; }
-
-    setSubmitting(true);
-    try {
-      await setRepriseManuelleDdp(societeId, ecId, date);
-      onSaved();
-    } catch (err: any) {
-      setErreur(err?.response?.data?.Message || err?.response?.data?.message || 'Erreur lors de l\'enregistrement de la reprise.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <ModalShell titre={`Reprise manuelle — facture ${doNumero || `EC_Id ${ecId}`}`} onClose={onClose} maxWidth="480px">
-      <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {erreur && <BandeauErreur message={erreur} />}
-
-        <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-          Saisissez jusqu'à quelle date le retard de cette facture a <strong>déjà été déclaré</strong>
-          {' '}(dans l'ancien applicatif, ou hors GRF). Le calcul incrémental repartira de cette borne :
-          rien ne sera déclaré deux fois.
-        </div>
-        <div style={{ fontSize: '0.8rem' }}>
-          Échéance légale de la facture : <strong>{formatDate(echeanceLegale)}</strong>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          <label style={{ fontSize: '0.8rem', fontWeight: 500 }}>Déjà déclaré jusqu'au</label>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} className="form-input" required />
-        </div>
-
-        <BoutonsModale onClose={onClose} submitting={submitting} libelle="Enregistrer la reprise" />
       </form>
     </ModalShell>
   );

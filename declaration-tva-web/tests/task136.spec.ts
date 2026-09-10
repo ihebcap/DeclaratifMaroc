@@ -37,7 +37,6 @@ async function installMocks(page: import('@playwright/test').Page) {
           dateMiseEnRouteSociete: '2023-07-01T00:00:00',
           nombreEcheancesExaminees: 0,
           lignes: [],
-          lignesRepriseManuelleRequise: [],
         },
       });
     }

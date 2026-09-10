@@ -145,9 +145,9 @@ public sealed class CleLigneDelaiPaiementDto
 }
 
 /// <summary>
-/// TASK-134 : une ligne candidate (ou « reprise manuelle requise ») renvoyée par la sélection
-/// TASK-131. <see cref="Depassement"/> est <c>null</c> — et JAMAIS 0 — pour une ligne en reprise
-/// manuelle requise : l'écran doit afficher un badge, pas un chiffre.
+/// TASK-134 : une ligne candidate renvoyée par la sélection TASK-131. Depuis TASK-220, toute
+/// facture antérieure à la mise en route de sa société est exclue en amont (aucune ligne
+/// produite) — il n'existe plus de ligne « reprise manuelle requise ».
 /// </summary>
 public sealed class LigneSelectionDelaiPaiementDto
 {
@@ -157,7 +157,7 @@ public sealed class LigneSelectionDelaiPaiementDto
     /// <summary>Cas de figure ayant produit la ligne (traçabilité TASK-131).</summary>
     public string Bucket { get; init; } = string.Empty;
 
-    /// <summary>« Candidate » ou « RepriseManuelleRequise ».</summary>
+    /// <summary>Toujours « Candidate ».</summary>
     public string Statut { get; init; } = string.Empty;
 
     public DateTime EcheanceLegale { get; init; }
@@ -169,10 +169,10 @@ public sealed class LigneSelectionDelaiPaiementDto
     public DateTime BorneActuelle { get; init; }
     public DateTime? BorneReference { get; init; }
 
-    /// <summary>« DerniereDeclaration », « EcheanceLegale », « RepriseManuelle » ou « Indeterminee ».</summary>
+    /// <summary>« DerniereDeclaration » ou « EcheanceLegale ».</summary>
     public string OrigineBorneReference { get; init; } = string.Empty;
 
-    /// <summary>Dépassement INCRÉMENTAL en jours ; <c>null</c> si reprise manuelle requise.</summary>
+    /// <summary>Dépassement INCRÉMENTAL en jours.</summary>
     public int? Depassement { get; init; }
 
     public decimal MontantLigne { get; init; }
@@ -235,7 +235,7 @@ public sealed class SelectionDelaiPaiementDto
     public DateTime DateDebutPeriode { get; init; }
     public DateTime DateFinPeriode { get; init; }
 
-    /// <summary><c>null</c> = société non configurée (TASK-128) ⇒ 0 candidate, tout en reprise manuelle requise.</summary>
+    /// <summary><c>null</c> = société non configurée (TASK-128) ⇒ aucune exclusion appliquée (position la plus sûre).</summary>
     public DateTime? DateMiseEnRouteSociete { get; init; }
 
     public int NombreEcheancesExaminees { get; init; }
@@ -251,9 +251,6 @@ public sealed class SelectionDelaiPaiementDto
 
     public IReadOnlyList<LigneSelectionDelaiPaiementDto> Lignes { get; init; } = Array.Empty<LigneSelectionDelaiPaiementDto>();
 
-    /// <summary>Lignes « antérieures à la mise en route — retard réel inconnu » : visibles, jamais intégrables.</summary>
-    public IReadOnlyList<LigneSelectionDelaiPaiementDto> LignesRepriseManuelleRequise { get; init; } = Array.Empty<LigneSelectionDelaiPaiementDto>();
-
     public static SelectionDelaiPaiementDto From(ResultatSelectionDelaiPaiement resultat) => new()
     {
         DateDebutPeriode = resultat.DateDebutPeriode,
@@ -263,7 +260,6 @@ public sealed class SelectionDelaiPaiementDto
         NombreEcheancesDejaDeclarees = resultat.NombreEcheancesDejaDeclarees,
         DerniereBorneDejaDeclaree = resultat.DerniereBorneDejaDeclaree,
         Lignes = resultat.Lignes.Select(LigneSelectionDelaiPaiementDto.From).ToList(),
-        LignesRepriseManuelleRequise = resultat.LignesRepriseManuelleRequise.Select(LigneSelectionDelaiPaiementDto.From).ToList(),
     };
 }
 
@@ -328,9 +324,7 @@ public sealed class ResultatIntegrationLignesDelaiPaiementDto
     public int NombreCandidates { get; init; }
     public int NombreIntegrees { get; init; }
     public IReadOnlyList<CleLigneDelaiPaiementDto> ClesDejaIntegrees { get; init; } = Array.Empty<CleLigneDelaiPaiementDto>();
-    public IReadOnlyList<CleLigneDelaiPaiementDto> ClesRefuseesRepriseManuelleRequise { get; init; } = Array.Empty<CleLigneDelaiPaiementDto>();
     public IReadOnlyList<CleLigneDelaiPaiementDto> ClesIntrouvablesDansSelection { get; init; } = Array.Empty<CleLigneDelaiPaiementDto>();
-    public int NombreRepriseManuelleRequiseDisponibles { get; init; }
     public DateTime? DateMiseEnRouteSociete { get; init; }
 
     public static ResultatIntegrationLignesDelaiPaiementDto From(ResultatIntegrationLignesDelaiPaiement r) => new()
@@ -339,9 +333,7 @@ public sealed class ResultatIntegrationLignesDelaiPaiementDto
         NombreCandidates = r.NombreCandidates,
         NombreIntegrees = r.NombreIntegrees,
         ClesDejaIntegrees = r.ClesDejaIntegrees.Select(CleLigneDelaiPaiementDto.From).ToList(),
-        ClesRefuseesRepriseManuelleRequise = r.ClesRefuseesRepriseManuelleRequise.Select(CleLigneDelaiPaiementDto.From).ToList(),
         ClesIntrouvablesDansSelection = r.ClesIntrouvablesDansSelection.Select(CleLigneDelaiPaiementDto.From).ToList(),
-        NombreRepriseManuelleRequiseDisponibles = r.NombreRepriseManuelleRequiseDisponibles,
         DateMiseEnRouteSociete = r.DateMiseEnRouteSociete,
     };
 }
