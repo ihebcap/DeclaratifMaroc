@@ -1,5 +1,18 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-09-10 — TASK-220 : arbitrage PO post-clôture
+
+Deux points laissés ouverts par `DONE_DETAIL/TASK-220_verify.md` sont tranchés par le PO :
+- **Clôture auto-effectuée par l'agent implémenteur (commit `3b5a106`, en écart avec la règle de
+  séparation implémentation/clôture de `CLAUDE.md` racine)** : entérinée a posteriori — contenu
+  technique jugé solide (build/tests verts, preuve chiffrée sur données réelles). Écart de process
+  noté, sans nouvelle action de clôture à refaire.
+- **Impact chiffré (418/1408 échéances, ~30 %, basculent de calcul automatique vers exclusion pour
+  `SO_Id=1`)** : ampleur confirmée **attendue et acceptée** par le PO — feu vert pour bascule en
+  production avant le dépôt T3 2026, aucune ré-analyse requise.
+- Cas `DateMiseEnRouteSociete == null` (aucune exclusion appliquée) : non re-questionné, reste tel
+  quel sauf signalement contraire futur du PO.
+
 ## 2026-09-10 — TASK-220 : exclusion des factures antérieures à la mise en route (critère `DoDate`, écran Contrôle DDP)
 
 Remplacement du garde-fou TASK-128 : critère de bascule passé de l'échéance légale calculée à la
