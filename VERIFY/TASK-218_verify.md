@@ -55,78 +55,83 @@ De plus, la borne de référence (`origineBorneReference`) varie indépendamment
 sa propre sous-phrase : `DerniereDeclaration` (« Déjà déclarée jusqu'au … »), `EcheanceLegale`
 (« 1ʳᵉ déclaration… »), `RepriseManuelle` (« Retard antérieur repris manuellement… »).
 
-## ⚠️ Test visuel navigateur — NON réalisé dans cette session (signalé explicitement)
+## Test visuel navigateur — RÉALISÉ (correction suite à REJECT du 10/09/2026)
 
-Tentative réelle effectuée (pas un renoncement de principe) :
-1. API démarrée (`dotnet run`) + front démarré (`npm run dev`) dans cette session.
-2. `GET /api/societes` retourne un **500** : `SqlException` — `Le serveur est introuvable ou n'est
-   pas accessible` (`Fournisseur de canaux nommés, error: 40`). La base SQL Server
-   (`GR_EMA_DISTRIBUTION`) n'est **pas accessible depuis cet environnement de session** — aucune
-   société ne peut être chargée, donc aucun écran de contrôle DDP ne peut être atteint pour produire
-   une vraie capture d'écran.
-3. Les deux serveurs de dev ont été arrêtés proprement à la fin de la tentative ; le port de proxy
-   Vite (`vite.config.ts` → `http://localhost:5280`) avait été temporairement changé pour pointer
-   vers l'instance locale (`5005`) le temps du test, puis **restauré** à sa valeur d'origine
-   (`git diff` confirme `vite.config.ts` intact, aucune modification résiduelle).
+Le premier dépôt de ce VERIFY a été **rejeté** : la session ne disposait alors que d'exemples
+« tracés à la main » (rejeu manuel du même code qu'on cherche à vérifier), jugés à raison circulaires
+et non probants pour une TASK à impact UX. Correction apportée : un vrai test navigateur, contre une
+vraie base, a été mené jusqu'au bout dans cette même session.
 
-**Aucune capture d'écran réelle n'a donc pu être produite dans cette session** — même contrainte
-d'environnement que celle déjà rencontrée et documentée pour TASK-217 (« backend non démarré dans
-cette session »), ici constatée plus précisément : backend démarré avec succès, mais base de données
-hors d'atteinte.
+**Ce qui bloquait la première tentative** : `connections.json` pointe vers `Server=DESKTOP-5BFKKEP`
+(le poste de développement habituel) — inaccessible depuis cet environnement de session (hostname
+réel : `Iheb-PC`). **Ce qui a débloqué le test** : une instance SQL Server locale existe sur CE poste
+(`Iheb-PC\SQL2022`, service Windows déjà démarré) et héberge une copie des bases
+`GR_EMA_DISTRIBUTION`/`NEW_EMA DISTRIBUTION` (vérifié par `sqlcmd -S .\SQL2022`).
 
-### Exemples tracés manuellement (à défaut de capture, un exemple par cas, calculé à la main en
-### rejouant le code de `genererCommentaireLigne` ligne par ligne — à revérifier visuellement par le
-### reviewer une fois la base accessible) :
+Démarche suivie :
+1. `connections.json` et `declaration-tva-web/vite.config.ts` (proxy `/api`) **temporairement**
+   repointés vers `.\SQL2022` / le port de l'API locale, le temps du test.
+2. API (`dotnet run`) + front (`npm run dev`) démarrés avec succès ; connexion à la base confirmée
+   (`GET /api/societes` → 200, société `NEW_EMA DISTRIBUTION`).
+3. Connexion réelle à l'écran (Admin/Admin), navigation Délai de Paiement → Contrôle, exercice 2026
+   annuel — **1136 lignes réelles chargées** depuis la base, 1408 échéances examinées.
+4. Date de mise en route saisie via l'écran (bouton dédié, pas de bypass) à deux valeurs successives
+   pour observer les deux régimes : `2023-07-01` (aucune ligne bloquée, garde-fou TASK-128 non
+   déclenché) puis `2026-06-01` (715 lignes basculent en reprise manuelle requise) — permet de
+   couvrir tous les cas demandés par la TASK avec les mêmes données réelles.
+5. Colonne `Explication` élargie de 260 à **420px** (changement conservé, pas seulement pour le
+   test — un texte de phrase complète a besoin de plus de place que 260px ; le test a montré que même
+   420px ne suffit pas à tout afficher sans troncature, ce qui est le comportement voulu : ellipsis +
+   tooltip natif au survol, jamais de retour à la ligne qui casserait la hauteur de ligne de la
+   grille).
+6. **Nettoyage en fin de session** : les deux serveurs de dev arrêtés, `connections.json` et
+   `vite.config.ts` **restaurés à l'identique** (`git diff` confirmé vide sur ces deux fichiers avant
+   ce commit) — aucune trace résiduelle de la configuration de test.
 
-1. **Reprise manuelle requise** (`statut=RepriseManuelleRequise`, `origineDelai=Defaut`,
-   `echeanceLegale=2023-05-10`, `nombreJoursDelaiApplique=60`) :
-   > Échéance légale le 10/05/2023 (Défaut société, 60 j), antérieure à la date de mise en route du
-   > module et sans historique de déclaration : le retard déjà couvert doit être saisi manuellement
-   > (bouton « Reprise manuelle ») avant toute intégration.
+### Captures d'écran réelles (données réelles, code réellement exécuté, pas de calcul manuel)
 
-2. **Payée, pièce rapprochée** (`bucket=DansPeriodePartAffectee`, `origineDelai=Convention` 90j,
-   `echeanceLegale=2026-04-07`, `typeReglement=Cheque`, `dateReglement=2026-07-20`,
-   `dateRapprochement=2026-08-06`, `origineBorneReference=DerniereDeclaration`,
-   `borneReference=2026-06-30`, `depassement=20`) :
-   > Échéance légale le 07/04/2026 (Convention, 90 j). Réglée le 20/07/2026 (Chèque), rapprochée le
-   > 06/08/2026. Déjà déclarée jusqu'au 30/06/2026 → 20 jour(s) de retard nouveaux comptés sur cette
-   > période.
+- `VERIFY/task218-01-paye-rapproche-non-rapproche.png` — vue d'ensemble de l'écran réel avec colonnes
+  `Origine du délai`/`Dernière déclaration`/`Constaté le`/`Dépassement`/`Mode`/`Cas`/`Explication`
+  toutes visibles simultanément ; lignes `Payé hors délai` (pièce rapprochée, ex. Chèque/Traite) et
+  `Payé non rapproché` (pièce en attente de pointage) présentes avec leur texte généré.
+- `VERIFY/task218-02-non-paye.png` — ligne réelle `F1210 · CONSILIUMPRO` / `FF260002` (bucket
+  non-affecté, `Cas = Non payé`), ligne sélectionnée en surbrillance, texte intégralement visible :
+  *« Échéance légale le 09/03/2026 (Défaut société, 62 j), toujours impayée. 1ʳᵉ déclaration pour
+  cette échéance → 297 jour(s) de retard comptés depuis l'échéance légale. Ces jours continueront à
+  courir tant que l'échéance reste non réglée. »*
+- `VERIFY/task218-03-reprise-manuelle-requise.png` — plusieurs lignes réelles avec mise en route
+  fixée au 01/06/2026 (`Dépassement` vide, `Dernière déclaration` vide), texte intégralement visible,
+  ex. `F0106 · SODIPOL SARL` / `FC2502231` : *« Échéance légale le 16/02/2026 (Défaut société, 62 j),
+  antérieure à la date de mise en route du module et sans historique de déclaration : le retard déjà
+  couvert doit être saisi manuellement (bouton « Reprise manuelle ») avant toute intégration. »*
 
-3. **Payée, pièce NON rapprochée** (`bucket=HorsPeriodePartAffectee`, `typeReglement=Virement`,
-   `dateReglement=2026-07-05`, `dateRapprochement=null`, `origineBorneReference=EcheanceLegale`,
-   `depassement=15`) :
-   > Échéance légale le 15/03/2026 (Défaut société, 60 j). Réglée le 05/07/2026 (Virement), pas
-   > encore rapprochée en banque : le retard continue de courir tant que le pointage n'est pas
-   > confirmé. 1ʳᵉ déclaration pour cette échéance → 15 jour(s) de retard comptés depuis l'échéance
-   > légale.
+Un exemple « Payé, réglé par Virement/Espèce » (sans clause pointage, car Espèce/Virement ne sont
+jamais rapprochés au sens `EstPiece`) a également été observé en conditions réelles (ex. facture
+`FC2600001`, réglée en Espèce) mais n'a pas fait l'objet d'une capture dédiée — le gabarit est
+strictement identique à celui capturé pour « Payé hors délai », seule la clause de pointage change
+(déjà couvert par le code de `genererCommentaireLigne`, cf. Couverture des cas ci-dessus).
 
-4. **Payée, Espèce** (`typeReglement=Espece`, sans clause pointage) :
-   > Échéance légale le 12/02/2026 (Convention facture, 30 j). Réglée le 18/02/2026 (Espèce). 1ʳᵉ
-   > déclaration pour cette échéance → 6 jour(s) de retard comptés depuis l'échéance légale.
+### Point additionnel confirmé en conditions réelles (déjà signalé plus bas, désormais vérifié et non
+### plus une simple hypothèse de lecture de code)
 
-5. **Non payée** (`bucket=DansPeriodePartNonAffectee`, `echeanceLegale=2026-06-08`,
-   `origineDelai=Defaut` 60j, `origineBorneReference=DerniereDeclaration`,
-   `borneReference=2026-06-30`, `borneActuelle=2026-09-30` (fin de période), `depassement=92`) :
-   > Échéance légale le 08/06/2026 (Défaut société, 60 j), toujours impayée. Déjà déclarée jusqu'au
-   > 30/06/2026 → 92 jour(s) de retard nouveaux comptés jusqu'au 30/09/2026. Ces jours continueront
-   > à courir tant que l'échéance reste non réglée.
-
-Ces 5 textes correspondent aux 3 exemples donnés dans la TASK elle-même (le premier et le troisième
-y sont repris quasi mot pour mot), ce qui donne un niveau de confiance raisonnable sur la fidélité du
-gabarit — mais **ne remplace pas** une vérification visuelle réelle sur des lignes issues de la base.
-Un test avec accès DB (ou par le PO en environnement réel) reste nécessaire avant clôture.
+Le bug pré-existant `estRepriseManuelleRequise` (champ inexistant sur le DTO) a été **confirmé
+visuellement** : sur les 715 lignes réellement en reprise manuelle requise (bannière de la toolbar
+« dont 715 en reprise manuelle requise »), la colonne `Statut` affichait quand même « Retard calculé »
+pour chacune au lieu du badge attendu — comportement identique pour les lignes réellement candidates.
+Confirme que le badge ne s'affiche jamais, dans aucun des deux régimes.
 
 ## Checklist UI (`DOCS/UI_STANDARDS.md`)
 
 - [x] Aucune instanciation directe de `AgGridReact` ni de `react-select` — seul `columnDefs` modifié.
 - [x] `storageKey` unique et nommé selon la convention — non affecté (grille existante inchangée).
 - [x] Montants alignés droite + format fr-FR ; dates JJ/MM/AAAA triables — non affecté par cette
-  TASK ; la nouvelle colonne `commentaire` est un texte libre, pas une donnée triable/filtrable par
+  TASK ; la nouvelle colonne `Explication` est un texte libre, pas une donnée triable/filtrable par
   nature (elle dérive de 8+ champs déjà présents individuellement en colonnes filtrables).
 - [x] Aucune couleur en dur ; variables CSS respectées — la nouvelle cellule n'introduit aucune
   couleur (texte simple, tooltip natif du navigateur).
-- [x] `npm run lint` + `npm run build` → 0 erreur — vérifié 2 fois dans cette session (avant et
-  après correction de formulation dans `phraseBorneReference`), voir logs ci-dessous.
+- [x] `npm run lint` + `npm run build` → 0 erreur — vérifié 3 fois dans cette session (avant/après
+  correction de formulation dans `phraseBorneReference`, puis après élargissement de la colonne
+  `Explication` à 420px suite au test navigateur réel), voir logs ci-dessous.
 
 ## Logs build/lint (10/09/2026)
 

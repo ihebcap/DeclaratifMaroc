@@ -216,7 +216,7 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
     {
       field: 'commentaire',
       headerName: 'Explication',
-      width: 260,
+      width: 420,
       headerTooltip: "Texte généré automatiquement à partir des colonnes déjà affichées sur la ligne — jamais une source d'information parallèle, uniquement une mise en phrase.",
       valueGetter: (p) => p.data ? genererCommentaireLigne(p.data) : '',
       cellRenderer: (p: any) => p.data ? (
