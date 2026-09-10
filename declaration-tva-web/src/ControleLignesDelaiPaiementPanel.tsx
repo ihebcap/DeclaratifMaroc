@@ -61,6 +61,68 @@ const LIBELLES_ORIGINE_DELAI: Record<string, string> = {
 };
 
 /**
+ * TASK-218 — Commentaire généré expliquant la ligne, en une ou deux phrases, dérivé UNIQUEMENT des
+ * champs déjà calculés par SelectionDelaiPaiementCalculator (aucune nouvelle donnée métier). Généré
+ * côté FRONT (choix documenté dans VERIFY/TASK-218_verify.md) : tous les champs nécessaires
+ * (bucket, statut, origineDelai, origineBorneReference, bornes, dépassement, réglement) sont déjà
+ * présents dans LigneSelectionDdpDto — un aller-retour backend n'ajouterait aucune donnée, juste de
+ * la mise en phrase, et le vocabulaire ("Dernière déclaration", "Constaté le") vit déjà côté front
+ * depuis TASK-217.
+ *
+ * Un gabarit distinct par cas réel du calculateur (jamais un texte générique) :
+ *   - RepriseManuelleRequise (tout bucket confondu : le garde-fou TASK-128 s'applique avant la
+ *     distinction hors/dans période) ;
+ *   - Candidate + bucket "part affectée" (Dans/HorsPeriodePartAffectee) = ligne payée ;
+ *   - Candidate + bucket "part non affectée" (Dans/HorsPeriodePartNonAffectee) = ligne non payée.
+ * Le sous-texte de la borne de référence (déjà déclarée / 1ʳᵉ déclaration / reprise manuelle
+ * antérieure) varie lui-même selon origineBorneReference, pour rester fidèle au cas réel.
+ */
+function phraseOrigineDelai(l: LigneSelectionDdpDto): string {
+  const libelleOrigine = LIBELLES_ORIGINE_DELAI[l.origineDelai] || l.origineDelai;
+  return `Échéance légale le ${formatDate(l.echeanceLegale)} (${libelleOrigine}, ${l.nombreJoursDelaiApplique} j)`;
+}
+
+function phraseBorneReference(l: LigneSelectionDdpDto, contexteFin: string): string {
+  const jours = l.depassement ?? 0;
+  switch (l.origineBorneReference) {
+    case 'DerniereDeclaration':
+      return `Déjà déclarée jusqu'au ${formatDate(l.borneReference!)} → ${jours} jour(s) de retard nouveaux comptés ${contexteFin}.`;
+    case 'RepriseManuelle':
+      return `Retard antérieur repris manuellement jusqu'au ${formatDate(l.borneReference!)} → ${jours} jour(s) de retard nouveaux comptés ${contexteFin}.`;
+    default: // EcheanceLegale
+      return `1ʳᵉ déclaration pour cette échéance → ${jours} jour(s) de retard comptés depuis l'échéance légale.`;
+  }
+}
+
+function genererCommentaireLigne(l: LigneSelectionDdpDto): string {
+  if (l.statut === 'RepriseManuelleRequise') {
+    return `${phraseOrigineDelai(l)}, antérieure à la date de mise en route du module et sans historique de ` +
+      `déclaration : le retard déjà couvert doit être saisi manuellement (bouton « Reprise manuelle ») avant toute intégration.`;
+  }
+
+  const estPartAffectee = l.bucket === 'DansPeriodePartAffectee' || l.bucket === 'HorsPeriodePartAffectee';
+
+  if (estPartAffectee) {
+    const estPiece = l.typeReglement === 'Cheque' || l.typeReglement === 'Traite' || l.typeReglement === 'Virement';
+    const estRapprochee = !!l.dateRapprochement;
+    let phraseReglement: string;
+    if (estPiece && estRapprochee) {
+      phraseReglement = `Réglée le ${formatDate(l.dateReglement!)} (${LIBELLES_MODE[l.typeReglement!] || l.typeReglement}), rapprochée le ${formatDate(l.dateRapprochement!)}.`;
+    } else if (estPiece && !estRapprochee) {
+      phraseReglement = `Réglée le ${formatDate(l.dateReglement!)} (${LIBELLES_MODE[l.typeReglement!] || l.typeReglement}), pas encore rapprochée en banque : le retard continue de courir tant que le pointage n'est pas confirmé.`;
+    } else {
+      phraseReglement = `Réglée le ${formatDate(l.dateReglement!)} (${LIBELLES_MODE[l.typeReglement!] || l.typeReglement}).`;
+    }
+    return `${phraseOrigineDelai(l)}. ${phraseReglement} ${phraseBorneReference(l, 'sur cette période')}`;
+  }
+
+  // Bucket "part non affectée" = échéance (ou solde restant) non payée à la borne actuelle.
+  return `${phraseOrigineDelai(l)}, toujours impayée. ` +
+    `${phraseBorneReference(l, `jusqu'au ${formatDate(l.borneActuelle)}`)} ` +
+    `Ces jours continueront à courir tant que l'échéance reste non réglée.`;
+}
+
+/**
  * AUDIT UX — « jamais un zéro silencieux ». Un tableau vide a TROIS causes très différentes pour un
  * comptable, qui doivent être nommées explicitement au lieu du message unique « Aucune ligne hors
  * délai pour cette période » (qui se lisait à tort « aucun retard chez nos fournisseurs ») :
@@ -151,6 +213,18 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
     { field: 'reglementNumero', headerName: 'N° Règlement', width: 120, valueGetter: (p) => p.data?.reglementNumero || '—' },
     { field: 'mode', headerName: 'Mode', width: 100, valueGetter: (p) => p.data?.typeReglement ? (LIBELLES_MODE[p.data.typeReglement] || p.data.typeReglement) : '—' },
     { field: 'bucket', headerName: 'Cas', width: 175, filter: CustomListFilter, valueGetter: (p) => p.data ? libelleCas(p.data) : '' },
+    {
+      field: 'commentaire',
+      headerName: 'Explication',
+      width: 260,
+      headerTooltip: "Texte généré automatiquement à partir des colonnes déjà affichées sur la ligne — jamais une source d'information parallèle, uniquement une mise en phrase.",
+      valueGetter: (p) => p.data ? genererCommentaireLigne(p.data) : '',
+      cellRenderer: (p: any) => p.data ? (
+        <span title={genererCommentaireLigne(p.data)} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+          {genererCommentaireLigne(p.data)}
+        </span>
+      ) : null,
+    },
     {
       headerName: 'Action',
       width: 150,
