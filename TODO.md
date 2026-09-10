@@ -13,12 +13,6 @@ Complémentaire à TASK-217/218 : badge visuel dérivé de `OrigineBorneReferenc
 backend, aucun nouveau calcul) — 3 états (Déjà déclarée / 1re déclaration / Reprise manuelle),
 filtrable, distinct du badge Statut existant. Voir `TASKS/TASK-219-badge-origine-borne-controle-ddp.md`.
 
-## 🆕 TASK-218 — Commentaire généré automatiquement expliquant chaque ligne (écran Contrôle DDP) (PO 10/09/2026)
-Complémentaire à TASK-217 : au lieu de recomposer mentalement 5-6 colonnes, un texte généré par ligne
-(backend recommandé) explique en une phrase pourquoi la ligne figure au contrôle — un gabarit par
-bucket/statut (payé période/hors période, non payé, reprise manuelle requise). Lecture seule, jamais
-persisté. Voir `TASKS/TASK-218-commentaire-genere-ligne-controle-ddp.md`.
-
 ## 🆕 TASK-217 — Renommage + tooltips des colonnes de bornes + n° jours dans Origine du délai (écran Contrôle DDP) (PO 10/09/2026)
 Signalement PO en préparation du dépôt T3 2026 : « Déjà déclaré au » / « Constaté au » incompréhensibles
 sans lire le code → renommées **Dernière déclaration** / **Constaté le** (sans collision avec les

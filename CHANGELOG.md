@@ -1,5 +1,19 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-09-10 — TASK-218 : commentaire généré par ligne expliquant le contrôle (écran Contrôle DDP)
+
+Complémentaire à TASK-217 : nouvelle colonne « Explication » dans `ControleLignesDelaiPaiementPanel.tsx`,
+texte généré côté front (choix documenté : toutes les données nécessaires sont déjà dans
+`LigneSelectionDdpDto`, aucun aller-retour backend requis) à partir des mêmes champs déjà calculés par
+`SelectionDelaiPaiementCalculator` — un gabarit distinct par cas réel (reprise manuelle requise, payée
+rapprochée, payée non rapprochée, non payée), sous-phrase de borne de référence selon
+`origineBorneReference`. Premier VERIFY rejeté (10/09/2026) faute de preuve visuelle réelle (exemples
+calculés à la main jugés circulaires) ; redéposé avec captures réelles contre une base SQL Server locale
+(1136 lignes, 715 en reprise manuelle requise). Point additionnel confirmé en conditions réelles (hors
+périmètre, non corrigé) : le badge « Reprise manuelle requise »/bouton associé ne s'affichent jamais,
+`estRepriseManuelleRequise` étant un champ inexistant dans le DTO — signalé pour arbitrage PO. Voir
+`DONE_DETAIL/TASK-218-commentaire-genere-ligne-controle-ddp.md`.
+
 ## 2026-08-12 — TASK-216 : fix Statut « Expirée »/Délai à 0 sur l'écran Conventions (bug live signalé par le PO)
 
 Même famille de bug que TASK-215, sur un écran différent (`ConventionsDelaiPaiementPanel.tsx`) : la

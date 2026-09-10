@@ -2,9 +2,9 @@
 
 > Implémenté par Claude en rôle **WORKER de secours** (dérogation explicite du PO, session du
 > 10/09/2026). Conformément à la règle de séparation implémentation/clôture (`CLAUDE.md` racine),
-> ce fichier VERIFY est déposé pour review par un tiers (PO ou session ARCHITECT distincte) — aucune
-> clôture (déplacement `DONE_DETAIL/`, mise à jour `DONE.md`/`TODO.md`/`CHANGELOG.md`) n'a été
-> effectuée par ce worker.
+> ce fichier VERIFY a été déposé pour review par un tiers (session ARCHITECT distincte) — la clôture
+> ci-dessous (déplacement `DONE_DETAIL/`, mise à jour `DONE.md`/`TODO.md`/`CHANGELOG.md`) a été
+> effectuée par cette session de review, pas par le worker.
 
 ## Étape 1 — choix backend vs front : **FRONT**
 
@@ -90,16 +90,17 @@ Démarche suivie :
 
 ### Captures d'écran réelles (données réelles, code réellement exécuté, pas de calcul manuel)
 
-- `VERIFY/task218-01-paye-rapproche-non-rapproche.png` — vue d'ensemble de l'écran réel avec colonnes
-  `Origine du délai`/`Dernière déclaration`/`Constaté le`/`Dépassement`/`Mode`/`Cas`/`Explication`
-  toutes visibles simultanément ; lignes `Payé hors délai` (pièce rapprochée, ex. Chèque/Traite) et
-  `Payé non rapproché` (pièce en attente de pointage) présentes avec leur texte généré.
-- `VERIFY/task218-02-non-paye.png` — ligne réelle `F1210 · CONSILIUMPRO` / `FF260002` (bucket
+- `DONE_DETAIL/task218-01-paye-rapproche-non-rapproche.png` — vue d'ensemble de l'écran réel avec
+  colonnes `Origine du délai`/`Dernière déclaration`/`Constaté le`/`Dépassement`/`Mode`/`Cas`/
+  `Explication` toutes visibles simultanément ; lignes `Payé hors délai` (pièce rapprochée, ex.
+  Chèque/Traite) et `Payé non rapproché` (pièce en attente de pointage) présentes avec leur texte
+  généré.
+- `DONE_DETAIL/task218-02-non-paye.png` — ligne réelle `F1210 · CONSILIUMPRO` / `FF260002` (bucket
   non-affecté, `Cas = Non payé`), ligne sélectionnée en surbrillance, texte intégralement visible :
   *« Échéance légale le 09/03/2026 (Défaut société, 62 j), toujours impayée. 1ʳᵉ déclaration pour
   cette échéance → 297 jour(s) de retard comptés depuis l'échéance légale. Ces jours continueront à
   courir tant que l'échéance reste non réglée. »*
-- `VERIFY/task218-03-reprise-manuelle-requise.png` — plusieurs lignes réelles avec mise en route
+- `DONE_DETAIL/task218-03-reprise-manuelle-requise.png` — plusieurs lignes réelles avec mise en route
   fixée au 01/06/2026 (`Dépassement` vide, `Dernière déclaration` vide), texte intégralement visible,
   ex. `F0106 · SODIPOL SARL` / `FC2502231` : *« Échéance légale le 16/02/2026 (Défaut société, 62 j),
   antérieure à la date de mise en route du module et sans historique de déclaration : le retard déjà
@@ -168,7 +169,19 @@ bouton `Action`, lignes ~141/161 avant cette TASK) : le code lit `p.data.estRepr
 réel est `statut === 'RepriseManuelleRequise'`). Non typé strictement (`p: any`), donc TypeScript ne
 le détecte pas à la compilation — mais à l'exécution `estRepriseManuelleRequise` vaut toujours
 `undefined`, ce qui semble empêcher le badge « Reprise manuelle requise » et le bouton « Reprise
-manuelle » de jamais s'afficher. **Non corrigé ici** : hors périmètre strict de TASK-218 (qui ne
-touche que la nouvelle colonne `Explication`), et une correction changerait le comportement d'une
-colonne existante sans validation PO préalable. Signalé pour arbitrage — à transformer en TASK
-dédiée si confirmé en environnement réel.
+manuelle » de jamais s'afficher. **Confirmé visuellement** en conditions réelles (cf. section
+ci-dessus). **Non corrigé ici** : hors périmètre strict de TASK-218 (qui ne touche que la nouvelle
+colonne `Explication`), et une correction changerait le comportement d'une colonne existante sans
+validation PO préalable. **Signalé pour arbitrage — à transformer en TASK dédiée.**
+
+## Revue architecte (APPROVE, 10/09/2026)
+
+- Code relu intégralement (`ControleLignesDelaiPaiementPanel.tsx`), cohérent avec les enums réels de
+  `SelectionDelaiPaiementCalculator.cs` (`BucketDelaiPaiement`, `StatutLigneDelaiPaiement`,
+  `OrigineBorneReference`) et le DTO (`api.ts`).
+- Les 3 captures d'écran ont été inspectées visuellement par l'architecte et confirment le contenu
+  décrit (données réelles, 1136/715 lignes, tous les cas couverts).
+- `connections.json`/`vite.config.ts` vérifiés sans résidu de configuration de test (`git diff` vide).
+- Checklist UI_STANDARDS conforme.
+- Bug hors périmètre laissé à l'arbitrage PO, comme documenté ci-dessus — pas de TASK dédiée ouverte
+  automatiquement, à faire créer par le PO s'il confirme vouloir le corriger.
