@@ -1,5 +1,10 @@
 # TODO — Module Déclaration TVA (GRF)
 
+## 🆕 TASK-219 — Badge « déjà déclarée / 1re déclaration / reprise manuelle » par ligne (écran Contrôle DDP) (PO 10/09/2026)
+Complémentaire à TASK-217/218 : badge visuel dérivé de `OrigineBorneReference` (déjà calculé côté
+backend, aucun nouveau calcul) — 3 états (Déjà déclarée / 1re déclaration / Reprise manuelle),
+filtrable, distinct du badge Statut existant. Voir `TASKS/TASK-219-badge-origine-borne-controle-ddp.md`.
+
 ## 🆕 TASK-218 — Commentaire généré automatiquement expliquant chaque ligne (écran Contrôle DDP) (PO 10/09/2026)
 Complémentaire à TASK-217 : au lieu de recomposer mentalement 5-6 colonnes, un texte généré par ligne
 (backend recommandé) explique en une phrase pourquoi la ligne figure au contrôle — un gabarit par
