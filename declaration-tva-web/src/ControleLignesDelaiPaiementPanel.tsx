@@ -61,6 +61,24 @@ const LIBELLES_ORIGINE_DELAI: Record<string, string> = {
 };
 
 /**
+ * TASK-219 — badge d'origine de la borne de référence, dérivé de `origineBorneReference` (déjà
+ * calculé côté backend, aucun nouveau calcul). `Indeterminee` n'a volontairement pas de libellé
+ * ici : ce cas n'apparaît que sur les lignes `RepriseManuelleRequise`, déjà signalées par le badge
+ * Statut existant (colonne `statut`) — pas de doublon.
+ */
+const LIBELLES_ORIGINE_BORNE: Record<string, string> = {
+  DerniereDeclaration: 'Déjà déclarée',
+  EcheanceLegale: '1re déclaration',
+  RepriseManuelle: 'Reprise manuelle',
+};
+
+const COULEURS_ORIGINE_BORNE: Record<string, string> = {
+  DerniereDeclaration: 'var(--status-ok-text)',
+  EcheanceLegale: 'var(--status-warning-text)',
+  RepriseManuelle: 'var(--status-warning-text-alt)',
+};
+
+/**
  * TASK-218 — Commentaire généré expliquant la ligne, en une ou deux phrases, dérivé UNIQUEMENT des
  * champs déjà calculés par SelectionDelaiPaiementCalculator (aucune nouvelle donnée métier). Généré
  * côté FRONT (choix documenté dans VERIFY/TASK-218_verify.md) : tous les champs nécessaires
@@ -207,6 +225,19 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
     { field: 'echeanceLegale', headerName: 'Échéance légale', width: 120, valueGetter: (p) => p.data ? formatDate(p.data.echeanceLegale) : '' },
     { field: 'origineDelai', headerName: 'Origine du délai', width: 165, filter: CustomListFilter, valueGetter: (p) => p.data ? `${LIBELLES_ORIGINE_DELAI[p.data.origineDelai] || p.data.origineDelai} (${p.data.nombreJoursDelaiApplique} j)` : '' },
     { field: 'borneReference', headerName: 'Dernière déclaration', width: 150, headerTooltip: "Date jusqu'à laquelle le retard de cette échéance a déjà été signalé dans une déclaration DDP précédente. Vide si l'échéance n'a jamais été déclarée.", valueGetter: (p) => p.data ? formatDate(p.data.borneReference) : '' },
+    {
+      field: 'origineBorneReference',
+      headerName: 'Origine',
+      width: 140,
+      filter: CustomListFilter,
+      headerTooltip: "Indique si l'échéance a déjà été déclarée (borne = dernière déclaration), s'il s'agit de sa 1re déclaration (borne = échéance légale), ou d'une reprise manuelle saisie au démarrage du module.",
+      valueGetter: (p) => p.data ? (LIBELLES_ORIGINE_BORNE[p.data.origineBorneReference] || '') : '',
+      cellRenderer: (p: any) => {
+        const libelle = p.data ? LIBELLES_ORIGINE_BORNE[p.data.origineBorneReference] : null;
+        if (!libelle) return null;
+        return <span style={{ color: COULEURS_ORIGINE_BORNE[p.data.origineBorneReference], fontWeight: 600 }}>{libelle}</span>;
+      },
+    },
     { field: 'borneActuelle', headerName: 'Constaté le', width: 125, headerTooltip: "Date jusqu'à laquelle le retard est compté pour cette période : la date de paiement si l'échéance est réglée, sinon la fin de la période en cours tant qu'elle reste impayée.", valueGetter: (p) => p.data ? formatDate(p.data.borneActuelle) : '' },
     { field: 'depassement', headerName: 'Dépassement (j)', width: 130, type: 'numericColumn', headerTooltip: 'Nombre de jours de retard NOUVEAUX depuis la dernière déclaration — pas le retard total depuis l\'échéance légale, pour éviter de compter deux fois le même retard.', valueGetter: (p) => p.data?.depassement ?? 0 },
     { field: 'montant', headerName: 'Montant', width: 130, type: 'numericColumn', valueGetter: (p) => p.data ? formatMoney(p.data.montantLigne) : '' },
