@@ -140,25 +140,55 @@ explicite s'il diverge de l'attente (pas tranché ailleurs dans la TASK de faço
   (`Aucune déclaration délai de paiement pour cette société.` introuvable / entrée de menu « Délai
   de paiement » introuvable), donc non imputable aux changements de cette TASK. Non corrigé ici
   (hors périmètre STRICT).
-- [ ] **Vérification sur données réelles (étape 5 de la TASK) — NON EFFECTUÉE dans cette session.**
-  Le sandbox d'exécution de cet agent n'a pas d'accès réseau à l'instance SQL Server du poste
-  (`DESKTOP-5BFKKEP`, testé via `sqlcmd`, `Impossible d'ouvrir une connexion... [53]`). Aucune
-  requête de comptage avant/après (nombre de lignes qui disparaîtraient du contrôle DDP) n'a donc
-  pu être produite ici, contrairement à ce que demande explicitement la TASK. **Bloquant pour un
-  déploiement en production** (le §Risques de la TASK recommande explicitement de chiffrer
-  l'impact avant bascule, pour éviter une surprise au dépôt T3 2026) : à faire par le reviewer avec
-  accès à la base réelle, ou par une session ayant accès au poste, avant `DONE_DETAIL/`.
+- [x] **Vérification sur données réelles (étape 5 de la TASK) — EFFECTUÉE le 2026-09-10**, suite au
+  BLOQUÉ du 2026-09-10 signalant que l'échec initial (`sqlcmd` contre `DESKTOP-5BFKKEP`) était une
+  erreur de nom d'hôte, pas une vraie absence d'accès réseau : l'instance réelle est
+  `localhost\SQL2022` (confirmé via `Get-Service` — `MSSQL$SQL2022` running — puis connexion
+  `sqlcmd` réussie). Méthode : petit programme console jetable
+  (`scratch/Ddp220Proof/Program.cs`, non commité, gardé localement pour reproductibilité)
+  réutilisant **le pipeline de production réel** (`ISelectionDelaiPaiementRepository.
+  GetEcheancesCandidatesAsync` + `IDelaiPaiementService.ChargerContexteAsync().Resoudre`, mêmes
+  repositories/services que `Declaration.API`, **aucune écriture** en base) contre
+  `GR_EMA_DISTRIBUTION` réelle, société SO_Id=1 (seule société existante en base — vérifié par
+  `SELECT SO_Id FROM P_SOCIETE`).
+
+  **Résultat chiffré (SO_Id=1, DateMiseEnRouteSociete = 2026-06-01) :**
+  | Mesure | Valeur |
+  |---|---|
+  | Échéances candidates (seuils légaux + devise société, toutes périodes) | 1408 |
+  | Ancien critère (échéance légale, sans historique) → bloquées « reprise manuelle requise » | 872 |
+  | **Nouveau critère (DoDate, TASK-220) → exclues** | **1290** |
+  | Bascule vers EXCLUSION (étaient `CalculAutomatique` avant, disparaissent maintenant) | **418** |
+  | Bascule vers INCLUSION (étaient bloquées avant, incluses maintenant) | 0 |
+
+  **Lecture métier — IMPACT SIGNIFICATIF confirmé** : 418 échéances qui produisaient normalement un
+  `Depassement` chiffré et intégrable (`CalculAutomatique`, jamais bloquées) **disparaissent
+  purement et simplement** du contrôle DDP avec le nouveau critère, alors qu'aucune n'était
+  auparavant en attente de reprise manuelle. Exemple représentatif (10 premières lignes) :
+  `EC_Id=20809 DO_Numero=FC2600396 DoDate=2026-04-01 EcheanceLegale=2026-06-01` — facture d'avril,
+  échéance légale calculée pile à la date de mise en route (délai société de ~60j), **exclue quand
+  même** par le nouveau critère strict sur `DoDate` — c'est exactement le cas de figure décrit dans
+  la TASK (§Nouveau comportement demandé, exemple 20/06/2024→18/09/2024). Confirme la lecture
+  demandée par le PO (décision explicite, pas une omission) mais l'ampleur (418/1408 = ~30% des
+  échéances candidates de cette société) valide la mise en garde de la TASK : **à vérifier
+  explicitement par le PO avant bascule en production**, le dépôt T3 2026 verra mécaniquement
+  disparaître ces lignes du contrôle si aucune action n'est prise en amont (aucune n'était visible
+  comme « bloquée » avant, donc aucun signal actuel n'attire l'attention dessus).
 - [x] Aucune modification de schéma ni de données sur `DM_REPRISE_DELAIPAIEMENT` (contrainte
   absolue du projet respectée — vérifié par grep sur `DeclarationTVA.sql`, fichier non modifié dans
   ce diff).
 
 ## Risques restants (à trancher par le reviewer)
 
-1. **Preuve données réelles manquante** (ci-dessus) — bloquant pour clôture avant confirmation par
-   quelqu'un ayant accès à la base réelle.
+1. **Impact chiffré confirmé significatif (418/1408 échéances, ~30%, cf. preuve ci-dessus)** :
+   la TASK anticipait ce risque et demandait explicitement de le mesurer avant bascule ; c'est fait,
+   mais le chiffre lui-même n'a pas été validé par le PO. Recommandation : ne pas déployer en
+   production avant confirmation explicite du PO que cette ampleur est attendue/acceptée, faute de
+   quoi le dépôt T3 2026 perdra silencieusement ~30% des échéances actuellement déclarables pour
+   SO_Id=1.
 2. **`DateMiseEnRouteSociete == null` → aucune exclusion** : changement de comportement côté société
    non configurée (avant : tout bloqué). À confirmer explicitement par le PO si ce n'était pas déjà
    son intention précise (la TASK ne tranche pas ce point de façon univoque, cf. §Risques de la
-   TASK originale).
+   TASK originale). Sans objet pour SO_Id=1 (date déjà configurée : 2026-06-01).
 3. `DM_REPRISE_DELAIPAIEMENT` reste en base, vide de toute utilité applicative — décision de
    rétention/archivage à prendre séparément par le PO (hors périmètre technique).
