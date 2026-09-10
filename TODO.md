@@ -1,5 +1,12 @@
 # TODO — Module Déclaration TVA (GRF)
 
+## 🆕 TASK-217 — Tooltips d'aide sur les colonnes de bornes de l'écran Contrôle DDP (PO 10/09/2026)
+Signalement PO en préparation du dépôt T3 2026 : les colonnes « Déjà déclaré au » et « Constaté au »
+de l'écran de contrôle DDP ne sont pas compréhensibles sans lire le code (`BorneReference`/
+`BorneActuelle` de `SelectionDelaiPaiementCalculator.cs`). Ajout d'icônes d'aide (ⓘ) + tooltip sur ces
+en-têtes de colonne, TASK strictement UI (aucun changement de calcul). Voir
+`TASKS/TASK-217-help-colonnes-bornes-ecran-controle-ddp.md`.
+
 ## 🆕 TASK-214 — Automatiser la récupération de `WinSW.exe` dans `Deploy-All.ps1` (plus d'étape manuelle) (PO 12/08/2026)
 Signalement PO : échec `FileNotFoundException` au clic « Installer » (`WinSW.exe absent`), et refus
 explicite de toute étape manuelle (« je ne fais rien manuellement ») — `Publish-Setup.ps1` se contente
