@@ -8,11 +8,6 @@ mécanisme de reprise manuelle (saisie du retard initial), le bouton associé et
 `RepriseManuelleRequise`. **Impacte TASK-219** (badge « Reprise manuelle » devient un état mort — à
 coordonner). Voir `TASKS/TASK-220_exclusion-facture-anterieure-mise-en-route-controle-ddp_2026-09-10.md`.
 
-## 🆕 TASK-219 — Badge « déjà déclarée / 1re déclaration / reprise manuelle » par ligne (écran Contrôle DDP) (PO 10/09/2026)
-Complémentaire à TASK-217/218 : badge visuel dérivé de `OrigineBorneReference` (déjà calculé côté
-backend, aucun nouveau calcul) — 3 états (Déjà déclarée / 1re déclaration / Reprise manuelle),
-filtrable, distinct du badge Statut existant. Voir `TASKS/TASK-219-badge-origine-borne-controle-ddp.md`.
-
 ## 🆕 TASK-217 — Renommage + tooltips des colonnes de bornes + n° jours dans Origine du délai (écran Contrôle DDP) (PO 10/09/2026)
 Signalement PO en préparation du dépôt T3 2026 : « Déjà déclaré au » / « Constaté au » incompréhensibles
 sans lire le code → renommées **Dernière déclaration** / **Constaté le** (sans collision avec les

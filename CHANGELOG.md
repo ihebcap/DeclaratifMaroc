@@ -1,5 +1,20 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-09-10 — TASK-219 : badge d'origine de la borne de référence par ligne (écran Contrôle DDP)
+
+Complémentaire à TASK-217/218 : nouvelle colonne « Origine » dans `ControleLignesDelaiPaiementPanel.tsx`,
+dérivée uniquement de `origineBorneReference` (déjà calculé côté backend, aucun nouveau calcul) — 3
+badges filtrables (« Déjà déclarée » / « 1re déclaration » / « Reprise manuelle »), mêmes tokens de
+couleur `var(--status-*)` que les badges Statut existants ; `Indeterminee` volontairement sans badge
+(déjà couvert par le badge Statut existant, pas de doublon). Preuve réelle des 3 badges obtenue via
+l'application elle-même (création + intégration d'une déclaration DDP de test, reprise manuelle via
+l'endpoint déjà existant `POST /delai-paiement/reprise`), nettoyage SQL complet après capture, aucune
+donnée de production touchée. Bug préexistant découvert et documenté (hors périmètre, non corrigé) :
+le bouton « Reprise manuelle » et le badge Statut de cet écran reposent sur `estRepriseManuelleRequise`,
+un champ inexistant dans le DTO (`LigneSelectionDdpDto` expose `statut`) — bouton inopérant en pratique
+dans l'UI. Voir `DONE_DETAIL/TASK-219-badge-origine-borne-controle-ddp.md` et
+`DONE_DETAIL/TASK-219_verify.md`.
+
 ## 2026-09-10 — TASK-218 : commentaire généré par ligne expliquant le contrôle (écran Contrôle DDP)
 
 Complémentaire à TASK-217 : nouvelle colonne « Explication » dans `ControleLignesDelaiPaiementPanel.tsx`,
