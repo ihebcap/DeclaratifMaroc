@@ -1,11 +1,9 @@
 # TODO — Module Déclaration TVA (GRF)
 
-## 🆕 TASK-217 — Renommage + tooltips des colonnes de bornes + n° jours dans Origine du délai (écran Contrôle DDP) (PO 10/09/2026)
-Signalement PO en préparation du dépôt T3 2026 : « Déjà déclaré au » / « Constaté au » incompréhensibles
-sans lire le code → renommées **Dernière déclaration** / **Constaté le** (sans collision avec les
-colonnes Mode/Échéance légale existantes) + tooltips. « Origine du délai » affiche en plus le nombre
-de jours réellement appliqué (`NombreJoursDelaiApplique`, déjà calculé côté backend). TASK strictement
-UI. Voir `TASKS/TASK-217-help-colonnes-bornes-ecran-controle-ddp.md`.
+> ✅ **TASK-217 approuvée** (16/09/2026, clôture en retard — code livré le 10/09/2026, revue
+> architecte complète effectuée à cette date : diff `b9ea5d3` relu intégralement, `npm run lint`/
+> `npm run build` rejoués indépendamment, mapping `nombreJoursDelaiApplique` retracé de bout en bout).
+> Voir `DONE_DETAIL/TASK-217-help-colonnes-bornes-ecran-controle-ddp.md`.
 
 ## 🆕 TASK-214 — Automatiser la récupération de `WinSW.exe` dans `Deploy-All.ps1` (plus d'étape manuelle) (PO 12/08/2026)
 Signalement PO : échec `FileNotFoundException` au clic « Installer » (`WinSW.exe absent`), et refus

@@ -1,5 +1,19 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+## 2026-09-16 — TASK-217 : approuve (clôture en retard, code déjà livré le 10/09/2026)
+
+Revue architecte (session distincte du worker de secours ayant implémenté le 10/09/2026, conforme à
+la règle de séparation implémentation/clôture) : diff `b9ea5d3` relu intégralement, `npm run lint`/
+`npm run build` rejoués indépendamment (0 erreur), mapping `nombreJoursDelaiApplique` retracé de bout
+en bout, checklist UI_STANDARDS confirmée. Le VERIFY était resté déposé sans être traité — TASK-218/
+219/220, postérieures et dépendant du même écran, avaient été clôturées entre-temps sans que ce
+retard soit remarqué (oubli de process, pas un défaut de code). Point non couvert par le worker (test
+visuel navigateur, backend non démarré) comblé indirectement par le test réel de TASK-219 le même
+jour sur le même écran. APPROVE. Nettoyage collatéral : 3 fichiers `VERIFY/*.md` parasites supprimés
+(`TASK-006_verify.md` — contenu réel = dump JSON de TASK-203 mal nommé ; `TASK-007_verify.md`/
+`TASK-024_verify.md` — tâches déjà closes en 2026-07, fichiers orphelins réintroduits par erreur au
+commit `27d782c` après une première suppression au commit `ccbd4d7`).
+
 ## 2026-09-10 — TASK-220 : arbitrage PO post-clôture
 
 Deux points laissés ouverts par `DONE_DETAIL/TASK-220_verify.md` sont tranchés par le PO :
