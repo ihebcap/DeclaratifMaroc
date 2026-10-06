@@ -6,6 +6,8 @@
 > Voir `DONE_DETAIL/TASK-217-help-colonnes-bornes-ecran-controle-ddp.md`.
 
 ## 🆕 TASK-221 — Seuil de montant DDP étendu jusqu'au 31/12/2025, tout montant dès le 01/01/2026 (PO 06/10/2026)
+**⛔ BLOQUÉE — arbitrage PO** (NC DGI 734 : exemption limitée aux factures avant le 01/01/2025, borne « ≤ 10 000 »,
+seuil par facture ; base légale de 2025-12-31 introuvable — détail en tête de la TASK).
 Règle déjà codée (`SeuilsLegauxDelaiPaiement`) : une seule constante change (`DateLimiteSeuilMontant`
 2024-12-31 -> 2025-12-31, + tests. Début de loi 01/07/2023 inchangé. Cumul avec TASK-220 inchangé. Point à confirmer :
 montant = échéance (legacy) ou total facture. Voir `TASKS/TASK-221-seuil-montant-ddp-etendu-31-12-2025.md`.
