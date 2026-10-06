@@ -70,9 +70,9 @@ Constantes, tests, front, `VERIFY/TASK-221_verify.md` (preuve chiffrée avant/ap
 - build .NET + lint/build front : 0 erreur.
 
 ## Risques / dépendances
-- **Impact métier** : les factures 07/2023 -> 06/2024 sortent du contrôle ; les factures < 10 000 de 2025
-  y **entrent pas** (déjà exclues) mais celles de 2025 (jusqu'au 31/12) restent filtrées alors qu'elles
-  ne l'étaient plus depuis 01/01/2025 : **des lignes < 10 000 de 2025 disparaissent**. Chiffrer avant prod.
+- **Impact métier (double, à chiffrer avant prod)** : (a) les factures 07/2023 -> 06/2024 sortent du
+  contrôle ; (b) les factures < 10 000 de 2025 y étaient incluses (seuil jusqu'au 31/12/2024 seulement) et
+  **en sortent** désormais.
 - **Montant comparé** = `RT_ECHEANCE.Montant` de l'échéance (devise société), pas le total facture :
   une facture >= 10 000 scindée en plusieurs échéances < 10 000 serait exclue. Comportement legacy
   conservé ; **à confirmer par le PO** (alternative : comparer le total facture).
