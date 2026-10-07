@@ -5,12 +5,13 @@
 > `npm run build` rejoués indépendamment, mapping `nombreJoursDelaiApplique` retracé de bout en bout).
 > Voir `DONE_DETAIL/TASK-217-help-colonnes-bornes-ecran-controle-ddp.md`.
 
-## 🆕 TASK-221 — Seuils légaux DDP : loi au 01/07/2024, seuil 10 000 jusqu'au 31/12/2025, tous montants dès le 01/01/2026 (PO 07/10/2026)
-Règle déjà codée (`SeuilsLegauxDelaiPaiement`), 2 constantes changent : `DateDebutDeclarationLoi` 2023-07-01 -> 2024-07-01
-et `DateLimiteSeuilMontant` 2024-12-31 -> 2025-12-31 (+ tests, `EXERCICE_MIN` front, mesures chiffrées avant/après).
-Cumul avec TASK-220 inchangé. Réserve : NC DGI 734 (exemption limitée aux factures avant le 01/01/2025) — le PO
-maintient sa règle, à confirmer avant production ; montant testé = échéance (legacy), arbitrage possible via le chiffrage.
-Voir `TASKS/TASK-221-seuils-legaux-ddp-2024-07-01-2025-12-31.md`.
+## 🆕 TASK-221 — Seuil de montant DDP étendu jusqu'au 31/12/2025, tous montants dès le 01/01/2026 (PO 07/10/2026)
+Règle : avant 01/07/2023 ignorées ; 01/07/2023-31/12/2025 seulement >= 10 000 ; dès 01/01/2026 toutes.
+Déjà codée (`SeuilsLegauxDelaiPaiement`) : une seule constante change, `DateLimiteSeuilMontant` 2024-12-31 -> 2025-12-31
+(+ tests, mesures chiffrées avant/après). Début de loi 01/07/2023 inchangé. Cumul avec TASK-220 inchangé.
+Réserve : NC DGI 734 (exemption limitée aux factures avant le 01/01/2025) — le PO maintient sa règle, à confirmer
+avant production ; montant testé = échéance (legacy).
+Voir `TASKS/TASK-221-seuil-montant-ddp-etendu-31-12-2025.md`.
 
 ## 🆕 TASK-214 — Automatiser la récupération de `WinSW.exe` dans `Deploy-All.ps1` (plus d'étape manuelle) (PO 12/08/2026)
 Signalement PO : échec `FileNotFoundException` au clic « Installer » (`WinSW.exe absent`), et refus
