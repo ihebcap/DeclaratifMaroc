@@ -5,31 +5,36 @@ using System.Linq;
 namespace Declaration.Core
 {
     /// <summary>
-    /// TASK-131 — Seuils légaux de la Déclaration Délai de Paiement Maroc. Dates statutaires de la loi
-    /// marocaine : AUCUN paramétrage par client (reproduction à l'identique du legacy
-    /// <c>LigneControleDelaisPaiementController.GetAll</c>, l.71-76). Point UNIQUE de vérité : la
-    /// requête de sélection (repository) reçoit ces valeurs en paramètres depuis ici, et le
-    /// calculateur pur les réapplique défensivement — jamais deux littéraux indépendants.
+    /// TASK-131 / TASK-221 — Seuils légaux de la Déclaration Délai de Paiement Maroc.
+    /// Point UNIQUE de vérité : la requête de sélection (repository) reçoit ces valeurs en paramètres depuis ici,
+    /// et le calculateur pur les réapplique défensivement — jamais deux littéraux indépendants.
+    /// Diverge du legacy par décision PO (TASK-221) : seuil porté au 31/12/2025 et borne strictement supérieure (> 10 000).
     /// </summary>
     public static class SeuilsLegauxDelaiPaiement
     {
         /// <summary>Début de la déclaration légale (legacy <c>dateDebDecLoi</c>) : aucune facture antérieure n'est déclarable.</summary>
         public static readonly DateTime DateDebutDeclarationLoi = new DateTime(2023, 7, 1);
 
-        /// <summary>Date au-delà de laquelle le seuil de montant ne s'applique plus (legacy <c>dateLimiteMontant</c>).</summary>
-        public static readonly DateTime DateLimiteSeuilMontant = new DateTime(2024, 12, 31);
+        /// <summary>
+        /// Date au-delà de laquelle le seuil de montant ne s'applique plus.
+        /// Portée au 31/12/2025 en dur pour tous les clients par décision PO (TASK-221).
+        /// Note circulaire DGI n°734 §O-2 : exemption des factures &lt;= 10 000 MAD TTC émises avant 2025 ;
+        /// la décision PO maintient l'exemption &lt;= 10 000 sur toute l'année 2025 (écart connu assumé).
+        /// Dès le 01/01/2026, toutes les échéances sont éligibles quel que soit leur montant.
+        /// </summary>
+        public static readonly DateTime DateLimiteSeuilMontant = new DateTime(2025, 12, 31);
 
         /// <summary>Seuil de montant (devise société) applicable UNIQUEMENT jusqu'à <see cref="DateLimiteSeuilMontant"/> inclus.</summary>
         public const decimal SeuilMontant = 10_000m;
 
         /// <summary>
         /// Éligibilité "seuils légaux" d'une facture : date document ≥ 2023-07-01 ET (date document
-        /// &gt; 2024-12-31 OU montant ≥ 10 000). Le montant est celui de la facture EN DEVISE SOCIÉTÉ
-        /// (le filtre devise société est appliqué en amont, comme dans le legacy).
+        /// &gt; 2025-12-31 OU montant &gt; 10 000). Le montant est celui de l'échéance EN DEVISE SOCIÉTÉ
+        /// (note DGI 734 §O-2 : exemption « &lt;= 10 000 » ; règle PO jusqu'au 31/12/2025, écart signalé).
         /// </summary>
         public static bool EstEligibleSeuilLegal(DateTime dateDocument, decimal montant)
             => dateDocument.Date >= DateDebutDeclarationLoi
-               && (dateDocument.Date > DateLimiteSeuilMontant || montant >= SeuilMontant);
+               && (dateDocument.Date > DateLimiteSeuilMontant || montant > SeuilMontant);
     }
 
     /// <summary>

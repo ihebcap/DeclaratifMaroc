@@ -525,23 +525,29 @@ namespace Declaration.Core.Tests
             Assert.Empty(lignes);
         }
 
-        // ══ SEUILS LÉGAUX (reproduits à l'identique du legacy) ═════════════════════════════════
+        // ══ SEUILS LÉGAUX (TASK-131 / TASK-221 : seuil au 31/12/2025 et borne > 10 000, diverge du legacy) ══
 
         [Fact]
         public void SeuilsLegaux_FactureAnterieureAu1erJuillet2023_JamaisEligible()
         {
             Assert.False(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2023, 6, 30), 1_000_000m));
-            Assert.True(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2023, 7, 1), 10_000m));
+            Assert.False(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2023, 7, 1), 10_000m));
+            Assert.True(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2023, 7, 1), 10_000.01m));
         }
 
         [Fact]
-        public void SeuilsLegaux_SeuilDeMontantApplicableUniquementJusquAu31Decembre2024()
+        public void SeuilsLegaux_SeuilDeMontantApplicableUniquementJusquAu31Decembre2025()
         {
-            // Avant/le 31/12/2024 : seuil 10 000 applicable.
+            // Avant/le 31/12/2025 : seuil 10 000 strictement supérieur (> 10 000).
             Assert.False(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2024, 12, 31), 9_999.99m));
-            Assert.True(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2024, 12, 31), 10_000m));
-            // Après le 31/12/2024 : plus de seuil de montant.
-            Assert.True(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2025, 1, 1), 1m));
+            Assert.False(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2024, 12, 31), 10_000m));
+            Assert.True(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2024, 12, 31), 10_000.01m));
+            Assert.False(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2025, 12, 31), 10_000m));
+            Assert.True(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2025, 12, 31), 10_000.01m));
+
+            // Après le 31/12/2025 : plus de seuil de montant (tous montants éligibles dès 01/01/2026).
+            Assert.True(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2026, 1, 1), 0.01m));
+            Assert.True(SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(new DateTime(2026, 1, 1), 800m));
         }
 
         [Fact]
@@ -553,6 +559,42 @@ namespace Declaration.Core.Tests
                 new DateTime(2025, 1, 1), new DateTime(2025, 3, 31),
                 new[] { ec }, Legale((1, new DateTime(2024, 8, 29)))));
 
+            Assert.Empty(lignes);
+        }
+
+        [Theory]
+        [InlineData("2023-06-30T00:00:00", 1000000.0, false)] // Scénario 1 : avant la loi
+        [InlineData("2023-07-01T00:00:00", 10000.00, false)] // Scénario 2 : borne exclue (> 10 000)
+        [InlineData("2023-07-01T00:00:00", 10000.01, true)]  // Scénario 3 : éligible
+        [InlineData("2024-12-31T00:00:00", 9999.99, false)]  // Scénario 4 : sous seuil
+        [InlineData("2025-01-01T00:00:00", 9999.99, false)]  // Scénario 5 : 2025 sous seuil (était oui avant TASK-221)
+        [InlineData("2025-04-23T00:00:00", 800.0, false)]    // Scénario 6 : cas d'un client (était oui)
+        [InlineData("2025-12-31T00:00:00", 10000.00, false)] // Scénario 7 : borne 31/12/2025 exclue
+        [InlineData("2025-12-31T00:00:00", 10000.01, true)]  // Scénario 8 : borne 31/12/2025 au-delà du seuil
+        [InlineData("2025-12-31T14:00:00", 800.0, false)]    // Scénario 9 : 31/12/2025 à 14:00 insensible à l'heure
+        [InlineData("2026-01-01T00:00:00", 0.01, true)]      // Scénario 10 : tous montants dès 2026
+        [InlineData("2026-01-01T00:00:00", 800.0, true)]     // Scénario 11 : tous montants dès 2026
+        [InlineData("2025-06-01T00:00:00", -10080.0, false)] // Scénario 12 : montant négatif <= 10 000
+        [InlineData("2026-02-01T00:00:00", -10080.0, true)]  // Scénario 13 : après date limite, tous montants
+        public void TASK221_Scenarios_EligibiliteSeuilLegal(string dateStr, double montantDouble, bool attendu)
+        {
+            var date = DateTime.Parse(dateStr);
+            var montant = (decimal)montantDouble;
+            var eligibilite = SeuilsLegauxDelaiPaiement.EstEligibleSeuilLegal(date, montant);
+            Assert.Equal(attendu, eligibilite);
+        }
+
+        [Fact]
+        public void TASK221_Scenario14_DateMiseEnRoutePosterieure_FactureExclue()
+        {
+            // Scénario 14 : DoDate = 2025-03-15, Montant = 50 000, DateMiseEnRoute = 2025-06-01 => exclue (TASK-220)
+            var ec = Echeance(1, new DateTime(2025, 3, 15), montant: 50_000m, solde: 50_000m);
+            var parametres = Parametres(
+                new DateTime(2025, 7, 1), new DateTime(2025, 9, 30),
+                new[] { ec }, Legale((1, new DateTime(2025, 5, 15))),
+                miseEnRoute: new DateTime(2025, 6, 1));
+
+            var lignes = SelectionDelaiPaiementCalculator.Selectionner(parametres);
             Assert.Empty(lignes);
         }
 

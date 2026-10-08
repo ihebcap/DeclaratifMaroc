@@ -111,7 +111,7 @@ public sealed class SelectionDelaiPaiementRepository : ISelectionDelaiPaiementRe
               AND EC_Type NOT IN (@TypeGain, @TypePerte)
               AND DE_Id = @DeviseSocieteId
               AND DO_Date >= @DateDebutLoi
-              AND (DO_Date > @DateLimiteMontant OR EC_Montant >= @SeuilMontant)",
+              AND (DO_Date >= @DateApresLimite OR EC_Montant > @SeuilMontant)",
             new
             {
                 SoId = soId,
@@ -120,7 +120,7 @@ public sealed class SelectionDelaiPaiementRepository : ISelectionDelaiPaiementRe
                 TypePerte = EcheanceTypePerte,
                 DeviseSocieteId = deviseSocieteId,
                 DateDebutLoi = dateDebutDeclarationLoi.Date,
-                DateLimiteMontant = dateLimiteSeuilMontant.Date,
+                DateApresLimite = dateLimiteSeuilMontant.Date.AddDays(1),
                 SeuilMontant = seuilMontant
             });
 
