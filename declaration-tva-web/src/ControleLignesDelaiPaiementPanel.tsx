@@ -201,7 +201,7 @@ export function ControleLignesDelaiPaiementPanel({ societeId, showToast }: {
   const toutesLignes = useMemo(() => resultat?.lignes ?? [], [resultat]);
 
   const columnDefs: ColDef[] = useMemo(() => [
-    { field: 'statut', headerName: 'Statut', width: 165, filter: CustomListFilter, cellRenderer: (p: any) => p.data ? <span style={{ color: 'var(--status-ok-text)', fontWeight: 600 }}>Retard calculé</span> : null },
+    { field: 'statut', headerName: 'Statut', width: 165, filter: CustomListFilter, valueGetter: (p) => p.data ? 'Retard calculé' : '', cellRenderer: (p: any) => p.data ? <span style={{ color: 'var(--status-ok-text)', fontWeight: 600 }}>Retard calculé</span> : null },
     { field: 'tiers', headerName: 'Fournisseur', filter: 'agTextColumnFilter', valueGetter: (p) => p.data ? `${p.data.tiersCode || ''} · ${p.data.tiersIntitule || ''}` : '' },
     { field: 'facture', headerName: 'Facture', width: 140, filter: CustomListFilter, valueGetter: (p) => p.data?.doNumero || '' },
     { field: 'doDate', headerName: 'Date facture', width: 110, valueGetter: (p) => p.data ? formatDate(p.data.doDate) : '' },
