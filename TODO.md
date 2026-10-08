@@ -11,6 +11,12 @@ Décision PO : appliquer les règles de la DGI. Dates déjà conformes (début 0
 Points ouverts hors TASK : montant testé = échéance (la note dit facture TTC) ; colonne « Montant » de l'écran Contrôle
 = montant de la ligne, source de confusion. Voir `TASKS/TASK-221-borne-seuil-ddp-note-dgi-734.md`.
 
+## 🆕 TASK-222 — Seuil d'exclusion DDP paramétrable par société, défaut = règle DGI (PO 08/10/2026, URGENT : client bloqué)
+Un client doit ignorer toutes les factures < 10 000 (écart volontaire à la note DGI 734 : amende sur toutes les factures émises dès
+2025). Aucun réglage n'existe aujourd'hui (constantes statutaires). Colonnes nullables `SeuilMontant`/`SeuilDateLimite` sur
+`DM_PARAM_DELAIPAIEMENT_SOCIETE` (table GRF), réglage admin dans la fenêtre de mise en route existante, bandeau d'écart visible à
+l'écran et dans l'export. Dépend de TASK-221 (borne). Voir `TASKS/TASK-222-seuil-exclusion-ddp-parametrable-par-societe.md`.
+
 ## 🆕 TASK-214 — Automatiser la récupération de `WinSW.exe` dans `Deploy-All.ps1` (plus d'étape manuelle) (PO 12/08/2026)
 Signalement PO : échec `FileNotFoundException` au clic « Installer » (`WinSW.exe absent`), et refus
 explicite de toute étape manuelle (« je ne fais rien manuellement ») — `Publish-Setup.ps1` se contente
