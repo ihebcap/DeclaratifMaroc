@@ -5,13 +5,6 @@
 > `npm run build` rejoués indépendamment, mapping `nombreJoursDelaiApplique` retracé de bout en bout).
 > Voir `DONE_DETAIL/TASK-217-help-colonnes-bornes-ecran-controle-ddp.md`.
 
-## 🆕 TASK-221 — Seuil de montant DDP : date limite 31/12/2025 en dur et borne `> 10 000` (PO 08/10/2026) — RISK HIGH
-Décision PO de simplification : pour tous les clients, avant 01/07/2023 ignorées ; 01/07/2023-31/12/2025 seulement montant > 10 000 ;
-dès 01/01/2026 toutes. Montant = échéance (inchangé). Déjà codé (`SeuilsLegauxDelaiPaiement`) : changent `DateLimiteSeuilMontant`
-2024-12-31 -> 2025-12-31, la borne (`>`, C# + SQL) et le prédicat de date SQL (à la journée). Écart connu avec la DGI (exemption limitée
-aux factures émises avant le 01/01/2025, note 734 §O-2 et annonce du 21/03/2025), porté par le PO. Débloque le client dont la ligne de 800 MAD
-(facture du 23/04/2025) apparaît en T3 2026. Voir `TASKS/TASK-221-seuil-ddp-date-limite-2025-12-31-en-dur.md`.
-
 ## 🆕 TASK-223 — Export Excel des grilles : Fournisseur/Facture vides et dates en jj/mm/aaaa (PO 08/10/2026) — RISK MEDIUM
 Sur le Contrôle DDP, l'export lit `node.data[field]` (`gridExport.ts:26-29`) : les colonnes calculées par `valueGetter` (Fournisseur,
 Facture, statut, origine, mode, cas, explication) sortent vides et les dates en ISO. Correctif : lire la valeur affichée

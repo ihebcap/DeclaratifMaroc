@@ -1,5 +1,16 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
+
+## 2026-10-08 — TASK-221 : approuve (seuil DDP : date limite 31/12/2025 en dur, borne `> 10 000`)
+
+Revue architecte (session distincte du worker, conforme à la règle de séparation) : commit `5ccba3f` relu
+(2 constantes/bornes C#, prédicat SQL `DO_Date >= @DateApresLimite OR EC_Montant > @SeuilMontant`
+équivalent au `.Date >` du C#), `dotnet build` 0 erreur et tests Core (223) et Orchestration (266) rejoués
+indépendamment, greps de contrôle et textes vivants vérifiés. Réserves consignées : mesures sur données
+réelles faites par le worker sur la base locale `GR_EMA_DISTRIBUTION` (291 échéances 2025 sortantes, 0 déjà
+déclarée), non sur la base du client concerné ; échecs Playwright (test A, task136) déclarés préexistants
+(TASK-220), non rejoués ; brouillons de déclaration déjà générés non régénérés (décision PO). Écart DGI
+assumé par le PO (exemption étendue aux factures 2025, NC 734 §O-2 / annonce du 21/03/2025). APPROVE.
 ## 2026-09-16 — TASK-217 : approuve (clôture en retard, code déjà livré le 10/09/2026)
 
 Revue architecte (session distincte du worker de secours ayant implémenté le 10/09/2026, conforme à
