@@ -4,11 +4,13 @@ RISK : HIGH (périmètre déclaratif légal, écart volontaire à la règle DGI 
 Dépendance : **TASK-221** (borne `>` dans `EstEligibleSeuilLegal`) à livrer avant ou dans la même session ; les deux TASKS touchent la même méthode.
 
 ## Contexte
-Demande PO (08/10/2026), urgente (un client est bloqué) : pour **un client précis**, ignorer **toutes** les factures dont le montant
-est inférieur à 10 000, quelle que soit leur date. Cela s'écarte de la règle DGI, qui exempte seulement les factures émises avant le
-01/01/2025 (note circulaire n°734 §O-2 ; annonce DGI du 21/03/2025, finances.gov.ma `fiche=7218` : « l'amende pécuniaire s'applique à
-toutes les factures émises à compter du 1er janvier 2025, y compris celles dont le montant est inférieur ou égal à 10 000 dirhams »).
-Le PO a pris connaissance de ces textes ; la décision d'écart lui appartient.
+Demande PO (08/10/2026, formulation finale), urgente (un client est bloqué) : pour **un client précis**, ignorer les factures dont le
+montant est inférieur à 10 000 **jusqu'au 31/12/2025** ; **à partir du 01/01/2026 il les déclare** (toutes). Cela s'écarte de la règle
+DGI pour les seules factures émises en 2025, que la DGI n'exempte plus (note circulaire n°734 §O-2 : exemption limitée aux factures
+émises avant le 01/01/2025 ; annonce DGI du 21/03/2025, finances.gov.ma `fiche=7218` : « l'amende pécuniaire s'applique à toutes les
+factures émises à compter du 1er janvier 2025, y compris celles dont le montant est inférieur ou égal à 10 000 dirhams »).
+Le PO a pris connaissance de ces textes ; la décision d'écart lui appartient. Cas d'origine : facture de 800 MAD du 23/04/2025
+(échéance légale 12/08/2025), visible à l'écran Contrôle de T3 2026 ; elle sera exclue par ce réglage.
 
 Aujourd'hui aucun réglage n'existe : le seuil est une constante statutaire (`SeuilsLegauxDelaiPaiement`,
 `Declaration.Core/SelectionDelaiPaiementCalculator.cs:14-33`, TASK-131). La date de mise en route société (TASK-220) n'est **pas
@@ -20,10 +22,11 @@ Une paramétrisation existe déjà pour la date de mise en route : table `DM_PAR
 
 ## Objectif
 ```
-Entrée  : société sans réglage -> comportement DGI (TASK-221) ; société avec seuil 10 000 et date limite 9999-12-31.
+Entrée  : société sans réglage -> comportement DGI (TASK-221) ; société avec seuil 10 000 et date limite 2025-12-31.
 Traitement : le seuil et sa date limite deviennent des valeurs par société ; null = valeurs statutaires.
-Sortie  : pour la société réglée, toute échéance de montant <= seuil est exclue du contrôle DDP, à toute date ;
-          les autres sociétés sont strictement inchangées ; l'écart est visible à l'écran.
+Sortie  : pour la société réglée, toute échéance de facture datée au plus tard de la date limite (2025-12-31) et de montant <= seuil
+          est exclue du contrôle DDP ; dès le 01/01/2026 tous les montants sont retenus ; les autres sociétés sont strictement
+          inchangées ; l'écart est visible à l'écran.
 ```
 
 ## Périmètre STRICT
@@ -34,7 +37,7 @@ Sortie  : pour la société réglée, toute échéance de montant <= seuil est e
      (script exécuté à l'installation/mise à jour). Aucune autre table touchée.
   2. Règle : `null` ⇒ valeurs statutaires (10 000 ; `DateLimiteSeuilMontant` 2024-12-31). Sinon l'échéance est exclue si
      `DoDate <= SeuilDateLimite` ET `montant <= SeuilMontant` (même borne que TASK-221 : `montant > seuil` requis pour être retenue).
-     `DateDebutDeclarationLoi` (2023-07-01) reste appliquée dans tous les cas. Pour le client concerné : `SeuilDateLimite = 9999-12-31`.
+     `DateDebutDeclarationLoi` (2023-07-01) reste appliquée dans tous les cas. Pour le client concerné : `SeuilDateLimite = 2025-12-31`.
   3. Branchement : le service de sélection résout les valeurs de la société et les passe **aux deux endroits** (requête SQL
      `GetEcheancesCandidatesAsync`, déjà paramétrée, et `ParametresSelectionDelaiPaiement` pour la réapplication défensive du
      calculateur) : une seule source de vérité, aucun littéral dupliqué.
@@ -60,11 +63,13 @@ Sortie  : pour la société réglée, toute échéance de montant <= seuil est e
 |---|---|---|---|
 | sans réglage | 2025-04-23 | 800 | oui (règle DGI : factures de 2025 déclarées) |
 | sans réglage | 2024-12-31 | 9 999,99 | non |
-| seuil 10 000 / limite 9999-12-31 | 2025-04-23 | 800 | non |
-| seuil 10 000 / limite 9999-12-31 | 2026-02-01 | 800 | non |
-| seuil 10 000 / limite 9999-12-31 | 2026-02-01 | 10 000,00 | non (borne exclue) |
-| seuil 10 000 / limite 9999-12-31 | 2026-02-01 | 10 000,01 | oui |
-| seuil 10 000 / limite 9999-12-31 | 2023-06-30 | 1 000 000 | non (avant la loi) |
+| seuil 10 000 / limite 2025-12-31 | 2025-04-23 | 800 | non (cas d'origine du client) |
+| seuil 10 000 / limite 2025-12-31 | 2025-12-31 | 800 | non |
+| seuil 10 000 / limite 2025-12-31 | 2025-12-31 | 10 000,00 | non (borne exclue) |
+| seuil 10 000 / limite 2025-12-31 | 2025-12-31 | 10 000,01 | oui |
+| seuil 10 000 / limite 2025-12-31 | 2026-01-01 | 800 | oui (dès 2026 tous les montants) |
+| seuil 10 000 / limite 2025-12-31 | 2026-02-01 | 0,01 | oui |
+| seuil 10 000 / limite 2025-12-31 | 2023-06-30 | 1 000 000 | non (avant la loi) |
 | seuil renseigné, limite null | 2025-04-23 | 800 | oui (limite = statutaire 2024-12-31) |
 + SQL et C# donnent le même résultat sur ces cas ; une société A réglée n'affecte pas la société B ; un utilisateur non admin reçoit 403 ;
 valeurs invalides rejetées ; bandeau et en-tête d'export affichés si et seulement si un écart est actif.
@@ -79,9 +84,10 @@ fenêtre de réglage, mesure sur la base du client (nombre de lignes avant/aprè
 - Le script SQL est rejouable sans effet (idempotent) et ne touche que `DM_PARAM_DELAIPAIEMENT_SOCIETE`.
 
 ## Risques / dépendances
-- **Exposition légale** : ignorer les factures de 2025 et après de montant <= 10 000 contredit la note DGI 734 et l'annonce du
-  21/03/2025 ; amende de 5 000 MAD par facture manquante ou inexacte (NC 734 p.7). Par défaut la règle reste DGI ; l'écart est un
-  choix explicite, tracé (utilisateur, date), visible à l'écran et dans l'export.
+- **Exposition légale** : ignorer les factures émises en 2025 de montant <= 10 000 contredit la note DGI 734 et l'annonce du
+  21/03/2025 ; amende de 5 000 MAD par facture manquante ou inexacte (NC 734 p.7). Dès 2026 le client déclare tout, donc l'écart est
+  borné aux factures de 2025. Par défaut la règle reste DGI ; l'écart est un choix explicite, tracé (utilisateur, date), visible à
+  l'écran et dans l'export.
 - **Cohérence avec l'historique** : une échéance déjà déclarée (ex. facture de 800 MAD du 23/04/2025, déclarée au 31/12/2025 dans
   l'annuelle 2025) cessera d'être alimentée dès que le réglage s'applique : plus aucun incrément de retard pour elle.
 - **Déploiement** : le client doit recevoir la nouvelle version et le script SQL (mise à jour d'installation) avant tout réglage ;
