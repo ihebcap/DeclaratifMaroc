@@ -15,31 +15,35 @@ Le bug touche donc **toute grille `ApbsGrid` dont une colonne est calculée**, p
 ## Objectif
 ```
 Entrée  : export Excel lisant node.data[field] (valeurs brutes, colonnes calculées vides, dates ISO)
-Traitement : l'export lit la valeur AFFICHÉE de chaque cellule (valueGetter pris en compte) et formate toute date en jj/mm/aaaa
-Sortie  : fichier Excel dont chaque colonne visible contient ce que l'écran affiche ; dates en jj/mm/aaaa
+Traitement : l'export lit la valeur AFFICHÉE de chaque cellule (valueGetter pris en compte) et écrit les dates en vraies cellules date Excel (format jj/mm/aaaa, sans heure)
+Sortie  : fichier Excel dont chaque colonne visible contient ce que l'écran affiche ; colonnes date triables/filtrables comme des dates dans Excel
 ```
 
 ## Périmètre STRICT
 - **Inclus** : `declaration-tva-web/src/grid/gridExport.ts`, un nouveau fichier pur `declaration-tva-web/src/grid/gridExportValues.ts` (aucun import à l'exécution de `ag-grid`/`xlsx`/React : seuls des `import type` sont admis, pour que `node --test` puisse le charger), un test `declaration-tva-web/tests-unit/gridExportValues.test.ts`, et **une seule ligne** de `ControleLignesDelaiPaiementPanel.tsx` (point 5).
   1. Valeur de cellule : remplacer `node.data[col.field]` par `gridApi.getCellValue({ rowNode: node, colKey: <colId> })` (API AG Grid 36). Utiliser le `colId` de l'état de colonne (pas `field`), et ne plus exclure les colonnes sans `field` mais avec `valueGetter` ; continuer à exclure les colonnes masquées et les colonnes d'action/sélection sans valeur (pas de `field` ni `valueGetter`).
-  2. Dates : toute valeur de type `Date`, ou chaîne ISO (`^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$`), est écrite au format texte `jj/mm/aaaa` (extraction par les 10 premiers caractères pour une chaîne : **aucun passage par `new Date(...)`**, pour éviter tout décalage de fuseau). Ne pas toucher aux nombres ni aux autres textes.
-  3. Une valeur déjà affichée en `jj/mm/aaaa` (cas du Contrôle DDP via `formatDate`) reste inchangée.
+  2. **Dates = vraies cellules date Excel** (PO 08/10/2026 : « je veux des dates Excel, l'essentiel le user ne voit pas l'heure »), affichées `jj/mm/aaaa`, **sans heure**. Sont reconnus comme date : une valeur `Date` ; une chaîne ISO (`^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$`) ; une chaîne **exactement** `jj/mm/aaaa` (`^\d{2}/\d{2}/\d{4}$`, c'est ce que renvoient les `valueGetter` du Contrôle DDP via `formatDate`). Jour/mois/année sont extraits **par lecture des caractères** (10 premiers pour l'ISO, **aucun `new Date(chaîne)`**, aucune conversion de fuseau, l'heure est ignorée) ; une date impossible (`31/02/2025`) ou une année hors 1900-2999 reste du texte inchangé. La cellule est construite explicitement, **sans passer par la conversion de `Date` de `xlsx`** (elle dépend du fuseau local) : numéro de série `Date.UTC(a, m-1, j) / 86400000 + 25569` (nombre entier, donc aucune heure), `{ t: 'n', v: série, z: 'dd/mm/yyyy' }`. Construire la feuille avec `XLSX.utils.aoa_to_sheet` (en-têtes en première ligne, cellules objets pour les dates) plutôt que `json_to_sheet`, et conserver le nom d'onglet `Données`.
+  3. Un texte qui contient une date mais n'est pas **uniquement** une date (ex. `01/01/2025 → 31/03/2025`, colonne « Dates / N° facture » des Conventions) reste du texte.
   4. Sélection des colonnes : exporter une colonne visible si elle a un `field` **ou** un `valueGetter` ; ne pas exporter celles qui n'ont ni l'un ni l'autre (colonnes d'actions). Clé de colonne = `colId`. En-têtes en double dans une même grille : suffixer le second (`Statut (2)`) au lieu d'écraser la colonne (l'objet est indexé par `headerName`, `gridExport.ts:28`). Une valeur qui n'est ni texte, ni nombre, ni booléen, ni `Date` devient une cellule vide (jamais `[object Object]`).
   5. `ControleLignesDelaiPaiementPanel.tsx` l.204, colonne `Statut` : elle n'a ni donnée `statut` ni `valueGetter` (seulement un `cellRenderer` qui affiche « Retard calculé »), donc elle resterait vide après le correctif. Ajouter `valueGetter: (p) => p.data ? 'Retard calculé' : ''`. Aucune autre modification de colonne.
-- **Exclus** (ne pas toucher, signaler seulement) : le formatage des montants (le Contrôle DDP exporte `Montant` en texte « 1 234,00 MAD » car `valueGetter` renvoie une chaîne ; passage en nombre = TASK ultérieure si le PO le demande) ; les autres colonnes et `valueGetter` de l'écran et des autres grilles ; les dates écrites comme **cellules date Excel** (restent du **texte** `jj/mm/aaaa` : limite connue, un tri/filtre chronologique dans Excel n'est pas garanti ; évolution possible en TASK séparée, piège de fuseau de `xlsx` 0.18.5) ; les autres exports (`DeclarationFinalePanel`, `VerifierIntegrerPanel`, `ControlGrid` s'ils ont leur propre export — vérifier par grep et signaler ; `ControlGrid` et `ReglementsSelection` ont `showExportButton={false}`) ; l'export XML/Excel serveur (`Declaration.Export.*`) ; tout code .NET.
+- **Exclus** (ne pas toucher, signaler seulement) : le formatage des montants (le Contrôle DDP exporte `Montant` en texte « 1 234,00 MAD » car `valueGetter` renvoie une chaîne ; passage en nombre = TASK ultérieure si le PO le demande) ; les autres colonnes et `valueGetter` de l'écran et des autres grilles ; les autres exports (`DeclarationFinalePanel`, `VerifierIntegrerPanel`, `ControlGrid` s'ils ont leur propre export — vérifier par grep et signaler ; `ControlGrid` et `ReglementsSelection` ont `showExportButton={false}`) ; l'export XML/Excel serveur (`Declaration.Export.*`) ; tout code .NET.
 
 ## Étapes
 1. Lire `gridExport.ts`, `ApbsGrid.tsx` (l.166-170, `handleExport`) et le panel Contrôle DDP. `grep exportGridToExcel` : lister toutes les grilles concernées.
 2. Implémenter (1) à (3). Pas de nouvelle dépendance. Pas de formateur dupliqué : si un utilitaire de date `jj/mm/aaaa` sans fuseau existe, le réutiliser, sinon fonction locale pure et exportée pour test.
-3. Tests. **(a) Unitaire (obligatoire)** : `npm run test:unit` (`node --test tests-unit/**/*.test.ts`, déjà en place, import avec extension `.ts` comme `valorisationErreurs.test.ts`) sur les fonctions pures de `gridExportValues.ts` (conversion de valeur, filtrage/dédoublonnage des colonnes) : tous les cas du tableau ci-dessous, plus `null`/`undefined`/objet/booléen. Pour le décalage de fuseau, lancer aussi avec `TZ=America/Los_Angeles` et `TZ=Pacific/Kiritimati` et noter le résultat. **(b) Playwright (si les données de test le permettent)** : test d'export (`page.waitForEvent('download')`, lecture du `.xlsx` avec la lib `xlsx`) sur l'écran Contrôle DDP avec au moins une ligne : colonnes `Fournisseur` et `Facture` non vides, `Date facture`/`Échéance légale`/`Dernière déclaration`/`Constaté le` au format `jj/mm/aaaa`. Si aucune donnée de test ne permet de charger l'écran, le dire dans le VERIFY et fournir une vérification manuelle pas à pas (ne pas inventer de résultat).
+3. Tests. **(a) Unitaire (obligatoire)** : `npm run test:unit` (`node --test tests-unit/**/*.test.ts`, déjà en place, import avec extension `.ts` comme `valorisationErreurs.test.ts`) sur les fonctions pures de `gridExportValues.ts` (conversion de valeur, filtrage/dédoublonnage des colonnes) : tous les cas du tableau ci-dessous, plus `null`/`undefined`/objet/booléen. Vérifier le numéro de série exact (45770 pour 23/04/2025) et l'absence de partie décimale. Pour le décalage de fuseau, lancer aussi avec `TZ=America/Los_Angeles` et `TZ=Pacific/Kiritimati` et noter le résultat. **(b) Playwright (si les données de test le permettent)** : test d'export (`page.waitForEvent('download')`, lecture du `.xlsx` avec la lib `xlsx`) sur l'écran Contrôle DDP avec au moins une ligne : colonnes `Fournisseur` et `Facture` non vides, `Date facture`/`Échéance légale`/`Dernière déclaration`/`Constaté le` au format `jj/mm/aaaa`. Si aucune donnée de test ne permet de charger l'écran, le dire dans le VERIFY et fournir une vérification manuelle pas à pas (ne pas inventer de résultat).
 4. Contrôle de non-régression : exporter au moins **2 autres grilles** `ApbsGrid` (une avec colonnes simples, une avec `valueGetter`) et comparer avant/après ; consigner les différences attendues (colonnes calculées désormais remplies, dates reformatées).
 
 ## Scénarios (à jouer à la main ou en test)
 | Cas | Attendu dans Excel |
 |---|---|
 | Ligne avec fournisseur `F001 · ACME` et facture `FA2025-123` | colonnes Fournisseur = `F001 · ACME`, Facture = `FA2025-123` |
-| `doDate = 2025-04-23T00:00:00` | `23/04/2025` |
-| `doDate = 2025-12-31T23:30:00` (pas de décalage de fuseau) | `31/12/2025` |
+| `doDate = 2025-04-23T00:00:00` | cellule **date** (numéro de série 45770), affichée `23/04/2025`, sans heure |
+| `doDate = 2025-12-31T23:30:00` (heure ignorée, pas de décalage de fuseau) | date `31/12/2025` (série 46022), jamais `01/01/2026` |
+| Texte `23/04/2025` (valueGetter du Contrôle DDP) | même cellule date que ci-dessus |
+| `31/02/2025`, `1850-01-01` | texte inchangé |
+| `01/01/2025 → 31/03/2025` | texte inchangé |
+| Tri/filtre par date dans Excel | chronologique (c.-à-d. vraies dates, pas du texte) |
 | `borneReference` vide / null | cellule vide |
 | Colonne masquée par l'utilisateur | absente du fichier |
 | Filtre/tri actifs dans la grille | lignes exportées dans l'ordre et selon le filtre affichés (comportement actuel conservé) |
@@ -55,7 +59,7 @@ Sortie  : fichier Excel dont chaque colonne visible contient ce que l'écran aff
 - [ ] `npm run lint` et `npm run build` (dans `declaration-tva-web/`) : 0 erreur
 - [ ] `dotnet build DeclarationTVA.slnx` : 0 erreur (aucun .NET modifié : le prouver par `git diff --stat`)
 - [ ] Export du Contrôle DDP : Fournisseur et Facture remplis (méthode + capture ou lecture du fichier)
-- [ ] 4 colonnes date au format `jj/mm/aaaa`, sans décalage d'un jour
+- [ ] 4 colonnes date du Contrôle DDP = vraies cellules date (type numérique + format `dd/mm/yyyy`, relu avec `xlsx` : `cell.t==="n"`, `cell.z`), sans heure ni décalage d'un jour ; tri chronologique vérifié dans Excel
 - [ ] Non-régression sur 2 autres grilles (étape 4)
 - [ ] `npm run test:unit` : tous verts, y compris sous les 2 fuseaux `TZ` (sortie collée)
 - [ ] Colonne `Statut` du Contrôle DDP remplie
