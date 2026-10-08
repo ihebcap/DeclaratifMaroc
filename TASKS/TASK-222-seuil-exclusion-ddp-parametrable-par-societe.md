@@ -1,7 +1,8 @@
 # TASK-222 — Seuil d'exclusion DDP paramétrable par société (défaut = règle DGI)
 
 RISK : HIGH (périmètre déclaratif légal, écart volontaire à la règle DGI pour une société) — discipline de preuve par critère exigée dans le VERIFY.
-Dépendance : **TASK-221** (borne `>` dans `EstEligibleSeuilLegal`) à livrer avant ou dans la même session ; les deux TASKS touchent la même méthode.
+Dépendance : **TASK-221** (borne `>` et montant testé = `MontantFactureTtc`, total TTC de la facture, dans `EstEligibleSeuilLegal`) à livrer avant ou dans la même
+session ; les deux TASKS touchent la même méthode. Partout où cette TASK dit « montant », il s'agit de `MontantFactureTtc` (décision PO « facture TTC », 08/10/2026).
 
 ## Contexte
 Demande PO (08/10/2026, formulation finale), urgente (un client est bloqué) : pour **un client précis**, ignorer les factures dont le

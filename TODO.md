@@ -5,11 +5,12 @@
 > `npm run build` rejoués indépendamment, mapping `nombreJoursDelaiApplique` retracé de bout en bout).
 > Voir `DONE_DETAIL/TASK-217-help-colonnes-bornes-ecran-controle-ddp.md`.
 
-## 🆕 TASK-221 — Borne du seuil de montant DDP alignée sur la note DGI 734 : `> 10 000` au lieu de `>= 10 000` (PO 07/10/2026)
-Décision PO : appliquer les règles de la DGI. Dates déjà conformes (début 01/07/2023, exemption <= 10 000 TTC jusqu'au
-31/12/2024, tout dès 2025) : seule la borne change (C# + SQL + tests). L'extension à 2025 envisagée est abandonnée.
-Points ouverts hors TASK : montant testé = échéance (la note dit facture TTC) ; colonne « Montant » de l'écran Contrôle
-= montant de la ligne, source de confusion. Voir `TASKS/TASK-221-borne-seuil-ddp-note-dgi-734.md`.
+## 🆕 TASK-221 — Seuil DDP : comparer le total TTC de la facture (pas l'échéance) et borne `> 10 000` conforme à la note DGI 734 (PO 07-08/10/2026)
+Décisions PO : appliquer les règles de la DGI ; montant = facture TTC. Dates déjà conformes (début 01/07/2023, exemption <= 10 000 TTC
+jusqu'au 31/12/2024, tout dès 2025) : changent la borne (`>`), le montant testé (somme des échéances du document, contrôle d'égalité avec
+le total Sage en mesure 3a, STOP si écart) et l'écran Contrôle (colonne « Montant facture TTC »). Des lignes ENTRENT (factures scindées
+en échéances <= 10 000) : chiffrage obligatoire avant bascule. L'extension à 2025 est abandonnée. RISK HIGH.
+Voir `TASKS/TASK-221-borne-seuil-ddp-note-dgi-734.md`.
 
 ## 🆕 TASK-222 — Seuil d'exclusion DDP paramétrable par société, défaut = règle DGI (PO 08/10/2026, URGENT : client bloqué)
 Un client doit ignorer les factures < 10 000 jusqu'au 31/12/2025 et tout déclarer dès le 01/01/2026 (écart volontaire à la note DGI
