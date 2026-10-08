@@ -12,6 +12,12 @@ dès 01/01/2026 toutes. Montant = échéance (inchangé). Déjà codé (`SeuilsL
 aux factures émises avant le 01/01/2025, note 734 §O-2 et annonce du 21/03/2025), porté par le PO. Débloque le client dont la ligne de 800 MAD
 (facture du 23/04/2025) apparaît en T3 2026. Voir `TASKS/TASK-221-seuil-ddp-date-limite-2025-12-31-en-dur.md`.
 
+## 🆕 TASK-223 — Export Excel des grilles : Fournisseur/Facture vides et dates en jj/mm/aaaa (PO 08/10/2026) — RISK MEDIUM
+Sur le Contrôle DDP, l'export lit `node.data[field]` (`gridExport.ts:26-29`) : les colonnes calculées par `valueGetter` (Fournisseur,
+Facture, statut, origine, mode, cas, explication) sortent vides et les dates en ISO. Correctif : lire la valeur affichée
+(`getCellValue`) et écrire les dates en `jj/mm/aaaa` sans passer par `new Date`. Composant partagé : toutes les grilles `ApbsGrid`
+sont concernées. Voir `TASKS/TASK-223-export-excel-grille-valeurs-affichees-dates-jj-mm-aaaa.md`.
+
 ## 💡 IDÉE (reportée, design relu) — Seuil DDP : total TTC de la facture + réglage par société avec historique (PO 08/10/2026)
 Évolution écartée « pour simplifier » : montant = somme des échéances du document (calcul C#), XML de dépôt avec total TTC, réglage du seuil
 par société (2 nouvelles tables GRF, historique append-only, garde admin), bandeau d'écart sur 3 écrans. Design complet relu en 5 passes
