@@ -5,21 +5,17 @@
 > `npm run build` rejoués indépendamment, mapping `nombreJoursDelaiApplique` retracé de bout en bout).
 > Voir `DONE_DETAIL/TASK-217-help-colonnes-bornes-ecran-controle-ddp.md`.
 
-## 🆕 TASK-221 — Seuil DDP : total TTC de la facture (pas l'échéance), borne `> 10 000`, règle d'éligibilité unique en C# (PO 07-08/10/2026) — RISK HIGH
-Décisions PO : appliquer les règles de la DGI ; montant = facture TTC. Dates déjà conformes (début 01/07/2023, exemption <= 10 000 TTC
-jusqu'au 31/12/2024, tout dès 2025). Changent : borne `>`, montant testé (somme des échéances du document, calculée en C#), colonne
-« Montant facture TTC » à l'écran/export, et le **fichier XML de dépôt DGI** (`<montantFactureTtc>` = total de la facture). Des lignes
-ENTRENT (factures scindées en échéances <= 10 000) : mesure 3b et visa PO obligatoires avant production. STOP si la somme des échéances
-diffère du total Sage (mesure 3a). **Décisions PO attendues : A (XML), B (source du total), C (signes mixtes), F (déploiement avec 222),
-G (brouillons).** Revue en 5 passes faite le 08/10/2026. Voir `TASKS/TASK-221-borne-seuil-ddp-note-dgi-734.md`.
+## 🆕 TASK-221 — Seuil de montant DDP : date limite 31/12/2025 en dur et borne `> 10 000` (PO 08/10/2026) — RISK HIGH
+Décision PO de simplification : pour tous les clients, avant 01/07/2023 ignorées ; 01/07/2023-31/12/2025 seulement montant > 10 000 ;
+dès 01/01/2026 toutes. Montant = échéance (inchangé). Déjà codé (`SeuilsLegauxDelaiPaiement`) : changent `DateLimiteSeuilMontant`
+2024-12-31 -> 2025-12-31, la borne (`>`, C# + SQL) et le prédicat de date SQL (à la journée). Écart connu avec la DGI (exemption limitée
+aux factures émises avant le 01/01/2025, note 734 §O-2 et annonce du 21/03/2025), porté par le PO. Débloque le client dont la ligne de 800 MAD
+(facture du 23/04/2025) apparaît en T3 2026. Voir `TASKS/TASK-221-seuil-ddp-date-limite-2025-12-31-en-dur.md`.
 
-## 🆕 TASK-222 — Seuil d'exclusion DDP paramétrable par société, défaut = règle DGI (PO 08/10/2026, URGENT : client bloqué) — RISK HIGH
-Un client doit ignorer les factures < 10 000 TTC jusqu'au 31/12/2025 et tout déclarer dès le 01/01/2026 (écart volontaire à la note DGI
-734 pour les seules factures de 2025). Réglage par société dans 2 NOUVELLES tables GRF (réglage + historique append-only ; aucune table
-existante modifiée), droits admin, endpoints dédiés, bandeau d'écart sur 3 écrans + en-tête d'export. Dépend de TASK-221 (mergée avant).
-**Décisions PO attendues (bloquantes) : D (2 tables GRF), E (droits admin), H (date d'émission ; borne <= 10 000), I (échéances déjà
-déclarées non suivies ; liste signée), J (bornes de validation), K (texte du bandeau).** Revue en 5 passes faite le 08/10/2026.
-Voir `TASKS/TASK-222-seuil-exclusion-ddp-parametrable-par-societe.md`.
+## 💡 IDÉE (reportée, design relu) — Seuil DDP : total TTC de la facture + réglage par société avec historique (PO 08/10/2026)
+Évolution écartée « pour simplifier » : montant = somme des échéances du document (calcul C#), XML de dépôt avec total TTC, réglage du seuil
+par société (2 nouvelles tables GRF, historique append-only, garde admin), bandeau d'écart sur 3 écrans. Design complet relu en 5 passes
+(sources, code, données, testabilité, risques) dans le commit `70ca0fe` (TASK-221 v3 et TASK-222 v3). À reprendre selon le besoin.
 
 ## 🆕 TASK-214 — Automatiser la récupération de `WinSW.exe` dans `Deploy-All.ps1` (plus d'étape manuelle) (PO 12/08/2026)
 Signalement PO : échec `FileNotFoundException` au clic « Installer » (`WinSW.exe absent`), et refus
