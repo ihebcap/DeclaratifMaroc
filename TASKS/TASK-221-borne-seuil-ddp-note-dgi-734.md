@@ -13,6 +13,10 @@ relu le 07/10/2026) :
   à dix mille (10.000) dirhams, toutes taxes comprises » ; ces factures « ne doivent pas être intégrées dans les
   déclarations des délais de paiement au titre des années 2023 et 2024 » ;
 - aucune exemption après cette date : toutes les factures émises à partir du 01/01/2025 sont déclarées.
+- Confirmé par l'annonce DGI du 21/03/2025 (finances.gov.ma, `detail-actualite.aspx?fiche=7218`) : « l'amende pécuniaire
+  s'applique à toutes les factures émises à compter du 1er janvier 2025, y compris celles dont le montant est inférieur ou
+  égal à 10 000 dirhams ». Le régime annuel (CA <= 50 M, transitoire 2024-2025) et le régime trimestriel (CA > 50 M) ne
+  changent pas cette règle : l'exemption dépend de la **date d'émission de la facture**, pas du type de déclaration.
 
 État du code : les **dates sont déjà conformes** (`DateDebutDeclarationLoi = 2023-07-01`, `DateLimiteSeuilMontant = 2024-12-31`,
 `Declaration.Core/SelectionDelaiPaiementCalculator.cs:17,20`) : aucune ne change. **Écart unique** : la borne. Le code déclare
