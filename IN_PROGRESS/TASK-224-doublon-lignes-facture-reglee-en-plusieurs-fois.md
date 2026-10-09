@@ -1,6 +1,6 @@
 # TASK-224 — Lignes dupliquées pour une facture réglée en plusieurs fois (TVA surdéclarée)
 
-Status: 🆕 à faire
+Status: 🔄 en cours
 Priority: CRITICAL (surdéclaration fiscale réelle — 64 908,46 MAD sur la déclaration observée)
 Module: Declaration.Application / Declaration.Infrastructure / Declaration.Core.Tests
 RISK: HIGH — impact fiscal direct + impact UX (le comptable valide un total faux sans le voir)
