@@ -5,12 +5,6 @@
 > `npm run build` rejoués indépendamment, mapping `nombreJoursDelaiApplique` retracé de bout en bout).
 > Voir `DONE_DETAIL/TASK-217-help-colonnes-bornes-ecran-controle-ddp.md`.
 
-## 🆕 TASK-223 — Export Excel des grilles : Fournisseur/Facture vides et dates en jj/mm/aaaa (PO 08/10/2026) — RISK MEDIUM
-Sur le Contrôle DDP, l'export lit `node.data[field]` (`gridExport.ts:26-29`) : les colonnes calculées par `valueGetter` (Fournisseur,
-Facture, statut, origine, mode, cas, explication) sortent vides et les dates en ISO. Correctif : lire la valeur affichée
-(`getCellValue`) et écrire les dates en `jj/mm/aaaa` sans passer par `new Date`. Composant partagé : toutes les grilles `ApbsGrid`
-sont concernées. Voir `TASKS/TASK-223-export-excel-grille-valeurs-affichees-dates-jj-mm-aaaa.md`.
-
 ## 💡 IDÉE (reportée, design relu) — Seuil DDP : total TTC de la facture + réglage par société avec historique (PO 08/10/2026)
 Évolution écartée « pour simplifier » : montant = somme des échéances du document (calcul C#), XML de dépôt avec total TTC, réglage du seuil
 par société (2 nouvelles tables GRF, historique append-only, garde admin), bandeau d'écart sur 3 écrans. Design complet relu en 5 passes

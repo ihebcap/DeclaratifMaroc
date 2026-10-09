@@ -1,6 +1,14 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
 
+## 2026-10-09 — TASK-223 : approuve (export Excel des grilles : valeurs affichées, vraies dates)
+
+Revue architecte (session distincte du worker) : 1re livraison REJETÉE (largeurs de colonnes absentes, risque
+`########` sur cellules date), corrigée au commit `66ddaea`. `npm run test:unit` (23/23, aussi sous fuseau
+Pacific/Kiritimati) et `npm run build` rejoués indépendamment. Réserves : aucun fichier Excel réel ouvert par
+la revue (relecture XLSX en test uniquement) ; en-têtes sans marge de largeur ; Montant du Contrôle DDP
+exporté en texte (« 1 234,00 MAD »), évolution éventuelle en TASK séparée. APPROVE.
+
 ## 2026-10-08 — TASK-221 : approuve (seuil DDP : date limite 31/12/2025 en dur, borne `> 10 000`)
 
 Revue architecte (session distincte du worker, conforme à la règle de séparation) : commit `5ccba3f` relu
