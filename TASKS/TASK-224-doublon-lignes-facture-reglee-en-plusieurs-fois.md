@@ -54,20 +54,25 @@ RISK: HIGH — impact fiscal direct + impact UX (le comptable valide un total fa
 ## Périmètre STRICT
 
 - **Inclus :**
-  1. **Phase 1 — Diagnostic (lecture seule, base GRF + persistance)** : pour la déclaration
-     `TVA1-2026-03-T` et les EC/MV des 3 factures ci-dessus, produire dans le VERIFY les résultats bruts de :
-     ```sql
-     -- lignes figées par facture × règlement × taux (base de persistance)
-     SELECT NumeroFacture, NumeroRapprochement, Taux, COUNT(*) AS nb, SUM(TVA) AS tva
-     FROM DM_LGTVA WHERE DeclarationId = @DeclarationId
-     GROUP BY NumeroFacture, NumeroRapprochement, Taux HAVING COUNT(*) > 1;
-     -- affectations par couple règlement × échéance (base GRF)
-     SELECT MV_Id, EC_Id, COUNT(*) AS nb, SUM(AF_Montant) AS montant
-     FROM RT_AFFECTATION GROUP BY MV_Id, EC_Id HAVING COUNT(*) > 1;
-     ```
-     (noms de colonnes à confirmer sur le schéma réel — ne rien supposer). Conclure explicitement
-     laquelle des 3 hypothèses est la bonne, avec la preuve. **Si aucune ne tient : STOP et signaler
-     — ne pas improviser de correctif.**
+  1. **Phase 1 — Diagnostic SANS accès base de données.** Le PO n'a aucun accès SQL : toute étape
+     doit être faisable par tests automatisés et par l'application elle-même.
+     - **Données de simulation** : créer les fixtures à partir de
+       [`TASKS/assets/TASK-224-donnees-simulation.md`](assets/TASK-224-donnees-simulation.md)
+       (12 factures, 15 règlements reconstitués de la capture, résultats attendus inclus :
+       15 lignes, total `68 281,46`). Données de test uniquement, jamais écrites en base réelle.
+     - **Reproduction par tests automatisés** (faux dépôts, comme `Task077RevalidationLignesFigeesTests.cs`
+       / `Task081PremierFigeageBandeauTests.cs` dans `Declaration.Orchestration.Tests`) : rejouer sur
+       `DeclarationWorkflowService` le jeu de simulation en enchaînant les chemins qui écrivent des lignes
+       figées (`ChargerCandidatesSiNecessaireAsync`, `RevaliderLignesFigeesAsync`,
+       `ReintegrerReglementsLiberesAsync`, resynchronisation, changement de sélection), et compter après
+       chaque étape les lignes par `(facture, règlement, taux)`. Le chemin qui produit 2 lignes
+       identiques est la cause ; le test rouge (commit de référence) est la preuve.
+     - **Outil de diagnostic dans l'application (lecture seule)** : action « Détecter les doublons » sur
+       « Vérifier & Intégrer », listant les groupes `(facture, règlement, taux)` présents plusieurs fois
+       dans la déclaration courante (n° facture, n° règlement, taux, nombre, TVA cumulée, TVA facture).
+       Le PO l'utilise sur `TVA1-2026-03-T` sans SQL et fournit une capture. Aucune modification de données.
+     - **Si aucune reproduction ne tient : STOP et signaler** (pas de correctif improvisé) ; la capture de
+       l'outil devient alors la donnée de départ de l'investigation.
   2. **Phase 2 — Correction de la cause confirmée**, plus **idempotence** : écrire une ligne figée
      est impossible si une ligne de même clé existe déjà. Clé = `(DeclarationId, Domaine, EC_Id, MV_Id
      [ou AF_Id], Taux, CodeTaxe)` — à ajuster selon le schéma réel de `DM_LGTVA` (colonnes `EC_Id` /
@@ -80,9 +85,8 @@ RISK: HIGH — impact fiscal direct + impact UX (le comptable valide un total fa
      et clôture bloquée tant qu'elle n'est pas levée. Ne pas bypasser pour les soldes initiaux (EC_Type=4)
      ni les FGR (EC_Type=111) : appliquer le contrôle sur la TVA connue ; si TVA inconnue, ne pas contrôler
      (documenter).
-  4. **Nettoyage des déclarations existantes** : script/procédure de détection (lecture seule d'abord) des
-     déclarations déjà affectées (`SELECT` des groupes `COUNT(*) > 1` ci-dessus sur TOUTES les déclarations
-     non clôturées), résultat joint au VERIFY. **Aucune suppression automatique** : le correctif des
+  4. **Nettoyage des déclarations existantes** : l'outil de détection de la Phase 1 doit s'appliquer à chaque
+     déclaration non clôturée, sans SQL manuel ; captures jointes au VERIFY. **Aucune suppression automatique** : le correctif des
      données de `TVA1-2026-03-T` est soumis au PO (arbitrage explicite) avant exécution. Les déclarations
      déjà clôturées/déposées avec doublon sont à signaler au PO, jamais modifiées.
 - **Exclu :**
@@ -107,7 +111,7 @@ Document `TASKS/assets/TASK-224-scenarios-test.md` (ou section du VERIFY) listan
 
 ## Livrables
 
-- Diagnostic Phase 1 (sorties SQL brutes + hypothèse retenue) dans `VERIFY/TASK-224_verify.md`.
+- Diagnostic Phase 1 (test de reproduction rouge + hypothèse retenue + capture de l'outil de détection) dans `VERIFY/TASK-224_verify.md`.
 - Correctif de la cause confirmée + idempotence d'écriture des lignes figées.
 - Garde-fou `TVA_FACTURE_SURDECLAREE` + clôture bloquée.
 - Tests automatisés :
@@ -117,13 +121,13 @@ Document `TASKS/assets/TASK-224-scenarios-test.md` (ou section du VERIFY) listan
   - test d'intégration / Application reproduisant le chemin de réécriture des lignes figées (cause
     confirmée) : appliquer 2× la même sélection → nombre de lignes inchangé ;
   - test du garde-fou (violation et cas sain).
-- Résultat de détection de doublons sur les déclarations non clôturées (lecture seule).
+- Outil de détection de doublons (lecture seule) opérationnel dans l'application, résultat sur les déclarations non clôturées.
 
 ## Critères de validation (preuve par critère, datée — cf. CLAUDE.md « Discipline de preuve »)
 
 - [ ] `dotnet build DeclarationTVA.slnx` → 0 erreur (log + date).
 - [ ] `npm run lint` + `npm run build` dans `declaration-tva-web/` si le front est touché → 0 erreur.
-- [ ] Phase 1 : cause prouvée (sorties SQL jointes), pas supposée.
+- [ ] Phase 1 : cause prouvée par un test de reproduction rouge sur le jeu de simulation (aucun accès SQL requis du PO), pas supposée.
 - [ ] Test de régression rouge AVANT correctif, vert APRÈS (commits de référence).
 - [ ] Sur `TVA1-2026-03-T` (copie de test ou après arbitrage PO) : total TVA attendu = `68 281,46`
       (et non `133 189,91`) ; FF260029/FF260027/FF260028 = 2 lignes chacune.
