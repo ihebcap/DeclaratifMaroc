@@ -7,10 +7,14 @@ import {
   formatCellValueForExcel,
   computeExcelDateSerial,
   filterAndDeduplicateColumns,
+  computeColumnWidths,
+  isExcelDateCell,
+  makeExcelDateCell,
   isValidDate,
   isLeapYear,
   type ExcelDateCell,
   type ColumnExportInfo,
+  type ColumnWidth,
 } from '../src/grid/gridExportValues.ts';
 
 test('calcul du numéro de série Excel : exactitude et absence de partie décimale', () => {
@@ -197,11 +201,12 @@ test('simulation d export Contrôle DDP avec lecture XLSX réelle', async () => 
   });
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = computeColumnWidths(aoa);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Données');
 
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-  const readWb = XLSX.read(buf, { type: 'buffer', cellNF: true });
+  const readWb = XLSX.read(buf, { type: 'buffer', cellNF: true, cellStyles: true });
   const readWs = readWb.Sheets['Données'];
 
   // Ligne 1 : en-têtes
@@ -247,6 +252,20 @@ test('simulation d export Contrôle DDP avec lecture XLSX réelle', async () => 
   // montant texte formaté
   assert.equal(readWs['I2'].t, 's');
   assert.equal(readWs['I2'].v, '1 234,00 MAD');
+
+  // Largeurs de colonnes !cols définies (en-tête et contenu, minimum 12 pour date, plafond 60)
+  assert.ok(readWs['!cols'], '!cols doit être défini dans la feuille');
+  const cols = readWs['!cols']!;
+  assert.equal(cols.length, 9);
+  assert.equal(cols[0].wch, 14, 'Statut : 14');
+  assert.equal(cols[1].wch, 16, 'Fournisseur : 16');
+  assert.equal(cols[2].wch, 10, 'Facture : 10');
+  assert.equal(cols[3].wch, 12, 'Date facture : min 12');
+  assert.equal(cols[4].wch, 15, 'Échéance légale : 15');
+  assert.equal(cols[5].wch, 20, 'Dernière déclaration : 20');
+  assert.equal(cols[6].wch, 12, 'Constaté le : min 12');
+  assert.equal(cols[7].wch, 15, 'Dépassement (j) : 15');
+  assert.equal(cols[8].wch, 12, 'Montant : 12');
 });
 
 test('non-régression : grille à colonnes simples (Déclarations TVA)', async () => {
@@ -307,4 +326,42 @@ test('non-régression : grille mixte avec booléen et plage (Conventions DDP)', 
   assert.equal(readWs['C2'].v, true); // booléen conservé
   assert.equal(readWs['C2'].t, 'b');
 });
+
+test('computeColumnWidths : en-tête et contenu, minimum 12 pour date, plafond 60', () => {
+  const aoa = [
+    ['Code', 'Date', 'Description', 'Court', 'Nombre', 'Bool'],
+    [
+      'CODE-123456', // len=11 > header=4
+      makeExcelDateCell(2025, 4, 23), // date : min 12 même si 'Date'.len=4
+      'Une ligne avec une description très détaillée dépassant largement soixante caractères de long pour tester le plafond strict de soixante', // > 60 -> 60
+      'OK', // len=2 < header=5 -> 5
+      1234567, // len=7
+      true, // len=4
+    ],
+  ];
+
+  const widths = computeColumnWidths(aoa);
+  assert.equal(widths.length, 6);
+  assert.equal(widths[0].wch, 11, 'prend la longueur du contenu si plus long que header');
+  assert.equal(widths[1].wch, 12, 'minimum 12 pour une date');
+  assert.equal(widths[2].wch, 60, 'plafond strict à 60 caractères');
+  assert.equal(widths[3].wch, 5, 'prend la longueur du header si plus long que contenu');
+  assert.equal(widths[4].wch, 7, 'prend la longueur du nombre');
+  assert.equal(widths[5].wch, 4, 'prend la longueur du booléen true');
+});
+
+test('computeColumnWidths : en-tête date plus large que 12 conserve la largeur du header', () => {
+  const aoa = [
+    ['Dernière déclaration constatée'],
+    [makeExcelDateCell(2025, 4, 23)],
+  ];
+  const widths = computeColumnWidths(aoa);
+  assert.equal(widths[0].wch, 30, 'conserve 30 car supérieur au minimum de 12');
+});
+
+test('computeColumnWidths : cas limites (tableau vide, absence de colonnes)', () => {
+  assert.deepEqual(computeColumnWidths([]), []);
+  assert.deepEqual(computeColumnWidths([[]]), []);
+});
+
 

@@ -149,3 +149,74 @@ export function filterAndDeduplicateColumns(columns: ColumnExportInfo[]): Resolv
 
   return result;
 }
+
+export interface ColumnWidth {
+  wch: number;
+}
+
+export function isExcelDateCell(val: unknown): val is ExcelDateCell {
+  return (
+    typeof val === 'object' &&
+    val !== null &&
+    (val as any).t === 'n' &&
+    typeof (val as any).v === 'number' &&
+    (val as any).z === 'dd/mm/yyyy'
+  );
+}
+
+/**
+ * Calcule la largeur de chaque colonne pour l'export Excel (worksheet['!cols']).
+ * - Basée sur la longueur maximale de l'en-tête et du contenu de la colonne
+ * - Minimum 12 pour une colonne contenant des dates (évite l'affichage ###### dans Excel)
+ * - Plafond strict à 60 caractères
+ */
+export function computeColumnWidths(aoa: any[][]): ColumnWidth[] {
+  if (!aoa || aoa.length === 0) return [];
+
+  const numCols = aoa[0]?.length || 0;
+  const result: ColumnWidth[] = [];
+
+  for (let c = 0; c < numCols; c++) {
+    let maxLen = 0;
+    let isDate = false;
+
+    // Vérifie si l'en-tête suggère une colonne de date
+    const headerStr = aoa[0]?.[c] != null ? String(aoa[0][c]) : '';
+    if (headerStr && /date/i.test(headerStr)) {
+      isDate = true;
+    }
+
+    for (let r = 0; r < aoa.length; r++) {
+      const cell = aoa[r]?.[c];
+      if (cell === null || cell === undefined || cell === '') continue;
+
+      if (isExcelDateCell(cell)) {
+        isDate = true;
+        maxLen = Math.max(maxLen, 12);
+      } else if (typeof cell === 'string') {
+        if (r > 0 && (ISO_DATE_REGEX.test(cell) || JJ_MM_AAAA_REGEX.test(cell))) {
+          isDate = true;
+          maxLen = Math.max(maxLen, 12);
+        } else {
+          maxLen = Math.max(maxLen, cell.length);
+        }
+      } else if (typeof cell === 'number') {
+        maxLen = Math.max(maxLen, String(cell).length);
+      } else if (typeof cell === 'boolean') {
+        maxLen = Math.max(maxLen, cell ? 4 : 5);
+      } else {
+        maxLen = Math.max(maxLen, String(cell).length);
+      }
+    }
+
+    if (isDate) {
+      maxLen = Math.max(maxLen, 12);
+    }
+
+    const wch = Math.min(Math.max(maxLen, isDate ? 12 : 0), 60);
+    result.push({ wch });
+  }
+
+  return result;
+}
+

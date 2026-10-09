@@ -3,6 +3,7 @@ import type { GridApi } from 'ag-grid-community';
 import {
   filterAndDeduplicateColumns,
   formatCellValueForExcel,
+  computeColumnWidths,
   type ColumnExportInfo,
 } from './gridExportValues.ts';
 
@@ -39,6 +40,7 @@ export function exportGridToExcel(gridApi: GridApi, fileName: string = 'export.x
   });
 
   const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+  worksheet['!cols'] = computeColumnWidths(aoa);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Données');
   const safeName = fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`;
