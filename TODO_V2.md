@@ -31,6 +31,7 @@
 | [TASK-236](TASKS/TASK-236-v2-compta-export-excel-aide-declaration-format-contractuel.md) | Export Excel d'aide à la déclaration, format contractuel versionné | 227, 228, 229, 234 |
 | [TASK-237](TASKS/TASK-237-v2-compta-import-excel-complete-controle-previsualisation.md) | Import du fichier complété, contrôles d'intégrité et de dérive, prévisualisation | 236 |
 | [TASK-230](TASKS/TASK-230-v2-compta-branchement-moteur-commun-api-ecrans-export.md) | Déclaration définitive depuis le fichier importé, lignes déclarées idempotentes, XML | 237 |
+| [TASK-241](TASKS/TASK-241-v2-memoire-du-dossier-et-suggestions-sans-ia.md) | Mémoire du dossier et suggestions (auto-apprentissage déterministe, sans IA) | 236, 237, 238, 239 |
 
 ## EPIC V2-5 — Transparence, documentation et diagnostic (transversal)
 | Task | Objet | Dépend de |
