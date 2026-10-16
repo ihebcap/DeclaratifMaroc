@@ -11,12 +11,12 @@ Dépend de : TASK-225
 ## Décisions de conception
 
 1. **Un moteur, deux sens** : paramètre `SensDeclaration` {Decaissement, Encaissement} ; journaux `F_JOURNAUX.JO_Type` 0 (achats) / 1 (ventes) ; `F_TAXE.TA_Sens` 0 / 1 ; tiers `F_COMPTET.CT_Type` 1 / 0. Aucun code dupliqué.
-2. **Taux = `F_TAXE.TA_Taux` via le `TA_Code` de la ligne de charge/produit** (cas simple PO : un compte de charge = un taux). Le compte de TVA attendu est `F_TAXE.CG_Num`. **Jamais déduit du compte de TVA seul** : en NEW_EMA `D07` et `D18` partagent 6111400000.
+2. **Taux = `F_TAXE.TA_Taux`, détecté par le compte général de la ligne de TVA (`F_TAXE.CG_Num`)** — arbitrage PO 16/10/2026 — ce qui couvre les ventes et frais bancaires sans `TA_Code`. Le `TA_Code` de la ligne de charge/produit, quand il existe, sert de **départage** si plusieurs codes partagent le même compte (NEW_EMA : `D07`/`D18` sur 6111400000) ; sans départage possible → alerte « taux ambigu », jamais de choix silencieux.
 3. HT par taux = Σ lignes de charge/produit de même `TA_Code` ; TVA constatée = Σ lignes sur `F_TAXE.CG_Num` ; TTC = montant de la ligne tiers.
 4. **Facture « lettrée »** = ligne tiers avec `EC_Lettre=1`. Le lettrage est équilibré ; un lettrage **déséquilibré** (Σ débits ≠ Σ crédits sur le couple `CT_Num` + `EC_Lettrage`) est une **anomalie bloquante**, jamais corrigée en silence.
 5. **Identité** = `cbMarq` de chaque ligne ; regroupement d'une pièce = (`JO_Num`, `JM_Date`, `EC_Piece`) — le test de non-collision sur les 2 bases fait partie des critères.
 6. Tiers reconnus par `F_COMPTET.CT_Type` + compte collectif réel de la ligne, **pas par préfixe de numéro** (LOTREX n'a pas de tiers `F%`).
-7. Anomalies typées (non exhaustif) : `TA_Code` absent de `F_TAXE` (1 cas LOTREX), `TA_Type≠0`, pièce sans ligne de TVA, TVA sur un compte ≠ `F_TAXE.CG_Num`, pièce sans ligne de charge, déséquilibre de pièce (Σ débits ≠ Σ crédits).
+7. Anomalies typées (non exhaustif) : `TA_Code` absent de `F_TAXE` (1 cas LOTREX), `TA_TTaux≠0` (taxe non exprimée en pourcentage : ex. `DOUAN` de HM_PHARMA_PROD avec `TA_Taux`=508 822, à exclure du calcul en %, **jamais** lue comme un taux ; `TA_Type` n'est pas un critère de rejet, PO 16/10/2026), pièce sans ligne de TVA, TVA sur un compte ≠ `F_TAXE.CG_Num`, pièce sans ligne de charge, déséquilibre de pièce (Σ débits ≠ Σ crédits).
 8. **Avoirs (pièces de sens opposé) : hors périmètre (PO 16/10/2026, « après »)**. Ils sont détectés, identifiés comme tels et exposés en anomalie « avoir non traité » ; jamais intégrés comme des factures.
 
 ## Périmètre STRICT
@@ -40,3 +40,9 @@ Dépend de : TASK-225
 
 - `Declaration.Compta.Reader/`, `Declaration.Compta.Contracts/`, `Declaration.Compta.Core/`, tests associés.
 - `DOCS/CADRAGE_V2_COMPTA_SOURCE_UNIQUE.md`.
+
+## Compléments issus de l'analyse TASK-235 (rejeux de l'architecte du 16/10/2026)
+
+1. **La clé (`JO_Num`, `JM_Date`, `EC_Piece`) n'est pas une identité de pièce fiable sur LOTREX** : 74 groupes d'achats et 279 groupes de ventes y portent plusieurs tiers (numéro `1` ou vide saisi), 145 groupes ont un `EC_Piece` vide. NEW_EMA et HM_PHARMA_PROD : 0 collision sur les factures. Règle : si le groupe contient **plus d'un tiers**, la décomposition se fait par (`clé` + `CT_Num`) et la pièce est signalée « pièce ambiguë » (alerte, jamais décomposée en silence) ; `EC_Piece` vide → alerte.
+2. **Détection du taux par le compte général** (PO 16/10/2026, `F_TAXE.CG_Num` → `TA_Taux`) : le `TA_Code` de la ligne de charge sert de départage quand plusieurs codes partagent le compte (cas `D07`/`D18` en NEW_EMA). Indispensable pour les ventes et frais bancaires sans `TA_Code`.
+3. **Colonnes IF/ICE variables** : standard `CT_Identifiant`/`CT_Siret` sur HM_PHARMA_PROD, colonne `ICE` personnalisée sur NEW_EMA et LOTREX → confirme le paramétrage par dossier (TASK-225).

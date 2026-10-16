@@ -12,8 +12,8 @@ Dépend de : TASK-225 ; front = TASK-231 + TASK-232
 
 1. **Règle de référence** : le rapprochement ne concerne que la banque, porté par la ligne sur le **compte de trésorerie du journal** (`F_JOURNAUX.CG_Num`). Compte bancaire = préfixe configurable par dossier (défaut `514`, enregistré dans la configuration de TASK-225).
 2. **Contrôles (lecture seule de `F_JOURNAUX`, `F_ECRITUREC`)**, chacun produit une alerte typée, avec dossier, journal, compte, volume concerné :
-   - **A1** : journal `JO_Rappro = 2` dont le compte de trésorerie n'est pas bancaire (observé sur LOTREX : `CAIS`, `CA` en 516…, `CEP` en 5111…).
-   - **A2** : journal bancaire (compte `514…`) avec `JO_Rappro ≠ 2` (rapprochement non activé).
+   - **A1** : journal rapproché (`JO_Rappro IN (1, 2)`) dont le compte de trésorerie n'est pas bancaire (observé sur LOTREX : `CAIS`, `CA` en 516…, `CEP` en 5111…).
+   - **A2** : journal bancaire (compte `514…`) avec `JO_Rappro = 0` (rapprochement non activé ; observé sur HM_PHARMA_PROD : journaux `60`, `ATW`).
    - **A3** : `EC_TresoPiece` renseigné sur une ligne dont le compte ≠ compte de trésorerie du journal.
    - **A4** : journal de type trésorerie sans compte de trésorerie renseigné.
    - **A5** : plusieurs journaux partageant le même compte de trésorerie (observé : `CAP`/`BQ1` en 51410000, `EAP`/`BQ4` en 51410003) — risque de rapprochement ambigu, à signaler (information, non bloquant).
