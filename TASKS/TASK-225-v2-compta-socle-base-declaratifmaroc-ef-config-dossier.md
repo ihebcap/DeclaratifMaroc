@@ -18,9 +18,16 @@ Dépend de : back = aucune ; **écran de paramétrage = TASK-231** (charte xGR, 
 5. Noms de colonnes : whitelist `^[A-Za-z0-9_]+$` (patron `IdentiteFiscaleFournisseurConfig.cs`), validés aussi **par existence réelle** dans `F_COMPTET` à l'enregistrement.
 6. Connexion Sage : lecture seule (`ApplicationIntent=ReadOnly` quand supporté, compte sans droit d'écriture documenté).
 
+7. **Aucun nom de base, de serveur ou d'instance en dur** (précision PO 16/10/2026 : « le nom de la base peut changer d'un client à l'autre, à définir lors de l'installation »). Deux niveaux distincts :
+   - **Installation** : le nom (et l'instance SQL) de la base **`DeclaratifMaroc`** elle-même est saisi dans l'assistant d'installation (`Declaration.Setup`, déjà doté d'une étape « Connexions SQL » et d'un `connections.json`, mode installation et mise à jour) ; défaut proposé `DeclaratifMaroc`, modifiable. L'étape de connexion de l'assistant est étendue (relire `SetupForm.cs` et `ConnectionsFileService` avant code) ; une mise à jour conserve les valeurs existantes.
+   - **Dossier** : le serveur et le nom de la **base compta Sage** de chaque dossier sont saisis dans l'application (paramétrage du dossier, TASK-243), jamais dans l'installeur, et testés par « Tester la connexion ».
+   Les noms avec espace (`[NEW_EMA DISTRIBUTION]`) et caractères spéciaux sont pris en charge ; tout identifiant est validé (liste blanche de caractères) puis protégé par crochets avant d'être utilisé dans une requête.
+8. Les écrans de paramétrage utilisent les composants et patterns de **TASK-243** (listes + tiroir, formulaire à onglets, aide ⓘ) ; cette TASK ne recrée aucun composant d'administration.
+
 ## Périmètre STRICT
 
 - **Inclus** :
+  0. Extension de l'assistant d'installation : saisie du serveur, de l'instance et du **nom de la base `DeclaratifMaroc`** (défaut proposé, modifiable), enregistrement dans `connections.json`, création de la base si absente, conservation à la mise à jour.
   1. Projets : `Declaration.Compta.Contracts` (DTO), `Declaration.Compta.Core` (logique pure), `Declaration.Compta.Reader` (SQL Sage lecture seule, vide à ce stade), `Declaration.Compta.Persistence` (EF Core, `DeclaratifMaromcDbContext`), référencés dans `DeclarationTVA.slnx`.
   2. Entités EF + migration initiale : `Dossier` (id, nom, connexion Sage chiffrée, colonne IF, colonne ICE, dates), `EcartValide` (créée vide ici, remplie en TASK-228), `LigneDeclareeCompta` (créée vide ici, **index unique** (RèglementCbMarq, FactureCbMarq, TauxCode, DossierId), remplie en TASK-230).
   3. Migrations automatiques au démarrage, idempotentes, avec journal clair en cas d'échec (message exploitable, pas d'erreur générique — cf. TASK-209).
@@ -35,6 +42,8 @@ Dépend de : back = aucune ; **écran de paramétrage = TASK-231** (charte xGR, 
 
 ## Critères de validation
 
+- Installation avec une base nommée autrement (ex. `DM_CLIENT_X`) : toute l'application fonctionne, aucune occurrence du nom par défaut en dur (`grep` joint) ; mise à jour de l'installation : valeurs conservées.
+- Dossier dont la base Sage porte un espace dans son nom (`NEW_EMA DISTRIBUTION`) : connexion et lectures réussies.
 - Démarrage sur serveur sans base `DeclaratifMaroc` → base créée et migrée, sans intervention.
 - Test de connexion réussi sur **LOTREX** et **NEW_EMA DISTRIBUTION** ; échec explicite et lisible sur `GOCOM` (pas de `F_ECRITUREC`).
 - Aucune écriture SQL dans les bases Sage (vérifier le compte utilisé / absence de commande d'écriture).

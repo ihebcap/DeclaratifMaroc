@@ -7,6 +7,15 @@ Module: declaration-tva-web (`index.css`, `App.tsx`, `App.css`, `src/components/
 
 > **Origine :** PO 16/10/2026 — « changement de charte graphique exactement comme D:\_vibe\xGR\xGR : sidebar, couleurs, tout ». Référence normative : `D:\_vibe\xGR\xGR\Necessaire\DESIGN_REFERENCE.md` (+ `Tresorerie.Vue/tailwind.config.js`, `src/assets/layout/sidebar/themes/_menu_dark.scss`, `KpiCard.vue`, `useKpiColor.ts`). **À relire en entier avant tout code.**
 
+## Règle de conformité (PO 16/10/2026 : « on est la même boîte, on suit à la lettre la charte graphique APBS »)
+
+- La charte APBS telle qu'appliquée dans xGR est **normative, pas indicative**. Sources, par ordre de priorité : `Necessaire/DESIGN_REFERENCE.md`, `Necessaire/ADMIN_PATTERNS.md`, `Necessaire/ACTION_PATTERNS.md`, `Necessaire/FILTER_PATTERNS.md` (xGR), puis le code de référence (`KpiCard.vue`, `_menu_dark.scss`, `tailwind.config.js`, `XGrid.vue`).
+- **Aucune interprétation** : couleurs, dégradés, rayons, ombres, tailles de police, espacements, libellés de boutons, icônes, ordre des zones d'écran, comportement des filtres et des actions sont repris à l'identique. Toute différence (contrainte technique React, cas non couvert par xGR) est **listée dans le VERIFY, justifiée et validée par le PO** ; jamais décidée par le worker.
+- **Ressources réutilisées telles quelles**, pas redessinées : logos et badge noir/vert, favicon, `manifest.webmanifest`, images (`Tresorerie.Vue/public`, `src/assets/images`), polices (Roboto, `src/assets/layout/fonts`), échelle de couleurs.
+- Cas non couvert par xGR → **s'arrêter et poser la question au PO** (règle « ne jamais improviser »), pas d'invention de style.
+- Si le PO dispose d'une charte APBS officielle (PDF, maquettes, kit de marque), elle **prime** sur la référence xGR en cas de divergence ; à fournir avant le début de la TASK.
+- **Revue de conformité** : checklist point par point (couleurs, sidebar, topbar, cards, tags, tableaux, boutons, formulaires, tiroirs, filtres, actions, polices, logos), chaque ligne comparée à un écran xGR de référence avec captures côte à côte. Un écart non justifié = REJECT.
+
 ## Décisions de conception
 
 1. **Port, pas réécriture** : GRF reste React (arbitrage PO 16/10/2026). On reprend la charte de xGR (Vue/PrimeVue/Tailwind) en **variables CSS** dans `index.css` ; aucun PrimeVue, aucune dépendance Vue.
@@ -38,5 +47,5 @@ Module: declaration-tva-web (`index.css`, `App.tsx`, `App.css`, `src/components/
 ## Files
 
 - `declaration-tva-web/src/index.css`, `App.tsx`, `App.css`, `src/components/commun/`.
-- `D:\_vibe\xGR\xGR\Necessaire\DESIGN_REFERENCE.md`, `Tresorerie.Vue/src/components/commun/KpiCard.vue`, `src/composables/useKpiColor.ts`, `src/assets/layout/sidebar/themes/_menu_dark.scss`, `tailwind.config.js`.
+- `D:\_vibe\xGR\xGR\Necessaire\DESIGN_REFERENCE.md`, `ACTION_PATTERNS.md`, `FILTER_PATTERNS.md`, `Tresorerie.Vue/public/` et `src/assets/images` (logos, favicon, manifest), `src/assets/layout/fonts` (Roboto), `Tresorerie.Vue/src/components/commun/KpiCard.vue`, `src/composables/useKpiColor.ts`, `src/assets/layout/sidebar/themes/_menu_dark.scss`, `tailwind.config.js`.
 - `DOCS/UI_STANDARDS.md`.

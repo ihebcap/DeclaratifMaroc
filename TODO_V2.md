@@ -11,6 +11,7 @@
 |---|---|---|
 | [TASK-235](TASKS/TASK-235-v2-compta-analyse-donnees-3-bases-lotrex-ema-gocom.md) | Analyse des données des 3 bases (lecture seule, **à lancer en premier avec Gemini**) | — |
 | [TASK-225](TASKS/TASK-225-v2-compta-socle-base-declaratifmaroc-ef-config-dossier.md) | Base `DeclaratifMaroc` (EF, migrations auto), configuration du dossier | — |
+| [TASK-243](TASKS/TASK-243-v2-parametrage-patterns-xgr-menus-et-centre-de-configuration.md) | Paramétrage à la xGR : menus, listes + tiroir, formulaires à onglets, centre de configuration | 231, 232 |
 | [TASK-242](TASKS/TASK-242-v2-utilisateurs-roles-et-droits-par-dossier.md) | Utilisateurs, rôles et droits par dossier (multi-dossier, cloisonnement) | 225 |
 | [TASK-226](TASKS/TASK-226-v2-compta-lecteur-factures-lettrees-ht-tva-ttc-par-taux.md) | Lecteur de factures lettrées achats/ventes → HT/TVA/TTC par taux | 225, 235 |
 
@@ -42,6 +43,7 @@
 | [TASK-240](TASKS/TASK-240-v2-documentation-complete-utilisateur-fonctionnelle-technique.md) | Documentation complète (4 documents, fiches d'alerte, aide intégrée) | toutes |
 
 ### Règles transversales de « terminé » (PO 16/10/2026) — appliquées en revue à **toute** TASK V2
+0. **Charte APBS suivie à la lettre** (même entreprise) : tout écran V2 reprend la charte et les patterns xGR sans interprétation ; écart = REJECT sauf validation PO documentée (voir TASK-231).
 1. **Documentée** : formules, alertes, colonnes et codes d'événements mis à jour dans `DOCS/V2/` (TASK-240). Doc absente ou périmée = REJECT.
 2. **Explicable** : tout montant calculé expose sa formule, ses entrées et ses sources (TASK-239). Aucun calcul opaque.
 3. **Rien de bizarre en silence** : toute valeur hors règle de plausibilité est affichée avec son code et sa raison, jamais corrigée ni masquée.
@@ -62,6 +64,9 @@ L'EPIC UX est en parallèle du back des EPICS V2-1 à V2-3 ; les écrans V2 (225
 3. En parallèle TASK-231 → 232.
 4. TASK-228/229, puis TASK-236 → 237 → 230.
 5. TASK-233 (migration V1) en dernier.
+
+## À prévoir après les droits d'accès (PO 16/10/2026)
+- **Niveau cabinet** : un administrateur de cabinet gère ses propres collaborateurs et ses propres dossiers (extension de TASK-242, à cadrer une fois TASK-242 livrée).
 
 ## Hors périmètre (à ouvrir plus tard)
 - **Avoirs** (détectés et signalés, jamais intégrés — PO : « on va les voir après »).
