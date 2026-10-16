@@ -11,6 +11,7 @@
 |---|---|---|
 | [TASK-235](TASKS/TASK-235-v2-compta-analyse-donnees-3-bases-lotrex-ema-gocom.md) | Analyse des données des 3 bases (lecture seule, **à lancer en premier avec Gemini**) | — |
 | [TASK-225](TASKS/TASK-225-v2-compta-socle-base-declaratifmaroc-ef-config-dossier.md) | Base `DeclaratifMaroc` (EF, migrations auto), configuration du dossier | — |
+| [TASK-242](TASKS/TASK-242-v2-utilisateurs-roles-et-droits-par-dossier.md) | Utilisateurs, rôles et droits par dossier (multi-dossier, cloisonnement) | 225 |
 | [TASK-226](TASKS/TASK-226-v2-compta-lecteur-factures-lettrees-ht-tva-ttc-par-taux.md) | Lecteur de factures lettrées achats/ventes → HT/TVA/TTC par taux | 225, 235 |
 
 ## EPIC V2-2 — Règlements et rapprochement
