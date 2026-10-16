@@ -13,7 +13,7 @@ Module: declaration-tva-web (`index.css`, `App.tsx`, `App.css`, `src/components/
 - **Aucune interprétation** : couleurs, dégradés, rayons, ombres, tailles de police, espacements, libellés de boutons, icônes, ordre des zones d'écran, comportement des filtres et des actions sont repris à l'identique. Toute différence (contrainte technique React, cas non couvert par xGR) est **listée dans le VERIFY, justifiée et validée par le PO** ; jamais décidée par le worker.
 - **Ressources réutilisées telles quelles**, pas redessinées : logos et badge noir/vert, favicon, `manifest.webmanifest`, images (`Tresorerie.Vue/public`, `src/assets/images`), polices (Roboto, `src/assets/layout/fonts`), échelle de couleurs.
 - Cas non couvert par xGR → **s'arrêter et poser la question au PO** (règle « ne jamais improviser »), pas d'invention de style.
-- Si le PO dispose d'une charte APBS officielle (PDF, maquettes, kit de marque), elle **prime** sur la référence xGR en cas de divergence ; à fournir avant le début de la TASK.
+- **xGR est la seule référence** (confirmé par le PO le 16/10/2026 : il n'existe pas d'autre charte APBS officielle). En cas de doute, la réponse est « comme dans xGR ».
 - **Revue de conformité** : checklist point par point (couleurs, sidebar, topbar, cards, tags, tableaux, boutons, formulaires, tiroirs, filtres, actions, polices, logos), chaque ligne comparée à un écran xGR de référence avec captures côte à côte. Un écart non justifié = REJECT.
 
 ## Décisions de conception
