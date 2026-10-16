@@ -5,7 +5,7 @@ Priority: HIGH
 Risk: CRITICAL (détermine la période et le montant de TVA déclarés)
 Module: Declaration.Compta.Reader + Declaration.Compta.Core
 Dépend de : TASK-226, TASK-234
-Arbitrage PO restant avant code : uniquement l'imputation des lettrages groupés n:m (CADRAGE §4). Arbitrés le 16/10/2026 : rapprochement banque seule, avoirs plus tard, report des règlements non déclarés, lettrage seul pour les clients.
+Arbitrages PO du 16/10/2026 : tous levés — rapprochement banque seule, avoirs plus tard, report des règlements non déclarés, lettrage seul pour les clients, **imputation proportionnelle** des lettrages groupés.
 
 > **Origine :** PO 16/10/2026 : « si la facture est lettrée avec une écriture de banque, elle doit être rapprochée ; autre type de règlement, pas de rapprochement » ; date = écriture de banque ; prorata, pas de lettrage partiel.
 
@@ -17,7 +17,7 @@ Arbitrage PO restant avant code : uniquement l'imputation des lettrages groupés
 4. **Prorata** (une seule opération, arrondi `MidpointRounding.AwayFromZero`, aucun ratio intermédiaire arrondi — bug GRFN §2) :
    - 1 facture / 1 règlement → 100 % à la date du règlement ;
    - 1 facture / n règlements → `TVA_taux × règlement / TTC_facture` à la date de chaque règlement ;
-   - n factures / m règlements (lettrage groupé) → **règle d'imputation à trancher par le PO avant code** (CADRAGE §4 : proportionnelle ou chronologique). Aucun code de ce cas avant arbitrage ; le cas est détecté et listé en attendant.
+   - n factures / m règlements (lettrage groupé) → **imputation proportionnelle (arbitrage PO 16/10/2026)** : `part(règlement r, facture f) = r × TTC_f / Σ TTC des factures du lettrage`, puis `TVA_taux(f, r) = TVA_taux(f) × part / TTC_f`. Résultat indépendant de l'ordre des règlements. Arrondi : `AwayFromZero` au niveau de chaque part, le reliquat d'arrondi est reporté sur la part la plus grande de la facture pour que Σ parts = TVA facture exactement, et tracé. Exemple de test imposé : A=300, B=700 ; P1=600 (juin), P2=400 (juillet) → P1 : A 180 / B 420 ; P2 : A 120 / B 280. Un lettrage groupé contenant un avoir est exclu et listé (avoirs hors périmètre).
    Invariant testé : Σ parts = TVA facture (reliquat d'arrondi affecté au dernier règlement, tracé).
 5. **Avoirs : hors périmètre de cette TASK (PO 16/10/2026, « on va les voir après »)**. Ils sont néanmoins **détectés** (pièce de sens opposé à la facture normale) et listés en alerte « avoir non traité » ; jamais ignorés en silence ni mélangés aux factures. TASK dédiée à ouvrir après validation du reste.
 6. **Période et report (confirmé PO)** : un règlement non déclaré **apparaît toujours jusqu'à sa déclaration** : sélection = date d'opération ≤ fin de période **et** non déjà déclaré (lien d'idempotence `LigneDeclareeCompta`, TASK-225), quelle que soit sa période d'origine.

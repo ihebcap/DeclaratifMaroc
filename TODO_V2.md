@@ -17,7 +17,7 @@
 | Task | Objet | Dépend de |
 |---|---|---|
 | [TASK-234](TASKS/TASK-234-v2-compta-alertes-parametrage-tresorerie-sage.md) | Alertes sur le paramétrage de trésorerie Sage (banque seule, compte de trésorerie) | 225, 235 |
-| [TASK-227](TASKS/TASK-227-v2-compta-reglements-rapprochement-date-operation-prorata.md) | Règlements lettrés, rapprochement banque, date `JM_Date+EC_Jour−1`, prorata, report | 226, 234 + arbitrage n:m |
+| [TASK-227](TASKS/TASK-227-v2-compta-reglements-rapprochement-date-operation-prorata.md) | Règlements lettrés, rapprochement banque, date `JM_Date+EC_Jour−1`, prorata, report | 226, 234 |
 
 ## EPIC V2-3 — Contrôles d'aide à la décision
 | Task | Objet | Dépend de |

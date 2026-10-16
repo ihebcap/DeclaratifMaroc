@@ -157,7 +157,7 @@ Arbitrages PO du 16/10/2026 : (a) **XGrid porté en React** (le front reste Reac
 | Report | Un règlement non déclaré **apparaît toujours jusqu'à sa déclaration**. |
 | Clients | Toujours sur le **lettrage**. |
 | Validation d'écart | Liée à la **facture** (montants figés, invalidée si l'écriture change). |
-| Imputation n:m | **Encore à trancher** (explication ci-dessous). |
+| Imputation n:m | **Proportionnelle** (PO 16/10/2026). Règle détaillée dans TASK-227. |
 
 **Imputation n:m — de quoi s'agit-il ?** Un seul lettrage peut regrouper plusieurs factures et plusieurs règlements. Sage ne dit pas quel règlement paie quelle facture. Exemple : factures A = 300 TTC et B = 700 TTC ; règlements P1 = 600 (juin) et P2 = 400 (juillet). La TVA de chaque facture doit être répartie entre les règlements, donc entre les mois.
 - **Proportionnelle** : chaque règlement paie chaque facture au prorata de son poids. P1 → A 180 et B 420 ; P2 → A 120 et B 280. Résultat indépendant de l'ordre, mais aucune facture n'est « soldée » à une date précise.
