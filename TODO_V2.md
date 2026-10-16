@@ -32,6 +32,19 @@
 | [TASK-237](TASKS/TASK-237-v2-compta-import-excel-complete-controle-previsualisation.md) | Import du fichier complété, contrôles d'intégrité et de dérive, prévisualisation | 236 |
 | [TASK-230](TASKS/TASK-230-v2-compta-branchement-moteur-commun-api-ecrans-export.md) | Déclaration définitive depuis le fichier importé, lignes déclarées idempotentes, XML | 237 |
 
+## EPIC V2-5 — Transparence, documentation et diagnostic (transversal)
+| Task | Objet | Dépend de |
+|---|---|---|
+| [TASK-238](TASKS/TASK-238-v2-journalisation-complete-et-pack-de-diagnostic.md) | Journal structuré, audit métier, pack de diagnostic en un clic | 225 |
+| [TASK-239](TASKS/TASK-239-v2-explicabilite-des-calculs-et-chiffres-anormaux.md) | « Pourquoi ce montant ? », feuille `Calculs`, règles de chiffres anormaux | 226, 227, 228 |
+| [TASK-240](TASKS/TASK-240-v2-documentation-complete-utilisateur-fonctionnelle-technique.md) | Documentation complète (4 documents, fiches d'alerte, aide intégrée) | toutes |
+
+### Règles transversales de « terminé » (PO 16/10/2026) — appliquées en revue à **toute** TASK V2
+1. **Documentée** : formules, alertes, colonnes et codes d'événements mis à jour dans `DOCS/V2/` (TASK-240). Doc absente ou périmée = REJECT.
+2. **Explicable** : tout montant calculé expose sa formule, ses entrées et ses sources (TASK-239). Aucun calcul opaque.
+3. **Rien de bizarre en silence** : toute valeur hors règle de plausibilité est affichée avec son code et sa raison, jamais corrigée ni masquée.
+4. **Tracée** : tout événement significatif et toute erreur sont journalisés avec `CorrelationId` et code stable (TASK-238) ; aucune erreur « générique ».
+
 ## EPIC UX — Charte graphique xGR et XGrid
 | Task | Objet | Dépend de |
 |---|---|---|
