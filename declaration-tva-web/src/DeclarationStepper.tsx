@@ -195,6 +195,7 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
                         <VerifierIntegrerPanel
                             mode="verifier"
                             declarationId={declarationId}
+                            declarationNumero={info.numero}
                             selectedRows={selectedRows}
                             readOnly={readOnlyStep}
                             integree={integree}
@@ -210,6 +211,7 @@ export function DeclarationStepper({ declarationId, showToast, onBack }: { decla
                         <VerifierIntegrerPanel
                             mode="confirmer"
                             declarationId={declarationId}
+                            declarationNumero={info.numero}
                             selectedRows={selectedRows}
                             readOnly={readOnlyStep}
                             integree={integree}

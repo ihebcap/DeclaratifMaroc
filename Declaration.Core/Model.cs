@@ -88,6 +88,8 @@ namespace Declaration.Core.Model
         public string? Reference { get; set; }
         public SourceAffectation Source { get; set; }
         public bool IsReport { get; set; } = false;
+        public int EC_Id { get; set; }
+        public int MV_Id { get; set; }
     }
 
     public class RecapParSource

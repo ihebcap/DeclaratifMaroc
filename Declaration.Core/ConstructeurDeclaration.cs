@@ -174,7 +174,9 @@ namespace Declaration.Core
                         DatePaiement = affectation.DatePaiement,
                         DateFacture = affectation.DateFacture,
                         Reference = affectation.Reference,
-                        Source = affectation.Source
+                        Source = affectation.Source,
+                        EC_Id = affectation.EC_Id,
+                        MV_Id = affectation.MV_Id
                     };
 
                     modele.Lignes.Add(enrichie);
@@ -236,6 +238,74 @@ namespace Declaration.Core
                     Message = $"Résidu inexpliqué de {modele.ControleEquilibre.ResiduInexplique:F2} (tolérance: {tolerance:F2}).",
                     RefLigne = "Global"
                 });
+            }
+
+            // TASK-224 : Garde-fou bloquant TVA_FACTURE_SURDECLAREE
+            // Pour chaque facture (EC_Id/NumeroFacture), Σ TVA déclarée ≤ TVA facture (tolérance 0,05 × nb lignes)
+            // ET Σ MontantAffecte ≤ TTC facture.
+            var groupesFactures = affectations
+                .Where(a => !a.EstRapprocheNonAffecte)
+                .GroupBy(a => a.EC_Id > 0 ? $"EC_{a.EC_Id}" : a.NumeroFacture);
+
+            foreach (var grp in groupesFactures)
+            {
+                var premiereAffectation = grp.First();
+                decimal montantAffecteTotal = grp.Sum(a => a.MontantAffecte);
+
+                decimal? tvaFactureMax = null;
+                decimal? ttcFactureMax = null;
+
+                if (premiereAffectation.EC_Type == 4)
+                {
+                    // Solde initial : appliquer le contrôle sur la TVA connue si saisie manuelle fournie
+                    if (premiereAffectation.SoldeInitialTva.HasValue)
+                    {
+                        tvaFactureMax = premiereAffectation.SoldeInitialTva.Value;
+                        ttcFactureMax = premiereAffectation.MontantAffecte;
+                    }
+                }
+                else
+                {
+                    DocumentTaxesInfo? doc = null;
+                    try { doc = resoudreFacture(premiereAffectation); } catch { }
+
+                    if (doc != null && !doc.EnErreur && doc.TotalTtc > 0)
+                    {
+                        tvaFactureMax = (decimal)doc.TotalTva;
+                        ttcFactureMax = (decimal)doc.TotalTtc;
+                    }
+                }
+
+                if (tvaFactureMax.HasValue && ttcFactureMax.HasValue)
+                {
+                    var lignesFacture = premiereAffectation.EC_Id > 0
+                        ? modele.Lignes.Where(l => l.EC_Id == premiereAffectation.EC_Id).ToList()
+                        : modele.Lignes.Where(l => l.NumeroFacture == premiereAffectation.NumeroFacture).ToList();
+
+                    decimal tvaDeclareeTotal = lignesFacture.Sum(l => l.Tva);
+                    decimal toleranceTva = 0.05m * Math.Max(1, lignesFacture.Count);
+                    decimal toleranceTtc = 0.05m * Math.Max(1, grp.Count());
+
+                    bool surdeclarationTva = tvaDeclareeTotal > (tvaFactureMax.Value + toleranceTva);
+                    bool depassementTtc = montantAffecteTotal > (ttcFactureMax.Value + toleranceTtc);
+
+                    if (surdeclarationTva || depassementTtc)
+                    {
+                        var motif = surdeclarationTva && depassementTtc
+                            ? $"TVA déclarée ({tvaDeclareeTotal:F2} MAD > {tvaFactureMax.Value:F2} MAD) et montant affecté ({montantAffecteTotal:F2} MAD > {ttcFactureMax.Value:F2} MAD)"
+                            : surdeclarationTva
+                                ? $"TVA déclarée ({tvaDeclareeTotal:F2} MAD > {tvaFactureMax.Value:F2} MAD)"
+                                : $"montant affecté ({montantAffecteTotal:F2} MAD > {ttcFactureMax.Value:F2} MAD)";
+
+                        modele.Alertes.Add(new Alerte
+                        {
+                            Niveau = NiveauAlerte.Error,
+                            Code = "TVA_FACTURE_SURDECLAREE",
+                            Message = $"Facture {premiereAffectation.NumeroFacture} surdéclarée : {motif}. Clôture bloquée.",
+                            RefLigne = $"Facture: {premiereAffectation.NumeroFacture}"
+                        });
+                    }
+                }
             }
 
             return modele;

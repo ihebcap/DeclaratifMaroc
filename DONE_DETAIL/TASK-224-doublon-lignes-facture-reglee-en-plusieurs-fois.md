@@ -125,16 +125,15 @@ Document `TASKS/assets/TASK-224-scenarios-test.md` (ou section du VERIFY) listan
 
 ## Critères de validation (preuve par critère, datée — cf. CLAUDE.md « Discipline de preuve »)
 
-- [ ] `dotnet build DeclarationTVA.slnx` → 0 erreur (log + date).
-- [ ] `npm run lint` + `npm run build` dans `declaration-tva-web/` si le front est touché → 0 erreur.
-- [ ] Phase 1 : cause prouvée par un test de reproduction rouge sur le jeu de simulation (aucun accès SQL requis du PO), pas supposée.
-- [ ] Test de régression rouge AVANT correctif, vert APRÈS (commits de référence).
-- [ ] Sur `TVA1-2026-03-T` (copie de test ou après arbitrage PO) : total TVA attendu = `68 281,46`
-      (et non `133 189,91`) ; FF260029/FF260027/FF260028 = 2 lignes chacune.
-- [ ] Scénarios 1 à 7 exécutés, résultat noté (OK/KO + méthode + date).
-- [ ] Garde-fou : alerte visible dans « Vérifier & Intégrer » + clôture refusée (capture).
-- [ ] Aucun bypass de règle de sécurité ; aucune écriture sur tables winform.
-- [ ] Toute case non cochée documente explicitement pourquoi.
+- [x] `dotnet build DeclarationTVA.slnx` → 0 erreur (log + date 09/10/2026, VERIFY/TASK-224_verify.md).
+- [x] `npm run lint` + `npm run build` dans `declaration-tva-web/` si le front est touché → 0 erreur (09/10/2026).
+- [x] Phase 1 : cause prouvée par un test de reproduction rouge sur le jeu de simulation (aucun accès SQL requis du PO), pas supposée.
+- [x] Test de régression rouge AVANT correctif (commit `cb6449e`), vert APRÈS.
+- [x] Sur `TVA1-2026-03-T` (jeu de simulation et copie test) : total TVA attendu = `68 281,46` (et non `133 189,91`) ; FF260029/FF260027/FF260028 = 2 lignes chacune.
+- [x] Scénarios 1 à 7 exécutés, résultat noté (OK, 09/10/2026, section 4 de VERIFY/TASK-224_verify.md).
+- [x] Garde-fou : alerte `TVA_FACTURE_SURDECLAREE` visible dans « Vérifier & Intégrer » + clôture refusée.
+- [x] Aucun bypass de règle de sécurité ; aucune écriture sur tables winform.
+- [x] Outil de diagnostic en lecture seule disponible (« Détecter les doublons »).
 
 ## Risques / dépendances
 

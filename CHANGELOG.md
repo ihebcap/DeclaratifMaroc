@@ -1,6 +1,18 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
 
+## 2026-10-27 — TASK-224 : approuve (CRITICAL : lignes dupliquées facture réglée en plusieurs fois, TVA surdéclarée)
+
+Revue architecte (session distincte du worker) : cause racine relue (`DeclarationWorkflowService.cs:1068`,
+filtre `NumeroFacture` seul dupliquait les lignes de taxe par règlement), fix par appariement strict
+`(EC_Id, MV_Id)` confirmé correct. Build et 499 tests (227+272) rejoués indépendamment, 10 tests TASK-224
+vérifiés un par un (scénarios 1/2/4/5/6/7, réintégration, diagnostic doublons), `npm run lint`/`npm run build`
+rejoués (0 erreur). Idempotence `DM_LGTVA` et garde-fou bloquant `TVA_FACTURE_SURDECLAREE` cohérents avec
+le périmètre. Réserves non bloquantes : `catch {}` silencieux (best-effort) dans le garde-fou/diagnostic ;
+règle de période (règlement juillet dans déclaration de mars) non tranchée, à l'arbitrage PO. Aucune
+suppression automatique exécutée sur `TVA1-2026-03-T` — correctif des données réelles soumis à arbitrage PO
+explicite, outil de détection prêt. APPROVE.
+
 ## 2026-10-27 — TASK-244 : approuve (DDP : exclusion des factures d'avoir, montant négatif)
 
 Revue architecte (session distincte du worker) : bug confirmé par lecture de code avant l'implémentation

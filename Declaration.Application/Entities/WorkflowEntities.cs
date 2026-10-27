@@ -192,3 +192,35 @@ public class DiagnosticDtIdResultat
     public string? DeclarationNumero { get; set; }
     public StatutDeclaration? DeclarationStatut { get; set; }
 }
+
+/// <summary>
+/// TASK-224 : résultat du diagnostic des lignes dupliquées (outil de détection en lecture seule).
+/// </summary>
+public class DiagnosticDoublonsResultat
+{
+    public Guid DeclarationId { get; set; }
+    public string NumeroDeclaration { get; set; } = "";
+    public int TotalLignes { get; set; }
+    public int TotalGroupesEnDoublon { get; set; }
+    public int TotalLignesEnTrop { get; set; }
+    public decimal SurdeclarationTva { get; set; }
+    public List<GroupeDoublonDto> Groupes { get; set; } = new();
+}
+
+public class GroupeDoublonDto
+{
+    public string NumeroFacture { get; set; } = "";
+    public string NumeroRapprochement { get; set; } = "";
+    public decimal Taux { get; set; }
+    public string CodeTaxe { get; set; } = "";
+    public string Domaine { get; set; } = "";
+    public string TiersNom { get; set; } = "";
+    public int NombreLignes { get; set; }
+    public decimal MontantAffecte { get; set; }
+    public decimal TvaLigne { get; set; }
+    public decimal TvaCumulee { get; set; }
+    public decimal TvaFacture { get; set; }
+    public decimal SurdeclarationGroupe { get; set; }
+    public List<Guid> LigneIds { get; set; } = new();
+}
+

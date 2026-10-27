@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-    Calculator, AlertTriangle, Loader2, Info, Lock, CheckCircle2, XCircle, ShieldCheck, FileStack, ExternalLink, Search, FileSpreadsheet, RefreshCw
+    Calculator, AlertTriangle, Loader2, Info, Lock, CheckCircle2, XCircle, ShieldCheck, FileStack, ExternalLink, Search, FileSpreadsheet, RefreshCw, Copy
 } from 'lucide-react';
 import { formatMoney } from './utils';
 import api from './api';
@@ -8,6 +8,7 @@ import type { ReglementRow } from './ReglementsSelection';
 import { RecapSourceTable } from './RecapSourceTable';
 import { DomainGrid } from './DomainGrid';
 import { DiagnosticModal } from './DiagnosticModal';
+import { DetecterDoublonsModal } from './DetecterDoublonsModal';
 import type { DomaineTVA } from './DeclarationStepper';
 
 // TASK-142 : colonnes du drill « Lignes incohérentes (TTC ≠ HT+TVA) ». Reprend defaultColumns de
@@ -300,6 +301,7 @@ function domaineOngletLabel(domaine: string): string {
 
 export interface VerifierIntegrerPanelProps {
     declarationId: string;
+    declarationNumero?: string;
     selectedRows: ReglementRow[];
     /** Relecture après intégration (TASK-075) : ignore selectedRows, charge tout par declarationId */
     readOnly?: boolean;
@@ -314,6 +316,7 @@ export interface VerifierIntegrerPanelProps {
 
 export function VerifierIntegrerPanel({
     declarationId,
+    declarationNumero,
     selectedRows,
     readOnly = false,
     integree,
@@ -325,6 +328,9 @@ export function VerifierIntegrerPanel({
 }: VerifierIntegrerPanelProps) {
     const [dataByReglement, setDataByReglement] = useState<Record<string, LigneValorisation[]>>({});
     const [loadingLignes, setLoadingLignes] = useState(true);
+
+    // TASK-224 : modal diagnostic détection des doublons
+    const [showDoublonsModal, setShowDoublonsModal] = useState(false);
 
     // Drill anomalie → grille filtrée (TASK-016), aussi réutilisé pour le drill par source (TASK-107)
     const [drillFiltre, setDrillFiltre] = useState<{
@@ -781,6 +787,14 @@ export function VerifierIntegrerPanel({
                     onRecalculated={() => { setReloadToken(t => t + 1); setDiagnostic(null); }}
                 />
             )}
+            {/* TASK-224 : modal diagnostic détection des doublons */}
+            {showDoublonsModal && (
+                <DetecterDoublonsModal
+                    declarationId={declarationId}
+                    declarationNumero={declarationNumero}
+                    onClose={() => setShowDoublonsModal(false)}
+                />
+            )}
             {/* En-tête */}
             <div style={{
                 padding: '0.65rem 1rem',
@@ -918,6 +932,7 @@ export function VerifierIntegrerPanel({
                                 }
                             }}
                             onDrillIncoherence={handleDrillIncoherence}
+                            onDetecterDoublons={() => setShowDoublonsModal(true)}
                         />
                     </>
                 )}
@@ -1048,6 +1063,19 @@ export function VerifierIntegrerPanel({
                 </div>
 
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <button
+                        onClick={() => setShowDoublonsModal(true)}
+                        title="Détecter les éventuels doublons de lignes pour les factures réglées en plusieurs fois (lecture seule)"
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                            background: 'white', border: '1px solid var(--border-color)',
+                            borderRadius: 'var(--radius-md)', padding: '0.45rem 0.85rem',
+                            cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)',
+                        }}
+                    >
+                        <Copy size={14} /> Détecter les doublons
+                    </button>
+
                     {(mode === 'confirmer' || mode === 'all') && (
                         <button
                             onClick={exporterControle}
@@ -1340,7 +1368,7 @@ function buildControls(
 
 function ChecklistCard({
     controls, loading, bloquants, avertissements, ligneIncoherente, ligneIncoherenteAutreOnglet, ecartExplique, reconciliation,
-    lignesNonValorisees, onDiagnostiquer, onDrill, onDrillIncoherence,
+    lignesNonValorisees, onDiagnostiquer, onDrill, onDrillIncoherence, onDetecterDoublons,
 }: {
     controls: Control[];
     loading: boolean;
@@ -1360,6 +1388,8 @@ function ChecklistCard({
     onDrill: (domaine: DomaineTVA, filtre: Record<string, any>, label: string) => void;
     /** TASK-112 : drill vers les lignes qui composent l'écart (TTC ≠ HT+TVA) */
     onDrillIncoherence?: () => void;
+    /** TASK-224 : ouverture modal diagnostic des doublons */
+    onDetecterDoublons?: () => void;
 }) {
     // TASK-165 : avertissements non bloquants repliés par défaut (n'empêchent pas l'intégration —
     // seul le compteur est visible sur l'en-tête, le détail est un second niveau de lecture).
@@ -1548,6 +1578,29 @@ function ChecklistCard({
                                 gap: '0.5rem'
                             }}>
                                 <span style={{ flex: 1 }}>• {displayMessage}</span>
+                                {a.code === 'TVA_FACTURE_SURDECLAREE' && onDetecterDoublons && (
+                                    <button
+                                        title="Ouvrir l'outil de détection des doublons"
+                                        onClick={onDetecterDoublons}
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '0.25rem',
+                                            padding: '0.1rem 0.4rem',
+                                            background: 'white',
+                                            border: '1px solid #fca5a5',
+                                            borderRadius: 'var(--radius-sm)',
+                                            cursor: 'pointer',
+                                            fontSize: '0.68rem',
+                                            fontWeight: 600,
+                                            color: 'var(--status-blocking-text)',
+                                            whiteSpace: 'nowrap',
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        <Copy size={10} /> Détecter doublons
+                                    </button>
+                                )}
                                 {hasDrill && (
                                     <button
                                         title="Voir les lignes concernées"

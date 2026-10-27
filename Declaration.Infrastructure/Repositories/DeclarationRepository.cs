@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using Microsoft.Extensions.Logging;
 using Declaration.Application.Entities;
 using Declaration.Application.Interfaces;
 using Declaration.Selection; // RegleDatePeriode : source unique de la date de période (TASK-062)
@@ -12,10 +13,12 @@ namespace Declaration.Infrastructure.Repositories;
 public class DeclarationRepository : IDeclarationRepository
 {
     private readonly IDbConnectionFactory _connectionFactory;
+    private readonly ILogger<DeclarationRepository>? _logger;
 
-    public DeclarationRepository(IDbConnectionFactory connectionFactory)
+    public DeclarationRepository(IDbConnectionFactory connectionFactory, ILogger<DeclarationRepository>? logger = null)
     {
         _connectionFactory = connectionFactory;
+        _logger = logger;
     }
 
     public async Task<DeclarationEntete?> GetByIdAsync(Guid id)
@@ -175,8 +178,38 @@ public class DeclarationRepository : IDeclarationRepository
 
     public async Task SaveLignesCandidatesAsync(IEnumerable<LigneCandidate> lignes)
     {
-        if (!lignes.Any()) return;
+        var liste = lignes.ToList();
+        if (liste.Count == 0) return;
+
         using var connection = _connectionFactory.CreatePersistenceConnection();
+
+        // TASK-224 : Idempotence stricte d'écriture des lignes figées dans DM_LGTVA
+        // Clé = (DeclarationId, Domaine, EC_Id, MV_Id, Taux, CodeTaxe)
+        // (ou fallback (DeclarationId, Domaine, NumeroFacture, NumeroRapprochement, Taux, CodeTaxe) si EC_Id/MV_Id <= 0)
+        // Pas de MERGE silencieux qui masque un doublon : un doublon détecté est loggé et ignoré, JAMAIS sommé.
+        var declIds = liste.Select(l => l.DeclarationId.ToString()).Distinct().ToList();
+        var domaines = liste.Select(l => l.Domaine).Distinct().ToList();
+
+        var existingRows = (await connection.QueryAsync<(string DeclarationId, string Domaine, int EC_Id, int MV_Id, string? NumeroFacture, string? NumeroRapprochement, decimal Taux, string? CodeTaxe)>(
+            @"SELECT DeclarationId, Domaine, EC_Id, MV_Id, NumeroFacture, NumeroRapprochement, Taux, CodeTaxe 
+              FROM DM_LGTVA 
+              WHERE DeclarationId IN @DeclIds AND Domaine IN @Domaines",
+            new { DeclIds = declIds, Domaines = domaines })).ToList();
+
+        string CleLigne(string declId, string dom, int ecId, int mvId, string? numFact, string? numReg, decimal taux, string? codeTaxe)
+        {
+            var code = (codeTaxe ?? "").Trim();
+            if (ecId > 0 && mvId > 0)
+                return $"{declId}|{dom}|EC_{ecId}|MV_{mvId}|{taux:F4}|{code}";
+            return $"{declId}|{dom}|F_{numFact}|R_{numReg}|{taux:F4}|{code}";
+        }
+
+        var clesConnues = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var r in existingRows)
+        {
+            clesConnues.Add(CleLigne(r.DeclarationId, r.Domaine, r.EC_Id, r.MV_Id, r.NumeroFacture, r.NumeroRapprochement, r.Taux, r.CodeTaxe));
+        }
+
         var sql = @"INSERT INTO DM_LGTVA
                     (Id, DeclarationId, Etat, Domaine, MotifRejet, NumeroFacture, Reference, NumeroRapprochement, TiersNom,
                      TiersIdentifiantFiscal, TiersICE, HT, Taux, CodeTaxe, TVA, TTC, Prorata, MontantAffecte, ModePaiement, DatePaiement, DateFacture, Source, EcType, EC_Id, MV_Id,
@@ -184,8 +217,20 @@ public class DeclarationRepository : IDeclarationRepository
                     VALUES (@Id, @DeclarationId, @Etat, @Domaine, @MotifRejet, @NumeroFacture, @Reference, @NumeroRapprochement, @TiersNom,
                      @TiersIdentifiantFiscal, @TiersICE, @HT, @Taux, @CodeTaxe, @TVA, @TTC, @Prorata, @MontantAffecte, @ModePaiement, @DatePaiement, @DateFacture, @Source, @EcType, @EC_Id, @MV_Id,
                      @CodeActivite, @CodeActiviteModifieManuellement, @CodeActiviteModifiePar, @CodeActiviteModifieLe)";
-        foreach (var l in lignes)
+
+        foreach (var l in liste)
         {
+            var cle = CleLigne(l.DeclarationId.ToString(), l.Domaine, l.EC_Id, l.MV_Id, l.NumeroFacture, l.NumeroRapprochement, l.Taux, l.CodeTaxe);
+            if (clesConnues.Contains(cle))
+            {
+                _logger?.LogWarning(
+                    "[TASK-224] Ligne figée dupliquée ignorée à l'écriture DM_LGTVA (idempotence) : Déclaration={DeclId}, Domaine={Domaine}, Facture={Facture}, Règlement={Reglement}, EC_Id={EcId}, MV_Id={MvId}, Taux={Taux}, CodeTaxe={CodeTaxe}",
+                    l.DeclarationId, l.Domaine, l.NumeroFacture, l.NumeroRapprochement, l.EC_Id, l.MV_Id, l.Taux, l.CodeTaxe);
+                continue;
+            }
+
+            clesConnues.Add(cle);
+
             await connection.ExecuteAsync(sql, new {
                 Id = l.Id.ToString(),
                 DeclarationId = l.DeclarationId.ToString(),

@@ -237,6 +237,29 @@ public class DeclarationsController : ControllerBase
     }
 
     /// <summary>
+    /// TASK-224 : Outil de diagnostic des lignes dupliquées (lecture seule).
+    /// Analyse les lignes figées de la déclaration courante et renvoie les groupes
+    /// (facture, règlement, taux) présents plusieurs fois.
+    /// </summary>
+    [HttpGet("{id}/diagnostic-doublons")]
+    public async Task<IActionResult> GetDiagnosticDoublons(Guid id)
+    {
+        try
+        {
+            var resultat = await _workflowService.DetecterDoublonsAsync(id);
+            return Ok(resultat);
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// TASK-147 : recalcule UNE ligne Proposee dont le diagnostic a détecté un cache PÉRIMÉ (relu
     /// avec succès APRÈS la création de la déclaration). Ne redéclenche AUCUNE lecture OM Sage —
     /// reconstruit la ligne depuis le cache déjà persisté. Retourne 409 si les conditions de

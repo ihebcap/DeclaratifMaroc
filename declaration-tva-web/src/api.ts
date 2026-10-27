@@ -104,6 +104,38 @@ export async function getDiagnosticLigne(declarationId: string, ecId: number): P
   return res.data;
 }
 
+// TASK-224 : Détection des doublons de lignes pour les factures réglées en plusieurs fois
+export interface GroupeDoublonDto {
+  numeroFacture: string;
+  numeroRapprochement: string;
+  taux: number;
+  codeTaxe: string;
+  domaine: string;
+  tiersNom: string;
+  nombreLignes: number;
+  montantAffecte: number;
+  tvaLigne: number;
+  tvaCumulee: number;
+  tvaFacture: number;
+  surdeclarationGroupe: number;
+  ligneIds: string[];
+}
+
+export interface DiagnosticDoublonsResultat {
+  declarationId: string;
+  numeroDeclaration: string;
+  totalLignes: number;
+  totalGroupesEnDoublon: number;
+  totalLignesEnTrop: number;
+  surdeclarationTva: number;
+  groupes: GroupeDoublonDto[];
+}
+
+export async function getDiagnosticDoublons(declarationId: string): Promise<DiagnosticDoublonsResultat> {
+  const res = await api.get<DiagnosticDoublonsResultat>(`/declarations/${declarationId}/diagnostic-doublons`);
+  return res.data;
+}
+
 // TASK-147 : recalcule une ligne Proposee dont le cache est périmé — ne redéclenche AUCUNE
 // lecture OM Sage, reconstruit la ligne depuis le cache déjà relu avec succès.
 export async function recalculerLigneDepuisCache(declarationId: string, ecId: number): Promise<{ message: string }> {

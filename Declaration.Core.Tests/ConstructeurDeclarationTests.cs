@@ -436,5 +436,197 @@ namespace Declaration.Core.Tests
             Assert.NotEmpty(decSansReference.Lignes);
             Assert.All(decSansReference.Lignes, l => Assert.Null(l.Reference));
         }
+
+        #region TASK-224 : Factures réglées en plusieurs fois & Garde-fou surdéclaration
+
+        [Fact]
+        public void ConstruireDeclaration_Task224_Scenario1_FactureRegleeEnDeuxFois_ProduitDeuxLignesSansSurdeclaration()
+        {
+            // Facture FF260029 (LOGINFO INGENIERIE) : 160 486,80 TTC, HT 133 739,00, TVA 26 747,80 à 20%
+            var docTaxes = new DocumentTaxesInfo
+            {
+                NumeroPiece = "FF260029",
+                TotalHT = 133739.00,
+                TotalTva = 26747.80,
+                TotalTtc = 160486.80,
+                LignesTaxe = new List<TaxeDetail>
+                {
+                    new TaxeDetail { Taux = 20, MontantTva = 26747.80, BaseHT = 133739.00, Code = "T20" }
+                }
+            };
+
+            var aff1 = new AffectationADeclarer
+            {
+                EC_Id = 2001,
+                MV_Id = 5001,
+                NumeroFacture = "FF260029",
+                NumeroRapprochement = "RF26100006",
+                MontantAffecte = 80243.40m,
+                Source = SourceAffectation.Decaissement
+            };
+
+            var aff2 = new AffectationADeclarer
+            {
+                EC_Id = 2001,
+                MV_Id = 5002,
+                NumeroFacture = "FF260029",
+                NumeroRapprochement = "RF26100007",
+                MontantAffecte = 80243.40m,
+                Source = SourceAffectation.Decaissement
+            };
+
+            var dec = ConstructeurDeclaration.ConstruireDeclaration(
+                new List<AffectationADeclarer> { aff1, aff2 },
+                _ => docTaxes,
+                2);
+
+            Assert.Equal(2, dec.Lignes.Count);
+            Assert.Equal(26747.80m, Math.Round(dec.Lignes.Sum(l => l.Tva), 2));
+            Assert.DoesNotContain(dec.Alertes, a => a.Code == "TVA_FACTURE_SURDECLAREE");
+        }
+
+        [Fact]
+        public void ConstruireDeclaration_Task224_Scenario4_FactureMultiTauxRegleeEnDeuxFois_ProduitQuatreLignes()
+        {
+            // Facture 2 taux (20% et 10%) :
+            // HT 100 000 @ 20% -> TVA 20 000 -> TTC 120 000
+            // HT 10 000 @ 10% -> TVA 1 000 -> TTC 11 000
+            // Total HT = 110 000, Total TVA = 21 000, Total TTC = 131 000
+            var docTaxes = new DocumentTaxesInfo
+            {
+                NumeroPiece = "FF_MULTI_01",
+                TotalHT = 110000.00,
+                TotalTva = 21000.00,
+                TotalTtc = 131000.00,
+                LignesTaxe = new List<TaxeDetail>
+                {
+                    new TaxeDetail { Taux = 20, MontantTva = 20000.00, BaseHT = 100000.00, Code = "T20" },
+                    new TaxeDetail { Taux = 10, MontantTva = 1000.00, BaseHT = 10000.00, Code = "T10" }
+                }
+            };
+
+            // Réglée en 2 fois 50% (65 500 chacune)
+            var aff1 = new AffectationADeclarer
+            {
+                EC_Id = 3001,
+                MV_Id = 6001,
+                NumeroFacture = "FF_MULTI_01",
+                NumeroRapprochement = "REG_01",
+                MontantAffecte = 65500.00m,
+                Source = SourceAffectation.Decaissement
+            };
+
+            var aff2 = new AffectationADeclarer
+            {
+                EC_Id = 3001,
+                MV_Id = 6002,
+                NumeroFacture = "FF_MULTI_01",
+                NumeroRapprochement = "REG_02",
+                MontantAffecte = 65500.00m,
+                Source = SourceAffectation.Decaissement
+            };
+
+            var dec = ConstructeurDeclaration.ConstruireDeclaration(
+                new List<AffectationADeclarer> { aff1, aff2 },
+                _ => docTaxes,
+                2);
+
+            // 2 règlements × 2 taux = 4 lignes, pas 8
+            Assert.Equal(4, dec.Lignes.Count);
+            Assert.Equal(21000.00m, Math.Round(dec.Lignes.Sum(l => l.Tva), 2));
+            Assert.DoesNotContain(dec.Alertes, a => a.Code == "TVA_FACTURE_SURDECLAREE");
+        }
+
+        [Fact]
+        public void ConstruireDeclaration_Task224_Scenario6_CasLimiteArrondi_SansAlerte()
+        {
+            // Facture FF260028 (SNSS TECHNOLOGIES) : TTC 80 414,77, TVA 13 402,46 à 20%
+            // Règlements : 40 207,38 + 40 207,39
+            var docTaxes = new DocumentTaxesInfo
+            {
+                NumeroPiece = "FF260028",
+                TotalHT = 67012.31,
+                TotalTva = 13402.46,
+                TotalTtc = 80414.77,
+                LignesTaxe = new List<TaxeDetail>
+                {
+                    new TaxeDetail { Taux = 20, MontantTva = 13402.46, BaseHT = 67012.31, Code = "T20" }
+                }
+            };
+
+            var aff1 = new AffectationADeclarer
+            {
+                EC_Id = 4001,
+                MV_Id = 7001,
+                NumeroFacture = "FF260028",
+                NumeroRapprochement = "RF26090006",
+                MontantAffecte = 40207.38m,
+                Source = SourceAffectation.Decaissement
+            };
+
+            var aff2 = new AffectationADeclarer
+            {
+                EC_Id = 4001,
+                MV_Id = 7002,
+                NumeroFacture = "FF260028",
+                NumeroRapprochement = "RF26090007",
+                MontantAffecte = 40207.39m,
+                Source = SourceAffectation.Decaissement
+            };
+
+            var dec = ConstructeurDeclaration.ConstruireDeclaration(
+                new List<AffectationADeclarer> { aff1, aff2 },
+                _ => docTaxes,
+                2);
+
+            Assert.Equal(2, dec.Lignes.Count);
+            var totalTva = Math.Round(dec.Lignes.Sum(l => l.Tva), 2);
+            Assert.True(Math.Abs(totalTva - 13402.46m) <= 0.01m);
+            Assert.DoesNotContain(dec.Alertes, a => a.Code == "TVA_FACTURE_SURDECLAREE");
+        }
+
+        [Fact]
+        public void ConstruireDeclaration_Task224_Scenario7_GardeFou_TvaFactureSurdeclaree_DeclencheAlerteError()
+        {
+            // Facture TTC 100 000, TVA 20 000
+            var docTaxes = new DocumentTaxesInfo
+            {
+                NumeroPiece = "FF_SURDEC",
+                TotalHT = 80000.00,
+                TotalTva = 20000.00,
+                TotalTtc = 100000.00,
+                LignesTaxe = new List<TaxeDetail>
+                {
+                    new TaxeDetail { Taux = 20, MontantTva = 20000.00, BaseHT = 80000.00, Code = "T20" }
+                }
+            };
+
+            // Règlements totalisant 150 000 TTC (> 100 000)
+            var aff1 = new AffectationADeclarer
+            {
+                EC_Id = 5001,
+                MV_Id = 8001,
+                NumeroFacture = "FF_SURDEC",
+                MontantAffecte = 75000.00m,
+                Source = SourceAffectation.Decaissement
+            };
+            var aff2 = new AffectationADeclarer
+            {
+                EC_Id = 5001,
+                MV_Id = 8002,
+                NumeroFacture = "FF_SURDEC",
+                MontantAffecte = 75000.00m,
+                Source = SourceAffectation.Decaissement
+            };
+
+            var dec = ConstructeurDeclaration.ConstruireDeclaration(
+                new List<AffectationADeclarer> { aff1, aff2 },
+                _ => docTaxes,
+                2);
+
+            Assert.Contains(dec.Alertes, a => a.Code == "TVA_FACTURE_SURDECLAREE" && a.Niveau == NiveauAlerte.Error);
+        }
+
+        #endregion
     }
 }

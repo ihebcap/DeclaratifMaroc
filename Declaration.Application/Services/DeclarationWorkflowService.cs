@@ -1065,7 +1065,17 @@ public class DeclarationWorkflowService
                     surchargeManuelle: null,
                     codeActiviteSage: c.Affectation.Tiers.CodeActivite);
 
-                var taxesLines = modele.Lignes.Where(l => l.NumeroFacture == c.Affectation.NumeroFacture).ToList();
+                // TASK-224 : appariement STRICT par affectation — une facture réglée en plusieurs fois
+                // produit plusieurs éléments dans modele.Lignes (un jeu de taux par règlement).
+                // Filtrer sur NumeroFacture seul dupliquait chaque ligne de taxe autant de fois qu'il y
+                // avait de règlements pour la même facture (surdéclaration de 64 908,46 MAD constatée).
+                // On filtre donc par affectation : (EC_Id, MV_Id) si connus, sinon par NumeroRapprochement.
+                var taxesLines = modele.Lignes.Where(l =>
+                    l.NumeroFacture == c.Affectation.NumeroFacture &&
+                    (l.MV_Id > 0 && c.Affectation.MV_Id > 0
+                        ? (l.MV_Id == c.Affectation.MV_Id && l.EC_Id == c.Affectation.EC_Id)
+                        : (string.IsNullOrEmpty(l.NumeroRapprochement) || l.NumeroRapprochement == c.Affectation.NumeroRapprochement))
+                ).ToList();
                 if (!taxesLines.Any())
                 {
                     var alerte = modele.Alertes.FirstOrDefault(a => a.RefLigne.Contains(c.Affectation.NumeroFacture));
@@ -1337,6 +1347,64 @@ public class DeclarationWorkflowService
                 Message = message,
                 RefLigne = l.NumeroFacture
             });
+        }
+
+        // TASK-224 : Garde-fou bloquant TVA_FACTURE_SURDECLAREE sur les lignes figées
+        // Pour chaque facture déclarée, Σ TVA déclarée ≤ TVA de la facture (tolérance 0,05 × nb de lignes)
+        // ET détection de tout doublon sur le même règlement et taux. Violation → NiveauAlerte.Error (clôture bloquée).
+        var facturesGroupes = integrees
+            .GroupBy(l => l.EC_Id > 0 ? $"EC_{l.EC_Id}" : l.NumeroFacture);
+
+        foreach (var grp in facturesGroupes)
+        {
+            var premiereLigne = grp.First();
+            var factureNumero = premiereLigne.NumeroFacture;
+            decimal tvaDeclaree = grp.Sum(l => l.TVA);
+            decimal tolerance = 0.05m * grp.Count();
+
+            // 1. Détection de doublons stricts (même règlement + même taux)
+            var aDoublonsReglementTaux = grp
+                .GroupBy(l => new { l.NumeroRapprochement, l.Taux, CodeTaxe = l.CodeTaxe ?? "" })
+                .Any(g => g.Count() > 1);
+
+            if (aDoublonsReglementTaux)
+            {
+                model.Alertes.Add(new Alerte
+                {
+                    Niveau = NiveauAlerte.Error,
+                    Code = "TVA_FACTURE_SURDECLAREE",
+                    Message = $"Facture {factureNumero} : lignes dupliquées détectées sur le même règlement et taux. Surdéclaration fiscale interdite.",
+                    RefLigne = factureNumero
+                });
+                continue;
+            }
+
+            // 2. Si l'EC_Id est connu et qu'un cache existe pour cette société, vérifie le plafond de TVA facture
+            if (premiereLigne.EC_Id > 0 && declaration.SocieteId > 0)
+            {
+                try
+                {
+                    var buckets = await _repository.GetBucketsCacheAsync(declaration.SocieteId, premiereLigne.EC_Id);
+                    if (buckets != null && buckets.Count > 0)
+                    {
+                        decimal tvaFactureMax = buckets.Sum(b => b.Tva);
+                        if (tvaFactureMax > 0 && tvaDeclaree > (tvaFactureMax + tolerance))
+                        {
+                            model.Alertes.Add(new Alerte
+                            {
+                                Niveau = NiveauAlerte.Error,
+                                Code = "TVA_FACTURE_SURDECLAREE",
+                                Message = $"Facture {factureNumero} surdéclarée : TVA déclarée ({tvaDeclaree:F2} MAD) > TVA facture ({tvaFactureMax:F2} MAD). Clôture bloquée.",
+                                RefLigne = factureNumero
+                            });
+                        }
+                    }
+                }
+                catch
+                {
+                    // Best-effort pour la lecture cache
+                }
+            }
         }
 
         // TASK-077 : remonte au checkup pré-intégration (étape ④) les avertissements de
@@ -2173,6 +2241,92 @@ public class DeclarationWorkflowService
             .Select(l => l.NumeroRapprochement)
             .Distinct()
             .ToList();
+    }
+
+    /// <summary>
+    /// TASK-224 : Outil de diagnostic dans l'application (lecture seule).
+    /// Analyse les lignes de la déclaration courante et liste les groupes
+    /// (facture, règlement, taux) présents plusieurs fois.
+    /// Pour chaque groupe : n° facture, n° règlement, taux, nombre, TVA cumulée, TVA facture.
+    /// </summary>
+    public async Task<DiagnosticDoublonsResultat> DetecterDoublonsAsync(Guid declarationId)
+    {
+        var declaration = await _repository.GetByIdAsync(declarationId);
+        if (declaration == null) throw new ArgumentException("Déclaration introuvable");
+
+        var lignesDec = await _repository.GetLignesAsync(declarationId, "Decaissement", 1, int.MaxValue, null, null);
+        var lignesEnc = await _repository.GetLignesAsync(declarationId, "Encaissement", 1, int.MaxValue, null, null);
+        var toutes = lignesDec.Concat(lignesEnc).ToList();
+
+        var resultat = new DiagnosticDoublonsResultat
+        {
+            DeclarationId = declarationId,
+            NumeroDeclaration = declaration.Numero,
+            TotalLignes = toutes.Count
+        };
+
+        var groupesDoublons = toutes
+            .GroupBy(l => new {
+                NumeroFacture = l.NumeroFacture ?? "",
+                NumeroRapprochement = l.NumeroRapprochement ?? "",
+                l.Taux,
+                CodeTaxe = l.CodeTaxe ?? "",
+                l.Domaine
+            })
+            .Where(g => g.Count() > 1)
+            .ToList();
+
+        resultat.TotalGroupesEnDoublon = groupesDoublons.Count;
+
+        foreach (var grp in groupesDoublons)
+        {
+            var premiere = grp.First();
+            int nbLignes = grp.Count();
+            decimal tvaLigne = premiere.TVA;
+            decimal tvaCumulee = grp.Sum(l => l.TVA);
+            decimal surdeclaration = tvaCumulee - tvaLigne;
+
+            decimal tvaFacture = 0m;
+            if (premiere.EC_Id > 0 && declaration.SocieteId > 0)
+            {
+                try
+                {
+                    var buckets = await _repository.GetBucketsCacheAsync(declaration.SocieteId, premiere.EC_Id);
+                    if (buckets != null && buckets.Count > 0)
+                    {
+                        var bucketTaux = buckets.FirstOrDefault(b => b.Taux == grp.Key.Taux);
+                        tvaFacture = bucketTaux != null ? bucketTaux.Tva : buckets.Sum(b => b.Tva);
+                    }
+                }
+                catch
+                {
+                    // Best-effort
+                }
+            }
+
+            var dto = new GroupeDoublonDto
+            {
+                NumeroFacture = grp.Key.NumeroFacture,
+                NumeroRapprochement = grp.Key.NumeroRapprochement,
+                Taux = grp.Key.Taux,
+                CodeTaxe = grp.Key.CodeTaxe,
+                Domaine = grp.Key.Domaine,
+                TiersNom = premiere.TiersNom,
+                NombreLignes = nbLignes,
+                MontantAffecte = premiere.MontantAffecte,
+                TvaLigne = tvaLigne,
+                TvaCumulee = tvaCumulee,
+                TvaFacture = tvaFacture,
+                SurdeclarationGroupe = surdeclaration,
+                LigneIds = grp.Select(l => l.Id).ToList()
+            };
+
+            resultat.TotalLignesEnTrop += (nbLignes - 1);
+            resultat.SurdeclarationTva += surdeclaration;
+            resultat.Groupes.Add(dto);
+        }
+
+        return resultat;
     }
 }
 
