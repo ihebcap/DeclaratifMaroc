@@ -10,13 +10,13 @@
 par société (2 nouvelles tables GRF, historique append-only, garde admin), bandeau d'écart sur 3 écrans. Design complet relu en 5 passes
 (sources, code, données, testabilité, risques) dans le commit `70ca0fe` (TASK-221 v3 et TASK-222 v3). À reprendre selon le besoin.
 
-## 🔄 TASK-224 — CRITICAL : lignes dupliquées pour une facture réglée en plusieurs fois, TVA surdéclarée (PO 09/10/2026) [EN COURS]
-Capture PO `TVA1-2026-03-T` : 3 factures réglées en 2 fois (FF260029/FF260027/FF260028) apparaissent en
+## 🔄 TASK-224 — CRITICAL : lignes dupliquées pour une facture réglée en plusieurs fois, TVA surdéclarée (PO 09/10/2026) [A VERIFIER]
+Capture PO `TVA1-2026-03-T` : 3 factures réglées en 2 fois (FF260029/FF260027/FF260028) apparaissaient en
 2 lignes par règlement → total TVA `133 189,91` au lieu de `68 281,46` (surdéclaration `64 908,46 MAD`).
-Calcul (`Ventilateur`/`ConstructeurDeclaration`) prouvé sain par simulation ; cache et requête de
-sélection écartés ; cause à confirmer en Phase 1 (lignes figées `DM_LGTVA` ré-écrites ?). Inclut
-idempotence d'écriture, garde-fou bloquant `TVA_FACTURE_SURDECLAREE` et détection des déclarations
-déjà touchées. Voir `IN_PROGRESS/TASK-224-doublon-lignes-facture-reglee-en-plusieurs-fois.md`.
+Cause racine identifiée et corrigée (`MapLignesCandidates` appariement par `EC_Id`/`MV_Id`), idempotence
+`DM_LGTVA` active, garde-fou `TVA_FACTURE_SURDECLAREE` bloquant la clôture, outil « Détecter les doublons »
+disponible en UI. Scénarios 1 à 7 validés (499 tests unitaires/orchestration au vert, 0 erreur build/lint).
+Voir `VERIFY/TASK-224_verify.md`.
 
 ## 🆕 TASK-214 — Automatiser la récupération de `WinSW.exe` dans `Deploy-All.ps1` (plus d'étape manuelle) (PO 12/08/2026)
 Signalement PO : échec `FileNotFoundException` au clic « Installer » (`WinSW.exe absent`), et refus

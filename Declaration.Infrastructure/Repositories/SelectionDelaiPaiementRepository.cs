@@ -110,6 +110,7 @@ public sealed class SelectionDelaiPaiementRepository : ISelectionDelaiPaiementRe
               AND DO_Domaine = @DoDomaine
               AND EC_Type NOT IN (@TypeGain, @TypePerte)
               AND DE_Id = @DeviseSocieteId
+              AND EC_Montant >= 0
               AND DO_Date >= @DateDebutLoi
               AND (DO_Date >= @DateApresLimite OR EC_Montant > @SeuilMontant)",
             new

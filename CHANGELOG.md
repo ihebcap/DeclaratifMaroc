@@ -1,6 +1,15 @@
 # CHANGELOG — Module Déclaration TVA (GRF)
 
 
+## 2026-10-27 — TASK-244 : approuve (DDP : exclusion des factures d'avoir, montant négatif)
+
+Revue architecte (session distincte du worker) : bug confirmé par lecture de code avant l'implémentation
+(`SelectionDelaiPaiementRepository.cs:114`, un avoir récent passait la sélection via la branche date du
+seuil légal, qui ne testait pas le signe du montant). Diff réel relu : une seule ligne ajoutée
+(`AND EC_Montant >= 0`), aucun scope creep. Preuve réelle sur `GR_EMA_DISTRIBUTION` vérifiée (1117 → 1091
+échéances candidates, 26 avoirs exclus, 0 résiduel), build 0 erreur, 227+272+61 tests verts. Analyse des
+autres chemins de lecture DDP (affectations, historique déclaré, calculateur) confirmée correcte. APPROVE.
+
 ## 2026-10-09 — TASK-223 : approuve (export Excel des grilles : valeurs affichées, vraies dates)
 
 Revue architecte (session distincte du worker) : 1re livraison REJETÉE (largeurs de colonnes absentes, risque
